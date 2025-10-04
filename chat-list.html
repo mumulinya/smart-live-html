@@ -1,0 +1,226 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+  <title>智评生活 - 聊天</title>
+  <!-- 引入样式 -->
+  <link rel="stylesheet" href="./css/element.css">
+  <link href="./css/main.css" rel="stylesheet">
+
+  <style type="text/css">
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 15px;
+      border-bottom: 1px solid #eee;
+      background-color: #fff;
+    }
+    .header-back-btn {
+      font-size: 20px;
+      color: #333;
+    }
+    .header-title {
+      font-size: 18px;
+      font-weight: bold;
+      flex: 1;
+      text-align: center;
+    }
+    .header-search {
+      font-size: 20px;
+      color: #333;
+    }
+    .chat-list {
+      height: calc(100vh - 110px);
+      overflow-y: auto;
+      background-color: #fff;
+    }
+    .chat-item {
+      padding: 12px 15px;
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+    }
+    .chat-avatar {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      object-fit: cover;
+      margin-right: 12px;
+      background-color: #f0f0f0;
+    }
+    .chat-info {
+      flex: 1;
+      overflow: hidden;
+    }
+    .chat-name {
+      font-weight: bold;
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .chat-last-message {
+      color: #666;
+      font-size: 0.9em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .chat-time {
+      color: #999;
+      font-size: 0.8em;
+      min-width: 50px;
+      text-align: right;
+    }
+    .unread-badge {
+      background-color: #f63;
+      color: white;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 0.7em;
+      position: absolute;
+      top: 5px;
+      right: 5px;
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <div class="header-back-btn" style="visibility: hidden;"><i class="el-icon-arrow-left"></i></div>
+    <div class="header-title">聊天</div>
+    <div class="header-search" @click="search">
+      <i class="el-icon-search"></i>
+    </div>
+  </div>
+  <div class="chat-list">
+    <div class="chat-item" v-for="chat in chatList" :key="chat.id" @click="toChat(chat.id)">
+      <div style="position: relative;">
+        <img :src="chat.avatar" :alt="chat.name" class="chat-avatar">
+        <div class="unread-badge" v-if="chat.unread > 0">{{chat.unread > 9 ? '9+' : chat.unread}}</div>
+      </div>
+      <div class="chat-info">
+        <div class="chat-name">{{chat.name}}</div>
+        <div class="chat-last-message">{{chat.lastMessage}}</div>
+      </div>
+      <div class="chat-time">{{chat.time}}</div>
+    </div>
+  </div>
+  <foot-bar :active-btn="3"></foot-bar>
+</div>
+
+<script src="./js/vue.js"></script>
+<script src="./js/axios.min.js"></script>
+<!-- 引入组件库 -->
+<script src="./js/element.js"></script>
+<script src="./js/common.js"></script>
+<script src="./js/footer.js"></script>
+<script>
+  const app = new Vue({
+    el: "#app",
+    data: {
+      chatList: [] // 聊天列表数据
+    },
+    created() {
+      // 初始化数据
+      this.initData();
+    },
+    methods: {
+      initData() {
+        // 模拟从后端获取数据
+        this.chatList = [
+          {
+            id: 1,
+            name: '张三',
+            avatar: 'https://bailian-bmp-pre.oss-cn-hangzhou.aliyuncs.com/public/system_agent/PlaceHolder.png',
+            lastMessage: '你好，最近项目进展如何？',
+            time: '10:30',
+            unread: 2
+          },
+          {
+            id: 2,
+            name: '李四',
+            avatar: 'https://bailian-bmp-pre.oss-cn-hangzhou.aliyuncs.com/public/system_agent/PlaceHolder.png',
+            lastMessage: '明天的会议记得准时参加',
+            time: '昨天',
+            unread: 0
+          },
+          {
+            id: 3,
+            name: '产品讨论组',
+            avatar: 'https://bailian-bmp-pre.oss-cn-hangzhou.aliyuncs.com/public/system_agent/PlaceHolder.png',
+            lastMessage: '新需求文档已上传',
+            time: '周一',
+            unread: 5
+          },
+          {
+            id: 4,
+            name: '王五',
+            avatar: 'https://bailian-bmp-pre.oss-cn-hangzhou.aliyuncs.com/public/system_agent/PlaceHolder.png',
+            lastMessage: '收到，谢谢',
+            time: '15:20',
+            unread: 0
+          },
+          {
+            id: 5,
+            name: '设计团队',
+            avatar: 'https://bailian-bmp-pre.oss-cn-hangzhou.aliyuncs.com/public/system_agent/PlaceHolder.png',
+            lastMessage: '设计稿已更新，请查收',
+            time: '09:45',
+            unread: 3
+          },
+          {
+            id: 2,
+            name: '李四',
+            avatar: 'https://bailian-bmp-pre.oss-cn-hangzhou.aliyuncs.com/public/system_agent/PlaceHolder.png',
+            lastMessage: '明天的会议记得准时参加',
+            time: '昨天',
+            unread: 0
+          },
+          {
+            id: 3,
+            name: '产品讨论组',
+            avatar: 'https://bailian-bmp-pre.oss-cn-hangzhou.aliyuncs.com/public/system_agent/PlaceHolder.png',
+            lastMessage: '新需求文档已上传',
+            time: '周一',
+            unread: 5
+          },
+          {
+            id: 4,
+            name: '王五',
+            avatar: 'https://bailian-bmp-pre.oss-cn-hangzhou.aliyuncs.com/public/system_agent/PlaceHolder.png',
+            lastMessage: '收到，谢谢',
+            time: '15:20',
+            unread: 0
+          },
+          {
+            id: 5,
+            name: '设计团队',
+            avatar: 'https://bailian-bmp-pre.oss-cn-hangzhou.aliyuncs.com/public/system_agent/PlaceHolder.png',
+            lastMessage: '设计稿已更新，请查收',
+            time: '09:45',
+            unread: 3
+          }
+        ];
+      },
+      toChat(chatId) {
+        // 跳转到私聊页面
+        location.href = "/chat.html?chatId=" + chatId;
+      },
+      search() {
+        // 搜索功能
+        alert('搜索功能暂未实现');
+      }
+    }
+  })
+</script>
+</body>
+</html>

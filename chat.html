@@ -1,0 +1,270 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+  <title>智评生活 - 私聊</title>
+  <!-- 引入样式 -->
+  <link rel="stylesheet" href="./css/element.css">
+  <link href="./css/main.css" rel="stylesheet">
+
+  <style type="text/css">
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 15px;
+      border-bottom: 1px solid #eee;
+      background-color: #fff;
+    }
+    .header-back-btn {
+      font-size: 20px;
+      color: #333;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+    }
+    .header-title {
+      font-size: 18px;
+      font-weight: bold;
+      flex: 1;
+      text-align: center;
+    }
+    .chat-messages {
+      height: calc(100vh - 210px);
+      padding: 15px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      background-color: #eaeaea;
+    }
+    .message {
+      max-width: 70%;
+      padding: 8px 12px;
+      margin-bottom: 10px;
+      border-radius: 18px;
+      word-wrap: break-word;
+      position: relative;
+    }
+    .message-left {
+      background-color: #e5e5ea;
+      align-self: flex-start;
+      border-top-left-radius: 5px;
+    }
+    .message-right {
+      background-color: #f63;
+      color: white;
+      align-self: flex-end;
+      border-top-right-radius: 5px;
+    }
+    .message-time {
+      font-size: 0.7em;
+      color: #999;
+      margin-top: 3px;
+      text-align: right;
+    }
+    .system-message {
+      background-color: #f0f0f0;
+      align-self: center;
+      max-width: 80%;
+      border-radius: 10px;
+      margin: 5px 0;
+      padding: 5px 10px;
+      font-size: 0.8em;
+      text-align: center;
+    }
+    .chat-input {
+      padding: 10px 15px;
+      border-top: 1px solid #eee;
+      display: flex;
+      background-color: #fff;
+    }
+    .chat-input input {
+      flex: 1;
+      padding: 10px 15px;
+      border: 1px solid #ddd;
+      border-radius: 20px;
+      margin-right: 10px;
+      font-size: 1em;
+    }
+    .chat-input button {
+      padding: 10px 20px;
+      background-color: #f63;
+      color: white;
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .chat-input button:disabled {
+      background-color: #ffaa80;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <div class="header-back-btn" @click="goBack">
+      <i class="el-icon-arrow-left"></i>
+      <span style="margin-left: 5px; font-size: 16px;"></span>
+    </div>
+    <div class="header-title">{{contactName}}</div>
+    <div style="width: 20px;"></div>
+  </div>
+  <div class="chat-messages" ref="chatMessages">
+    <div v-for="msg in messages" :key="msg.id" class="message" :class="{'message-left': !msg.isSelf, 'message-right': msg.isSelf, 'system-message': msg.isSystem}">
+      <div v-if="!msg.isSystem && !msg.isSystem">{{msg.text}}</div>
+      <div v-if="msg.isSystem" style="text-align:center">{{msg.text}}</div>
+      <div class="message-time" v-if="!msg.isSystem">{{msg.time}}</div>
+    </div>
+  </div>
+  <div class="chat-input">
+    <input type="text" v-model="messageInput" @input="handleInput" @keyup.enter="sendMessage" placeholder="输入消息...">
+    <button @click="sendMessage" :disabled="!messageInput">发送</button>
+  </div>
+  <foot-bar :active-btn="3"></foot-bar>
+</div>
+
+<script src="./js/vue.js"></script>
+<script src="./js/axios.min.js"></script>
+<!-- 引入组件库 -->
+<script src="./js/element.js"></script>
+<script src="./js/common.js"></script>
+<script src="./js/footer.js"></script>
+<script>
+  const app = new Vue({
+    el: "#app",
+    data: {
+      chatId: 0,
+      contactName: "加载中...",
+      messages: [], // 消息列表
+      messageInput: "", // 输入框内容
+      chatData: {
+        1: {
+          name: '张三',
+          avatar: 'https://bailian-bmp-pre.oss-cn-hangzhou.aliyuncs.com/public/system_agent/PlaceHolder.png',
+          messages: [
+            { id: 101, sender: '张三', text: '你好，最近项目进展如何？', time: '10:30', isSelf: false },
+            { id: 102, sender: 'me', text: '进展顺利，预计下周可以交付', time: '10:31', isSelf: true },
+            { id: 103, sender: '张三', text: '好的，辛苦了', time: '10:35', isSelf: false }
+          ]
+        },
+        2: {
+          name: '李四',
+          avatar: 'https://bailian-bmp-pre.oss-cn-hangzhou.aliyuncs.com/public/system_agent/PlaceHolder.png',
+          messages: [
+            { id: 201, sender: '李四', text: '明天的会议记得准时参加', time: '09:15', isSelf: false },
+            { id: 202, sender: 'me', text: '收到，我会准时参加', time: '09:20', isSelf: true }
+          ]
+        },
+        3: {
+          name: '产品讨论组',
+          avatar: 'https://bailian-bmp-pre.oss-cn-hangzhou.aliyuncs.com/public/system_agent/PlaceHolder.png',
+          messages: [
+            { id: 301, sender: '系统', text: '王五加入了群聊', time: '08:40', isSelf: false, isSystem: true },
+            { id: 302, sender: '产品经理', text: '新需求文档已上传', time: '08:45', isSelf: false },
+            { id: 303, sender: 'me', text: '已查看，有问题会反馈', time: '09:00', isSelf: true },
+            { id: 304, sender: '设计师', text: '设计稿预计今天完成', time: '09:15', isSelf: false }
+          ]
+        },
+        4: {
+          name: '王五',
+          avatar: 'https://bailian-bmp-pre.oss-cn-hangzhou.aliyuncs.com/public/system_agent/PlaceHolder.png',
+          messages: [
+            { id: 401, sender: '王五', text: '收到，谢谢', time: '15:20', isSelf: false },
+            { id: 402, sender: 'me', text: '不客气，有问题随时沟通', time: '15:21', isSelf: true }
+          ]
+        },
+        5: {
+          name: '设计团队',
+          avatar: 'https://bailian-bmp-pre.oss-cn-hangzhou.aliyuncs.com/public/system_agent/PlaceHolder.png',
+          messages: [
+            { id: 501, sender: '设计主管', text: '设计稿已更新，请查收', time: '09:45', isSelf: false },
+            { id: 502, sender: 'me', text: '收到，看起来不错', time: '09:50', isSelf: true },
+            { id: 503, sender: '设计师', text: '有任何修改意见随时告诉我', time: '09:55', isSelf: false }
+          ]
+        }
+      }
+    },
+    created() {
+      // 从URL获取chatId
+      this.chatId = util.getUrlParam("chatId");
+
+      if (!this.chatId || !this.chatData[this.chatId]) {
+        // 如果chatId无效，返回上一页
+        window.history.back();
+        return;
+      }
+
+      // 初始化数据
+      this.initData();
+    },
+    mounted() {
+      // 滚动到底部
+      this.scrollToBottom();
+    },
+    methods: {
+      initData() {
+        const chat = this.chatData[this.chatId];
+        this.contactName = chat.name;
+        this.messages = chat.messages;
+      },
+      scrollToBottom() {
+        this.$nextTick(() => {
+          const chatMessages = this.$refs.chatMessages;
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+        });
+      },
+      sendMessage() {
+        if (!this.messageInput.trim()) return;
+
+        const now = new Date();
+        const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+        // 添加到消息历史
+        const chat = this.chatData[this.chatId];
+        chat.messages.push({
+          id: Date.now(),
+          sender: 'me',
+          text: this.messageInput,
+          time: timeStr,
+          isSelf: true
+        });
+
+        // 更新UI
+        this.messages = [...chat.messages];
+        this.messageInput = '';
+
+        // 滚动到底部
+        this.scrollToBottom();
+
+        // 模拟对方回复（延迟1.5秒）
+        setTimeout(() => {
+          if (chat.messages && this.chatData[this.chatId]) {
+            const replyTime = `${now.getHours().toString().padStart(2, '0')}:${(now.getMinutes()+1).toString().padStart(2, '0')}`;
+            chat.messages.push({
+              id: Date.now() + 1,
+              sender: chat.name,
+              text: '自动回复: 已收到您的消息',
+              time: replyTime,
+              isSelf: false
+            });
+            this.messages = [...chat.messages];
+            this.scrollToBottom();
+          }
+        }, 1500);
+      },
+      handleInput() {
+        // 输入框变化处理
+      },
+      goBack() {
+        // 返回到聊天列表页面
+        location.href = "/chat-list.html";
+      }
+    }
+  })
+</script>
+</body>
+</html>

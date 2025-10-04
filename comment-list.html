@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+  <title>全部评论 - 智评生活</title>
+  <link rel="stylesheet" href="./css/element.css">
+  <link href="./css/main.css" rel="stylesheet">
+  <style type="text/css">
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 15px;
+      border-bottom: 1px solid #eee;
+      background-color: #fff;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-back-btn {
+      font-size: 20px;
+      color: #333;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+    }
+    .header-title {
+      font-size: 18px;
+      font-weight: bold;
+      flex: 1;
+      text-align: center;
+    }
+
+    .comment-list-container {
+      height: calc(100vh - 60px);
+      overflow-y: auto;
+      background-color: #f8f8f8;
+    }
+
+    /* 发表评论组件样式 - 与详情页保持一致 */
+    .comment-publish {
+      background: #fff;
+      padding: 15px;
+      border-bottom: 1px solid #f1f1f1;
+    }
+
+    .publish-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .publish-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      overflow: hidden;
+      margin-right: 10px;
+      flex-shrink: 0;
+    }
+
+    .publish-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .username {
+      font-size: 14px;
+      font-weight: 500;
+      color: #333;
+    }
+
+    .publish-content {
+      margin-left: 42px;
+    }
+
+    .publish-textarea {
+      position: relative;
+      margin-bottom: 12px;
+    }
+
+    .publish-textarea textarea {
+      width: 100%;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 14px;
+      line-height: 1.4;
+      resize: none;
+      background: #fafafa;
+      color: #333;
+      min-height: 60px;
+      box-sizing: border-box;
+      font-family: inherit;
+    }
+
+    .publish-textarea textarea:focus {
+      outline: none;
+      border-color: #ff6633;
+      background: #fff;
+    }
+
+    .publish-textarea textarea::placeholder {
+      color: #999;
+    }
+
+    .text-count {
+      position: absolute;
+      bottom: 8px;
+      right: 12px;
+      font-size: 12px;
+      color: #999;
+    }
+
+    .publish-images {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .image-upload {
+      width: 70px;
+      height: 70px;
+      border: 1px dashed #d9d9d9;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: #999;
+      font-size: 18px;
+      background: #fafafa;
+      transition: all 0.2s;
+    }
+
+    .image-upload:hover {
+      border-color: #ff6633;
+      color: #ff6633;
+    }
+
+    .image-preview {
+      position: relative;
+      width: 70px;
+      height: 70px;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid #f0f0f0;
+    }
+
+    .image-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .image-remove {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      width: 18px;
+      height: 18px;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .publish-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 12px;
+      border-top: 1px solid #f8f8f8;
+    }
+
+    .action-left {
+      display: flex;
+      align-items: center;
+    }
+
+    .rate-section {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .action-right {
+      display: flex;
+      gap: 8px;
+    }
+
+    .publish-btn {
+      padding: 6px 16px;
+      border: none;
+      border-radius: 16px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .cancel-btn {
+      background: #f5f5f5;
+      color: #666;
+    }
+
+    .cancel-btn:hover {
+      background: #e8e8e8;
+    }
+
+    .submit-btn {
+      background: #ff6633;
+      color: white;
+    }
+
+    .submit-btn:hover {
+      background: #ff854d;
+    }
+
+    .submit-btn.disabled {
+      background: #ffb399;
+      cursor: not-allowed;
+    }
+
+    /* 评论列表样式 */
+    .comments-section {
+      background: #fff;
+    }
+
+    .comment-box {
+      display: flex;
+      padding: 15px;
+      border-bottom: 1px solid #f1f1f1;
+    }
+
+    .comment-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      overflow: hidden;
+      margin-right: 12px;
+      flex-shrink: 0;
+    }
+
+    .comment-icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .comment-info {
+      flex: 1;
+    }
+
+    .comment-user {
+      font-size: 14px;
+      font-weight: 500;
+      color: #333;
+      margin-bottom: 4px;
+    }
+
+    .comment-user span {
+      font-size: 12px;
+      color: #ff6633;
+      background: #fff5f5;
+      padding: 1px 6px;
+      border-radius: 10px;
+      margin-left: 8px;
+    }
+
+    .comment-content {
+      font-size: 14px;
+      line-height: 1.5;
+      color: #333;
+      margin: 8px 0;
+    }
+
+    .comment-images {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 8px 0;
+    }
+
+    .comment-images img {
+      width: 80px;
+      height: 80px;
+      border-radius: 6px;
+      object-fit: cover;
+    }
+
+    .comment-stats {
+      font-size: 12px;
+      color: #999;
+      margin-top: 8px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #999;
+      font-size: 14px;
+    }
+
+    .no-more {
+      text-align: center;
+      padding: 20px;
+      color: #999;
+      font-size: 14px;
+    }
+
+    .empty-comments {
+      text-align: center;
+      padding: 60px 20px;
+      color: #999;
+    }
+
+    .empty-comments i {
+      font-size: 48px;
+      margin-bottom: 16px;
+      color: #ddd;
+    }
+
+    /* 图片预览样式 */
+    .image-preview-layer {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .preview-container {
+      width: 90%;
+      max-width: 800px;
+      height: 80%;
+      background: #fff;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .preview-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 20px;
+      border-bottom: 1px solid #eee;
+      background: #f8f8f8;
+    }
+
+    .preview-title {
+      font-size: 16px;
+      font-weight: bold;
+      color: #333;
+    }
+
+    .close-btn {
+      font-size: 18px;
+      color: #666;
+      cursor: pointer;
+      padding: 5px;
+    }
+
+    .close-btn:hover {
+      color: #ff6633;
+    }
+
+    .preview-content {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      overflow: hidden;
+    }
+
+    .preview-image {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    .preview-footer {
+      padding: 15px 20px;
+      border-top: 1px solid #eee;
+      background: #f8f8f8;
+    }
+
+    .preview-nav {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+    }
+
+    .nav-btn {
+      width: 40px;
+      height: 40px;
+      border: 1px solid #ddd;
+      border-radius: 50%;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .nav-btn:hover:not(:disabled) {
+      border-color: #ff6633;
+      color: #ff6633;
+    }
+
+    .nav-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .preview-counter {
+      font-size: 14px;
+      color: #666;
+      min-width: 60px;
+      text-align: center;
+    }
+
+  </style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <div class="header-back-btn" @click="goBack">
+      <i class="el-icon-arrow-left"></i>
+    </div>
+    <div class="header-title">全部评论</div>
+    <div style="width: 20px;"></div>
+  </div>
+
+  <div class="comment-list-container" ref="commentList" @scroll="handleScroll">
+    <!-- 发表评论组件 -->
+    <div class="comment-publish">
+      <div class="publish-header">
+        <div class="publish-avatar">
+          <img :src="user.icon || '/imgs/icons/default-icon.png'" alt="头像">
+        </div>
+        <div class="publish-user">
+          <div class="username">{{user.nickname || '我'}}</div>
+        </div>
+      </div>
+
+      <div class="publish-content">
+        <div class="publish-textarea">
+          <textarea
+                  v-model="commentText"
+                  placeholder="说点什么..."
+                  rows="2"
+                  maxlength="500"
+                  @focus="onTextareaFocus"
+                  @blur="onTextareaBlur"
+          ></textarea>
+          <div class="text-count">{{commentText.length}}/500</div>
+        </div>
+
+        <div class="publish-images" v-if="selectedImages.length > 0 || isTextareaFocused">
+          <div class="image-upload" @click="triggerImageUpload">
+            <i class="el-icon-plus"></i>
+            <input
+                    type="file"
+                    ref="imageInput"
+                    multiple
+                    accept="image/*"
+                    @change="handleImageUpload"
+                    style="display: none"
+            >
+          </div>
+
+          <div
+                  class="image-preview"
+                  v-for="(image, index) in selectedImages"
+                  :key="index"
+          >
+            <img :src="image.url" alt="预览图片">
+            <div class="image-remove" @click.stop="removeImage(index)">
+              <i class="el-icon-close"></i>
+            </div>
+          </div>
+        </div>
+
+        <div class="publish-actions" v-if="isTextareaFocused || commentText">
+          <div class="action-left">
+            <div class="rate-section">
+              <span style="margin-right: 8px; color: #666; font-size: 14px;">打分</span>
+              <el-rate
+                      v-model="commentRating"
+                      :colors="['#99A9BF', '#F7BA2A', '#FF9900']"
+              ></el-rate>
+            </div>
+          </div>
+
+          <div class="action-right">
+            <button
+                    class="publish-btn cancel-btn"
+                    @click="cancelPublish"
+            >
+              取消
+            </button>
+            <button
+                    class="publish-btn submit-btn"
+                    :class="{disabled: !commentText.trim()}"
+                    :disabled="!commentText.trim()"
+                    @click="publishComment"
+            >
+              发布
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 评论列表 -->
+    <div class="comments-section">
+      <div v-if="comments.length === 0 && !loading" class="empty-comments">
+        <i class="el-icon-chat-round"></i>
+        <div>暂无评论，快来发表第一条评论吧～</div>
+      </div>
+
+      <div class="comment-box" v-for="comment in comments" :key="comment.id">
+        <div class="comment-icon">
+          <img :src="comment.userIcon || '/imgs/icons/default-icon.png'" alt="">
+        </div>
+        <div class="comment-info">
+          <div class="comment-user">
+            {{comment.nickName || '匿名用户'}}
+            <span>Lv{{comment.userLevel || 1}}</span>
+          </div>
+          <div style="display: flex; align-items: center; margin-bottom: 8px;">
+            <el-rate disabled v-model="comment.rating" style="margin-right: 8px;"></el-rate>
+            <span style="font-size: 12px; color: #ff6633;">{{comment.rating}}分</span>
+          </div>
+          <div class="comment-content">{{comment.content}}</div>
+
+          <div class="comment-images" v-if="comment.images && comment.images.length > 0">
+            <img
+                    v-for="(img, index) in comment.images"
+                    :key="index"
+                    :src="img"
+                    alt="评论图片"
+                    @click="previewImage(comment.images, index)"
+            >
+          </div>
+
+          <div class="comment-stats">
+            {{formatTime(new Date(comment.createTime))}} ·
+            浏览{{comment.viewCount || 0}} ·
+            评论{{comment.replyCount || 0}}
+          </div>
+        </div>
+      </div>
+
+      <div v-if="loading" class="loading">
+        <i class="el-icon-loading"></i> 加载中...
+      </div>
+
+      <div v-if="noMore" class="no-more">
+        没有更多评论了
+      </div>
+    </div>
+  </div>
+
+  <!-- 图片预览层 -->
+  <div class="image-preview-layer" v-if="showImagePreview" @click="closeImagePreview">
+    <div class="preview-container" @click.stop>
+      <div class="preview-header">
+        <span class="preview-title">图片预览</span>
+        <i class="el-icon-close close-btn" @click="closeImagePreview"></i>
+      </div>
+      <div class="preview-content">
+        <img :src="currentPreviewImage" alt="预览图片" class="preview-image">
+      </div>
+      <div class="preview-footer">
+        <div class="preview-nav">
+          <button class="nav-btn" @click="prevImage" :disabled="currentPreviewIndex === 0">
+            <i class="el-icon-arrow-left"></i>
+          </button>
+          <span class="preview-counter">{{ currentPreviewIndex + 1 }} / {{ previewImages.length }}</span>
+          <button class="nav-btn" @click="nextImage" :disabled="currentPreviewIndex === previewImages.length - 1">
+            <i class="el-icon-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+<script src="./js/vue.js"></script>
+<script src="./js/axios.min.js"></script>
+<script src="./js/element.js"></script>
+<script src="./js/common.js"></script>
+<script>
+  const app = new Vue({
+    el: "#app",
+    data: {
+      util,
+      blogId: null,
+      shopId:null,
+      sourceId:null,
+      sourceType:null,
+      comments: [],
+      current: 1,// comment的页码
+      comment:{
+        sourceId:null,
+        sourceType:null,
+        content: '',
+        userId: null,
+        parentId: null,
+        answerId: null,
+        // rating: null,
+      },
+      page: 1,
+      pageSize: 10,
+      loading: false,
+      noMore: false,
+      // 发表评论相关
+      commentText: '',
+      commentRating: 5,
+      selectedImages: [],
+      isTextareaFocused: false,
+      user: {},
+
+      // 图片预览相关
+      showImagePreview: false,
+      previewImages: [],
+      currentPreviewIndex: 0,
+      currentPreviewImage: ''
+
+    },
+    created() {
+      this.blogId = util.getUrlParam("blogId");
+      this.shopId = util.getUrlParam("shopId");
+      if(this.blogId != null&&this.blogId!=""){
+        this.sourceId=this.blogId
+        this.sourceType=1
+      }else if(this.shopId != null&&this.shopId!=""){
+       this.sourceId=this.shopId
+        this.sourceType=2
+      }
+      this.queryLoginUser();
+      this.loadComments();
+    },
+    methods: {
+      goBack() {
+        history.back();
+      },
+
+      // 查询登录用户
+      queryLoginUser() {
+        axios.get("/app/user/me")
+                .then(({ data }) => {
+                  this.user = data;
+                })
+                .catch(console.log)
+      },
+
+      // 加载评论列表
+      async loadComments() {
+        if (this.loading || this.noMore) return;
+
+        this.loading = true;
+        try {
+          const response = await axios.get("/app/comment/listComment", {
+            params: {
+              sourceId: this.sourceId,
+              sourceType: this.sourceType,
+              current: this.current
+            }
+          });
+
+          const newComments = response.data.list || response.data;
+
+          if (newComments.length === 0) {
+            this.noMore = true;
+          } else {
+            this.comments = [...this.comments, ...newComments];
+            this.comments.forEach(comment => {
+              if(comment.images!=""&&comment.images!=null){
+                comment.images=comment.images.split(",")
+              }
+            })
+            this.page++;
+          }
+        } catch (error) {
+          console.error('加载评论失败:', error);
+          this.$message.error('加载评论失败');
+        } finally {
+          this.loading = false;
+        }
+      },
+
+      // 滚动加载
+      handleScroll() {
+        const container = this.$refs.commentList;
+        const scrollTop = container.scrollTop;
+        const scrollHeight = container.scrollHeight;
+        const clientHeight = container.clientHeight;
+
+        // 距离底部50px时加载更多
+        if (scrollHeight - scrollTop - clientHeight < 50 && !this.loading && !this.noMore) {
+          this.current++;
+          this.loadComments();
+        }
+      },
+
+      // 发表评论相关方法
+      onTextareaFocus() {
+        this.isTextareaFocused = true;
+      },
+
+      onTextareaBlur() {
+        setTimeout(() => {
+          if (!this.commentText) {
+            this.isTextareaFocused = false;
+          }
+        }, 200);
+      },
+
+      triggerImageUpload() {
+        this.$refs.imageInput.click();
+      },
+
+      handleImageUpload(event) {
+        const files = event.target.files;
+        if (files.length + this.selectedImages.length > 9) {
+          this.$message.error('最多只能上传9张图片');
+          return;
+        }
+
+        for (let file of files) {
+          if (file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              this.selectedImages.push({
+                file: file,
+                url: e.target.result
+              });
+            };
+            reader.readAsDataURL(file);
+          }
+        }
+
+        event.target.value = '';
+      },
+
+      removeImage(index) {
+        this.selectedImages.splice(index, 1);
+      },
+
+      cancelPublish() {
+        this.commentText = '';
+        this.commentRating = 5;
+        this.selectedImages = [];
+        this.isTextareaFocused = false;
+      },
+
+      // 发布评论
+      async publishComment() {
+        if (!this.commentText.trim()) {
+          this.$message.error('请输入评价内容');
+          return;
+        }
+        this.checkLogin();
+        const formData = new FormData();
+        this.comment.content=this.commentText
+        this.comment.rating=this.commentRating
+        this.comment.sourceId=this.sourceId
+        this.comment.sourceType=this.sourceType
+        this.comment.userId=this.user.id
+        this.comment.parentId=0
+        this.comment.answerId=0
+        formData.append('content', this.commentText);
+        formData.append('rating', this.commentRating);
+        formData.append('sourceId', this.sourceId);
+        formData.append('sourceType', this.sourceType);
+
+        // 添加图片文件
+        this.selectedImages.forEach((image, index) => {
+          formData.append('images', image.file);
+        });
+
+        try {
+          // await axios.post('/app/comment', formData, {
+          //   headers: {
+          //     'Content-Type': 'multipart/form-data'
+          //   }
+          // });
+
+          await axios.post('/app/comment/addComment', this.comment);
+
+          this.$message.success('评价发布成功');
+          this.cancelPublish();
+
+          // 重新加载评论列表
+          this.comments = [];
+          this.page = 1;
+          this.noMore = false;
+          this.loadComments();
+
+        } catch (error) {
+          this.$message.error('发布失败，请重试');
+          console.error(error);
+        }
+      },
+      checkLogin() {
+        // 获取token
+        let token = sessionStorage.getItem("token");
+        if (!token) {
+          location.href = "login.html"
+        }
+      },
+      // 图片预览
+      previewImage(images, index) {
+        // 处理图片地址，确保是完整URL
+        this.previewImages = images.map(img => {
+          if (img.startsWith('http')) {
+            return img;
+          } else {
+            // 如果是相对路径，添加基础URL
+            return `http://192.168.182.20:9000${img.startsWith('/') ? '' : '/'}${img}`;
+          }
+        });
+        this.currentPreviewIndex = index;
+        this.currentPreviewImage = this.previewImages[index];
+        this.showImagePreview = true;
+      },
+
+      closeImagePreview() {
+        this.showImagePreview = false;
+        this.previewImages = [];
+        this.currentPreviewIndex = 0;
+        this.currentPreviewImage = '';
+      },
+
+      prevImage() {
+        if (this.currentPreviewIndex > 0) {
+          this.currentPreviewIndex--;
+          this.currentPreviewImage = this.previewImages[this.currentPreviewIndex];
+        }
+      },
+
+      nextImage() {
+        if (this.currentPreviewIndex < this.previewImages.length - 1) {
+          this.currentPreviewIndex++;
+          this.currentPreviewImage = this.previewImages[this.currentPreviewIndex];
+        }
+      },
+
+
+      formatTime(date) {
+        const now = new Date();
+        const diff = now - date;
+
+        if (diff < 60000) { // 1分钟内
+          return '刚刚';
+        } else if (diff < 3600000) { // 1小时内
+          return Math.floor(diff / 60000) + '分钟前';
+        } else if (diff < 86400000) { // 1天内
+          return Math.floor(diff / 3600000) + '小时前';
+        } else if (diff < 2592000000) { // 30天内
+          return Math.floor(diff / 86400000) + '天前';
+        } else {
+          return date.getFullYear() + '年' + (date.getMonth() + 1) + '月' + date.getDate() + '日';
+        }
+      }
+    }
+  });
+</script>
+</body>
+</html>
