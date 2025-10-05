@@ -23,6 +23,71 @@
       .el-tabs__content{
           height: 90%;
       }
+      /* 🔥 替换这里的样式代码 */
+      .action-buttons {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-shrink: 0;
+        margin-left: auto;
+        padding-left: 15px;
+      }
+
+      .message-btn {
+        padding: 8px 16px;
+        background-color: #07c160;
+        color: white;
+        border-radius: 20px;
+        cursor: pointer;
+        font-size: 14px;
+        min-width: 60px;
+        text-align: center;
+      }
+
+      .message-btn:hover {
+        background-color: #06a652;
+      }
+
+      .logout-btn {
+        padding: 8px 16px;
+        background-color: #ff6633;
+        color: white;
+        border-radius: 20px;
+        cursor: pointer;
+        font-size: 14px;
+        min-width: 60px;
+      }
+      /* 🔥 新增基础信息区域样式 */
+      .basic {
+        display: flex;
+        align-items: flex-start;
+        padding: 15px;
+        position: relative;
+      }
+
+      .basic-icon {
+        flex-shrink: 0;
+        margin-right: 15px;
+      }
+
+      .basic-info {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .basic-info .name {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 5px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .basic-info span {
+        font-size: 14px;
+        color: #666;
+      }
   </style>
 
 </head>
@@ -41,8 +106,13 @@
       <div class="name">{{user.nickName}}</div>
       <span>杭州</span>
     </div>
-    <div class="logout-btn" @click="follow" style="text-align: center">
-      {{followed ? "取消关注" : "关注"}}
+    <div class="action-buttons">
+      <div class="logout-btn" @click="follow">
+        {{followed ? "取消关注" : "关注"}}
+      </div>
+      <div class="message-btn" @click="sendPrivateMessage">
+        私信
+      </div>
     </div>
   </div>
   <div class="introduce">
@@ -93,12 +163,13 @@
       user: "",
       loginUser: {},
       activeName: "1",
+      sessionId: "",
       info: {},
       blogs: [],
       followed: false, // 是否关注了
       commonFollows: [], // 共同关注
     },
-    created() {
+        created() {
       this.queryUser();
       this.queryLoginUser();
     },
@@ -132,6 +203,8 @@
             this.queryBlogs();
             // 是否被关注
             this.isFollowed();
+            //是否存在会话
+            this.isCreateSession();
           })
           .catch(console.log)
       },
@@ -172,6 +245,42 @@
             this.followed = !this.followed
           })
           .catch(this.$message.error)
+      },
+      // 新增私信方法
+      sendPrivateMessage() {
+        //会话存在，直接跳转
+        if(this.sessionId!="" && this.sessionId!=null){
+          location.href = `/chat.html?sessionId=${this.sessionId}`;
+           return;
+        }
+       let targetUid=this.user.id
+        // 1. 先获取或创建会话
+        axios.post(`/app/chat/chatSession/createSession/${targetUid}`).then(response => {
+          if (response.success) {
+            const sessionId = response.data;
+            // 跳转到聊天页面
+            location.href = `/chat.html?sessionId=${sessionId}`;
+          } else {
+            this.$message.error('创建会话失败');
+          }
+        }).catch(error => {
+          console.error('私信失败:', error);
+          this.$message.error('私信功能暂不可用');
+        });
+      },
+      isCreateSession() {
+        // 获取会话ID
+          axios.get(`/app/chat/chatSession/getSessionId`,{
+            params: {
+              fromUid: this.loginUser.id,
+              toUid: this.user.id
+            }
+          }).then(response => {
+            if (response.success) {
+               this.sessionId = response.data;
+               console.log("会话id为"+this.sessionId)
+            }
+          })
       },
       handleClick(t) {
         if (t.name === '2') {
