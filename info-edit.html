@@ -10,18 +10,151 @@
   <link href="./css/info.css" rel="stylesheet">
 
   <style type="text/css">
+    .avatar-upload {
+      display: none;
+    }
+    .info-btn a {
+      color: #666;
+      text-decoration: none;
+    }
+    .info-btn a:hover {
+      color: #409EFF;
+    }
 
+    /* 自定义弹窗样式 */
+    .custom-dialog {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .custom-dialog .el-dialog {
+      margin: 0 !important;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      max-width: 90%;
+      width: 300px !important;
+    }
+
+    /* 对话框内容样式 */
+    .dialog-content {
+      padding: 20px 0;
+    }
+    .dialog-footer {
+      text-align: center;
+    }
+    .gender-options {
+      display: flex;
+      justify-content: space-around;
+      margin: 20px 0;
+    }
+    .gender-option {
+      text-align: center;
+      padding: 10px 20px;
+      border: 2px solid #e4e7ed;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .gender-option.active {
+      border-color: #409EFF;
+      background-color: #ecf5ff;
+    }
+    .gender-option i {
+      font-size: 24px;
+      margin-bottom: 5px;
+      display: block;
+    }
+
+    /* 生日选择器样式 */
+    .birthday-picker {
+      width: 100%;
+    }
+    .birthday-picker .el-date-editor {
+      width: 100% !important;
+    }
+
+    /* 隐藏侧边栏 */
+    .el-picker-panel__sidebar {
+      display: none !important;
+    }
+
+    /* 调整主体内容宽度 */
+    .el-picker-panel__body-wrapper {
+      width: 100% !important;
+    }
+
+    /* 移动端优化 */
+    @media (max-width: 768px) {
+      .el-date-picker {
+        width: 280px !important;
+      }
+      .el-picker-panel {
+        width: 280px !important;
+      }
+      .el-picker-panel__body {
+        min-width: 260px !important;
+      }
+      .el-date-picker__header {
+        margin: 0 12px !important;
+      }
+      .el-date-table th,
+      .el-date-table td {
+        width: 32px !important;
+        height: 32px !important;
+        padding: 2px !important;
+      }
+      .el-date-table td div {
+        height: 28px !important;
+        line-height: 28px !important;
+      }
+    }
+
+    /* 紧凑型日期选择器 */
+    .compact-date-picker .el-picker-panel {
+      width: 280px !important;
+    }
+    .compact-date-picker .el-date-picker__header {
+      margin: 5px 12px !important;
+    }
+    .compact-date-picker .el-picker-panel__body {
+      min-width: 260px !important;
+    }
+    .compact-date-picker .el-date-table th,
+    .compact-date-picker .el-date-table td {
+      width: 30px !important;
+      height: 30px !important;
+      padding: 1px !important;
+    }
+    .compact-date-picker .el-date-table td div {
+      height: 26px !important;
+      line-height: 26px !important;
+      font-size: 12px !important;
+    }
+
+    /* 对话框内容内边距调整 */
+    .birthday-dialog .el-dialog__body {
+      padding: 15px 20px !important;
+    }
+
+    /* 日期输入框样式 */
+    .compact-date-input .el-input__inner {
+      height: 36px !important;
+      line-height: 36px !important;
+      font-size: 14px !important;
+    }
   </style>
-</head>
 <body>
 <div id="app">
   <div class="header">
-    <div class="header-back-btn" @click="goBack" ><i class="el-icon-arrow-left"></i></div>
+    <div class="header-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
     <div class="header-title">资料编辑&nbsp;&nbsp;&nbsp;</div>
   </div>
+
   <div class="edit-container">
     <div class="info-box">
-      <div class="info-item">
+      <div class="info-item" @click="uploadAvatar">
         <div class="info-label">头像</div>
         <div class="info-btn">
           <img width="35" :src="user.icon || '/imgs/icons/default-icon.png'" alt="">
@@ -29,17 +162,17 @@
         </div>
       </div>
       <div class="divider"></div>
-      <div class="info-item">
+      <div class="info-item" @click="editNickName">
         <div class="info-label">昵称</div>
         <div class="info-btn">
-          <div>{{user.nickName}}</div>
+          <div>{{user.nickName || '未设置'}}</div>
           <div>
             <i class="el-icon-arrow-right"></i>
           </div>
         </div>
       </div>
       <div class="divider"></div>
-      <div class="info-item">
+      <div class="info-item" @click="editIntroduce">
         <div class="info-label">个人介绍</div>
         <div class="info-btn">
           <div style="overflow: hidden; width: 150px;text-align: right">{{info.introduce || '介绍一下自己'}}</div>
@@ -49,16 +182,17 @@
         </div>
       </div>
     </div>
+
     <div class="info-box">
-      <div class="info-item">
+      <div class="info-item" @click="editGender">
         <div class="info-label">性别</div>
         <div class="info-btn">
-          <div>{{info.gender || '选择'}}</div>
+          <div>{{genderText}}</div>
           <div><i class="el-icon-arrow-right"></i></div>
         </div>
       </div>
       <div class="divider"></div>
-      <div class="info-item">
+      <div class="info-item" @click="editCity">
         <div class="info-label">城市</div>
         <div class="info-btn">
           <div>{{info.city || '选择'}}</div>
@@ -66,17 +200,17 @@
         </div>
       </div>
       <div class="divider"></div>
-      <div class="info-item">
+      <div class="info-item" @click="editBirthday">
         <div class="info-label">生日</div>
         <div class="info-btn">
-          <div>{{info.birthday || '添加'}}</div>
+          <div>{{birthdayText}}</div>
           <div><i class="el-icon-arrow-right"></i></div>
         </div>
       </div>
     </div>
 
     <div class="info-box">
-      <div class="info-item">
+      <div class="info-item" @click="viewPoints">
         <div class="info-label">我的积分</div>
         <div class="info-btn">
           <div>查看积分</div>
@@ -84,17 +218,104 @@
         </div>
       </div>
       <div class="divider"></div>
-      <div class="info-item">
+      <div class="info-item" @click="upgradeVIP">
         <div class="info-label">会员等级</div>
         <div class="info-btn">
-          <div><a href="javascript:void(0)">成为VIP尊享特权</a></div>
+          <div><a href="javascript:void(0)">{{vipText}}</a></div>
           <div><i class="el-icon-arrow-right"></i></div>
         </div>
       </div>
     </div>
   </div>
+
+  <!-- 隐藏的文件上传input -->
+  <input type="file" ref="avatarInput" class="avatar-upload" accept="image/*" @change="handleAvatarChange">
+
+  <!-- 昵称编辑对话框 -->
+  <el-dialog title="修改昵称" :visible.sync="showNickNameDialog" width="90%" class="custom-dialog" :close-on-click-modal="false">
+    <div class="dialog-content">
+      <el-input v-model="tempNickName" placeholder="请输入昵称" maxlength="20" show-word-limit></el-input>
+    </div>
+    <div slot="footer" class="dialog-footer">
+      <el-button @click="showNickNameDialog = false">取消</el-button>
+      <el-button type="primary" @click="saveNickName">确定</el-button>
+    </div>
+  </el-dialog>
+
+  <!-- 个人介绍编辑对话框 -->
+  <el-dialog title="修改个人介绍" :visible.sync="showIntroduceDialog" width="90%" class="custom-dialog" :close-on-click-modal="false">
+    <div class="dialog-content">
+      <el-input type="textarea" v-model="tempIntroduce" placeholder="请输入个人介绍" maxlength="200" show-word-limit
+                :rows="4"></el-input>
+    </div>
+    <div slot="footer" class="dialog-footer">
+      <el-button @click="showIntroduceDialog = false">取消</el-button>
+      <el-button type="primary" @click="saveIntroduce">确定</el-button>
+    </div>
+  </el-dialog>
+
+  <!-- 性别选择对话框 -->
+  <el-dialog title="选择性别" :visible.sync="showGenderDialog" width="90%" class="custom-dialog" :close-on-click-modal="false">
+    <div class="dialog-content">
+      <div class="gender-options">
+        <div class="gender-option" :class="{active: tempGender === '0'}" @click="tempGender = '0'">
+          <i class="el-icon-male" style="color: #409EFF;"></i>
+          <div>男</div>
+        </div>
+        <div class="gender-option" :class="{active: tempGender === '1'}" @click="tempGender = '1'">
+          <i class="el-icon-female" style="color: #E91E63;"></i>
+          <div>女</div>
+        </div>
+      </div>
+    </div>
+    <div slot="footer" class="dialog-footer">
+      <el-button @click="showGenderDialog = false">取消</el-button>
+      <el-button type="primary" @click="saveGender">确定</el-button>
+    </div>
+  </el-dialog>
+
+  <!-- 城市编辑对话框 -->
+  <el-dialog title="修改城市" :visible.sync="showCityDialog" width="90%" class="custom-dialog" :close-on-click-modal="false">
+    <div class="dialog-content">
+      <el-input v-model="tempCity" placeholder="请输入所在城市"></el-input>
+    </div>
+    <div slot="footer" class="dialog-footer">
+      <el-button @click="showCityDialog = false">取消</el-button>
+      <el-button type="primary" @click="saveCity">确定</el-button>
+    </div>
+  </el-dialog>
+
+  <!-- 生日编辑对话框 -->
+  <el-dialog title="修改生日" :visible.sync="showBirthdayDialog" width="90%"
+             class="custom-dialog birthday-dialog" :close-on-click-modal="false">
+    <div class="dialog-content">
+      <div class="birthday-picker">
+        <el-date-picker
+                v-model="tempBirthday"
+                type="date"
+                placeholder="选择生日"
+                :picker-options="pickerOptions"
+                value-format="yyyy-MM-dd"
+                format="yyyy-MM-dd"
+                class="compact-date-input"
+                :class="{'compact-date-picker': isMobile}"
+                style="width: 100%"
+                popper-class="compact-date-picker">
+        </el-date-picker>
+      </div>
+      <div style="font-size: 12px; color: #999; margin-top: 12px; text-align: center;">
+        请选择您的出生日期
+      </div>
+    </div>
+    <div slot="footer" class="dialog-footer">
+      <el-button @click="showBirthdayDialog = false" size="small">取消</el-button>
+      <el-button type="primary" @click="saveBirthday" size="small">确定</el-button>
+    </div>
+  </el-dialog>
+
   <foot-bar :active-btn="4"></foot-bar>
 </div>
+
 <script src="./js/vue.js"></script>
 <script src="./js/axios.min.js"></script>
 <!-- 引入组件库 -->
@@ -102,35 +323,424 @@
 <script src="./js/common.js"></script>
 <script src="./js/footer.js"></script>
 <script>
-
   const app = new Vue({
     el: "#app",
     data: {
-      user: "",
-      info: {},
+      user: {},
+      info: {
+        introduce: '',
+        gender: '',
+        city: '',
+        birthday: '',
+        points: 0,
+        vipLevel: 0
+      },
+      showGenderDialog: false,
+      showCityDialog: false,
+      showBirthdayDialog: false,
+      showIntroduceDialog: false,
+      showNickNameDialog: false,
+      tempGender: '',
+      tempCity: '',
+      tempBirthday: null,
+      tempIntroduce: '',
+      tempNickName: '',
+      isMobile: window.innerWidth < 768,
+      // 日期选择器配置 - 去掉快捷选项
+      pickerOptions: {
+        disabledDate(time) {
+          // 禁止选择今天之后的日期
+          return time.getTime() > Date.now();
+        }
+        // 移除了shortcuts数组
+      }
+    },
+    computed: {
+      // 性别显示文本
+      genderText() {
+        const genderMap = {
+          '0': '男',
+          '1': '女'
+        };
+        return genderMap[this.info.gender] || '选择';
+      },
+      // 生日显示文本
+      birthdayText() {
+        return this.info.birthday || '添加';
+      },
+      // VIP显示文本
+      vipText() {
+        if (this.info.vipLevel > 0) {
+          return `VIP${this.info.vipLevel}`;
+        }
+        return '成为VIP尊享特权';
+      }
     },
     created() {
       this.checkLogin();
+      // 监听窗口大小变化
+      window.addEventListener('resize', this.handleResize);
+    },
+    beforeDestroy() {
+      window.removeEventListener('resize', this.handleResize);
     },
     methods: {
-      checkLogin() {
-        // 查询用户信息
-        axios.get("/user/me")
-        .then(({data}) => {
-          this.user = data;
-          this.info = JSON.parse(sessionStorage.getItem("userInfo")) || {}
-        })
-        .catch(err => {
-          this.$message.error(err);
-          setTimeout(() => location.href = "login.html", 1000)
-        })
+      handleResize() {
+        this.isMobile = window.innerWidth < 768;
       },
-      goBack(){
+
+      getUserInfo(){
+        axios.get("/app/user/info/getUserInfo/"+this.user.id)
+                .then(({data}) => {
+                  this.info = data;
+                  this.saveUserInfo();
+                })
+                .catch(err => {
+                  console.error('获取用户信息失败:', err);
+                })
+      },
+      // 获取用户信息
+      checkLogin() {
+        axios.get("/app/user/me")
+                .then(({data}) => {
+                  // 保存用户
+                  this.user = data;
+                  this.getUserInfo()
+                })
+                .catch(err => {
+                  location.href = "login.html"
+                })
+      },
+
+      // 保存用户信息到本地存储
+      saveUserInfo() {
+        try {
+          sessionStorage.setItem("userInfo", JSON.stringify(this.info));
+          localStorage.setItem("userInfo", JSON.stringify(this.info));
+        } catch (e) {
+          console.error('保存用户信息失败:', e);
+        }
+      },
+
+      // 编辑生日
+      editBirthday() {
+        // 将字符串日期转换为Date对象
+        if (this.info.birthday) {
+          this.tempBirthday = new Date(this.info.birthday);
+        } else {
+          this.tempBirthday = null;
+        }
+        this.showBirthdayDialog = true;
+
+        // 延迟设置日期选择器样式，确保DOM已渲染
+        this.$nextTick(() => {
+          this.adjustDatePickerStyle();
+        });
+      },
+
+      // 调整日期选择器样式
+      adjustDatePickerStyle() {
+        setTimeout(() => {
+          const datePicker = document.querySelector('.el-picker-panel');
+          if (datePicker && this.isMobile) {
+            datePicker.style.transform = 'scale(0.8)';
+            datePicker.style.transformOrigin = 'top center';
+            datePicker.style.marginTop = '-20px';
+          }
+        }, 100);
+      },
+
+      // 保存生日
+      saveBirthday() {
+        if (!this.tempBirthday) {
+          this.$message.error('请选择生日');
+          return;
+        }
+
+        // 日期选择器会自动格式化为 yyyy-MM-dd
+        const birthday = this.tempBirthday;
+
+        axios.post("app/user/info/update", { birthday })
+                .then(({ data }) => {
+                  if (data) {
+                    this.$message.success('生日修改成功');
+                    this.info.birthday = birthday;
+                    this.saveUserInfo();
+                    this.showBirthdayDialog = false;
+                  } else {
+                    this.$message.error(data.msg || '修改失败');
+                  }
+                })
+                .catch(err => {
+                  console.error('修改生日失败:', err);
+                  this.$message.error('修改失败，请重试');
+                });
+      },
+
+      // 上传头像
+      uploadAvatar() {
+        this.$refs.avatarInput.click();
+      },
+
+      // 处理头像选择
+      handleAvatarChange(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        // 检查文件类型
+        if (!file.type.startsWith('image/')) {
+          this.$message.error('请选择图片文件');
+          return;
+        }
+
+        // 检查文件大小（限制2MB）
+        if (file.size > 2 * 1024 * 1024) {
+          this.$message.error('图片大小不能超过2MB');
+          return;
+        }
+
+        // 显示上传中提示
+        const loading = this.$loading({
+          lock: true,
+          text: '头像上传中...',
+          spinner: 'el-icon-loading',
+          background: 'rgba(0, 0, 0, 0.7)'
+        });
+
+        // 创建FormData
+        const formData = new FormData();
+        formData.append('avatar', file);
+
+        // 上传头像
+        axios.post("/user/avatar", formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        })
+                .then(({ data }) => {
+                  loading.close();
+                  if (data.code === 200) {
+                    this.$message.success('头像上传成功');
+                    this.user.icon = data.data.url;
+                    event.target.value = '';
+                  } else {
+                    this.$message.error(data.msg || '上传失败');
+                  }
+                })
+                .catch(err => {
+                  loading.close();
+                  console.error('头像上传失败:', err);
+                  this.$message.error('上传失败，请重试');
+                  event.target.value = '';
+                });
+      },
+
+      // 编辑昵称
+      editNickName() {
+        this.tempNickName = this.user.nickName || '';
+        this.showNickNameDialog = true;
+      },
+
+      // 保存昵称
+      saveNickName() {
+        if (!this.tempNickName || this.tempNickName.trim() === '') {
+          this.$message.error('昵称不能为空');
+          return;
+        }
+        if (this.tempNickName.length > 20) {
+          this.$message.error('昵称不能超过20个字符');
+          return;
+        }
+
+        const nickName = this.tempNickName.trim();
+        axios.post("app/user/info/update", { nickName})
+                .then(({ data }) => {
+                  if (data) {
+                    this.$message.success('昵称修改成功');
+                    this.user.nickName = nickName;
+                    this.showNickNameDialog = false;
+                  } else {
+                    this.$message.error(data.msg || '修改失败');
+                  }
+                })
+                .catch(err => {
+                  console.error('修改昵称失败:', err);
+                  this.$message.error('修改失败，请重试');
+                });
+      },
+
+      // 编辑个人介绍
+      editIntroduce() {
+        this.tempIntroduce = this.info.introduce || '';
+        this.showIntroduceDialog = true;
+      },
+
+      // 保存个人介绍
+      saveIntroduce() {
+        if (this.tempIntroduce && this.tempIntroduce.length > 200) {
+          this.$message.error('个人介绍不能超过200个字符');
+          return;
+        }
+
+        const introduce = this.tempIntroduce ? this.tempIntroduce.trim() : '';
+        axios.post("app/user/info/update", {
+          userId: this.user.id,
+          introduce: introduce
+        })
+                .then(({ data }) => {
+                  if (data) {
+                    this.$message.success('个人介绍修改成功');
+                    this.info.introduce = introduce;
+                    this.saveUserInfo();
+                    this.showIntroduceDialog = false;
+                  } else {
+                    this.$message.error(data.msg || '修改失败');
+                  }
+                })
+                .catch(err => {
+                  console.error('修改个人介绍失败:', err);
+                  this.$message.error('修改失败，请重试');
+                });
+      },
+
+      // 编辑性别
+      editGender() {
+        this.tempGender = this.info.gender || '';
+        this.showGenderDialog = true;
+      },
+
+      // 保存性别
+      saveGender() {
+        if (!this.tempGender) {
+          this.$message.error('请选择性别');
+          return;
+        }
+
+        axios.post("app/user/info/update", { gender: this.tempGender })
+                .then(({ data }) => {
+                  if (data) {
+                    this.$message.success('性别修改成功');
+                    this.info.gender = this.tempGender;
+                    this.saveUserInfo();
+                    this.showGenderDialog = false;
+                  } else {
+                    this.$message.error(data.msg || '修改失败');
+                  }
+                })
+                .catch(err => {
+                  console.error('修改性别失败:', err);
+                  this.$message.error('修改失败，请重试');
+                });
+      },
+
+      // 编辑城市
+      editCity() {
+        this.tempCity = this.info.city || '';
+        this.showCityDialog = true;
+      },
+
+      // 保存城市
+      saveCity() {
+        if (!this.tempCity || this.tempCity.trim() === '') {
+          this.$message.error('城市不能为空');
+          return;
+        }
+
+        const city = this.tempCity.trim();
+        axios.post("app/user/info/update", { city })
+                .then(({ data }) => {
+                  if (data) {
+                    this.$message.success('城市修改成功');
+                    this.info.city = city;
+                    this.saveUserInfo();
+                    this.showCityDialog = false;
+                  } else {
+                    this.$message.error(data.msg || '修改失败');
+                  }
+                })
+                .catch(err => {
+                  console.error('修改城市失败:', err);
+                  this.$message.error('修改失败，请重试');
+                });
+      },
+
+      // 编辑生日
+      editBirthday() {
+        // 将字符串日期转换为Date对象
+        if (this.info.birthday) {
+          this.tempBirthday = new Date(this.info.birthday);
+        } else {
+          this.tempBirthday = null;
+        }
+        this.showBirthdayDialog = true;
+      },
+
+      // 保存生日
+      saveBirthday() {
+        if (!this.tempBirthday) {
+          this.$message.error('请选择生日');
+          return;
+        }
+
+        // 日期选择器会自动格式化为 yyyy-MM-dd
+        const birthday = this.tempBirthday;
+
+        axios.post("app/user/info/update", { birthday })
+                .then(({ data }) => {
+                  if (data) {
+                    this.$message.success('生日修改成功');
+                    this.info.birthday = birthday;
+                    this.saveUserInfo();
+                    this.showBirthdayDialog = false;
+                  } else {
+                    this.$message.error(data.msg || '修改失败');
+                  }
+                })
+                .catch(err => {
+                  console.error('修改生日失败:', err);
+                  this.$message.error('修改失败，请重试');
+                });
+      },
+
+      // 查看积分
+      viewPoints() {
+        this.$message({
+          message: `当前积分：${this.info.points || 0}`,
+          center: true,
+          type: 'info'
+        });
+      },
+
+      // 升级VIP
+      upgradeVIP() {
+        if (this.info.vipLevel > 0) {
+          this.$message({
+            message: `您已经是VIP${this.info.vipLevel}用户`,
+            center: true,
+            type: 'info'
+          });
+        } else {
+          this.$confirm('开通VIP会员，享受更多特权服务', '开通VIP', {
+            confirmButtonText: '立即开通',
+            cancelButtonText: '再想想',
+            center: true
+          }).then(() => {
+            this.$message({
+              message: '跳转到VIP开通页面',
+              center: true,
+              type: 'success'
+            });
+          }).catch(() => {
+            // 用户取消
+          });
+        }
+      },
+
+      goBack() {
         history.back();
       }
-    },
-
-  })
+    }
+  });
 </script>
 </body>
 </html>

@@ -295,8 +295,16 @@
                   });
           await this.loadUserSessionWithLoading();
         } catch (error) {
-          console.log(error);
+          this.$message({
+            type: 'warning',
+            message: '请先登录',
+            duration: 1000, // 1秒后自动关闭
+            onClose: () => {
+              location.href = "login.html"; // 提示关闭后跳转
+            }
+          });
           this.hidePageLoading();
+          return;
         }
       },
 

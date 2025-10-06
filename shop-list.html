@@ -6,23 +6,34 @@
   <title>智评生活</title>
   <!-- 引入样式 -->
   <link rel="stylesheet" href="./css/element.css">
-
   <link href="./css/shop-list.css" rel="stylesheet">
   <link href="./css/main.css" rel="stylesheet">
-
-  <style type="text/css">
-
-  </style>
 </head>
 <body>
 <div id="app">
   <div class="header">
     <div class="header-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
     <div class="header-title">{{typeName}}</div>
-    <div class="header-search">
-      <i class="el-icon-search"></i>
+    <div class="header-actions">
+      <div class="header-location" @click="reGetLocation" title="重新定位">
+        <i class="el-icon-location"></i>
+      </div>
+      <div class="header-search">
+        <i class="el-icon-search"></i>
+      </div>
     </div>
   </div>
+
+  <!-- 定位状态显示 -->
+  <div class="location-status" v-if="locationLoading">
+    <i class="el-icon-loading"></i> 定位中...
+  </div>
+  <div class="location-status" v-else-if="usingCachedLocation" style="color: #67C23A;">
+  </div>
+  <div class="location-status" v-else-if="locationError" style="color: #F56C6C;">
+    <i class="el-icon-warning"></i> 定位失败，使用默认位置
+  </div>
+
   <div class="sort-bar">
     <div class="sort-item">
       <el-dropdown trigger="click" @command="handleCommand">
@@ -53,9 +64,9 @@
         <div class="shop-title shop-item">{{s.name}}</div>
         <div class="shop-rate shop-item" >
           <el-rate
-              disabled v-model="s.score/10"
-              text-color="#F63"
-              show-score
+                  disabled v-model="s.score/10"
+                  text-color="#F63"
+                  show-score
           ></el-rate>
           <span>{{s.comments}}条</span>
         </div>
@@ -78,7 +89,6 @@
 <script src="./js/element.js"></script>
 <script src="./js/common.js"></script>
 <script>
-
   const app = new Vue({
     el: "#app",
     data: {
@@ -87,55 +97,212 @@
       types: [], // 类型列表
       shops: [], // 商店列表
       typeName: "",
+      locationLoading: false, // 定位加载状态
+      locationError: false,   // 定位错误状态
+      usingCachedLocation: false, // 是否使用缓存位置
       params:{
         typeId: 0,
         current: 1,
         sortBy: "",
-        x: 120.149993, // 经度
-        y: 30.334229 // 纬度
+        x: 120.149993, // 默认经度（杭州）
+        y: 30.334229   // 默认纬度（杭州）
       }
     },
     created() {
       // 获取参数
       this.params.typeId = util.getUrlParam("type");
       this.typeName = util.getUrlParam("name");
-      // 查询类型
-      this.queryTypes();
-      // 查询商店
-      this.queryShops();
+
+      // 优先从缓存读取位置，没有再定位
+      this.initLocation();
     },
     methods: {
+      // 初始化位置信息
+      initLocation() {
+        // 先尝试从缓存读取位置
+        const cachedLocation = this.getCachedLocation();
+
+        if (cachedLocation) {
+          // 使用缓存位置
+          console.log("使用缓存位置:", cachedLocation);
+          this.params.x = cachedLocation.x;
+          this.params.y = cachedLocation.y;
+          this.usingCachedLocation = true;
+
+          // 直接查询数据
+          this.queryTypes();
+          this.queryShops();
+        } else {
+          // 缓存中没有位置，进行定位
+          console.log("缓存中没有位置，开始定位");
+          this.getLocation();
+        }
+      },
+
+      // 获取缓存中的位置
+      getCachedLocation() {
+        try {
+          const cached = localStorage.getItem('user_location');
+          if (cached) {
+            const location = JSON.parse(cached);
+
+            // 检查缓存是否过期（24小时）
+            const cacheTime = localStorage.getItem('user_location_time');
+            const now = new Date().getTime();
+            if (cacheTime && (now - parseInt(cacheTime)) < 24 * 60 * 60 * 1000) {
+              return location;
+            } else {
+              // 缓存过期，清除
+              this.clearLocationCache();
+              return null;
+            }
+          }
+        } catch (error) {
+          console.log("读取位置缓存失败:", error);
+          this.clearLocationCache();
+        }
+        return null;
+      },
+
+      // 保存位置到缓存
+      saveLocationToCache(x, y) {
+        try {
+          const location = { x, y };
+          localStorage.setItem('user_location', JSON.stringify(location));
+          localStorage.setItem('user_location_time', new Date().getTime().toString());
+          console.log("位置已保存到缓存:", location);
+        } catch (error) {
+          console.log("保存位置缓存失败:", error);
+        }
+      },
+
+      // 清除位置缓存
+      clearLocationCache() {
+        try {
+          localStorage.removeItem('user_location');
+          localStorage.removeItem('user_location_time');
+          console.log("位置缓存已清除");
+        } catch (error) {
+          console.log("清除位置缓存失败:", error);
+        }
+      },
+
+      // 自动定位方法
+      getLocation() {
+        this.locationLoading = true;
+        this.locationError = false;
+        this.usingCachedLocation = false;
+
+        if (!navigator.geolocation) {
+          console.log("浏览器不支持地理定位");
+          this.locationError = true;
+          this.locationLoading = false;
+          this.queryTypes();
+          this.queryShops();
+          return;
+        }
+
+        // 定位选项
+        const options = {
+          enableHighAccuracy: true, // 高精度
+          timeout: 10000,           // 10秒超时
+          maximumAge: 60000         // 1分钟内缓存
+        };
+
+        navigator.geolocation.getCurrentPosition(
+                // 定位成功回调
+                (position) => {
+                  console.log("定位成功:", position);
+
+                  // 获取经纬度并赋值给x和y
+                  const longitude = position.coords.longitude; // 经度
+                  const latitude = position.coords.latitude;   // 纬度
+
+                  // 赋值给params中的x和y
+                  this.params.x = longitude;
+                  this.params.y = latitude;
+
+                  // 保存到缓存
+                  this.saveLocationToCache(longitude, latitude);
+
+                  console.log("当前位置 - 经度:", longitude, "纬度:", latitude);
+
+                  this.locationLoading = false;
+
+                  // 定位成功后查询数据
+                  this.queryTypes();
+                  this.queryShops();
+                },
+                // 定位失败回调
+                (error) => {
+                  console.log("定位失败:", error);
+                  this.locationError = true;
+                  this.locationLoading = false;
+
+                  // 使用默认位置查询数据
+                  this.$message({
+                    message: '定位失败，使用默认位置',
+                    type: 'warning',
+                    duration: 2000
+                  });
+
+                  this.queryTypes();
+                  this.queryShops();
+                },
+                options
+        );
+      },
+
+      // 手动重新定位方法
+      reGetLocation() {
+        // 清除缓存，强制重新定位
+        this.clearLocationCache();
+        this.locationLoading = true;
+        this.locationError = false;
+        this.usingCachedLocation = false;
+
+        // 清空店铺列表
+        this.shops = [];
+        this.params.current = 1;
+
+        // 重新定位
+        this.getLocation();
+      },
+
       queryTypes() {
         axios.get("/app/shop/shop-type/list")
-          .then(({data}) => {
-            this.types = data;
-          })
-          .catch(err => {
-            console.log(err);
-            this.$message.error(err)
-          })
+                .then(({data}) => {
+                  this.types = data;
+                })
+                .catch(err => {
+                  console.log(err);
+                  this.$message.error(err)
+                })
       },
       queryShops() {
         axios.get("/app/shop/of/type", {
-            params: this.params
-          })
-          .then(({data}) => {
-            if (!data) {
-              return
-            }
-            data.forEach(s => s.images = s.images.split(',')[0]);
-            this.shops = this.shops.concat(data);
-          })
-          .catch(err => {
-            console.log(err);
-            this.$message.error(err)
-          })
+          params: this.params
+        })
+                .then(({data}) => {
+                  if (!data) {
+                    return
+                  }
+                  data.forEach(s => s.images = s.images.split(',')[0]);
+                  this.shops = this.shops.concat(data);
+                })
+                .catch(err => {
+                  console.log(err);
+                  this.$message.error(err)
+                })
       },
       handleCommand(t) {
         location.href = "/shop-list.html?type="+t.id+"&name="+t.name;
       },
       sortAndQuery(sortBy) {
         this.params.sortBy = sortBy;
+        // 清空列表重新查询
+        this.shops = [];
+        this.params.current = 1;
         this.queryShops();
       },
       goBack() {
@@ -156,9 +323,39 @@
         }else{
           this.isReachBottom = false
         }
-      },
+      }
     }
   })
 </script>
+
+<style>
+  /* 添加定位状态样式 */
+  .location-status {
+    padding: 8px 16px;
+    background: #f4f4f5;
+    color: #909399;
+    font-size: 12px;
+    text-align: center;
+    border-bottom: 1px solid #e6e6e6;
+  }
+
+  /* header布局调整 */
+  .header-actions {
+    display: flex;
+    align-items: center;
+  }
+
+  .header-location {
+    margin-right: 15px;
+    cursor: pointer;
+    color: #409EFF;
+    font-size: 18px;
+  }
+
+  .header-search {
+    cursor: pointer;
+    font-size: 18px;
+  }
+</style>
 </body>
 </html>

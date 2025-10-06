@@ -122,18 +122,27 @@
     }
 
     .category-icon {
-      width: 30px;
-      height: 30px;
-      border-radius: 8px;
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
       display: flex;
       align-items: center;
       justify-content: center;
       margin-bottom: 5px;
+      background-color: #f8f9fa;
+    }
+
+    .category-icon img {
+      width: 16px;
+      height: 16px;
+      object-fit: contain;
     }
 
     .category-text {
-      font-size: 12px;
+      font-size: 11px;
       color: #333;
+      text-align: center;
+      line-height: 1.2;
     }
 
     /* 店铺列表 */
@@ -225,6 +234,92 @@
       font-size: 20px;
       color: #333;
     }
+
+    /* 加载遮罩层 */
+    .map-loading {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.95);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      font-size: 16px;
+      color: #666;
+    }
+
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #07c160;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 16px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      margin-top: 12px;
+      font-size: 14px;
+      color: #999;
+    }
+
+    /* 地图容器加载状态 */
+    .map-container.loading {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    /* 定位状态显示 */
+    .location-status {
+      padding: 8px 16px;
+      background: #f4f4f5;
+      color: #909399;
+      font-size: 12px;
+      text-align: center;
+      border-bottom: 1px solid #e6e6e6;
+    }
+
+    /* 自定义标记样式 */
+    .custom-marker {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: 3px solid white;
+      border-radius: 50%;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 12px;
+      transition: all 0.3s ease;
+    }
+
+    .custom-marker:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .custom-marker.high-score {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    .custom-marker.medium-score {
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+
+    .custom-marker.low-score {
+      background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    }
   </style>
 </head>
 <body>
@@ -234,10 +329,30 @@
       <i class="el-icon-arrow-left"></i>
     </div>
     <div class="header-title">地图</div>
-    <div style="width: 20px;"></div>
+    <div class="header-actions">
+      <div class="header-location" @click="reGetLocation" title="重新定位">
+        <i class="el-icon-location"></i>
+      </div>
+    </div>
   </div>
 
-  <div class="map-container">
+  <!-- 定位状态显示 -->
+  <div class="location-status" v-if="locationLoading">
+    <i class="el-icon-loading"></i> 定位中...
+  </div>
+  <div class="location-status" v-else-if="usingCachedLocation" style="color: #67C23A;">
+  </div>
+  <div class="location-status" v-else-if="locationError" style="color: #F56C6C;">
+    <i class="el-icon-warning"></i> 定位失败，使用默认位置
+  </div>
+
+  <!-- 🔥 新增：地图加载遮罩 -->
+  <div class="map-loading" v-if="isLoading">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">{{ loadingText }}</div>
+  </div>
+
+  <div class="map-container" :class="{ 'loading': isLoading }">
     <!-- 高德地图容器 -->
     <div id="amap-container"></div>
 
@@ -256,9 +371,9 @@
     <!-- 分类筛选 -->
     <div class="category-filter" v-show="showFilters">
       <div class="category-list">
-        <div v-for="type in types" :key="type.id" class="category-item" @click="selectCategory(type)">
-          <div class="category-icon" :style="{ backgroundColor: type.color }">
-            <i :class="type.icon" style="color: white;"></i>
+        <div v-for="type in shopTypeList" :key="type.id" class="category-item" @click="selectCategory(type)">
+          <div class="category-icon" >
+            <img :class="type.icon" :src="'/imgs/'+type.icon"></img>
           </div>
           <div class="category-text">{{ type.name }}</div>
         </div>
@@ -267,7 +382,7 @@
 
     <!-- 店铺列表 -->
     <div class="shop-list">
-      <div v-for="shop in filteredShops" :key="shop.id" class="shop-item" @click="centerToShop(shop)">
+      <div v-for="shop in shopList" :key="shop.id" class="shop-item" @click="centerToShop(shop)">
         <img :src="shop.avatar || '/imgs/default-shop.jpg'" alt="" class="shop-avatar">
         <div class="shop-info">
           <div class="shop-name">{{ shop.name }}</div>
@@ -275,23 +390,18 @@
             <span class="shop-score">{{ shop.score }}</span>
             <el-rate disabled v-model="shop.score/10" text-color="#F63" :size="12"></el-rate>
           </div>
-          <div class="shop-distance">{{ shop.distance }}m</div>
+          <div class="shop-distance">{{ formatDistance(shop.distance) }}</div>
         </div>
       </div>
     </div>
 
     <!-- 控制按钮 -->
     <div class="control-buttons">
-      <div class="control-btn" @click="centerToCurrentLocation">
-        <i class="el-icon-location-outline"></i>
-      </div>
       <div class="control-btn" @click="refreshData">
         <i class="el-icon-refresh"></i>
       </div>
     </div>
   </div>
-
-  <foot-bar :active-btn="2"></foot-bar>
 </div>
 
 <script src="./js/vue.js"></script>
@@ -309,14 +419,22 @@
       searchKeyword: "",
       showFilters: false,
       selectedShopId: null,
-      isLoading: false,
+      isLoading: true,
+      loadingText: "正在初始化...",
+      locationLoading: false,
+      locationError: false,
+      usingCachedLocation: false,
       currentType: null,
+      x: 120.16142,
+      y: 30.279693,
+      keyword: "",
       map: null,
       markers: [],
       infoWindows: [],
+      typeId: 1,
       currentLocationMarker: null,
-      locationAccuracyCircle: null, // 新增：精度圈
-      types: [
+      locationAccuracyCircle: null,
+      shopTypeList: [
         { id: 1, name: "美食", icon: "el-icon-food", color: "#f63" },
         { id: 2, name: "外卖", icon: "el-icon-takeaway-box", color: "#07c160" },
         { id: 3, name: "超市", icon: "el-icon-shopping-cart-2", color: "#1989fa" },
@@ -400,33 +518,133 @@
           y: 30.272693
         }
       ],
-      filteredShops: []
+      shopList: []
     },
     created() {
-      this.filteredShops = [...this.shops];
+      this.initLocation();
     },
     mounted() {
-      // 初始化高德地图
       this.initMap();
     },
     methods: {
+      initLocation() {
+        const cachedLocation = this.getCachedLocation();
+
+        if (cachedLocation) {
+          this.x = cachedLocation.x;
+          this.y = cachedLocation.y;
+          this.usingCachedLocation = true;
+          this.initMapAndData();
+        } else {
+          this.locationLoading = true;
+          this.centerToCurrentLocation();
+        }
+      },
+
+      getCachedLocation() {
+        try {
+          const cached = localStorage.getItem('user_location');
+          if (cached) {
+            const location = JSON.parse(cached);
+            const cacheTime = localStorage.getItem('user_location_time');
+            const now = new Date().getTime();
+            if (cacheTime && (now - parseInt(cacheTime)) < 24 * 60 * 60 * 1000) {
+              return location;
+            } else {
+              this.clearLocationCache();
+              return null;
+            }
+          }
+        } catch (error) {
+          console.log("读取位置缓存失败:", error);
+          this.clearLocationCache();
+        }
+        return null;
+      },
+
+      saveLocationToCache(x, y) {
+        try {
+          const location = { x, y };
+          localStorage.setItem('user_location', JSON.stringify(location));
+          localStorage.setItem('user_location_time', new Date().getTime().toString());
+        } catch (error) {
+          console.log("保存位置缓存失败:", error);
+        }
+      },
+
+      clearLocationCache() {
+        try {
+          localStorage.removeItem('user_location');
+          localStorage.removeItem('user_location_time');
+        } catch (error) {
+          console.log("清除位置缓存失败:", error);
+        }
+      },
+
+      async initMapAndData() {
+        this.isLoading = true;
+        this.loadingText = "正在初始化地图...";
+
+        try {
+          this.initMap();
+          this.map.setCenter([this.x, this.y]);
+          this.addCurrentLocationMarker(this.x, this.y);
+
+          this.loadingText = "正在加载店铺类型...";
+          await this.getShopTypeList();
+
+          this.loadingText = "正在加载附近店铺...";
+          await this.getShopList();
+
+          this.isLoading = false;
+        } catch (error) {
+          console.error('初始化失败:', error);
+          this.isLoading = false;
+        }
+      },
+
       initMap() {
-        // 初始化地图
         this.map = new AMap.Map('amap-container', {
           zoom: 15,
-          center: [120.16142, 30.279693],
+          center: [this.x, this.y],
           viewMode: '2D'
         });
 
-        // 添加店铺标记
-        this.addShopMarkers();
-
-        // 监听地图移动事件
         this.map.on('moveend', () => {
           console.log('地图移动结束');
         });
       },
 
+      addCurrentLocationMarker(lng, lat) {
+        if (this.currentLocationMarker) {
+          this.map.remove(this.currentLocationMarker);
+        }
+        if (this.locationAccuracyCircle) {
+          this.map.remove(this.locationAccuracyCircle);
+        }
+
+        this.currentLocationMarker = new AMap.Marker({
+          position: [lng, lat],
+          offset: new AMap.Pixel(-15, -34),
+          icon: new AMap.Icon({
+            size: new AMap.Size(30, 34),
+            image: 'https://a.amap.com/jsapi_demos/static/demo-center/icons/poi-marker-red.png',
+            imageSize: new AMap.Size(30, 34)
+          }),
+          title: '我的位置'
+        });
+
+        this.map.add(this.currentLocationMarker);
+      },
+
+      formatDistance(distance) {
+        if (!distance && distance !== 0) return '距离未知';
+        if (distance < 1000) return Math.round(distance) + '米';
+        if (distance < 10000) return (distance / 1000).toFixed(1) + '公里';
+        return Math.round(distance / 1000) + '公里';
+      },
+
+      // 🎨 美化后的标记添加方法
       addShopMarkers() {
         // 清除现有标记
         if (this.markers.length > 0) {
@@ -439,17 +657,53 @@
           this.infoWindows = [];
         }
 
-        // 为每个店铺添加标记
-        this.filteredShops.forEach(shop => {
+        // 为每个店铺添加美化后的标记
+        this.shopList.forEach(shop => {
+          // 根据评分确定标记样式
+          let markerClass = 'custom-marker';
+          if (shop.score >= 4.5) {
+            markerClass += ' high-score';
+          } else if (shop.score >= 4.0) {
+            markerClass += ' medium-score';
+          } else {
+            markerClass += ' low-score';
+          }
+
+          // 创建自定义标记内容
+          const markerContent = document.createElement('div');
+          markerContent.className = markerClass;
+          markerContent.innerHTML = `
+            <div style="
+              width: 24px;
+              height: 24px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              border-radius: 50%;
+              background: inherit;
+              border: 2px solid white;
+              box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            ">
+              <span style="font-size: 10px; font-weight: bold;">${Math.round(shop.score)}</span>
+            </div>
+          `;
+
           const marker = new AMap.Marker({
             position: [shop.x, shop.y],
-            offset: new AMap.Pixel(-12, -36),
-            extData: shop,
-            label: {
-              content: shop.name,
-              direction: 'top',
-              offset: new AMap.Pixel(0, -40)
-            }
+            content: markerContent,
+            offset: new AMap.Pixel(-12, -12),
+            extData: shop
+          });
+
+          // 添加鼠标悬停效果
+          marker.on('mouseover', () => {
+            markerContent.style.transform = 'scale(1.2)';
+            markerContent.style.zIndex = '1000';
+          });
+
+          marker.on('mouseout', () => {
+            markerContent.style.transform = 'scale(1)';
+            markerContent.style.zIndex = 'auto';
           });
 
           // 添加点击事件
@@ -463,46 +717,167 @@
         // 将所有标记添加到地图
         this.map.add(this.markers);
 
-        // 如果有标记，调整视野以包含所有标记
+        // 调整视野以包含所有标记
         if (this.markers.length > 0) {
           this.map.setFitView(this.markers);
         }
       },
 
+      // 🎨 美化信息窗口 - 精美星星版本
       showInfoWindow(shop) {
-        // 关闭所有已打开的信息窗口
         this.infoWindows.forEach(win => win.close());
         this.infoWindows = [];
 
-        // 创建信息窗口内容
+        const distanceText = this.formatDistance(shop.distance);
+
+        // 生成精美星星HTML
+        const generateStars = (score) => {
+          const fullStars = Math.floor(score);
+          const decimal = score % 1;
+          let starsHtml = '';
+
+          for (let i = 1; i <= 5; i++) {
+            if (i <= fullStars) {
+              // 满星
+              starsHtml += `
+          <span style="
+            color: #F7BA2A;
+            font-size: 16px;
+            text-shadow: 0 1px 2px rgba(247, 186, 42, 0.3);
+          ">★</span>
+        `;
+            } else if (i === fullStars + 1 && decimal >= 0.3) {
+              // 半星（根据小数部分显示不同填充）
+              if (decimal >= 0.8) {
+                starsHtml += `<span style="color: #F7BA2A; font-size: 16px;">★</span>`;
+              } else if (decimal >= 0.5) {
+                starsHtml += `<span style="color: #F7BA2A; font-size: 16px;">☆</span>`;
+              } else {
+                starsHtml += `<span style="color: #F7BA2A; font-size: 16px; opacity: 0.6;">☆</span>`;
+              }
+            } else {
+              // 空星
+              starsHtml += `
+          <span style="
+            color: #E6E6E6;
+            font-size: 16px;
+          ">★</span>
+        `;
+            }
+          }
+
+          return starsHtml;
+        };
+
         const content = `
-          <div style="min-width: 200px; padding: 10px;">
-            <h4 style="margin: 0 0 10px 0; color: #333;">${shop.name}</h4>
-            <div style="display: flex; align-items: center; margin-bottom: 5px;">
-              <span class="shop-score">${shop.score}</span>
-              <div style="font-size: 12px; color: #999;">${shop.comments ? shop.comments + '条评论' : ''}</div>
+    <div style="
+      min-width: 280px;
+      padding: 20px;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+      border: 1px solid #f0f0f0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    ">
+      <div style="display: flex; align-items: flex-start; margin-bottom: 16px;">
+        <img src="${shop.avatar || '/imgs/default-shop.jpg'}"
+             style="width: 70px; height: 70px; border-radius: 10px; object-fit: cover; margin-right: 16px; border: 2px solid #f8f8f8;">
+        <div style="flex: 1;">
+          <h4 style="margin: 0 0 12px 0; color: #333; font-size: 18px; font-weight: 700; line-height: 1.3;">${shop.name}</h4>
+
+          <!-- 评分区域 -->
+          <div style="margin-bottom: 8px;">
+            <div style="display: flex; align-items: center; margin-bottom: 6px;">
+              <div style="display: flex; align-items: center; margin-right: 10px;">
+                ${generateStars(shop.score)}
+              </div>
+              <span style="
+                color: #ff6b35;
+                font-weight: 700;
+                font-size: 16px;
+                background: linear-gradient(135deg, #ff6b35, #ff8c00);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+              ">${shop.score}</span>
             </div>
-            <div style="font-size: 12px; color: #666; margin-bottom: 5px;">距离 ${shop.distance}m</div>
-            <div style="font-size: 12px; color: #666; margin-bottom: 10px;">${shop.address || '地址信息暂无'}</div>
-            <div style="text-align: right;">
-              <button onclick="app.toShopDetail(${shop.id})"
-                      style="background-color: #f63; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">
-                查看详情
-              </button>
+
+            <!-- 评论数量 -->
+            <div style="
+              display: inline-flex;
+              align-items: center;
+              background: #f8f9fa;
+              padding: 4px 10px;
+              border-radius: 12px;
+              color: #666;
+              font-size: 12px;
+              font-weight: 500;
+            ">
+              <span style="margin-right: 4px;">💬</span>
+              ${shop.comments ? shop.comments + '条评论' : '暂无评论'}
             </div>
           </div>
-        `;
 
-        // 创建信息窗口
+          <!-- 距离 -->
+          <div style="
+            display: inline-flex;
+            align-items: center;
+            background: #e8f4ff;
+            padding: 4px 10px;
+            border-radius: 12px;
+            color: #1890ff;
+            font-size: 12px;
+            font-weight: 500;
+            margin-top: 4px;
+          ">
+            <span style="margin-right: 4px;">📍</span>
+            ${distanceText}
+          </div>
+        </div>
+      </div>
+
+      <!-- 地址 -->
+      <div style="
+        background: #fafafa;
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 16px;
+        border-left: 3px solid #1890ff;
+      ">
+        <div style="color: #666; font-size: 13px; line-height: 1.4;">
+          ${shop.address || '地址信息暂无'}
+        </div>
+      </div>
+
+      <!-- 按钮 -->
+      <div style="text-align: right;">
+        <button onclick="app.toShopDetail(${shop.id})"
+                style="
+                  background: linear-gradient(135deg, #ff6b35, #ff8c00);
+                  color: white;
+                  border: none;
+                  padding: 10px 24px;
+                  border-radius: 24px;
+                  cursor: pointer;
+                  font-weight: 600;
+                  font-size: 14px;
+                  transition: all 0.3s ease;
+                  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+                "
+                onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(255, 107, 53, 0.4)';"
+                onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(255, 107, 53, 0.3)';">
+          🏪 查看店铺详情
+        </button>
+      </div>
+    </div>
+  `;
+
         const infoWindow = new AMap.InfoWindow({
           content: content,
-          offset: new AMap.Pixel(0, -30)
+          offset: new AMap.Pixel(0, -45),
+          closeWhenClickMap: true
         });
 
-        // 打开信息窗口
         infoWindow.open(this.map, [shop.x, shop.y]);
-
-        // 保存引用以便后续关闭
         this.infoWindows.push(infoWindow);
       },
 
@@ -511,126 +886,114 @@
       },
 
       selectCategory(type) {
-        this.currentType = type;
+        this.typeId = type.id;
         this.showFilters = false;
         this.$message.success(`已筛选${type.name}类别`);
-
-        // 这里可以添加实际的分类筛选逻辑
-        this.filterShops();
-      },
-
-      filterShops() {
-        if (!this.currentType) {
-          this.filteredShops = [...this.shops];
-        } else {
-          // 这里可以根据类型进行筛选
-          this.filteredShops = this.shops;
-        }
-
-        // 重新添加标记
-        this.addShopMarkers();
+        this.getShopList();
       },
 
       centerToShop(shop) {
-        // 跳转到店铺详情页
         this.toShopDetail(shop.id);
       },
 
       searchShops() {
         if (!this.searchKeyword.trim()) {
-          this.filteredShops = [...this.shops];
-          this.addShopMarkers();
+          this.keyword = this.searchKeyword.toLowerCase();
+          this.getShopList();
           return;
         }
-
-        const keyword = this.searchKeyword.toLowerCase();
-        this.filteredShops = this.shops.filter(shop =>
-                shop.name.toLowerCase().includes(keyword)
-        );
-
-        // 重新添加标记
-        this.addShopMarkers();
+        this.keyword = this.searchKeyword.toLowerCase();
+        this.getShopList();
       },
 
-      centerToCurrentLocation() {
-        // 定位到用户当前位置
-        this.isLoading = true;
+      async centerToCurrentLocation() {
+        this.locationLoading = true;
+        this.usingCachedLocation = false;
 
-        // 使用高德地图的定位插件
-        AMap.plugin('AMap.Geolocation', () => {
-          const geolocation = new AMap.Geolocation({
-            enableHighAccuracy: true,  // 启用高精度定位
-            timeout: 10000,
-            maximumAge: 0,
-            convert: true,            // 自动转换坐标
-            showButton: true,
-            showMarker: false,        // 不显示默认标记（我们自己创建）
-            showCircle: false,        // 不显示默认精度圈（我们自己创建）
-            panToLocation: true,
-            trackLocation: false
-          });
-
-          geolocation.getCurrentPosition((status, result) => {
-            this.isLoading = false;
-            if (status === 'complete') {
-              this.$message.success("定位成功");
-
-              // 移除之前的位置标记和精度圈
-              if (this.currentLocationMarker) {
-                this.map.remove(this.currentLocationMarker);
-              }
-              if (this.locationAccuracyCircle) {
-                this.map.remove(this.locationAccuracyCircle);
-              }
-
-              // 1. 创建位置标记
-              this.currentLocationMarker = new AMap.Marker({
-                position: [result.position.lng, result.position.lat],
-                offset: new AMap.Pixel(-15, -34), // 更精确的偏移
-                icon: new AMap.Icon({
-                  size: new AMap.Size(30, 34),
-                  image: 'https://a.amap.com/jsapi_demos/static/demo-center/icons/poi-marker-red.png',
-                  imageSize: new AMap.Size(30, 34)
-                }),
-                title: '我的位置'
+        try {
+          await new Promise((resolve, reject) => {
+            AMap.plugin('AMap.Geolocation', () => {
+              const geolocation = new AMap.Geolocation({
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0,
+                convert: true,
+                showButton: true,
+                showMarker: false,
+                showCircle: false,
+                panToLocation: true,
+                trackLocation: false
               });
 
-              // 2. 创建精度圈（显示定位精度）
-              this.locationAccuracyCircle = new AMap.Circle({
-                center: [result.position.lng, result.position.lat],  // 圆心位置
-                radius: result.accuracy,                           // 半径（米）
-                strokeColor: "#28F",                               // 线条颜色
-                strokeOpacity: 0.5,                                // 线条透明度
-                strokeWeight: 1,                                   // 线条宽度
-                fillColor: "#28F",                                 // 填充颜色
-                fillOpacity: 0.2                                   // 填充透明度
+              geolocation.getCurrentPosition((status, result) => {
+                if (status === 'complete') {
+                  this.$message.success("定位成功");
+                  this.x = result.position.lng;
+                  this.y = result.position.lat;
+                  this.saveLocationToCache(this.x, this.y);
+                  this.initMapAndData();
+                  this.locationLoading = false;
+                  resolve(result);
+                } else {
+                  this.$message.error("定位失败：" + result.message);
+                  this.locationError = true;
+                  this.locationLoading = false;
+                  this.initMapAndData();
+                  resolve(null);
+                }
               });
-
-              // 3. 将标记和精度圈添加到地图
-              this.map.add([this.currentLocationMarker, this.locationAccuracyCircle]);
-
-              // 4. 更新地图中心
-              this.map.setCenter([result.position.lng, result.position.lat]);
-
-              // 5. 显示定位精度信息
-              this.$message.info(`定位精度：${Math.round(result.accuracy)}米`);
-
-            } else {
-              this.$message.error("定位失败：" + result.message);
-              // 使用默认位置
-              this.map.setCenter([120.16142, 30.279693]);
-            }
+            });
           });
-        });
+        } catch (error) {
+          console.error('定位过程出错:', error);
+          this.locationError = true;
+          this.locationLoading = false;
+          this.initMapAndData();
+        }
+      },
+
+      reGetLocation() {
+        this.clearLocationCache();
+        this.locationLoading = true;
+        this.locationError = false;
+        this.usingCachedLocation = false;
+        this.centerToCurrentLocation();
+      },
+
+      getShopTypeList(){
+        this.loadingText = "正在加载店铺类型...";
+        return axios.get('/app/map/getShopTypeList').then(res => {
+          this.shopTypeList = res.data
+        }).catch(err => {
+          console.log(err)
+        })
+      },
+
+      getShopList(){
+        this.loadingText = "正在加载附近店铺...";
+        return axios.get('/app/map/getShopList', {
+          params: {
+            typeId: this.typeId,
+            x: this.x,
+            y: this.y,
+            keyword: this.keyword
+          }
+        }).then(res => {
+          this.shopList = res.data
+          this.addShopMarkers();
+          this.keyword = ''
+        }).catch(err => {
+          console.log(err)
+        })
       },
 
       refreshData() {
         this.isLoading = true;
+        this.loadingText = "正在刷新数据...";
         setTimeout(() => {
           this.isLoading = false;
           this.$message.success("刷新成功");
-          // 重新加载数据和标记
-          this.addShopMarkers();
+          this.getShopList();
         }, 1000);
       },
 
@@ -644,5 +1007,18 @@
     }
   })
 </script>
+
+<style>
+  .header-actions {
+    display: flex;
+    align-items: center;
+  }
+
+  .header-location {
+    cursor: pointer;
+    color: #409EFF;
+    font-size: 18px;
+  }
+</style>
 </body>
 </html>
