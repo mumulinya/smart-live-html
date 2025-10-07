@@ -8,13 +8,34 @@
   <link rel="stylesheet" href="./css/element.css">
   <link href="./css/main.css" rel="stylesheet">
   <style type="text/css">
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #e5e5ea;
+      color: #333;
+      overflow-x: hidden;
+    }
+
+    #app {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background-color: #f8f8f8;
+    }
+
     .header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 15px;
-      border-bottom: 1px solid #eee;
+      padding: 15px 20px;
       background-color: #fff;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      z-index: 10;
     }
     .header-back-btn {
       font-size: 20px;
@@ -22,143 +43,273 @@
       cursor: pointer;
       display: flex;
       align-items: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      justify-content: center;
+      transition: background-color 0.2s;
+    }
+    .header-back-btn:hover {
+      background-color: #f5f5f5;
     }
     .header-title {
       font-size: 18px;
-      font-weight: bold;
+      font-weight: 600;
       flex: 1;
       text-align: center;
     }
+    .header-actions {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .header-actions .el-icon {
+      font-size: 20px;
+      color: #666;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    .header-actions .el-icon:hover {
+      color: #f63;
+    }
+
     .chat-messages {
-      height: calc(100vh - 210px);
-      padding: 15px;
+      height: calc(100vh - 220px);
+      padding: 20px 15px;
       overflow-y: auto;
       display: flex;
       flex-direction: column;
-      background-color: #eaeaea;
+      background-color: #f0f2f5;
+      background-image:
+              radial-gradient(circle at 10px 10px, rgba(0, 0, 0, 0.03) 1px, transparent 0),
+              radial-gradient(circle at 20px 20px, rgba(0, 0, 0, 0.02) 1px, transparent 0);
+      background-size: 30px 30px;
     }
+
+    /* 消息气泡样式优化 */
     .message {
-      max-width: 70%;
-      padding: 8px 12px;
-      margin-bottom: 10px;
+      max-width: 75%;
+      padding: 10px 15px;
+      margin-bottom: 12px;
       border-radius: 18px;
       word-wrap: break-word;
       position: relative;
-      animation: fadeIn 0.3s;
+      animation: fadeIn 0.3s ease-out;
+      line-height: 1.5;
     }
+
     .message-left {
       background-color: #fff;
       align-self: flex-start;
       border-top-left-radius: 5px;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.08);
     }
+
     .message-right {
       background-color: #f63;
       color: white;
       align-self: flex-end;
       border-top-right-radius: 5px;
+      box-shadow: 0 1px 2px rgba(246, 102, 51, 0.2);
     }
+
     .message-time {
       font-size: 0.7em;
-      color: #999;
       margin-top: 3px;
       text-align: right;
+      opacity: 0.7;
     }
+
+    /* AI头像和样式优化 */
     .ai-avatar {
-      width: 30px;
-      height: 30px;
+      width: 36px;
+      height: 36px;
       border-radius: 50%;
-      background-color: #f63;
+      background: linear-gradient(135deg, #f63 0%, #ff8a5c 100%);
       color: white;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: bold;
+      font-weight: 600;
       margin-right: 10px;
       flex-shrink: 0;
+      box-shadow: 0 2px 5px rgba(246, 102, 51, 0.2);
     }
+
+    /* 思考状态动画优化 */
     .thinking {
       display: flex;
       align-items: center;
-      padding: 8px 12px;
+      padding: 10px 15px;
       margin: 10px 0;
       background-color: #fff;
       border-radius: 18px;
       width: fit-content;
       align-self: flex-start;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.08);
     }
+
     .thinking-dot {
-      width: 8px;
-      height: 8px;
-      background-color: #999;
+      width: 10px;
+      height: 10px;
+      background-color: #f63;
       border-radius: 50%;
-      margin: 0 2px;
+      margin: 0 3px;
       animation: bounce 1.4s infinite ease-in-out both;
     }
+
     .thinking-dot:nth-child(1) { animation-delay: -0.32s; }
     .thinking-dot:nth-child(2) { animation-delay: -0.16s; }
 
+    /* 输入区域样式优化 */
+    .chat-input {
+      padding: 12px 15px;
+      border-top: 1px solid #eee;
+      display: flex;
+      background-color: #fff;
+      flex-direction: column;
+      box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .chat-input-top {
+      display: flex;
+      width: 100%;
+      margin-bottom: 10px;
+    }
+
+    .chat-input input {
+      flex: 1;
+      padding: 12px 18px;
+      border: 1px solid #e0e0e0;
+      border-radius: 24px;
+      margin-right: 10px;
+      font-size: 1em;
+      transition: all 0.2s;
+      outline: none;
+    }
+
+    .chat-input input:focus {
+      border-color: #f63;
+      box-shadow: 0 0 0 2px rgba(246, 102, 51, 0.1);
+    }
+
+    .chat-input button {
+      padding: 12px 22px;
+      background: linear-gradient(135deg, #f63 0%, #ff8a5c 100%);
+      color: white;
+      border: none;
+      border-radius: 24px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+      box-shadow: 0 2px 5px rgba(246, 102, 51, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .chat-input button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(246, 102, 51, 0.3);
+    }
+
+    .chat-input button:active {
+      transform: translateY(1px);
+      box-shadow: 0 1px 3px rgba(246, 102, 51, 0.2);
+    }
+
+    .chat-input button:disabled {
+      background: #ffaa80;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    /* 建议按钮样式优化 */
+    .suggestion-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 5px;
+      padding-bottom: 5px;
+    }
+
+    .suggestion-btn {
+      background-color: #f5f5f5;
+      border: 1px solid #e8e8e8;
+      border-radius: 18px;
+      padding: 6px 14px;
+      font-size: 0.85em;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: #444;
+    }
+
+    .suggestion-btn:hover {
+      background-color: #eeeeee;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .suggestion-btn:active {
+      transform: translateY(0);
+    }
+
+    /* 动画效果 */
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
     }
 
     @keyframes bounce {
-      0%, 80%, 100% { transform: scale(0); }
-      40% { transform: scale(1.0); }
+      0%, 80%, 100% { transform: scale(0.6); }
+      40% { transform: scale(1); }
     }
 
-    .chat-input {
-      padding: 10px 15px;
-      border-top: 1px solid #eee;
+    /* 滚动条美化 */
+    .chat-messages::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .chat-messages::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .chat-messages::-webkit-scrollbar-thumb {
+      background-color: rgba(0, 0, 0, 0.1);
+      border-radius: 3px;
+    }
+
+    .chat-messages::-webkit-scrollbar-thumb:hover {
+      background-color: rgba(0, 0, 0, 0.2);
+    }
+
+    /* 消息发送状态指示器 */
+    .message-status {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      margin-left: 5px;
+      vertical-align: middle;
+    }
+
+    /* 空状态样式 */
+    .empty-state {
       display: flex;
-      background-color: #fff;
       flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      color: #999;
+      text-align: center;
     }
-    .chat-input-top {
-      display: flex;
-      width: 100%;
-      margin-bottom: 8px;
-    }
-    .chat-input input {
-      flex: 1;
-      padding: 10px 15px;
-      border: 1px solid #ddd;
-      border-radius: 20px;
-      margin-right: 10px;
-      font-size: 1em;
-    }
-    .chat-input button {
-      padding: 10px 20px;
-      background-color: #f63;
-      color: white;
-      border: none;
-      border-radius: 20px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    .chat-input button:disabled {
-      background-color: #ffaa80;
-      cursor: not-allowed;
-    }
-    .suggestion-buttons {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 5px;
-    }
-    .suggestion-btn {
-      background-color: #f0f0f0;
-      border: 1px solid #ddd;
-      border-radius: 15px;
-      padding: 5px 10px;
-      font-size: 0.8em;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .suggestion-btn:hover {
-      background-color: #e0e0e0;
+
+    .empty-icon {
+      font-size: 60px;
+      margin-bottom: 20px;
+      opacity: 0.3;
     }
   </style>
 </head>
@@ -169,10 +320,13 @@
       <i class="el-icon-arrow-left"></i>
     </div>
     <div class="header-title">AI助手</div>
-    <div style="width: 20px;"></div>
+    <div class="header-actions">
+      <i class="el-icon-more" @click="showOptions"></i>
+    </div>
   </div>
+
   <div class="chat-messages" ref="chatMessages">
-    <div v-if="messages.length === 0" class="message message-left">
+    <div v-if="messages.length === 0 && !isThinking" class="message message-left">
       <div style="display: flex; align-items: flex-start;">
         <div class="ai-avatar">AI</div>
         <div>
@@ -183,6 +337,7 @@
     </div>
 
     <div v-if="isThinking" class="thinking">
+      <div class="ai-avatar" style="width: 28px; height: 28px; font-size: 12px; margin-right: 8px;">AI</div>
       <div class="thinking-dot"></div>
       <div class="thinking-dot"></div>
       <div class="thinking-dot"></div>
@@ -198,14 +353,26 @@
       </div>
       <div v-else>
         <div>{{msg.text}}</div>
-        <div class="message-time">{{msg.time}}</div>
+        <div class="message-time">
+          {{msg.time}}
+          <i v-if="msg.status === 'sending'" class="el-icon-loading message-status" style="font-size: 12px;"></i>
+          <i v-if="msg.status === 'sent'" class="el-icon-check message-status" style="font-size: 12px;"></i>
+        </div>
       </div>
     </div>
   </div>
+
   <div class="chat-input">
     <div class="chat-input-top">
-      <input type="text" v-model="messageInput" @input="handleInput" @keyup.enter="sendMessage" placeholder="输入您的问题...">
-      <button @click="sendMessage" :disabled="!messageInput.trim()">发送</button>
+      <input
+              type="text"
+              v-model="messageInput"
+              @input="handleInput"
+              @keyup.enter="sendMessage"
+              placeholder="输入您的问题...">
+      <button @click="sendMessage" :disabled="!messageInput.trim()">
+        <i class="el-icon-paper-plane" style="margin-right: 5px;"></i>发送
+      </button>
     </div>
     <div class="suggestion-buttons">
       <div class="suggestion-btn" @click="useSuggestion('最近有什么热门餐厅推荐吗？')">热门餐厅推荐</div>
@@ -214,6 +381,7 @@
       <div class="suggestion-btn" @click="useSuggestion('附近有什么适合约会的餐厅？')">约会餐厅推荐</div>
     </div>
   </div>
+
   <foot-bar :active-btn="3"></foot-bar>
 </div>
 
@@ -228,7 +396,8 @@
     data: {
       messages: [], // 消息列表
       messageInput: "", // 输入框内容
-      isThinking: false // AI思考状态
+      isThinking: false, // AI思考状态
+      isLoading: false // 加载状态
     },
     created() {
       // 初始化数据
@@ -240,9 +409,22 @@
     },
     methods: {
       initData() {
-        // 如果需要初始消息，可以在创建时添加
-        // 目前在模板中直接显示欢迎消息
+        // 可以从本地存储加载历史记录
+        const history = localStorage.getItem('ai_chat_history');
+        if (history) {
+          try {
+            this.messages = JSON.parse(history);
+          } catch (e) {
+            console.error('Failed to parse chat history', e);
+          }
+        }
       },
+
+      // 保存聊天记录到本地存储
+      saveHistory() {
+        localStorage.setItem('ai_chat_history', JSON.stringify(this.messages));
+      },
+
       scrollToBottom() {
         this.$nextTick(() => {
           const chatMessages = this.$refs.chatMessages;
@@ -251,37 +433,32 @@
           }
         });
       },
-      addMessage(text, isSelf) {
+
+      addMessage(text, isSelf, status = 'sent') {
         const now = new Date();
         const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
-        this.messages.push({
-          id: Date.now(),
+        const message = {
+          id: Date.now() + Math.random().toString(36).substr(2, 5),
           text: text,
           time: timeStr,
-          isSelf: isSelf
-        });
+          isSelf: isSelf,
+          status: status
+        };
 
+        this.messages.push(message);
         this.scrollToBottom();
+        this.saveHistory();
+
+        return message.id;
       },
-      //发送消息
+
+      // 发送消息
       async sendMessage() {
-        if (!this.messageInput.trim()) return;
+        if (!this.messageInput.trim() || this.isThinking) return;
 
-        // 生成唯一ID - 使用更安全的方式
-        const userMessageId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-        const aiMessageId = 'ai_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-
-        console.log('🎯 用户消息ID:', userMessageId);
-        console.log('🎯 AI消息ID:', aiMessageId);
-
-        // 添加用户消息 - 使用新的ID
-        this.messages.push({
-          id: userMessageId,
-          text: this.messageInput,
-          time: new Date().toTimeString().slice(0, 5),
-          isSelf: true
-        });
+        // 添加用户消息，状态为发送中
+        const userMessageId = this.addMessage(this.messageInput, true, 'sending');
 
         // 显示思考状态
         this.isThinking = true;
@@ -291,40 +468,49 @@
         this.messageInput = "";
 
         try {
-          // 创建AI消息占位符 - 使用新的ID
-          this.messages.push({
-            id: aiMessageId,
-            text: "▌", // 光标效果
-            time: new Date().toTimeString().slice(0, 5),
-            isSelf: false
-          });
+          // 创建AI消息占位符
+          const aiMessageId = this.addMessage("▌", false);
 
           // 隐藏思考状态，显示流式消息
           this.isThinking = false;
           this.scrollToBottom();
 
-          // 调用流式API - 传递正确的AI消息ID
+          // 更新用户消息状态为已发送
+          const userMsgIndex = this.messages.findIndex(msg => msg.id === userMessageId);
+          if (userMsgIndex !== -1) {
+            this.messages[userMsgIndex].status = 'sent';
+          }
+
+          // 调用流式API
           await this.streamResponse(userInput, aiMessageId);
 
         } catch (error) {
           console.error('请求错误:', error);
           this.isThinking = false;
 
-          // 更新错误消息 - 使用正确的AI消息ID
-          const errorIndex = this.messages.findIndex(msg => msg.id === aiMessageId);
+          // 更新用户消息状态为已发送（即使失败也标记为已发送）
+          const userMsgIndex = this.messages.findIndex(msg => msg.id === userMessageId);
+          if (userMsgIndex !== -1) {
+            this.messages[userMsgIndex].status = 'sent';
+          }
+
+          // 查找并更新错误消息
+          const errorIndex = this.messages.findIndex(msg => msg.text === "▌" && !msg.isSelf);
           if (errorIndex !== -1) {
             this.messages[errorIndex].text = "抱歉，请求失败，请稍后重试";
-            this.$forceUpdate();
+          } else {
+            this.addMessage("抱歉，请求失败，请稍后重试", false);
           }
         }
       },
-// 流式响应处理
+
+      // 流式响应处理
       async streamResponse(userInput, messageId) {
         try {
-          console.log('🔄 开始流式请求，路径: /app-dev-api/app/ai/ai/chat');
+          console.log('开始流式请求');
 
           const response = await fetch('/app-dev-api/app/ai/ai/chat', {
-            method: 'POST',  // 根据后端调整 GET 或 POST
+            method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
@@ -333,8 +519,6 @@
               sessionId: 'user-session-' + Date.now()
             })
           });
-
-          console.log('✅ 请求成功，状态:', response.status);
 
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -348,49 +532,38 @@
             const { done, value } = await reader.read();
 
             if (done) {
-              console.log('🏁 流式传输完成');
+              console.log('流式传输完成');
               break;
             }
 
             // 解码数据块
             const chunk = decoder.decode(value, { stream: true });
-            console.log('📦 原始数据块:', chunk);
 
-            // 直接显示文本，不解析SSE格式
             if (chunk.trim()) {
               accumulatedText += chunk;
-              console.log('📝 累积文本:', accumulatedText);
-
-              // 更新消息内容
               this.updateMessageContent(messageId, accumulatedText);
             }
           }
 
         } catch (error) {
-          console.error('💥 流式请求错误:', error);
+          console.error('流式请求错误:', error);
           throw error;
         }
       },
 
-// 专门的消息更新方法
+      // 更新消息内容
       updateMessageContent(messageId, newContent) {
         const messageIndex = this.messages.findIndex(msg => msg.id === messageId);
         if (messageIndex !== -1) {
-          // 如果当前是光标，先清除
-          if (this.messages[messageIndex].text === '▌') {
-            this.messages[messageIndex].text = newContent;
-          } else {
-            this.messages[messageIndex].text = newContent; // 直接替换，避免重复
-          }
-
-          // 强制Vue更新
+          this.messages[messageIndex].text = newContent;
           this.$forceUpdate();
           this.scrollToBottom();
+          this.saveHistory();
         }
       },
-// 移除原来的 generateResponse 方法，或者保留作为备用
+
+      // 备用响应方法
       async generateResponse(userInput) {
-        // 这个方法现在作为备用方案，如果流式请求失败可以调用
         try {
           const response = await axios.get('/app/ai/ai/chat', {
             params: {
@@ -404,16 +577,33 @@
           return "抱歉，暂时无法处理您的请求，请稍后重试。";
         }
       },
+
       handleInput() {
         // 输入框变化处理
       },
+
       goBack() {
         // 返回到聊天列表页面
         location.href = "/index.html";
       },
+
       useSuggestion(text) {
         this.messageInput = text;
         this.sendMessage();
+      },
+
+      showOptions() {
+        this.$confirm('对话选项', '提示', {
+          confirmButtonText: '清空对话',
+          cancelButtonText: '取消',
+          type: 'info'
+        }).then(() => {
+          this.messages = [];
+          localStorage.removeItem('ai_chat_history');
+          this.scrollToBottom();
+        }).catch(() => {
+          // 取消操作
+        });
       }
     }
   })

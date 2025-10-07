@@ -1140,7 +1140,6 @@
         this.comment.parentId=0
         this.comment.answerId=0
         this.comment.images=this.selectedImages.map(image => image.url).join(',');
-        console.log("图片地址为"+this.comment.images)
          axios.post('/app/comment/addComment', this.comment)
         .then(({data}) => {
                   this.$message.success('评价发布成功');

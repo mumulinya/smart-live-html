@@ -1,48 +1,889 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="zh-CN">
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-  <title>智评生活</title>
-  <!-- 引入样式 -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>智评生活 - 个人主页</title>
+  <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
   <link rel="stylesheet" href="./css/element.css">
+  <link href="./css/index.css" rel="stylesheet">
   <link href="./css/main.css" rel="stylesheet">
-  <link href="./css/info.css" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-  <style type="text/css">
-      .el-tabs--bottom .el-tabs__item.is-bottom:nth-child(2), .el-tabs--bottom .el-tabs__item.is-top:nth-child(2), .el-tabs--top .el-tabs__item.is-bottom:nth-child(2), .el-tabs--top .el-tabs__item.is-top:nth-child(2) {
-          padding-left: 15px;
+    html, body {
+      height: 100%;
+      overflow-x: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background-color: #f8f9fa;
+      touch-action: pan-y;
+    }
+
+    #app {
+      min-height: 100vh;
+      padding-bottom: 60px;
+      position: relative;
+      background: #f8f9fa;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      padding: 15px;
+      background: white;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-back-btn {
+      font-size: 18px;
+      color: #333;
+      cursor: pointer;
+      padding: 5px;
+      border-radius: 50%;
+      transition: background-color 0.3s;
+    }
+
+    .header-back-btn:hover {
+      background-color: #f5f5f5;
+    }
+
+    .header-title {
+      flex: 1;
+      text-align: center;
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .basic {
+      display: flex;
+      align-items: center;
+      padding: 25px 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      position: relative;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .basic-icon img {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      border: 3px solid rgba(255, 255, 255, 0.4);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      transition: transform 0.3s ease;
+    }
+
+    .basic-icon img:hover {
+      transform: scale(1.05);
+    }
+
+    .basic-info {
+      flex: 1;
+      margin-left: 20px;
+    }
+
+    .basic-info .name {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 8px;
+      letter-spacing: 0.5px;
+    }
+
+    .basic-info span {
+      font-size: 14px;
+      opacity: 0.9;
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .edit-btn {
+      margin-top: 8px;
+      padding: 6px 16px;
+      background: rgba(255, 255, 255, 0.25);
+      border-radius: 18px;
+      font-size: 13px;
+      display: inline-block;
+      cursor: pointer;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      transition: all 0.3s;
+      backdrop-filter: blur(5px);
+    }
+
+    .edit-btn:hover {
+      background: rgba(255, 255, 255, 0.35);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .logout-btn {
+      position: absolute;
+      top: 25px;
+      right: 20px;
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.8);
+      cursor: pointer;
+      transition: color 0.3s;
+      padding: 6px 12px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .logout-btn:hover {
+      color: white;
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .stats {
+      display: flex;
+      background: white;
+      padding: 20px 0;
+      border-bottom: 1px solid #f0f0f0;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+    }
+
+    .stat-item {
+      flex: 1;
+      text-align: center;
+      border-right: 1px solid #f0f0f0;
+      cursor: pointer;
+      transition: all 0.3s;
+      padding: 8px 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-item:last-child {
+      border-right: none;
+    }
+
+    .stat-item::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      background: rgba(64, 158, 255, 0.1);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      transition: all 0.6s ease;
+    }
+
+    .stat-item:active::after {
+      width: 100px;
+      height: 100px;
+    }
+
+    .stat-number {
+      font-size: 20px;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 4px;
+      transition: color 0.3s;
+    }
+
+    .stat-label {
+      font-size: 13px;
+      color: #999;
+      transition: color 0.3s;
+    }
+
+    .stat-item:hover .stat-number,
+    .stat-item:hover .stat-label {
+      color: #409EFF;
+    }
+
+    .introduce {
+      padding: 18px 20px;
+      background: white;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 14px;
+      color: #666;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      line-height: 1.5;
+      position: relative;
+    }
+
+    .introduce:hover {
+      background-color: #f9f9f9;
+      padding-left: 25px;
+    }
+
+    .introduce i {
+      margin-left: 5px;
+      color: #409EFF;
+      transition: transform 0.3s;
+    }
+
+    .introduce:hover i {
+      transform: translateX(3px);
+    }
+
+    .content {
+      background: #f8f9fa;
+      min-height: calc(100vh - 300px);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .custom-tabs-header {
+      background: white;
+      padding: 16px 16px 8px;
+      position: relative;
+      z-index: 10;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+
+    .custom-tabs-nav {
+      display: flex;
+      justify-content: space-between;
+      background: #f8f9f9;
+      border-radius: 10px;
+      padding: 4px;
+      position: relative;
+    }
+
+    .custom-tab-item {
+      flex: 1;
+      text-align: center;
+      padding: 14px 8px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #666;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      z-index: 2;
+      margin: 0 2px;
+      border: none;
+      background: transparent;
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      pointer-events: auto;
+    }
+
+    .custom-tab-item::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      background: rgba(64, 158, 255, 0.15);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      transition: all 0.5s ease;
+      z-index: -1;
+    }
+
+    .custom-tab-item:active::before {
+      width: 100%;
+      height: 100%;
+      border-radius: 8px;
+    }
+
+    .custom-tab-item:hover {
+      color: #409EFF;
+      background: rgba(64, 158, 255, 0.08);
+      transform: translateY(-1px);
+    }
+
+    .custom-tab-item.active {
+      color: #409EFF;
+      background: white;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+      transform: translateY(0);
+    }
+
+    .custom-tab-item.active::after {
+      content: '';
+      position: absolute;
+      bottom: -4px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 20px;
+      height: 3px;
+      background: #409EFF;
+      border-radius: 2px;
+    }
+
+    .el-tabs {
+      display: none;
+    }
+
+    .tabs-container {
+      position: relative;
+      height: 100%;
+      touch-action: pan-x; /* 允许横向滑动 */
+    }
+
+    .tabs-content {
+      display: flex;
+      height: 100%;
+      transition: transform 0.3s ease;
+      will-change: transform;
+    }
+
+    .tab-pane {
+      flex: 0 0 100%;
+      height: 100%;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 20px;
+    }
+
+    .custom-tabs-content {
+      display: block;
+      height: 100%;
+      margin-top: 0;
+    }
+
+    .swipe-indicator {
+      text-align: center;
+      padding: 8px;
+      color: #999;
+      font-size: 12px;
+      background: white;
+      border-bottom: 1px solid #f0f0f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .swipe-indicator i {
+      font-size: 14px;
+    }
+
+    .blog-item {
+      display: flex;
+      padding: 20px;
+      background: white;
+      border-bottom: 1px solid #f0f0f0;
+      transition: all 0.3s;
+      margin-bottom: 0;
+    }
+
+    .blog-item:hover {
+      background-color: #f9f9f9;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .blog-img {
+      width: 100px;
+      height: 100px;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-right: 18px;
+      flex-shrink: 0;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s;
+    }
+
+    .blog-img:hover {
+      transform: scale(1.03);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .blog-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.5s;
+    }
+
+    .blog-img:hover img {
+      transform: scale(1.05);
+    }
+
+    .blog-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .blog-title {
+      font-size: 16px;
+      color: #333;
+      line-height: 1.5;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      cursor: pointer;
+      transition: color 0.3s;
+      font-weight: 500;
+      margin-bottom: 10px;
+      max-width: 100%;
+    }
+
+    .blog-title:hover {
+      color: #409EFF;
+    }
+
+    .blog-meta {
+      display: flex;
+      align-items: center;
+      color: #999;
+      font-size: 13px;
+    }
+
+    .blog-liked,
+    .blog-comments,
+    .blog-share {
+      display: flex;
+      align-items: center;
+      margin-right: 18px;
+      cursor: pointer;
+      padding: 6px 10px;
+      border-radius: 6px;
+      transition: all 0.3s;
+    }
+
+    .blog-liked:hover,
+    .blog-comments:hover,
+    .blog-share:hover {
+      background-color: #f5f5f5;
+      transform: translateY(-1px);
+    }
+
+    .blog-liked.active {
+      color: #ff6633;
+    }
+
+    .blog-liked.active img {
+      filter: brightness(0) saturate(100%) invert(47%) sepia(90%) saturate(2000%) hue-rotate(350deg) brightness(100%) contrast(100%);
+    }
+
+    .blog-liked img,
+    .blog-comments img {
+      width: 16px;
+      height: 16px;
+      margin-right: 5px;
+    }
+
+    .user-list {
+      background: white;
+    }
+
+    .user-item {
+      display: flex;
+      align-items: center;
+      padding: 18px 20px;
+      border-bottom: 1px solid #f0f0f0;
+      transition: all 0.3s;
+    }
+
+    .user-item:hover {
+      background-color: #f9f9f9;
+      transform: translateX(5px);
+    }
+
+    .user-avatar {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      margin-right: 15px;
+      flex-shrink: 0;
+      cursor: pointer;
+      overflow: hidden;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s;
+    }
+
+    .user-avatar:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    }
+
+    .user-avatar img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .user-info {
+      flex: 1;
+      cursor: pointer;
+    }
+
+    .user-name {
+      font-size: 16px;
+      color: #333;
+      margin-bottom: 5px;
+      font-weight: 500;
+      transition: color 0.3s;
+    }
+
+    .user-name:hover {
+      color: #409EFF;
+    }
+
+    .user-desc {
+      font-size: 13px;
+      color: #999;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 1;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .follow-btn {
+      padding: 7px 18px;
+      border: 1px solid #409EFF;
+      border-radius: 18px;
+      color: #409EFF;
+      font-size: 13px;
+      background: white;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-weight: 500;
+    }
+
+    .follow-btn:hover {
+      background: #409EFF;
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(64, 158, 255, 0.3);
+    }
+
+    .follow-btn.following {
+      background: #f0f0f0;
+      color: #999;
+      border-color: #f0f0f0;
+    }
+
+    .follow-btn.following:hover {
+      background: #e0e0e0;
+      border-color: #e0e0e0;
+      color: #777;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .review-item {
+      padding: 20px;
+      background: white;
+      border-bottom: 1px solid #f0f0f0;
+      transition: all 0.3s;
+    }
+
+    .review-item:hover {
+      background-color: #f9f9f9;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .review-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .review-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      margin-right: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .review-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .review-user {
+      flex: 1;
+    }
+
+    .review-user-name {
+      font-size: 15px;
+      color: #333;
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+
+    .review-rating {
+      color: #ff9900;
+      font-size: 13px;
+    }
+
+    .review-content {
+      font-size: 14px;
+      color: #333;
+      line-height: 1.6;
+      margin-bottom: 12px;
+    }
+
+    .review-images {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .review-image {
+      width: 80px;
+      height: 80px;
+      border-radius: 6px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .review-image:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    }
+
+    .review-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .review-footer {
+      display: flex;
+      align-items: center;
+      color: #999;
+      font-size: 13px;
+    }
+
+    .review-time {
+      flex: 1;
+    }
+
+    .review-actions {
+      display: flex;
+      align-items: center;
+    }
+
+    .review-action {
+      display: flex;
+      align-items: center;
+      margin-left: 15px;
+      cursor: pointer;
+      padding: 6px 10px;
+      border-radius: 6px;
+      transition: all 0.3s;
+    }
+
+    .review-action:hover {
+      background-color: #f5f5f5;
+      transform: translateY(-1px);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 80px 20px;
+      color: #999;
+      background: white;
+    }
+
+    .empty-icon {
+      font-size: 60px;
+      margin-bottom: 20px;
+      opacity: 0.4;
+    }
+
+    .empty-text {
+      font-size: 15px;
+    }
+
+    .load-more {
+      text-align: center;
+      padding: 20px;
+      color: #999;
+      font-size: 14px;
+      background: white;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    .load-more:hover {
+      background-color: #f9f9f9;
+      color: #666;
+    }
+
+    .loading-text {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .loading-text i {
+      margin-right: 8px;
+    }
+
+    .no-more {
+      color: #ccc;
+      cursor: default;
+    }
+
+    .no-more:hover {
+      background-color: white;
+      color: #ccc;
+    }
+
+    .foot-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: white;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      border-top: 1px solid #eee;
+      z-index: 100;
+    }
+
+    .foot-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      height: 100%;
+      cursor: pointer;
+      transition: all 0.3s;
+      color: #666;
+      text-decoration: none;
+    }
+
+    .foot-btn.active {
+      color: #409EFF;
+    }
+
+    .foot-btn:hover {
+      background-color: #f9f9f9;
+    }
+
+    .foot-icon {
+      font-size: 22px;
+      margin-bottom: 4px;
+    }
+
+    .foot-text {
+      font-size: 12px;
+    }
+
+    /* 退出登录提示框居中样式 */
+    .el-message-box__wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .el-message-box {
+      position: static !important;
+      margin: 0 !important;
+      top: auto !important;
+      left: auto !important;
+      transform: none !important;
+      width: 90% !important;
+      max-width: 320px !important;
+    }
+
+    /* 优化提示框按钮样式 */
+    .el-message-box__btns {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      padding: 15px 20px 20px;
+    }
+
+    .el-message-box__btn {
+      min-width: 90px;
+      padding: 8px 15px;
+    }
+
+    @media (max-width: 768px) {
+      .basic {
+        padding: 20px 15px;
       }
 
-      .el-tabs, .el-tab-pane {
-          height: 100%;
+      .blog-item {
+        padding: 15px;
       }
 
-      .el-tabs__header {
-          height: 10%;
+      .user-item {
+        padding: 15px;
       }
 
-      .el-tabs__content {
-          height: 90%;
+      .review-item {
+        padding: 15px;
       }
+
+      .blog-img {
+        width: 80px;
+        height: 80px;
+        margin-right: 15px;
+      }
+
+      .custom-tabs-header {
+        padding: 12px 12px 6px;
+      }
+
+      .custom-tab-item {
+        padding: 12px 6px;
+        font-size: 13px;
+        min-height: 44px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .custom-tabs-header {
+        padding: 10px 10px 4px;
+      }
+
+      .custom-tab-item {
+        padding: 10px 4px;
+        font-size: 12px;
+        min-height: 42px;
+      }
+    }
   </style>
-
 </head>
-
 <body>
 <div id="app">
   <div class="header">
     <div class="header-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
-    <div class="header-title">个人主页&nbsp;&nbsp;&nbsp;</div>
+    <div class="header-title">个人主页</div>
   </div>
+
   <div class="basic">
     <div class="basic-icon">
       <img :src="user.icon || '/imgs/icons/default-icon.png'" alt="">
     </div>
     <div class="basic-info">
-      <div class="name">{{user.nickName}}</div>
-      <span>杭州</span>
+      <div class="name">{{user.nickName || '未设置昵称'}}</div>
+      <span>{{info.city || '未知城市'}}</span>
       <div class="edit-btn" @click="toEdit">
         编辑资料
       </div>
@@ -51,199 +892,997 @@
       退出登录
     </div>
   </div>
-  <div class="introduce">
-    <span v-if="info.introduce"></span>
+
+  <div class="stats">
+    <div class="stat-item" @click="switchTab('note')">
+      <div class="stat-number">{{stats.noteCount || 0}}</div>
+      <div class="stat-label">笔记</div>
+    </div>
+    <div class="stat-item" @click="switchTab('fans')">
+      <div class="stat-number">{{stats.fansCount || 0}}</div>
+      <div class="stat-label">粉丝</div>
+    </div>
+    <div class="stat-item" @click="switchTab('follow')">
+      <div class="stat-number">{{stats.followCount || 0}}</div>
+      <div class="stat-label">关注</div>
+    </div>
+    <div class="stat-item" @click="switchTab('review')">
+      <div class="stat-number">{{stats.likeCount || 0}}</div>
+      <div class="stat-label">获赞</div>
+    </div>
+  </div>
+
+  <div class="introduce" @click="toEdit">
+    <span v-if="info.introduce">{{info.introduce}}</span>
     <span v-else>添加个人简介，让大家更好的认识你 <i class="el-icon-edit"></i></span>
   </div>
+
   <div class="content">
-    <el-tabs v-model="activeName" @tab-click="handleClick">
-      <el-tab-pane label="笔记" name="1">
-        <div v-for="b in blogs" :key="b.id" class="blog-item" >
-          <div class="blog-img" @click="toBlogDetail(b)"><img :src="b.images.split(',')[0]" alt=""></div>
-          <div class="blog-info">
-            <div class="blog-title">{{b.title}}</div>
-            <div class="blog-liked"><img src="/imgs/thumbup.png" alt=""> {{b.liked}}</div>
-            <div class="blog-comments"><i class="el-icon-chat-dot-round"></i> {{b.comments}}</div>
-          </div>
+    <div class="custom-tabs-header">
+      <div class="custom-tabs-nav">
+        <div class="custom-tab-item"
+             :class="{ active: activeName === 'note' }"
+             @click="switchTabWithFeedback('note')"
+             @touchstart="handleTabTouchStart">
+          笔记({{blogs.length}})
         </div>
-      </el-tab-pane>
-      <el-tab-pane label="评价" name="2">评价</el-tab-pane>
-      <el-tab-pane label="粉丝(0)" name="3">粉丝(0)</el-tab-pane>
-      <el-tab-pane label="关注(0)" name="4">
-        <div class="blog-list" @scroll="onScroll">
-          <div class="blog-box" v-for="b in blogs2" :key="b.id">
-            <div class="blog-img2" @click="toBlogDetail(b)"><img :src="b.img" alt=""></div>
-            <div class="blog-title">{{b.title}}</div>
-            <div class="blog-foot" @click="toUser(b)">
-              <div class="blog-user-icon"><img :src="b.icon || '/imgs/icons/default-icon.png'" alt=""></div>
-              <div class="blog-user-name" >{{b.name}}</div>
-              <div class="blog-liked" @click="addLike(b)">
-                <svg t="1646634642977" class="icon" viewBox="0 0 1024 1024" version="1.1"
-                     xmlns="http://www.w3.org/2000/svg" p-id="2187" width="14" height="14">
-                  <path
-                      d="M160 944c0 8.8-7.2 16-16 16h-32c-26.5 0-48-21.5-48-48V528c0-26.5 21.5-48 48-48h32c8.8 0 16 7.2 16 16v448zM96 416c-53 0-96 43-96 96v416c0 53 43 96 96 96h96c17.7 0 32-14.3 32-32V448c0-17.7-14.3-32-32-32H96zM505.6 64c16.2 0 26.4 8.7 31 13.9 4.6 5.2 12.1 16.3 10.3 32.4l-23.5 203.4c-4.9 42.2 8.6 84.6 36.8 116.4 28.3 31.7 68.9 49.9 111.4 49.9h271.2c6.6 0 10.8 3.3 13.2 6.1s5 7.5 4 14l-48 303.4c-6.9 43.6-29.1 83.4-62.7 112C815.8 944.2 773 960 728.9 960h-317c-33.1 0-59.9-26.8-59.9-59.9v-455c0-6.1 1.7-12 5-17.1 69.5-109 106.4-234.2 107-364h41.6z m0-64h-44.9C427.2 0 400 27.2 400 60.7c0 127.1-39.1 251.2-112 355.3v484.1c0 68.4 55.5 123.9 123.9 123.9h317c122.7 0 227.2-89.3 246.3-210.5l47.9-303.4c7.8-49.4-30.4-94.1-80.4-94.1H671.6c-50.9 0-90.5-44.4-84.6-95l23.5-203.4C617.7 55 568.7 0 505.6 0z"
-                      p-id="2188" :fill="b.isLike ? '#ff6633' : '#82848a'"></path>
-                </svg>
-                {{b.liked}}
+        <div class="custom-tab-item"
+             :class="{ active: activeName === 'review' }"
+             @click="switchTabWithFeedback('review')"
+             @touchstart="handleTabTouchStart">
+          评价({{reviews.length}})
+        </div>
+        <div class="custom-tab-item"
+             :class="{ active: activeName === 'fans' }"
+             @click="switchTabWithFeedback('fans')"
+             @touchstart="handleTabTouchStart">
+          粉丝({{fansList.length}})
+        </div>
+        <div class="custom-tab-item"
+             :class="{ active: activeName === 'follow' }"
+             @click="switchTabWithFeedback('follow')"
+             @touchstart="handleTabTouchStart">
+          关注({{followList.length}})
+        </div>
+        <div class="custom-tab-item"
+             :class="{ active: activeName === 'feed' }"
+             @click="switchTabWithFeedback('feed')"
+             @touchstart="handleTabTouchStart">
+          动态({{feeds.length}})
+        </div>
+      </div>
+    </div>
+
+    <div class="swipe-indicator">
+      <i class="el-icon-back"></i>
+      左右滑动切换标签
+      <i class="el-icon-right"></i>
+    </div>
+
+    <div class="custom-tabs-content">
+      <div class="tabs-container"
+           @touchstart="handleContainerTouchStart"
+           @touchmove="handleContainerTouchMove($event)"
+           @touchend="handleContainerTouchEnd">
+        <div class="tabs-content" :style="{ transform: `translateX(-${currentIndex * 100}%)` }">
+
+          <!-- 笔记标签页 -->
+          <div class="tab-pane">
+            <div v-if="blogs.length > 0">
+              <div v-for="b in blogs" :key="b.id" class="blog-item">
+                <div class="blog-img" @click="toBlogDetail(b)" @touchstart.stop>
+                  <img :src="getFirstImage(b.images)" alt="">
+                </div>
+                <div class="blog-info">
+                  <div class="blog-title" @click="toBlogDetail(b)" @touchstart.stop>{{ truncateTitle(b.title, 20) }}</div>
+                  <div class="blog-meta">
+                    <div class="blog-liked"
+                         :class="{'active': b.isLike}"
+                         @click.stop="toggleLike(b)" @touchstart.stop>
+                      <img src="/imgs/thumbup.png" alt="">
+                      {{b.liked || 0}}
+                    </div>
+                    <div class="blog-comments" @click.stop="toBlogDetail(b)" @touchstart.stop>
+                      <i class="el-icon-chat-dot-round"></i>
+                      {{b.comments || 0}}
+                    </div>
+                    <div class="blog-share" @click.stop="shareBlog(b)" @touchstart.stop>
+                      <i class="el-icon-share"></i>
+                      分享
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="load-more"
+                   :class="{'no-more': blogLoading || blogNoMore}"
+                   @click="loadMoreBlogs" @touchstart.stop>
+                <div class="loading-text" v-if="blogLoading">
+                  <i class="el-icon-loading"></i> 加载中...
+                </div>
+                <div v-else-if="blogNoMore">没有更多了</div>
+                <div v-else>加载更多</div>
+              </div>
+            </div>
+            <div v-else class="empty-state">
+              <div class="empty-icon"><i class="el-icon-document"></i></div>
+              <div class="empty-text">还没有发布任何笔记</div>
+            </div>
+          </div>
+
+          <!-- 评价标签页 -->
+          <div class="tab-pane">
+            <div v-if="reviews.length > 0">
+              <div v-for="review in reviews" :key="review.id" class="review-item">
+                <div class="review-header">
+                  <div class="review-avatar">
+                    <img :src="user.icon || '/imgs/icons/default-icon.png'" alt="">
+                  </div>
+                  <div class="review-user">
+                    <div class="review-user-name">{{user.nickName}}</div>
+                    <div class="review-rating">
+                      <i class="el-icon-star-on" v-for="n in 5" :key="n"
+                         :style="{color: n <= (review.rating || 5) ? '#ff9900' : '#ddd'}"></i>
+                    </div>
+                  </div>
+                </div>
+                <div class="review-content">{{review.content || '这个用户还没有写评价内容'}}</div>
+                <div class="review-images" v-if="review.images">
+                  <div class="review-image" v-for="(img, index) in review.images.split(',')" :key="index" @click="previewImage(img)" @touchstart.stop>
+                    <img :src="img" alt="">
+                  </div>
+                </div>
+                <div class="review-footer">
+                  <div class="review-time">{{formatTime(review.createTime)}}</div>
+                  <div class="review-actions">
+                    <div class="review-action" @click.stop @touchstart.stop>
+                      <i class="el-icon-thumb"></i> {{review.liked || 0}}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="load-more"
+                   :class="{'no-more': reviewLoading || reviewNoMore}"
+                   @click="loadMoreReviews" @touchstart.stop>
+                <div class="loading-text" v-if="reviewLoading">
+                  <i class="el-icon-loading"></i> 加载中...
+                </div>
+                <div v-else-if="reviewNoMore">没有更多了</div>
+                <div v-else>加载更多</div>
+              </div>
+            </div>
+            <div v-else class="empty-state">
+              <div class="empty-icon"><i class="el-icon-chat-dot-round"></i></div>
+              <div class="empty-text">还没有发布任何评价</div>
+            </div>
+          </div>
+
+          <!-- 粉丝标签页 -->
+          <div class="tab-pane">
+            <div class="user-list">
+              <div v-if="fansList.length > 0">
+                <div v-for="user in fansList" :key="user.id" class="user-item">
+                  <div class="user-avatar" @click="toUserDetail(user)" @touchstart.stop>
+                    <img :src="user.icon || '/imgs/icons/default-icon.png'" alt="">
+                  </div>
+                  <div class="user-info" @click="toUserDetail(user)" @touchstart.stop>
+                    <div class="user-name">{{user.nickName || '匿名用户'}}</div>
+                    <div class="user-desc">{{user.introduce || '这个人很懒，什么都没写'}}</div>
+                  </div>
+                  <button class="follow-btn" :class="{'following': user.isFollowed}"
+                          @click.stop="toggleFollow(user)" @touchstart.stop>
+                    {{user.isFollowed ? '已关注' : '关注'}}
+                  </button>
+                </div>
+                <div class="load-more"
+                     :class="{'no-more': fansLoading || fansNoMore}"
+                     @click="loadMoreFans" @touchstart.stop>
+                  <div class="loading-text" v-if="fansLoading">
+                    <i class="el-icon-loading"></i> 加载中...
+                  </div>
+                  <div v-else-if="fansNoMore">没有更多了</div>
+                  <div v-else>加载更多</div>
+                </div>
+              </div>
+              <div v-else class="empty-state">
+                <div class="empty-icon"><i class="el-icon-user"></i></div>
+                <div class="empty-text">还没有粉丝</div>
               </div>
             </div>
           </div>
+
+          <!-- 关注标签页 -->
+          <div class="tab-pane">
+            <div class="user-list">
+              <div v-if="followList.length > 0">
+                <div v-for="user in followList" :key="user.id" class="user-item">
+                  <div class="user-avatar" @click="toUserDetail(user)" @touchstart.stop>
+                    <img :src="user.icon || '/imgs/icons/default-icon.png'" alt="">
+                  </div>
+                  <div class="user-info" @click="toUserDetail(user)" @touchstart.stop>
+                    <div class="user-name">{{user.nickName || '匿名用户'}}</div>
+                    <div class="user-desc">{{user.introduce || '这个人很懒，什么都没写'}}</div>
+                  </div>
+                  <button class="follow-btn following" @click.stop="unfollow(user)" @touchstart.stop>
+                    已关注
+                  </button>
+                </div>
+                <div class="load-more"
+                     :class="{'no-more': followLoading || followNoMore}"
+                     @click="loadMoreFollows" @touchstart.stop>
+                  <div class="loading-text" v-if="followLoading">
+                    <i class="el-icon-loading"></i> 加载中...
+                  </div>
+                  <div v-else-if="followNoMore">没有更多了</div>
+                  <div v-else>加载更多</div>
+                </div>
+              </div>
+              <div v-else class="empty-state">
+                <div class="empty-icon"><i class="el-icon-star-off"></i></div>
+                <div class="empty-text">还没有关注任何人</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 动态标签页 -->
+          <div class="tab-pane">
+            <div v-if="feeds.length > 0">
+              <div v-for="b in feeds" :key="b.id" class="blog-item">
+                <div class="blog-img" @click="toBlogDetail(b)" @touchstart.stop>
+                  <img :src="getFirstImage(b.images)" alt="">
+                </div>
+                <div class="blog-info">
+                  <div class="blog-title" @click="toBlogDetail(b)" @touchstart.stop>{{ truncateTitle(b.title, 20) }}</div>
+                  <div class="blog-meta">
+                    <div class="blog-liked"
+                         :class="{'active': b.isLike}"
+                         @click.stop="toggleLike(b)" @touchstart.stop>
+                      <img src="/imgs/thumbup.png" alt="">
+                      {{b.liked || 0}}
+                    </div>
+                    <div class="blog-comments" @click.stop="toBlogDetail(b)" @touchstart.stop>
+                      <i class="el-icon-chat-dot-round"></i>
+                      {{b.comments || 0}}
+                    </div>
+                    <div class="blog-share" @click.stop="shareBlog(b)" @touchstart.stop>
+                      <i class="el-icon-share"></i>
+                      分享
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="load-more"
+                   :class="{'no-more': feedLoading || feedNoMore}"
+                   @click="loadMoreFeeds" @touchstart.stop>
+                <div class="loading-text" v-if="feedLoading">
+                  <i class="el-icon-loading"></i> 加载中...
+                </div>
+                <div v-else-if="feedNoMore">没有更多了</div>
+                <div v-else>加载更多</div>
+              </div>
+            </div>
+            <div v-else class="empty-state">
+              <div class="empty-icon"><i class="el-icon-document"></i></div>
+              <div class="empty-text">还没有关注人的动态</div>
+            </div>
+          </div>
         </div>
-      </el-tab-pane>
-    </el-tabs>
+      </div>
+    </div>
   </div>
-  <foot-bar :active-btn="4"></foot-bar>
+
+  <foot-bar :active-btn="4" class="foot-bar"></foot-bar>
 </div>
+
 <script src="./js/vue.js"></script>
 <script src="./js/axios.min.js"></script>
-<!-- 引入组件库 -->
 <script src="./js/element.js"></script>
 <script src="./js/common.js"></script>
 <script src="./js/footer.js"></script>
 <script>
-  const app = new Vue({
-    el: "#app",
-    data: {
-      user: "",
-      activeName: "1",
-      info: {},
-      blogs: [],
-      blogs2: [], // 关注的人的播客
-      params: {
-        minTime: 0, // 上一次拉取到的时间戳
-        offset: 0, // 偏移量
-      },
-      count: 5,
-      isReachBottom: false,
+  new Vue({
+    el: '#app',
+    data() {
+      return {
+        user: {},
+        activeName: "note",
+        activeBtn: 4,
+        info: {},
+        blogs: [],
+        reviews: [],
+        fansList: [],
+        followList: [],
+        feeds:[],
+        stats: {
+          noteCount: 0,
+          fansCount: 0,
+          followCount: 0,
+          likeCount: 0
+        },
+        // 分页相关数据
+        blogCurrent: 1,
+        blogSize: 10,
+        blogLoading: false,
+        blogNoMore: false,
+
+        reviewCurrent: 1,
+        reviewSize: 10,
+        reviewLoading: false,
+        reviewNoMore: false,
+
+        fansCurrent: 1,
+        fansSize: 10,
+        fansLoading: false,
+        fansNoMore: false,
+
+        followCurrent: 1,
+        followSize: 10,
+        followLoading: false,
+        followNoMore: false,
+
+        feedCurrent: 1,
+        feedSize: 10,
+        feedLoading: false,
+        feedNoMore: false,
+
+        // 滑动相关数据
+        touchStartX: 0,
+        touchEndX: 0,
+        touchStartTime: 0,
+        currentIndex: 0,
+        tabOrder: ['note', 'review', 'fans', 'follow','feed'],
+        isSwiping: false,
+        isTabTouched: false,
+
+        // 点击防抖
+        lastClickTime: 0,
+        clickCooldown: 300
+      }
     },
     created() {
       this.queryUser();
+      this.currentIndex = this.tabOrder.indexOf(this.activeName);
+    },
+    watch: {
+      activeName(newVal) {
+        this.currentIndex = this.tabOrder.indexOf(newVal);
+      }
     },
     methods: {
-      load() {
-        this.count += 2;
+      // 处理标签的触摸开始事件
+      handleTabTouchStart() {
+        this.isTabTouched = true;
       },
-      queryBlogs() {
-        axios.get("/app/blog/of/me")
-          .then(({data}) => this.blogs = data)
-          .catch(this.$message.error)
-      },
-      queryBlogsOfFollow(clear) {
-        if (clear) {
-          this.params.offset = 0;
-          this.params.minTime = new Date().getTime() + 1;
+
+      // 处理容器的触摸开始事件
+      handleContainerTouchStart(e) {
+        if (this.isTabTouched) {
+          this.isTabTouched = false;
+          return;
         }
-        let {minTime, offset: os} = this.params;
-        axios.get("/app/blog/of/follow", {
-            params: {offset: os, lastId: minTime || new Date().getTime() + 1}
-          })
-          .then(({data}) => {
-            if (!data) {
-              return;
+
+        this.touchStartX = e.touches[0].clientX;
+        this.touchStartTime = Date.now();
+        this.isSwiping = false;
+      },
+
+      // 处理容器的触摸移动事件
+      handleContainerTouchMove(e) {
+        if (this.isTabTouched) {
+          return;
+        }
+
+        this.touchEndX = e.touches[0].clientX;
+        const diff = Math.abs(this.touchStartX - this.touchEndX);
+
+        // 降低滑动判定阈值，提高灵敏度
+        if (diff > 5) {
+          this.isSwiping = true;
+          // 仅在需要时阻止默认行为，提高滑动流畅度
+          if (Math.abs(diff) > 15) {
+            e.preventDefault();
+          }
+        }
+      },
+
+      // 处理容器的触摸结束事件
+      handleContainerTouchEnd() {
+        this.isTabTouched = false;
+
+        if (!this.isSwiping) {
+          return;
+        }
+
+        // 降低滑动距离和时间要求，使滑动更容易触发
+        const minSwipeDistance = 30;  // 原为50
+        const minSwipeTime = 50;      // 原为100
+        const diff = this.touchStartX - this.touchEndX;
+        const touchTime = Date.now() - this.touchStartTime;
+
+        if (Math.abs(diff) > minSwipeDistance && touchTime > minSwipeTime) {
+          if (diff > 0) {
+            this.swipeToNext();
+          } else {
+            this.swipeToPrev();
+          }
+        }
+
+        this.isSwiping = false;
+      },
+
+      // 带反馈的标签切换
+      switchTabWithFeedback(tabName) {
+        const now = Date.now();
+
+        if (now - this.lastClickTime < this.clickCooldown) {
+          return;
+        }
+
+        if (this.activeName === tabName) {
+          return;
+        }
+
+        this.lastClickTime = now;
+        this.activeName = tabName;
+        this.currentIndex = this.tabOrder.indexOf(tabName);
+        this.loadTabData(tabName);
+      },
+
+      // 统计信息点击切换
+      switchTab(tabName) {
+        this.switchTabWithFeedback(tabName);
+      },
+
+      // 限制标题字数
+      truncateTitle(title, maxLength = 20) {
+        if (!title) return '无标题';
+        if (title.length <= maxLength) return title;
+        return title.substring(0, maxLength) + '...';
+      },
+
+      // 滑动到下一个标签
+      swipeToNext() {
+        if (this.currentIndex < this.tabOrder.length - 1) {
+          this.currentIndex++;
+          this.activeName = this.tabOrder[this.currentIndex];
+          this.loadTabData(this.activeName);
+        }
+      },
+
+      // 滑动到上一个标签
+      swipeToPrev() {
+        if (this.currentIndex > 0) {
+          this.currentIndex--;
+          this.activeName = this.tabOrder[this.currentIndex];
+          this.loadTabData(this.activeName);
+        }
+      },
+
+      // 加载标签数据
+      loadTabData(tabName) {
+        switch(tabName) {
+          case 'fans':
+            if (this.fansList.length === 0) {
+              this.queryFans();
             }
-            let {list, ...params} = data;
-            list.forEach(b => b.img = b.images.split(",")[0])
-            this.blogs2 = clear ? list : this.blogs2.concat(list);
-            this.params = params;
-          })
-          .catch(e => console.log(e))
+            break;
+          case 'follow':
+            if (this.followList.length === 0) {
+              this.queryFollows();
+            }
+            break;
+          case 'review':
+            if (this.reviews.length === 0) {
+              this.queryReviews();
+            }
+            break;
+          case 'feed':
+            if (this.feeds.length === 0) {
+              this.queryFeeds();
+            }
+            break;
+        }
       },
-      queryUser() {
-        // 查询用户信息
-        axios.get("/app/user/me")
-          .then(({data}) => {
-            // 保存用户
-            this.user = data;
-            // 查询用户详情
-            this.queryUserInfo();
-            // 查询用户笔记
-            this.queryBlogs();
-          })
-          .catch(err => {
-            location.href = "login.html"
-          })
+
+      // 获取第一张图片
+      getFirstImage(images) {
+        if (!images) return '/imgs/default-blog.jpg';
+        const imageArray = images.split(',');
+        return imageArray[0] || '/imgs/default-blog.jpg';
       },
+
+      // 查询用户信息
+      async  queryUser() {
+        console.log("queryUser")
+        try {
+             let response=await axios.get("/app/user/me")
+                    this.user = response.data;
+                    this.queryUserInfo();
+                    this.queryUserStats();
+                    this.queryBlogs();
+        } catch (error) {
+          console.error('查询用户信息失败:', error);
+          this.$message({
+            type: 'warning',
+            message: '请先登录',
+            duration: 1000,
+            onClose: () => {
+              location.href = "login.html";
+            }
+          });
+        }
+      },
+
+      // 查询用户详情
+      queryUserInfo() {
+        axios.get("/app/user/info/getUserInfo/" + this.user.id)
+                .then(({data}) => {
+                  if (data) {
+                    this.info = data;
+                    sessionStorage.setItem("userInfo", JSON.stringify(data))
+                  }
+                })
+                .catch(err => {
+                  console.error('获取用户详情失败:', err);
+                })
+      },
+
+      // 查询用户统计信息
+      queryUserStats() {
+        this.stats = {
+          noteCount: this.blogs.length,
+          fansCount: this.fansList.length,
+          followCount: this.followList.length,
+          likeCount: this.blogs.reduce((sum, blog) => sum + (blog.liked || 0), 0)
+        };
+      },
+
+      // 查询笔记
+      queryBlogs() {
+        this.blogCurrent = 1;
+        this.blogNoMore = false;
+        axios.get("/app/blog/of/me", {
+          params: {
+            current: this.blogCurrent,
+            size: this.blogSize
+          }
+        })
+                .then(({data}) => {
+                  this.blogs = data || [];
+                  this.queryUserStats();
+
+                  if (this.blogs.length < this.blogSize) {
+                    this.blogNoMore = true;
+                  }
+                })
+                .catch(err => {
+                  console.error('获取笔记失败:', err);
+                  this.blogs = [];
+                  this.queryUserStats();
+                })
+      },
+
+      // 加载更多笔记
+      loadMoreBlogs() {
+        if (this.blogLoading || this.blogNoMore) return;
+
+        this.blogLoading = true;
+        this.blogCurrent++;
+
+        axios.get("/app/blog/of/me", {
+          params: {
+            current: this.blogCurrent,
+            size: this.blogSize
+          }
+        })
+                .then(({data}) => {
+                  const newBlogs = data || [];
+                  if (newBlogs.length > 0) {
+                    this.blogs = [...this.blogs, ...newBlogs];
+                  }
+
+                  if (newBlogs.length < this.blogSize) {
+                    this.blogNoMore = true;
+                  }
+
+                  this.queryUserStats();
+                })
+                .catch(err => {
+                  console.error('加载更多笔记失败:', err);
+                  this.blogCurrent--;
+                })
+                .finally(() => {
+                  this.blogLoading = false;
+                });
+      },
+
+      // 查询评价
+      queryReviews() {
+        this.reviewCurrent = 1;
+        this.reviewNoMore = false;
+        axios.get("/app/comment/of/me", {
+          params: {
+            current: this.reviewCurrent
+          }
+        })
+                .then(({data}) => {
+                  this.reviews = data || [];
+
+                  if (this.reviews.length < this.reviewSize) {
+                    this.reviewNoMore = true;
+                  }
+                })
+                .catch(err => {
+                  console.error('获取评价失败:', err);
+                  this.reviews = [];
+                })
+      },
+
+      // 加载更多评价
+      loadMoreReviews() {
+        if (this.reviewLoading || this.reviewNoMore) return;
+
+        this.reviewLoading = true;
+        this.reviewCurrent++;
+
+        axios.get("/app/comment/of/me", {
+          params: {
+            current: this.reviewCurrent
+          }
+        })
+                .then(({data}) => {
+                  const newReviews = data || [];
+                  if (newReviews.length > 0) {
+                    this.reviews = [...this.reviews, ...newReviews];
+                  }
+
+                  if (newReviews.length < this.reviewSize) {
+                    this.reviewNoMore = true;
+                  }
+                })
+                .catch(err => {
+                  console.error('加载更多评价失败:', err);
+                  this.reviewCurrent--;
+                })
+                .finally(() => {
+                  this.reviewLoading = false;
+                });
+      },
+
+      // 查询粉丝列表
+      queryFans() {
+        this.fansCurrent = 1;
+        this.fansNoMore = false;
+        axios.get("/app/user/follow/fans", {
+          params: {
+            current: this.fansCurrent,
+            size: this.fansSize
+          }
+        })
+                .then(({data}) => {
+                  this.fansList = data || [];
+                  this.stats.fansCount = this.fansList.length;
+
+                  if (this.fansList.length < this.fansSize) {
+                    this.fansNoMore = true;
+                  }
+                })
+                .catch(err => {
+                  console.error('获取粉丝列表失败:', err);
+                  this.fansList = [];
+                })
+      },
+
+      // 加载更多粉丝
+      loadMoreFans() {
+        if (this.fansLoading || this.fansNoMore) return;
+
+        this.fansLoading = true;
+        this.fansCurrent++;
+
+        axios.get("/app/user/follow/fans", {
+          params: {
+            current: this.fansCurrent,
+            size: this.fansSize
+          }
+        })
+                .then(({data}) => {
+                  const newFans = data || [];
+                  if (newFans.length > 0) {
+                    this.fansList = [...this.fansList, ...newFans];
+                    this.stats.fansCount = this.fansList.length;
+                  }
+
+                  if (newFans.length < this.fansSize) {
+                    this.fansNoMore = true;
+                  }
+                })
+                .catch(err => {
+                  console.error('加载更多粉丝失败:', err);
+                  this.fansCurrent--;
+                })
+                .finally(() => {
+                  this.fansLoading = false;
+                });
+      },
+
+      // 查询关注列表
+      queryFollows() {
+        this.followCurrent = 1;
+        this.followNoMore = false;
+        axios.get("/app/user/follow/follows", {
+          params: {
+            current: this.followCurrent,
+            size: this.followSize
+          }
+        })
+                .then(({data}) => {
+                  this.followList = data || [];
+                  this.stats.followCount = this.followList.length;
+
+                  if (this.followList.length < this.followSize) {
+                    this.followNoMore = true;
+                  }
+                })
+                .catch(err => {
+                  console.error('获取关注列表失败:', err);
+                  this.followList = [];
+                })
+      },
+
+      // 加载更多关注
+      loadMoreFollows() {
+        if (this.followLoading || this.followNoMore) return;
+
+        this.followLoading = true;
+        this.followCurrent++;
+
+        axios.get("/app/user/follow/follows", {
+          params: {
+            current: this.followCurrent,
+            size: this.followSize
+          }
+        })
+                .then(({data}) => {
+                  const newFollows = data || [];
+                  if (newFollows.length > 0) {
+                    this.followList = [...this.followList, ...newFollows];
+                    this.stats.followCount = this.followList.length;
+                  }
+
+                  if (newFollows.length < this.followSize) {
+                    this.followNoMore = true;
+                  }
+                })
+                .catch(err => {
+                  console.error('加载更多关注失败:', err);
+                  this.followCurrent--;
+                })
+                .finally(() => {
+                  this.followLoading = false;
+                });
+      },
+
+      // 查询关注人笔记
+      queryFeeds() {
+        this.feedCurrent = 1;
+        this.feedNoMore = false;
+        axios.get("/app/blog/of/follow", {
+          params: {
+            current: this.feedCurrent,
+            size: this.feedSize
+          }
+        })
+                .then(({data}) => {
+                  this.feeds = data || [];
+
+                  if (this.feeds.length < this.feedSize) {
+                    this.feedNoMore = true;
+                  }
+                })
+                .catch(err => {
+                  console.error('获取动态失败:', err);
+                  this.feeds = [];
+                })
+      },
+
+      // 加载更多关注人笔记
+      loadMoreFeeds() {
+        if (this.feedLoading || this.feedNoMore) return;
+
+        this.feedLoading = true;
+        this.feedCurrent++;
+
+        axios.get("/app/blog/of/follow", {
+          params: {
+            current: this.feedCurrent,
+            size: this.feedSize
+          }
+        })
+                .then(({data}) => {
+                  const newFeeds = data || [];
+                  if (newFeeds.length > 0) {
+                    this.feeds = [...this.feeds, ...newFeeds];
+                  }
+
+                  if (newFeeds.length < this.feedSize) {
+                    this.feedNoMore = true;
+                  }
+                })
+                .catch(err => {
+                  console.error('加载更多动态失败:', err);
+                  this.feedCurrent--;
+                })
+                .finally(() => {
+                  this.feedLoading = false;
+                });
+      },
+
+      // 点赞/取消点赞
+      toggleLike(blog) {
+        if (blog.isLike) {
+          this.unlikeBlog(blog);
+        } else {
+          this.likeBlog(blog);
+        }
+      },
+
+      // 点赞
+      likeBlog(blog) {
+        blog.isLike = true;
+        this.addLike(blog)
+        this.$message.success('点赞成功');
+      },
+
+      // 取消点赞
+      unlikeBlog(blog) {
+        blog.isLike = false;
+        this.addLike(blog)
+        this.$message.success('取消点赞');
+      },
+      addLike(b) {
+        axios.put("app/blog/like/" + b.id)
+                .then(({data}) => {
+                  this.queryBlogById(b);
+                })
+                .catch(err => {
+                  this.$message.error(err)
+                })
+      },
+      queryBlogById(b) {
+        axios.get("app/blog/" + b.id)
+                .then(({data}) => {
+                  b.liked = data.liked;
+                  b.isLike = data.isLike;
+                })
+                .catch(() => {
+                  this.$message.error
+                  b.liked++;
+                })
+      },
+
+      // 关注/取消关注
+      toggleFollow(user) {
+        if (user.isFollowed) {
+          this.unfollow(user);
+        } else {
+          this.follow(user);
+        }
+      },
+
+      follow(user) {
+        user.isFollowed = true;
+        this.$message.success('关注成功');
+        this.stats.followCount++;
+      },
+
+      unfollow(user) {
+        user.isFollowed = false;
+        this.$message.success('取消关注成功');
+        this.stats.followCount--;
+        if (this.activeName === 'follow') {
+          this.followList = this.followList.filter(u => u.id !== user.id);
+        }
+      },
+
+      // 分享笔记
+      shareBlog(blog) {
+        this.$confirm('分享到其他平台?', '分享', {
+          confirmButtonText: '复制链接',
+          cancelButtonText: '取消',
+          type: 'info'
+        }).then(() => {
+          const url = window.location.origin + '/blog-detail.html?id=' + blog.id;
+          this.copyToClipboard(url);
+          this.$message.success('链接已复制到剪贴板');
+        }).catch(() => {
+          // 用户取消
+        });
+      },
+
+      // 复制到剪贴板
+      copyToClipboard(text) {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      },
+
+      // 图片预览
+      previewImage(imgUrl) {
+        this.$message.info('图片预览功能');
+      },
+
+      // 跳转到用户详情
+      toUserDetail(user) {
+        if (user.id === this.user.id) {
+          this.queryUser();
+        } else {
+          location.href = "other-info.html?id=" + user.id;
+        }
+      },
+
+      // 跳转到笔记详情
+      toBlogDetail(blog) {
+        location.href = "blog-detail.html?id=" + blog.id;
+      },
+
+      // 格式化时间
+      formatTime(time) {
+        if (!time) return '';
+        const date = new Date(time);
+        const now = new Date();
+        const diff = now - date;
+
+        if (diff < 60000) return '刚刚';
+        if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前';
+        if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前';
+        if (diff < 604800000) return Math.floor(diff / 86400000) + '天前';
+
+        return date.getFullYear() + '-' + (date.getMonth() + 1) + '-' + date.getDate();
+      },
+
       goBack() {
         history.back();
       },
-      queryUserInfo() {
-        axios.get("/app/user/info/" + this.user.id)
-          .then(({data}) => {
-            if (!data) {
-              return
-            }
-            // 保存用户详情
-            this.info = data;
-            // 保存到本地
-            sessionStorage.setItem("userInfo", JSON.stringify(data))
-          })
-          .catch(err => {
-            this.$message.error(err);
-          })
-      },
+
       toEdit() {
         location.href = 'info-edit.html'
       },
+
       logout() {
-        axios.post("/app/auth/appLogout")
-          .then(() => {
-            // 清理session
-            sessionStorage.removeItem("token")
-            // 跳转
-            location.href = "/"
-          })
-          .catch(this.$message.error)
+        this.$confirm('确定要退出登录吗？', '退出登录', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning',
+          center: true, // 启用居中属性
+          customClass: 'logout-dialog'
+        }).then(() => {
+          axios.post("/app/auth/appLogout")
+                  .then(() => {
+                    sessionStorage.removeItem("token");
+                    sessionStorage.removeItem("userInfo");
+                    localStorage.removeItem("userInfo");
+                    location.href = "/";
+                  })
+                  .catch(() => {
+                    sessionStorage.removeItem("token");
+                    sessionStorage.removeItem("userInfo");
+                    localStorage.removeItem("userInfo");
+                    location.href = "/";
+                  })
+        })
       },
-      handleClick(r) {
-        if (r.name === '4') {
-          this.queryBlogsOfFollow(true);
-        }
-      },
-      addLike(b) {
-        axios.put("/app/blog/like/" + b.id)
-          .then(({data}) => {
-            this.queryBlogById(b);
-          })
-          .catch(err => {
-            this.$message.error(err)
-          })
-      },
-      toUser(b) {
-        location.href = "other-info.html?id=" + b.userId;
-      },
-      toBlogDetail(b) {
-        location.href = "blog-detail.html?id=" + b.id;
-      },
-      queryBlogById(b) {
-        axios.get("/app/blog/" + b.id)
-          .then(({data}) => {
-            b.liked = data.liked;
-            b.isLike = data.isLike;
-          })
-          .catch(() => {
-            this.$message.error
-            b.liked++;
-          })
-      },
-      onScroll(e) {
-        let scrollTop = e.target.scrollTop;
-        let offsetHeight = e.target.offsetHeight;
-        let scrollHeight = e.target.scrollHeight;
-        if (scrollTop === 0) {
-          // 到顶部了，查询一次
-          this.queryBlogsOfFollow(true);
-        } else if (scrollTop + offsetHeight + 1 > scrollHeight && !this.isReachBottom) {
-          this.isReachBottom = true
-          // 再次查询下一页数据
-          this.queryBlogsOfFollow();
-        } else {
-          this.isReachBottom = false
+
+      changeTab(index) {
+        this.activeBtn = index;
+        if (index !== 4) {
+          console.log('切换到标签页:', index);
         }
       }
-    },
-
-  })
+    }
+  });
 </script>
 </body>
-
 </html>
