@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+    <title>智评生活</title>
+    <!-- 引入样式 -->
+    <link rel="stylesheet" href="./css/element.css">
+
+    <link href="./css/blog-detail.css" rel="stylesheet">
+    <link href="./css/main.css" rel="stylesheet">
+
+    <style type="text/css">
+        .header{
+            position: relative;
+        }
+        .foot-view span{
+            font-size: 12px;
+        }
+        .liked{
+
+        }
+
+
+
+        .comment-publish {
+            background: #fff;
+            margin: 0;
+            padding: 15px;
+            border-bottom: 1px solid #f1f1f1;
+        }
+
+        .publish-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .publish-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            overflow: hidden;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        .publish-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .username {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .publish-content {
+            margin-left: 42px; /* 头像宽度 + margin-right */
+        }
+
+        .publish-textarea {
+            position: relative;
+            margin-bottom: 12px;
+        }
+
+        .publish-textarea textarea {
+            width: 100%;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 14px;
+            line-height: 1.4;
+            resize: none;
+            background: #fafafa;
+            color: #333;
+            min-height: 60px;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        .publish-textarea textarea:focus {
+            outline: none;
+            border-color: #ff6633;
+            background: #fff;
+        }
+
+        .publish-textarea textarea::placeholder {
+            color: #999;
+        }
+
+        .text-count {
+            position: absolute;
+            bottom: 8px;
+            right: 12px;
+            font-size: 12px;
+            color: #999;
+        }
+
+        .publish-images {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .image-upload {
+            width: 70px;
+            height: 70px;
+            border: 1px dashed #d9d9d9;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #999;
+            font-size: 18px;
+            background: #fafafa;
+            transition: all 0.2s;
+        }
+
+        .image-upload:hover {
+            border-color: #ff6633;
+            color: #ff6633;
+        }
+
+        .image-preview {
+            position: relative;
+            width: 70px;
+            height: 70px;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid #f0f0f0;
+        }
+
+        .image-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .image-remove {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            width: 18px;
+            height: 18px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .publish-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 12px;
+            border-top: 1px solid #f8f8f8;
+        }
+
+        .action-left {
+            display: flex;
+            align-items: center;
+        }
+
+        .rate-section {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .action-right {
+            display: flex;
+            gap: 8px;
+        }
+
+        .publish-btn {
+            padding: 6px 16px;
+            border: none;
+            border-radius: 16px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .cancel-btn {
+            background: #f5f5f5;
+            color: #666;
+        }
+
+        .cancel-btn:hover {
+            background: #e8e8e8;
+        }
+
+        .submit-btn {
+            background: #ff6633;
+            color: white;
+        }
+
+        .submit-btn:hover {
+            background: #ff854d;
+        }
+
+        .submit-btn.disabled {
+            background: #ffb399;
+            cursor: not-allowed;
+        }
+
+        /* 适配您页面现有的样式 */
+        .comment-publish {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        /* 确保与您页面中的其他元素对齐 */
+        .publish-header {
+            align-items: flex-start;
+        }
+
+        .publish-user {
+            flex: 1;
+        }
+
+        /* 响应式调整 */
+        @media (max-width: 375px) {
+            .comment-publish {
+                padding: 12px 15px;
+            }
+
+            .publish-content {
+                margin-left: 40px;
+            }
+
+            .image-upload,
+            .image-preview {
+                width: 65px;
+                height: 65px;
+            }
+        }
+
+
+
+        /* 悬浮评论模态框样式 */
+        .comment-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        .comment-modal-content {
+            width: 100%;
+            max-width: 100%;
+            background: white;
+            border-radius: 16px 16px 0 0;
+            max-height: 80vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(100%);
+            }
+            to {
+                transform: translateY(0);
+            }
+        }
+
+        .comment-modal .comment-publish {
+            border-radius: 16px 16px 0 0;
+            padding: 20px 15px;
+        }
+
+        .comment-modal .publish-header {
+            position: relative;
+            margin-bottom: 15px;
+        }
+
+        .close-btn {
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #f5f5f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .close-btn:hover {
+            background: #e8e8e8;
+        }
+
+        .comment-modal .publish-textarea textarea {
+            min-height: 100px;
+            background: #fff;
+            border: 1px solid #e0e0e0;
+        }
+
+        .comment-modal .publish-actions {
+            padding-top: 15px;
+            border-top: 1px solid #f0f0f0;
+            margin-top: 15px;
+        }
+
+        /* 隐藏原来位置的评论发布组件 */
+        .comment-publish:not(.comment-modal .comment-publish) {
+            display: none;
+        }
+
+        /* 图片预览样式 */
+        .image-preview-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .preview-container {
+            width: 90%;
+            max-width: 800px;
+            height: 80%;
+            background: #fff;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+            background: #f8f8f8;
+        }
+
+        .preview-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .close-btn {
+            font-size: 18px;
+            color: #666;
+            cursor: pointer;
+            padding: 5px;
+        }
+
+        .close-btn:hover {
+            color: #ff6633;
+        }
+
+        .preview-content {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        .preview-image {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .preview-footer {
+            padding: 15px 20px;
+            border-top: 1px solid #eee;
+            background: #f8f8f8;
+        }
+
+        .preview-nav {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .nav-btn {
+            width: 40px;
+            height: 40px;
+            border: 1px solid #ddd;
+            border-radius: 50%;
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .nav-btn:hover:not(:disabled) {
+            border-color: #ff6633;
+            color: #ff6633;
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .preview-counter {
+            font-size: 14px;
+            color: #666;
+            min-width: 60px;
+            text-align: center;
+        }
+
+
+    </style>
+</head>
+<body>
+<div id="app">
+    <div class="header">
+        <div class="header-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
+        <div class="header-title"></div>
+        <div class="header-share">...</div>
+    </div>
+    <div style="height: 85%; overflow-y: scroll; overflow-x: hidden">
+        <div class="blog-info-box" ref="swiper"
+             @touchstart="moveStart"
+             @touchmove="moving"
+             @touchend="moveEnd">
+            <div class="swiper-item" v-for="(img, i) in blog.images" :key="i">
+                <img :src="img" alt="" style="width: 100%" height="100%">
+            </div>
+        </div>
+        <div class="basic">
+            <div class="basic-icon" @click="toOtherInfo">
+                <img :src="blog.icon || '/imgs/icons/default-icon.png'" alt="">
+            </div>
+            <div class="basic-info">
+                <div class="name">{{blog.name}}</div>
+                <span class="time">{{formatTime(new Date(blog.createTime))}}</span>
+            </div>
+            <div style="width: 20%">
+                <div class="logout-btn" @click="follow" v-show="!user || user.id !== blog.userId ">
+                    {{followed ? '取消关注' : '关注'}}
+                </div>
+            </div>
+
+        </div>
+        <div class="blog-text" v-html="blog.content">
+        </div>
+        <div class="shop-basic">
+            <div class="shop-icon">
+                <img :src="shop.image" alt="">
+            </div>
+            <div style="width: 80%">
+                <div class="name">{{shop.name}}</div>
+                <div>
+                    <el-rate
+                            v-model="shop.score/10">
+                    </el-rate>
+                </div>
+                <div class="shop-avg">￥{{shop.avgPrice}}/人</div>
+            </div>
+        </div>
+        <div class="zan-box">
+            <div>
+                <svg t="1646634642977" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2187" width="20" height="20">
+                    <path d="M160 944c0 8.8-7.2 16-16 16h-32c-26.5 0-48-21.5-48-48V528c0-26.5 21.5-48 48-48h32c8.8 0 16 7.2 16 16v448zM96 416c-53 0-96 43-96 96v416c0 53 43 96 96 96h96c17.7 0 32-14.3 32-32V448c0-17.7-14.3-32-32-32H96zM505.6 64c16.2 0 26.4 8.7 31 13.9 4.6 5.2 12.1 16.3 10.3 32.4l-23.5 203.4c-4.9 42.2 8.6 84.6 36.8 116.4 28.3 31.7 68.9 49.9 111.4 49.9h271.2c6.6 0 10.8 3.3 13.2 6.1s5 7.5 4 14l-48 303.4c-6.9 43.6-29.1 83.4-62.7 112C815.8 944.2 773 960 728.9 960h-317c-33.1 0-59.9-26.8-59.9-59.9v-455c0-6.1 1.7-12 5-17.1 69.5-109 106.4-234.2 107-364h41.6z m0-64h-44.9C427.2 0 400 27.2 400 60.7c0 127.1-39.1 251.2-112 355.3v484.1c0 68.4 55.5 123.9 123.9 123.9h317c122.7 0 227.2-89.3 246.3-210.5l47.9-303.4c7.8-49.4-30.4-94.1-80.4-94.1H671.6c-50.9 0-90.5-44.4-84.6-95l23.5-203.4C617.7 55 568.7 0 505.6 0z" p-id="2188" :fill="blog.isLike ? '#ff6633' : '#82848a'"></path>
+                </svg>
+            </div>
+            <div class="zan-list">
+                <div class="user-icon-mini" v-for="u in likes" :key="u.id">
+                    <img :src="u.icon || '/imgs/icons/default-icon.png'" alt="">
+                </div>
+                <div style="margin-left:10px;text-align: center;line-height: 24px;">{{blog.liked}}人点赞</div>
+            </div>
+        </div>
+        <div class="blog-divider"></div>
+
+
+
+
+        <!-- 在 <div class="blog-comments"> 上面添加这个评论发表组件 -->
+        <!-- 在 <div class="blog-comments"> 上面添加这个评论发表组件 -->
+
+
+
+        <div class="blog-comments" v-show="blog.comments!=0">
+            <div class="comments-head">
+                <div>网友评价 <span>({{blog.comments || 119}})</span></div>
+            </div>
+            <div class="comment-list">
+                <div class="comment-box" v-for="comment in comments" :key="comment">
+                    <div class="comment-icon">
+                        <img :src="comment.userIcon || '/imgs/icons/default-icon.png'" alt="">
+                    </div>
+                    <div class="comment-info">
+                        <div class="comment-user">
+                            {{comment.nickName || '匿名用户'}}
+                            <span>Lv{{comment.userLevel || 1}}</span>
+                        </div>
+                        <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                            <el-rate disabled v-model="comment.rating" style="margin-right: 8px;"></el-rate>
+                            <span style="font-size: 12px; color: #ff6633;">{{comment.rating}}分</span>
+                        </div>
+                        <div class="comment-content">{{comment.content}}</div>
+
+                        <div class="comment-images" v-if="comment.images && comment.images.length > 0">
+                            <img
+                                    v-for="(img, index) in comment.images"
+                                    :key="index"
+                                    :src="img"
+                                    alt="评论图片"
+                                    @click="previewImage(comment.images, index)"
+                            >
+                        </div>
+
+                        <div class="comment-stats">
+                            {{formatTime(new Date(comment.createTime))}} ·
+                            浏览{{comment.viewCount || 0}} ·
+                            评论{{comment.replyCount || 0}}
+                        </div>
+                    </div>
+                </div>
+                <div
+                        style="display: flex; justify-content: space-between;padding: 15px 0; border-top: 1px solid #f1f1f1; margin-top: 10px;">
+                    <div @click="viewAllComments">查看全部{{blog.comments || 119}}条评价</div>
+                    <div><i class="el-icon-arrow-right"></i></div>
+                </div>
+            </div>
+        </div>
+        <div v-show="blog.comments==0"class="blog-comments" >
+            暂无评论，快来发表第一条评论吧～
+        </div>
+        <div class="blog-divider"></div>
+    </div>
+    <div class="foot">
+        <div class="foot-box">
+            <div class="foot-view"  @click="addLike()">
+                <svg t="1646634642977" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2187" width="26" height="26">
+                    <path d="M160 944c0 8.8-7.2 16-16 16h-32c-26.5 0-48-21.5-48-48V528c0-26.5 21.5-48 48-48h32c8.8 0 16 7.2 16 16v448zM96 416c-53 0-96 43-96 96v416c0 53 43 96 96 96h96c17.7 0 32-14.3 32-32V448c0-17.7-14.3-32-32-32H96zM505.6 64c16.2 0 26.4 8.7 31 13.9 4.6 5.2 12.1 16.3 10.3 32.4l-23.5 203.4c-4.9 42.2 8.6 84.6 36.8 116.4 28.3 31.7 68.9 49.9 111.4 49.9h271.2c6.6 0 10.8 3.3 13.2 6.1s5 7.5 4 14l-48 303.4c-6.9 43.6-29.1 83.4-62.7 112C815.8 944.2 773 960 728.9 960h-317c-33.1 0-59.9-26.8-59.9-59.9v-455c0-6.1 1.7-12 5-17.1 69.5-109 106.4-234.2 107-364h41.6z m0-64h-44.9C427.2 0 400 27.2 400 60.7c0 127.1-39.1 251.2-112 355.3v484.1c0 68.4 55.5 123.9 123.9 123.9h317c122.7 0 227.2-89.3 246.3-210.5l47.9-303.4c7.8-49.4-30.4-94.1-80.4-94.1H671.6c-50.9 0-90.5-44.4-84.6-95l23.5-203.4C617.7 55 568.7 0 505.6 0z" p-id="2188" :fill="blog.isLike ? '#ff6633' : '#82848a'"></path>
+                </svg>
+                <span :class="{liked: blog.isLike}">{{blog.liked}}</span>
+            </div>
+        </div>
+        <div style="width: 40%">
+        </div>
+        <div class="foot-box">
+            <div class="foot-view" @click="checkLogin">
+                <i class="el-icon-chat-square"></i>
+            </div>
+        </div>
+    </div>
+    <!-- 在 body 末尾，footer 之前添加悬浮层 -->
+    <div class="comment-modal" v-if="showCommentPublish" @click="closeCommentModal">
+        <div class="comment-modal-content" @click.stop>
+            <div class="comment-publish">
+                <div class="publish-header">
+                    <div class="publish-avatar">
+                        <img :src="user.icon || '/imgs/icons/default-icon.png'" alt="头像">
+                    </div>
+                    <div class="publish-user">
+                        <div class="username">{{user.nickName || '我'}}</div>
+                    </div>
+                    <div class="close-btn" @click="closeCommentModal">
+                        <i class="el-icon-close"></i>
+                    </div>
+                </div>
+
+                <div class="publish-content">
+                    <div class="publish-textarea">
+          <textarea
+                  v-model="commentText"
+                  placeholder="说点什么..."
+                  rows="4"
+                  maxlength="500"
+                  @focus="onTextareaFocus"
+                  @blur="onTextareaBlur"
+          ></textarea>
+                        <div class="text-count">{{commentText.length}}/500</div>
+                    </div>
+
+                    <div class="publish-images" v-if="selectedImages.length > 0 || isTextareaFocused">
+                        <div class="image-upload" @click="triggerImageUpload">
+                            <i class="el-icon-plus"></i>
+                            <input
+                                    type="file"
+                                    ref="imageInput"
+                                    multiple
+                                    accept="image/*"
+                                    @change="handleImageUpload"
+                                    style="display: none"
+                            >
+                        </div>
+
+                        <div
+                                class="image-preview"
+                                v-for="(image, index) in selectedImages"
+                                :key="index"
+                        >
+                            <img :src="image.url" alt="预览图片" @click="previewImage(selectedImages.map(image => image.url).join(','),index)">
+                            <div class="image-remove" @click.stop="removeImage(index)">
+                                <i class="el-icon-close"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="publish-actions">
+                        <div class="action-left">
+                            <div class="rate-section">
+                                <span style="margin-right: 8px; color: #666; font-size: 14px;">打分</span>
+                                <el-rate
+                                        v-model="commentRating"
+                                        :colors="['#99A9BF', '#F7BA2A', '#FF9900']"
+                                ></el-rate>
+                            </div>
+                        </div>
+
+                        <div class="action-right">
+                            <button
+                                    class="publish-btn cancel-btn"
+                                    @click="cancelPublish"
+                            >
+                                取消
+                            </button>
+                            <button
+                                    class="publish-btn submit-btn"
+                                    :class="{disabled: !commentText.trim()}"
+                                    :disabled="!commentText.trim()"
+                                    @click="publishComment"
+                            >
+                                发布
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 图片预览层 -->
+    <div class="image-preview-layer" v-if="showImagePreview" @click="closeImagePreview">
+        <div class="preview-container" @click.stop>
+            <div class="preview-header">
+                <span class="preview-title">图片预览</span>
+                <i class="el-icon-close close-btn" @click="closeImagePreview"></i>
+            </div>
+            <div class="preview-content">
+                <img :src="currentPreviewImage" alt="预览图片" class="preview-image">
+            </div>
+            <div class="preview-footer">
+                <div class="preview-nav">
+                    <button class="nav-btn" @click="prevImage" :disabled="currentPreviewIndex === 0">
+                        <i class="el-icon-arrow-left"></i>
+                    </button>
+                    <span class="preview-counter">{{ currentPreviewIndex + 1 }} / {{ previewImages.length }}</span>
+                    <button class="nav-btn" @click="nextImage" :disabled="currentPreviewIndex === previewImages.length - 1">
+                        <i class="el-icon-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+</div>
+</body>
+<script src="./js/vue.js"></script>
+<script src="./js/axios.min.js"></script>
+<!-- 引入组件库 -->
+<script src="./js/element.js"></script>
+<script src="./js/common.js"></script>
+<script>
+    let each = function (ary, callback) {
+        for (let i = 0, l = ary.length; i < l; i++) {
+            if (callback(ary[i], i) === false) break
+        }
+    }
+    const app = new Vue({
+        el: "#app",
+        data: {
+            showCommentPublish: false,
+            commentText: '',
+            commentRating: 5,
+            selectedImages: [],
+            isTextareaFocused: false,
+            commentText: '',
+            commentRating: 5,
+            selectedImages: [],
+            isTextareaFocused: false,
+            comment:{
+                sourceId:null,
+                sourceType:null,
+                content: '',
+                userId: null,
+                parentId: null,
+                answerId: null,
+                images: '',
+                rating: null,
+            },
+            comments: [],
+            util,
+            blog: {},
+            shop: {},
+            likes: [],
+            user: {}, // 登录用户
+            followed: false, // 是否关注了
+            _width: 0,
+            duration: 300,
+            container: null,
+            items: [],
+            active: 0,
+            start: {
+                x: 0,
+                y: 0
+            },
+            move: {
+                x: 0,
+                y: 0
+            },
+            sensitivity: 60,
+            resistance: 0.3,
+
+            // 图片预览相关
+            showImagePreview: false,
+            previewImages: [],
+            currentPreviewIndex: 0,
+            currentPreviewImage: ''
+        },
+        created() {
+            let id = util.getUrlParam("id");
+            this.queryBlogById(id);
+            this.loadComments(id);
+        },
+        methods: {
+            init() {
+                // 获得父容器节点
+                this.container = this.$refs.swiper
+                // 获得所有的子节点
+                this.items = this.container.querySelectorAll('.swiper-item')
+                this.updateItemWidth()
+                this.setTransform()
+                this.setTransition('none')
+            },
+            goBack() {
+                history.back();
+            },
+            toOtherInfo(){
+                if(this.blog.userId === this.user.id){
+                    location.href = "/info.html"
+                }else{
+                    location.href = "/other-info.html?id=" + this.blog.userId
+                }
+            },
+            queryBlogById(id) {
+                axios.get("/app/blog/" + id)
+                    .then(({data}) => {
+                        data.images = data.images.split(",")
+                        this.blog = data;
+                        this.$nextTick(this.init);
+                        this.queryShopById(data.shopId)
+                        this.queryLikeList(id);
+                        this.queryLoginUser();
+                    })
+                    .catch(this.$message.error)
+            },
+            queryShopById(shopId) {
+                axios.get("/app/shop/" + shopId)
+                    .then(({data}) => {
+                        data.image = data.images.split(",")[0]
+                        this.shop = data
+                    })
+                    .catch(this.$message.error)
+            },
+            queryLikeList(id){
+                axios.get("/app/blog/likes/" + id)
+                    .then(({data}) => this.likes = data)
+                    .catch(this.$message.error)
+            },
+            addLike(){
+                axios.put("/app/blog/like/" +this.blog.id)
+                    .then(({data}) => {
+                        axios.get("/app/blog/" + this.blog.id)
+                            .then(({data}) => {
+                                data.images = data.images.split(",")
+                                this.blog = data;
+                                this.queryLikeList(this.blog.id);
+                            })
+                            .catch(this.$message.error)
+                    })
+                    .catch(err => {
+                        this.$message.error(err)
+                    })
+            },
+            isFollowed(){
+                axios.get("/app/user/follow/isFollow/" + this.blog.userId)
+                    .then(({data}) => this.followed = data)
+                    .catch(this.$message.error)
+            },
+            follow(){
+                axios.put("/app/user/follow/" + this.blog.userId + "/" + !this.followed)
+                    .then(() => {
+                        this.$message.success(this.followed ? "已取消关注" : "已关注")
+                        this.followed = !this.followed
+                    })
+                    .catch(this.$message.error)
+            },
+            formatTime(b) {
+                return b.getFullYear() + "年" + (b.getMonth() + 1) + "月" + b.getDate() + "日 ";
+            },
+            formatMinutes(m) {
+                if (m < 10) m = "0" + m
+                return m;
+            },
+            queryLoginUser(){
+                // 查询用户信息
+                axios.get("/app/user/me")
+                    .then(({ data }) => {
+                        // 保存用户
+                        this.user = data;
+                        if(this.user.id !== this.blog.userId){
+                            this.isFollowed();
+                        }
+                    })
+                    .catch(console.log)
+            },
+            checkLogin() {
+                // 获取token
+                let token = sessionStorage.getItem("token");
+                if (!token) {
+                    location.href = "login.html"
+                }else{
+                    this.showCommentPublish = true
+                }
+            },
+            //加载评论
+            async loadComments(id) {
+                if (this.loading || this.noMore) return;
+
+                this.loading = true;
+                try {
+                    const response = await axios.get("/app/comment/listComment", {
+                        params: {
+                            sourceId: id,
+                            sourceType: 1,
+                            current: 1
+                        }
+                    });
+
+                    const newComments = response.data.list || response.data;
+
+                    if (newComments.length === 0) {
+                        this.noMore = true;
+                    } else {
+                        this.comments = [...this.comments, ...newComments];
+                        this.comments=this.comments.slice(0,3)
+                        this.comments.forEach(comment => {
+                            if(comment.images!=""&&comment.images!=null){
+                                comment.images=comment.images.split(",")
+                            }
+                        })
+                        this.page++;
+                    }
+                } catch (error) {
+                    console.error('加载评论失败:', error);
+                    this.$message.error('加载评论失败');
+                } finally {
+                    this.loading = false;
+                }
+            },
+
+            // 获取父容器宽度，并且更新所有的子节点宽度，因为我们默认所有子节点的宽高等于父节点的宽高
+            updateItemWidth() {
+                this._width = this.container.offsetWidth || document.documentElement.offsetWidth
+            },
+            // 根据当前活动子项的下标计算各个子项的X轴位置
+            // 计算公式(子项的下标 - 当前活动下标) * 子项宽度 + 偏移(手指移动距离)；
+            setTransform(offset) {
+                offset = offset || 0
+                each(this.items, (item, i) => {
+                    let distance = (i - this.active) * this._width + offset
+                    let transform = `translate3d(${distance}px, 0, 0)`
+                    item.style.webkitTransform = transform
+                    item.style.transform = transform
+                })
+            },
+            // 给每一个子项添加transition过度动画
+            setTransition(duration) {
+                duration = duration || this.duration
+                duration = typeof duration === 'number' ? (duration + 'ms') : duration
+                each(this.items, (item) => {
+                    item.style.webkitTransition = duration
+                    item.style.transition = duration
+                })
+            },
+            moveStart(e) {
+                console.log('moveStart')
+                this.start.x = e.changedTouches[0].pageX
+                this.start.y = e.changedTouches[0].pageY
+                this.setTransition('none')
+            },
+            moving(e) {
+                console.log('moving')
+                e.preventDefault()
+                e.stopPropagation()
+                let distanceX = e.changedTouches[0].pageX - this.start.x
+                let distanceY = e.changedTouches[0].pageY - this.start.y
+                if (Math.abs(distanceX) > Math.abs(distanceY)) {
+                    this.isMoving = true
+                    this.move.x = this.start.x + distanceX
+                    this.move.y = this.start.y + distanceY
+                    // 当活动子项为第一项且手指向右滑动或者活动项为最后一项切向左滑动的时候，添加阻力，形成一个拉弹簧的效果
+                    if ((this.active === 0 && distanceX > 0) || (this.active === (this.items.length - 1) && distanceX < 0)) {
+                        distanceX = distanceX * this.resistance
+                    }
+                    this.setTransform(distanceX)
+                }
+            },
+            moveEnd(e) {
+                console.log('moveEnd')
+                if (this.isMoving) {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    let distance = this.move.x - this.start.x
+                    if (Math.abs(distance) > this.sensitivity) {
+                        if (distance < 0) {
+                            this.next()
+                        } else {
+                            this.prev()
+                        }
+                    } else {
+                        this.back()
+                    }
+                    this.reset()
+                    this.isMoving = false
+                }
+            },
+            next() {
+                let index = this.active + 1
+                // 运用动画切换到指定下标的子项
+                this.go(index)
+            },
+            prev() {
+                let index = this.active - 1
+                // 运用动画切换到指定下标的子项
+                this.go(index)
+            },
+            reset() {
+                this.start.x = 0
+                this.start.y = 0
+                this.move.x = 0
+                this.move.y = 0
+            },
+            back() {
+                this.setTransition()
+                this.setTransform()
+            },
+            destroy() {
+                this.setTransition('none')
+            },
+            // 运用动画切换到指定下标的子项
+            go(index) {
+                this.active = index
+                if (this.active < 0) {
+                    this.active = 0
+                } else if (this.active > this.items.length - 1) {
+                    this.active = this.items.length - 1
+                }
+                this.$emit('change', this.active)
+                this.setTransition()
+                this.setTransform()
+            },
+
+
+
+
+            // 触发图片上传
+            triggerImageUpload() {
+                this.$refs.imageInput.click();
+            },
+
+            // 处理图片上传
+            async  handleImageUpload(event) {
+                const files = event.target.files;
+                if (files.length + this.selectedImages.length > 9) {
+                    this.$message.error('最多只能上传9张图片');
+                    return;
+                }
+
+                for (let file of files) {
+                    if (file.type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        //上传图片
+                        let url=await this.fileSelected(file)
+                        reader.onload = (e) => {
+                            this.selectedImages.push({
+                                file: file,
+                                url: url
+                            });
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                }
+            },
+
+            // 移除图片
+            removeImage(index) {
+                this.selectedImages.splice(index, 1);
+            },
+
+            // 文本域聚焦
+            onTextareaFocus() {
+                this.isTextareaFocused = true;
+            },
+
+            // 文本域失焦
+            onTextareaBlur() {
+                // 延迟隐藏操作区域，避免点击发布按钮时失焦
+                setTimeout(() => {
+                    if (!this.commentText) {
+                        this.isTextareaFocused = false;
+                    }
+                }, 200);
+            },
+
+            // 图片预览
+            previewImage(images, index) {
+                console.log('预览图片:', images, '类型:', typeof images);
+                // 处理图片数据 - 确保是数组格式
+                let imageArray = [];
+
+                if (Array.isArray(images)) {
+                    // 如果已经是数组，直接使用
+                    imageArray = images;
+                } else if (typeof images === 'string' && images.trim() !== '') {
+                    // 如果是字符串，按逗号分割
+                    imageArray = images.split(',').map(img => img.trim()).filter(img => img !== '');
+                }
+
+                if (!imageArray || imageArray.length === 0) {
+                    this.$message.warning('没有可预览的图片');
+                    return;
+                }
+
+                console.log('处理后的图片数组:', imageArray);
+
+                // 处理图片地址，确保是完整URL
+                this.previewImages = imageArray.map(img => {
+                    if (img.startsWith('http')) {
+                        return img;
+                    } else {
+                        // 如果是相对路径，添加基础URL
+                        return `http://192.168.182.20:9000${img.startsWith('/') ? '' : '/'}${img}`;
+                    }
+                });
+                this.currentPreviewIndex = index;
+                this.currentPreviewImage = this.previewImages[index];
+                this.showImagePreview = true;
+            },
+
+            closeImagePreview() {
+                this.showImagePreview = false;
+                this.previewImages = [];
+                this.currentPreviewIndex = 0;
+                this.currentPreviewImage = '';
+            },
+
+            prevImage() {
+                if (this.currentPreviewIndex > 0) {
+                    this.currentPreviewIndex--;
+                    this.currentPreviewImage = this.previewImages[this.currentPreviewIndex];
+                }
+            },
+
+            nextImage() {
+                if (this.currentPreviewIndex < this.previewImages.length - 1) {
+                    this.currentPreviewIndex++;
+                    this.currentPreviewImage = this.previewImages[this.currentPreviewIndex];
+                }
+            },
+
+            // 查看全部评论
+            viewAllComments() {
+                location.href = "/comment-list.html?blogId=" + this.blog.id;
+            },
+
+
+            // 关闭评论模态框
+            closeCommentModal() {
+                this.showCommentPublish = false;
+                this.cancelPublish(); // 清空内容
+            },
+
+            // 修改原有的cancelPublish方法
+            cancelPublish() {
+                this.commentText = '';
+                this.commentRating = 5;
+                this.selectedImages = [];
+                this.isTextareaFocused = false;
+                this.showCommentPublish = false; // 关闭模态框
+            },
+
+            // 发表评论
+            publishComment() {
+                if (!this.commentText.trim()) {
+                    this.$message.error('请输入评价内容');
+                    return;
+                }
+
+                const formData = new FormData();
+                this.comment.content=this.commentText
+                this.comment.rating=this.commentRating
+                this.comment.sourceId=this.blog.id
+                this.comment.sourceType=1
+                this.comment.userId=this.user.id
+                this.comment.parentId=0
+                this.comment.answerId=0
+                this.comment.images=this.selectedImages.map(image => image.url).join(',');
+                axios.post('/app/comment/addComment', this.comment)
+                    .then(({data}) => {
+                        this.$message.success('评价发布成功');
+                        this.commentText = '';
+                        this.commentRating = 5;
+                        this.selectedImages = [];
+                        this.showCommentPublish = false; // 发布成功后关闭模态框
+                        // 可以在这里刷新评论列表
+                        this.loadComments(this.blog.id);
+                        this.queryBlogById(this.blog.id);
+                    })
+                    .catch(error => {
+                        this.$message.error('发布失败，请重试');
+                        console.error(error);
+                    });
+            },
+            // 文件上传
+            async fileSelected(file) {
+                let formData = new FormData();
+                formData.append("file", file);
+
+                // 微服务环境下可能需要添加服务路由头
+                const config = {
+                    headers: {
+                        // 如果网关需要，添加服务路由信息
+                        // 'X-Service-Id': 'file-service'
+                    },
+                    timeout: 30000 // 微服务调用链较长，增加超时时间
+                };
+                let url
+                await axios.post("/app/file/appUpload", formData, config)
+                    .then(({data}) =>url=data)
+                    .catch(this.$message.error);
+                return url
+            },
+        }
+    })
+</script>
+</body>
+</html>
