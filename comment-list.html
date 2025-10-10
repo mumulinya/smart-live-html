@@ -438,6 +438,128 @@
       text-align: center;
     }
 
+    /* AI评论相关样式 - 头像大小与用户头像一致 */
+    .ai-generated-comment {
+      background: linear-gradient(135deg, #f8fbff 0%, #f0f7ff 100%);
+      border: 1px solid #e1eeff;
+      border-radius: 12px;
+      margin: 12px 0;
+      padding: 16px;
+      position: relative;
+      box-shadow: 0 2px 8px rgba(74, 108, 247, 0.08);
+    }
+
+    .ai-generated-badge {
+      position: absolute;
+      top: 12px;
+      right: 16px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      font-size: 10px;
+      padding: 4px 8px;
+      border-radius: 10px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+    }
+    /* AI头像 - 完全与用户头像尺寸一致 */
+    .ai-comment-icon {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 14px;
+      width: 36px; /* 完全一致 */
+      height: 36px; /* 完全一致 */
+      border-radius: 50%; /* 完全一致 */
+      overflow: hidden; /* 完全一致 */
+      margin-right: 10px; /* 完全一致 */
+      flex-shrink: 0; /* 完全一致 */
+      box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+    }
+
+    .ai-comment-icon::before {
+      content: '';
+      position: absolute;
+      top: -10px;
+      left: -10px;
+      right: -10px;
+      bottom: -10px;
+      background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.2) 50%, transparent 70%);
+      animation: shine 3s infinite linear;
+    }
+
+    @keyframes shine {
+      0% {
+        transform: translateX(-100%);
+      }
+      100% {
+        transform: translateX(100%);
+      }
+    }
+
+    .ai-comment-icon i {
+      position: relative;
+      z-index: 2;
+      filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2));
+    }
+
+    .ai-comment-info .comment-user {
+      color: #2d3748;
+      font-weight: 600;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .ai-verified {
+      color: #667eea;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(102, 126, 234, 0.1);
+      padding: 2px 6px;
+      border-radius: 8px;
+    }
+
+    .ai-comment-info .comment-content {
+      color: #4a5568;
+      line-height: 1.6;
+      font-size: 14px;
+      margin: 0;
+      padding: 8px 0;
+    }
+
+    .ai-comment-info .comment-stats {
+      color: #718096;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .ai-highlight {
+      color: #667eea;
+      font-weight: 600;
+    }
+
+    /* 悬停效果 */
+    .ai-generated-comment:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(74, 108, 247, 0.15);
+      transition: all 0.3s ease;
+    }
+
+    .ai-comment-icon:hover {
+      transform: scale(1.05);
+      transition: transform 0.3s ease;
+    }
+
   </style>
 </head>
 <body>
@@ -533,10 +655,34 @@
 
     <!-- 评论列表 -->
     <div class="comments-section">
+
+      <!-- AI生成的评论 - 头像大小与用户头像一致 -->
+      <div class="comment-box ai-generated-comment" v-if="aiComment && aiComment.content">
+        <div class="comment-icon ai-comment-icon">
+          <i class="el-icon-magic"></i>
+        </div>
+        <div class="comment-info ai-comment-info">
+          <div class="comment-user">
+            智评助手
+            <span class="ai-verified">
+              <i class="el-icon-check"></i>
+              官方认证
+            </span>
+          </div>
+          <div class="comment-content">{{aiComment.content}}</div>
+          <div class="comment-stats">
+            <span class="ai-highlight">{{aiComment.createTime}}</span>
+          </div>
+        </div>
+        <div class="ai-generated-badge">AI生成</div>
+      </div>
+
       <div v-if="comments.length === 0 && !loading" class="empty-comments">
         <i class="el-icon-chat-round"></i>
         <div>暂无评论，快来发表第一条评论吧～</div>
       </div>
+
+
 
       <div class="comment-box" v-for="comment in comments" :key="comment.id">
         <div class="comment-icon">
@@ -631,6 +777,7 @@
         answerId: null,
         // rating: null,
       },
+      aiComment: {},
       page: 1,
       pageSize: 10,
       loading: false,
@@ -697,6 +844,9 @@
           } else {
             this.comments = [...this.comments, ...newComments];
             this.comments.forEach(comment => {
+              if(comment.isAIGenerated===true){
+                this.aiComment= comment
+              }
               if(comment.images!=""&&comment.images!=null){
                 comment.images=comment.images.split(",")
               }
@@ -712,16 +862,17 @@
       },
 
       // 滚动加载
-      handleScroll() {
-        const container = this.$refs.commentList;
-        const scrollTop = container.scrollTop;
-        const scrollHeight = container.scrollHeight;
-        const clientHeight = container.clientHeight;
-
-        // 距离底部50px时加载更多
-        if (scrollHeight - scrollTop - clientHeight < 50 && !this.loading && !this.noMore) {
-          this.current++;
-          this.loadComments();
+      handleScroll(e) {
+        let scrollTop = e.target.scrollTop;
+        let offsetHeight = e.target.offsetHeight;
+        let scrollHeight = e.target.scrollHeight;
+        if(scrollTop + offsetHeight + 1 > scrollHeight && !this.isReachBottom){
+          this.isReachBottom = true
+          console.log("触底")
+          this.current++
+          this.loadComments()
+        }else{
+          this.isReachBottom = false
         }
       },
 

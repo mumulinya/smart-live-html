@@ -287,6 +287,23 @@
       font-size: 12px;
       text-align: center;
       border-bottom: 1px solid #e6e6e6;
+      transition: all 0.3s ease;
+      max-height: 40px;
+      overflow: hidden;
+    }
+
+    .location-status.hidden {
+      max-height: 0;
+      padding: 0;
+      border-bottom: none;
+    }
+
+    .location-status.success {
+      color: #67C23A;
+    }
+
+    .location-status.error {
+      color: #F56C6C;
     }
 
     /* 自定义标记样式 */
@@ -337,13 +354,15 @@
   </div>
 
   <!-- 定位状态显示 -->
-  <div class="location-status" v-if="locationLoading">
-    <i class="el-icon-loading"></i> 定位中...
-  </div>
-  <div class="location-status" v-else-if="usingCachedLocation" style="color: #67C23A;">
-  </div>
-  <div class="location-status" v-else-if="locationError" style="color: #F56C6C;">
-    <i class="el-icon-warning"></i> 定位失败，使用默认位置
+  <div class="location-status" :class="{
+        'success': usingCachedLocation && !locationLoading && !locationError,
+        'error': locationError,
+        'hidden': !showLocationStatus
+      }" v-if="showLocationStatus">
+    <i class="el-icon-loading" v-if="locationLoading"></i>
+    <i class="el-icon-location" v-else-if="usingCachedLocation && !locationError"></i>
+    <i class="el-icon-warning" v-else-if="locationError"></i>
+    {{ locationStatusText }}
   </div>
 
   <!-- 🔥 新增：地图加载遮罩 -->
@@ -421,9 +440,11 @@
       selectedShopId: null,
       isLoading: true,
       loadingText: "正在初始化...",
+      // 定位相关数据
       locationLoading: false,
       locationError: false,
       usingCachedLocation: false,
+      showLocationStatus: false,
       currentType: null,
       x: 120.16142,
       y: 30.279693,
@@ -434,6 +455,11 @@
       typeId: 1,
       currentLocationMarker: null,
       locationAccuracyCircle: null,
+      userLocation: {
+        x: 120.149993,
+        y: 30.334229,
+        region: {}
+      },
       shopTypeList: [
         { id: 1, name: "美食", icon: "el-icon-food", color: "#f63" },
         { id: 2, name: "外卖", icon: "el-icon-takeaway-box", color: "#07c160" },
@@ -520,6 +546,14 @@
       ],
       shopList: []
     },
+    computed: {
+      locationStatusText() {
+        if (this.locationLoading) return "定位中...";
+        if (this.usingCachedLocation && !this.locationError) return "已使用缓存位置";
+        if (this.locationError) return "定位失败，使用默认位置";
+        return "";
+      }
+    },
     created() {
       this.initLocation();
     },
@@ -527,20 +561,76 @@
       this.initMap();
     },
     methods: {
+      // 获取地区信息
+      async getRegionInfo(lng, lat) {
+        try {
+          console.log('开始获取地区信息，坐标:', lng, lat);
+
+          const response = await fetch(
+                  `https://restapi.amap.com/v3/geocode/regeo?key=60bdbf9b9cf98025c397ee43e8c25871&location=${lng},${lat}`
+          );
+
+          console.log('响应状态:', response.status, response.statusText);
+
+          const data = await response.json();
+          console.log('API返回数据:', data);
+
+          if (data.status === '1' && data.regeocode) {
+            const address = data.regeocode.addressComponent;
+            const result = {
+              province: address.province,
+              city: address.city || address.province,
+              district: address.district,
+              township: address.township,
+              fullAddress: data.regeocode.formatted_address
+            };
+            console.log('解析后的地区信息:', result);
+            return result;
+          } else {
+            throw new Error(`API返回错误: ${data.info}`);
+          }
+        } catch (error) {
+          console.error('获取地区信息详细错误:', error);
+          return null;
+        }
+      },
+
+      // 显示定位状态（3秒后自动隐藏）
+      showLocationStatusMessage() {
+        this.showLocationStatus = true;
+
+        setTimeout(() => {
+          this.hideLocationStatus();
+        }, 3000);
+      },
+
+      // 隐藏定位状态
+      hideLocationStatus() {
+        this.showLocationStatus = false;
+      },
+
+      // 初始化位置信息
       initLocation() {
         const cachedLocation = this.getCachedLocation();
 
         if (cachedLocation) {
+          console.log("使用缓存位置:", cachedLocation);
+          this.userLocation.x = cachedLocation.x;
+          this.userLocation.y = cachedLocation.y;
           this.x = cachedLocation.x;
           this.y = cachedLocation.y;
           this.usingCachedLocation = true;
+          this.locationError = false;
+          this.userLocation.region = cachedLocation.region;
+          this.showLocationStatusMessage();
           this.initMapAndData();
         } else {
-          this.locationLoading = true;
-          this.centerToCurrentLocation();
+          console.log("缓存中没有位置，开始定位");
+          this.getLocation();
         }
       },
 
+      // 获取缓存中的位置
       getCachedLocation() {
         try {
           const cached = localStorage.getItem('user_location');
@@ -562,23 +652,134 @@
         return null;
       },
 
-      saveLocationToCache(x, y) {
+      // 保存位置到缓存
+      saveLocationToCache(x, y, region) {
         try {
-          const location = { x, y };
+          const location = { x, y, region };
           localStorage.setItem('user_location', JSON.stringify(location));
           localStorage.setItem('user_location_time', new Date().getTime().toString());
+          console.log("位置已保存到缓存:", location);
         } catch (error) {
           console.log("保存位置缓存失败:", error);
         }
       },
 
+      // 清除位置缓存
       clearLocationCache() {
         try {
           localStorage.removeItem('user_location');
           localStorage.removeItem('user_location_time');
+          console.log("位置缓存已清除");
         } catch (error) {
           console.log("清除位置缓存失败:", error);
         }
+      },
+
+      // 自动定位方法
+      getLocation() {
+        this.showLocationStatus = true;
+        this.locationLoading = true;
+        this.locationError = false;
+        this.usingCachedLocation = false;
+
+        if (!navigator.geolocation) {
+          console.log("浏览器不支持地理定位");
+          this.locationError = true;
+          this.locationLoading = false;
+          this.showLocationStatusMessage();
+          this.initMapAndData();
+          return;
+        }
+
+        const options = {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 60000
+        };
+
+        navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                  console.log("定位成功:", position);
+                  const convertedCoord = this.transformWGS84ToGCJ02(position.coords.longitude, position.coords.latitude)
+                  const longitude = convertedCoord.lng;
+                  const latitude = convertedCoord.lat;
+
+                  this.userLocation.x = longitude;
+                  this.userLocation.y = latitude;
+                  this.x = longitude;
+                  this.y = latitude;
+
+                  // 等待地区信息获取完成
+                  try {
+                    const regionInfo = await this.getRegionInfo(longitude, latitude);
+                    if (regionInfo) {
+                      this.userLocation.region = regionInfo;
+                      console.log("地区信息获取成功:", regionInfo);
+
+                      // 保存包含地区信息的缓存
+                      this.saveLocationToCache(longitude, latitude, regionInfo);
+
+                      // 显示包含地区的成功消息
+                      this.$message({
+                        message: `定位成功：${regionInfo.district}`,
+                        type: 'success',
+                        duration: 2000
+                      });
+                    } else {
+                      throw new Error('获取地区信息失败');
+                    }
+                  } catch (error) {
+                    console.error('获取地区信息失败:', error);
+                    // 即使地区获取失败，也保存坐标
+                    this.saveLocationToCache(longitude, latitude, null);
+
+                    this.$message({
+                      message: '定位成功（地区信息获取失败）',
+                      type: 'warning',
+                      duration: 2000
+                    });
+                  }
+                  console.log("当前位置 - 经度:", longitude, "纬度:", latitude, "地区:", this.userLocation.region);
+                  this.locationLoading = false;
+                  this.usingCachedLocation = false;
+                  this.showLocationStatusMessage();
+
+                  this.initMapAndData();
+                },
+                (error) => {
+                  console.log("定位失败:", error);
+                  this.locationError = true;
+                  this.locationLoading = false;
+                  this.showLocationStatusMessage();
+
+                  this.$message({
+                    message: '定位失败，使用默认位置',
+                    type: 'warning',
+                    duration: 2000
+                  });
+
+                  this.initMapAndData();
+                },
+                options
+        );
+      },
+
+      // GPS坐标转高德坐标
+      transformWGS84ToGCJ02(lng, lat) {
+        // 简化的坐标转换（实际应该使用更精确的算法）
+        const x = lng - 0.0065;
+        const y = lat - 0.0060;
+        return { lng: x, lat: y };
+      },
+
+      // 手动重新定位方法
+      reGetLocation() {
+        this.clearLocationCache();
+        this.showLocationStatus = true;
+        this.locationLoading = true;
+        this.locationError = false;
+        this.usingCachedLocation = false;
+        this.getLocation();
       },
 
       async initMapAndData() {
@@ -586,7 +787,10 @@
         this.loadingText = "正在初始化地图...";
 
         try {
-          this.initMap();
+          if (!this.map) {
+            this.initMap();
+          }
+
           this.map.setCenter([this.x, this.y]);
           this.addCurrentLocationMarker(this.x, this.y);
 
@@ -904,60 +1108,6 @@
         }
         this.keyword = this.searchKeyword.toLowerCase();
         this.getShopList();
-      },
-
-      async centerToCurrentLocation() {
-        this.locationLoading = true;
-        this.usingCachedLocation = false;
-
-        try {
-          await new Promise((resolve, reject) => {
-            AMap.plugin('AMap.Geolocation', () => {
-              const geolocation = new AMap.Geolocation({
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 0,
-                convert: true,
-                showButton: true,
-                showMarker: false,
-                showCircle: false,
-                panToLocation: true,
-                trackLocation: false
-              });
-
-              geolocation.getCurrentPosition((status, result) => {
-                if (status === 'complete') {
-                  this.$message.success("定位成功");
-                  this.x = result.position.lng;
-                  this.y = result.position.lat;
-                  this.saveLocationToCache(this.x, this.y);
-                  this.initMapAndData();
-                  this.locationLoading = false;
-                  resolve(result);
-                } else {
-                  this.$message.error("定位失败：" + result.message);
-                  this.locationError = true;
-                  this.locationLoading = false;
-                  this.initMapAndData();
-                  resolve(null);
-                }
-              });
-            });
-          });
-        } catch (error) {
-          console.error('定位过程出错:', error);
-          this.locationError = true;
-          this.locationLoading = false;
-          this.initMapAndData();
-        }
-      },
-
-      reGetLocation() {
-        this.clearLocationCache();
-        this.locationLoading = true;
-        this.locationError = false;
-        this.usingCachedLocation = false;
-        this.centerToCurrentLocation();
       },
 
       getShopTypeList(){
