@@ -40,6 +40,23 @@
     .location-status.error {
       color: #F56C6C;
     }
+
+    /* 博客列表容器样式 - 关键修复 */
+    .blog-list {
+      /* 计算高度：可视区域高度 - 顶部元素总高度（根据实际布局调整） */
+      height: calc(100vh - 220px);
+      overflow-y: auto; /* 启用纵向滚动 */
+      overflow-x: hidden; /* 禁止横向滚动 */
+      padding: 10px 0;
+    }
+
+    /* 加载提示样式 */
+    .scroll-tip {
+      text-align: center;
+      padding: 15px 0;
+      color: #909399;
+      font-size: 12px;
+    }
   </style>
 </head>
 <body>
@@ -71,12 +88,15 @@
     box-shadow: 0 0 3px 2px rgba(0, 0, 0, 0.1);
     border-radius: 18px;"></div>
   </div>
+
   <div class="type-list">
     <div class="type-box" v-for="t in types" :key="t.id" @click="toShopList(t.id, t.name)">
       <div class="type-view"><img :src="'/imgs/' + t.icon" alt=""></div>
       <div class="type-text">{{t.name}}</div>
     </div>
   </div>
+
+  <!-- 博客列表（绑定滚动事件） -->
   <div class="blog-list" @scroll="onScroll">
     <div class="blog-box" v-for="b in blogs" :key="b.id">
       <div class="blog-img" @click="toBlogDetail(b)"><img :src="b.img" alt=""></div>
@@ -92,24 +112,33 @@
         </div>
       </div>
     </div>
+
+    <!-- 加载状态/无更多数据提示 -->
+    <div class="scroll-tip" v-if="blogs.length > 0">
+      <i class="el-icon-loading" v-if="isLoading"></i>
+      <span v-if="isLoading">加载中...</span>
+      <span v-else-if="noMoreData">已加载全部数据</span>
+    </div>
   </div>
+
   <foot-bar :active-btn="1"></foot-bar>
 </div>
+
 <script src="./js/vue.js"></script>
 <script src="./js/axios.min.js"></script>
-<!-- 引入组件库 -->
 <script src="./js/element.js"></script>
 <script src="./js/common.js"></script>
 <script src="./js/footer.js"></script>
 <script>
-
   const app = new Vue({
     el: "#app",
     data: {
       isReachBottom: false,
       types: [], // 类型列表
       blogs: [], // 播客列表
-      current: 1,// blog的页码
+      current: 1, // 当前页码
+      isLoading: false, // 加载状态标记
+      noMoreData: false, // 无更多数据标记
       // 定位相关数据
       locationLoading: false,
       locationError: false,
@@ -120,7 +149,9 @@
         x: 120.149993,
         y: 30.334229,
         region: {}
-      }
+      },
+      // 新增：防抖标记，防止重复请求
+      isRequesting: false
     },
     computed: {
       locationStatusText() {
@@ -131,7 +162,6 @@
       }
     },
     created() {
-      // 查询类型
       this.queryTypes();
       this.queryHotBlogsScroll();
       this.initLocation();
@@ -140,33 +170,24 @@
       // 获取地区信息
       async getRegionInfo(lng, lat) {
         try {
-          console.log('开始获取地区信息，坐标:', lng, lat);
-
           const response = await fetch(
                   `https://restapi.amap.com/v3/geocode/regeo?key=60bdbf9b9cf98025c397ee43e8c25871&location=${lng},${lat}`
           );
-
-          console.log('响应状态:', response.status, response.statusText);
-
           const data = await response.json();
-          console.log('API返回数据:', data);
-
           if (data.status === '1' && data.regeocode) {
             const address = data.regeocode.addressComponent;
-            const result = {
+            return {
               province: address.province,
               city: address.city || address.province,
               district: address.district,
               township: address.township,
               fullAddress: data.regeocode.formatted_address
             };
-            console.log('解析后的地区信息:', result);
-            return result;
           } else {
             throw new Error(`API返回错误: ${data.info}`);
           }
         } catch (error) {
-          console.error('获取地区信息详细错误:', error);
+          console.error('获取地区信息失败:', error);
           return null;
         }
       },
@@ -174,10 +195,7 @@
       // 显示定位状态（3秒后自动隐藏）
       showLocationStatusMessage() {
         this.showLocationStatus = true;
-
-        setTimeout(() => {
-          this.hideLocationStatus();
-        }, 3000);
+        setTimeout(() => this.hideLocationStatus(), 3000);
       },
 
       // 隐藏定位状态
@@ -188,39 +206,31 @@
       // 初始化位置信息
       initLocation() {
         const cachedLocation = this.getCachedLocation();
-
         if (cachedLocation) {
-          console.log("使用缓存位置:", cachedLocation);
-          this.userLocation.x = cachedLocation.x;
-          this.userLocation.y = cachedLocation.y;
+          this.userLocation = { ...cachedLocation };
+          this.currentCity = cachedLocation.region?.city || cachedLocation.region?.province || '杭州';
           this.usingCachedLocation = true;
-          this.locationError = false;
-          this.userLocation.region = cachedLocation.region;
-          this.currentCity = cachedLocation.region.city || cachedLocation.region.province || '杭州';
           this.showLocationStatusMessage();
         } else {
-          console.log("缓存中没有位置，开始定位");
           this.getLocation();
         }
       },
 
-      // 获取缓存中的位置
+      // 获取缓存位置
       getCachedLocation() {
         try {
           const cached = localStorage.getItem('user_location');
-          if (cached) {
-            const location = JSON.parse(cached);
-            const cacheTime = localStorage.getItem('user_location_time');
+          const cacheTime = localStorage.getItem('user_location_time');
+          if (cached && cacheTime) {
             const now = new Date().getTime();
-            if (cacheTime && (now - parseInt(cacheTime)) < 24 * 60 * 60 * 1000) {
-              return location;
-            } else {
-              this.clearLocationCache();
-              return null;
+            // 缓存有效期24小时
+            if (now - parseInt(cacheTime) < 24 * 60 * 60 * 1000) {
+              return JSON.parse(cached);
             }
           }
+          this.clearLocationCache();
         } catch (error) {
-          console.log("读取位置缓存失败:", error);
+          console.error('读取位置缓存失败:', error);
           this.clearLocationCache();
         }
         return null;
@@ -232,9 +242,8 @@
           const location = { x, y, region };
           localStorage.setItem('user_location', JSON.stringify(location));
           localStorage.setItem('user_location_time', new Date().getTime().toString());
-          console.log("位置已保存到缓存:", location);
         } catch (error) {
-          console.log("保存位置缓存失败:", error);
+          console.error('保存位置缓存失败:', error);
         }
       },
 
@@ -243,13 +252,12 @@
         try {
           localStorage.removeItem('user_location');
           localStorage.removeItem('user_location_time');
-          console.log("位置缓存已清除");
         } catch (error) {
-          console.log("清除位置缓存失败:", error);
+          console.error('清除位置缓存失败:', error);
         }
       },
 
-      // 自动定位方法
+      // 自动定位
       getLocation() {
         this.showLocationStatus = true;
         this.locationLoading = true;
@@ -257,7 +265,6 @@
         this.usingCachedLocation = false;
 
         if (!navigator.geolocation) {
-          console.log("浏览器不支持地理定位");
           this.locationError = true;
           this.locationLoading = false;
           this.showLocationStatusMessage();
@@ -272,70 +279,47 @@
 
         navigator.geolocation.getCurrentPosition(
                 async (position) => {
-                  console.log("定位成功:", position);
-                  const convertedCoord = this.transformWGS84ToGCJ02(position.coords.longitude, position.coords.latitude)
-                  const longitude = convertedCoord.lng;
-                  const latitude = convertedCoord.lat;
-
+                  const convertedCoord = this.transformWGS84ToGCJ02(
+                          position.coords.longitude,
+                          position.coords.latitude
+                  );
+                  const { lng: longitude, lat: latitude } = convertedCoord;
                   this.userLocation.x = longitude;
                   this.userLocation.y = latitude;
 
-                  // 等待地区信息获取完成
                   try {
                     const regionInfo = await this.getRegionInfo(longitude, latitude);
                     if (regionInfo) {
                       this.userLocation.region = regionInfo;
                       this.currentCity = regionInfo.city || regionInfo.province || '杭州';
-                      console.log("地区信息获取成功:", regionInfo);
-
-                      // 保存包含地区信息的缓存
                       this.saveLocationToCache(longitude, latitude, regionInfo);
-
-                      // 显示包含地区的成功消息
-                      this.$message({
-                        message: `定位成功：${regionInfo.district}`,
-                        type: 'success',
-                        duration: 2000
-                      });
+                      this.$message.success(`定位成功：${regionInfo.district}`);
                     } else {
-                      throw new Error('获取地区信息失败');
+                      throw new Error('地区信息获取失败');
                     }
                   } catch (error) {
-                    console.error('获取地区信息失败:', error);
-                    // 即使地区获取失败，也保存坐标
+                    console.error('地区信息处理失败:', error);
                     this.saveLocationToCache(longitude, latitude, null);
-
-                    this.$message({
-                      message: '定位成功（地区信息获取失败）',
-                      type: 'warning',
-                      duration: 2000
-                    });
+                    this.$message.warning('定位成功（地区信息获取失败）');
                   }
-                  console.log("当前位置 - 经度:", longitude, "纬度:", latitude, "地区:", this.userLocation.region);
+
                   this.locationLoading = false;
-                  this.usingCachedLocation = false;
                   this.showLocationStatusMessage();
                 },
                 (error) => {
-                  console.log("定位失败:", error);
+                  console.error('定位失败:', error);
                   this.locationError = true;
                   this.locationLoading = false;
                   this.showLocationStatusMessage();
-
-                  this.$message({
-                    message: '定位失败，使用默认位置',
-                    type: 'warning',
-                    duration: 2000
-                  });
+                  this.$message.warning('定位失败，使用默认位置');
                 },
                 options
         );
       },
 
-      // 手动重新定位方法
+      // 重新定位
       reGetLocation() {
         this.clearLocationCache();
-        this.showLocationStatus = true;
         this.locationLoading = true;
         this.locationError = false;
         this.usingCachedLocation = false;
@@ -344,78 +328,116 @@
 
       // GPS坐标转高德坐标
       transformWGS84ToGCJ02(lng, lat) {
-        // 简化的坐标转换（实际应该使用更精确的算法）
+        // 简化的坐标转换算法
         const x = lng - 0.0065;
         const y = lat - 0.0060;
         return { lng: x, lat: y };
       },
 
+      // 查询类型列表
       queryTypes() {
         axios.get("/app/shop/shop-type/list")
-                .then(({data}) => {
-                  this.types = data;
+                .then(({ data }) => {
+                  this.types = data || [];
                 })
                 .catch(err => {
-                  this.$message.error(err)
-                })
+                  this.$message.error('类型加载失败');
+                });
       },
+
+      // 分页查询博客
       queryHotBlogsScroll() {
-        axios.get("/app/blog/hot?current=" + this.current)
-                .then(({data}) => {
-                  data.forEach(b => b.img = b.images.split(",")[0]);
+        // 如果正在加载或无更多数据，直接返回
+        if (this.isLoading || this.noMoreData || this.isRequesting) return;
+
+        this.isLoading = true;
+        this.isRequesting = true; // 设置请求标记
+
+        axios.get(`/app/blog/hot?current=${this.current}`)
+                .then(({ data }) => {
+                  if (!data || data.length === 0) {
+                    // 无数据时标记为无更多
+                    this.noMoreData = true;
+                    return;
+                  }
+                  // 处理图片路径
+                  data.forEach(b => {
+                    b.img = b.images?.split(",")[0] || '';
+                  });
+                  // 追加数据（而非覆盖）
                   this.blogs = this.blogs.concat(data);
+                  this.current++; // 页码自增
                 })
                 .catch(err => {
-                  this.$message.error(err)
+                  this.$message.error('博客加载失败');
+                  console.error('博客请求错误:', err);
                 })
+                .finally(() => {
+                  // 无论成功失败，结束加载状态
+                  this.isLoading = false;
+                  this.isReachBottom = false;
+                  this.isRequesting = false; // 重置请求标记
+                });
       },
+
+      // 点赞功能
       addLike(b) {
-        axios.put("/app/blog/like/" +b.id)
-                .then(({data}) => {
-                  this.queryBlogById(b)
+        axios.put(`/app/blog/like/${b.id}`)
+                .then(() => {
+                  this.queryBlogById(b);
                 })
                 .catch(err => {
-                  this.$message.error(err)
-                })
+                  this.$message.error('点赞失败');
+                  console.error('点赞错误:', err);
+                });
       },
+
+      // 获取单篇博客最新信息
       queryBlogById(b) {
-        axios.get("/app/blog/" + b.id)
-                .then(({data}) => {
+        axios.get(`/app/blog/${b.id}`)
+                .then(({ data }) => {
                   b.liked = data.liked;
                   b.isLike = data.isLike;
                 })
                 .catch(() => {
-                  this.$message.error
-                  b.liked ++;
-                })
+                  // 失败时本地临时更新（乐观更新）
+                  b.liked++;
+                  b.isLike = true;
+                });
       },
-      onScroll(e) {
-        let scrollTop = e.target.scrollTop;
-        let offsetHeight = e.target.offsetHeight;
-        let scrollHeight = e.target.scrollHeight;
-        if (scrollTop + offsetHeight > scrollHeight && !this.isReachBottom) {
-          this.isReachBottom = true
 
-          // 再次查询下一页数据
-          this.current++;
+      // 滚动事件处理（触底检测）
+      onScroll(e) {
+        const { scrollTop, offsetHeight, scrollHeight } = e.target;
+        // 触底判断：滚动高度 + 可视高度 >= 总高度 - 50px（缓冲值，避免精度问题）
+        if (scrollTop + offsetHeight >= scrollHeight - 50
+                && !this.isLoading
+                && !this.noMoreData
+                && !this.isRequesting) { // 添加请求标记检查
+          this.isReachBottom = true;
+          // 加载下一页
           this.queryHotBlogsScroll();
-        } else {
-          this.isReachBottom = false
         }
       },
+
+      // 跳转店铺列表
       toShopList(id, name) {
-        location.href = "/shop-list.html?type=" + id + "&name=" + name
+        location.href = `/shop-list.html?type=${id}&name=${encodeURIComponent(name)}`;
       },
+
+      // 跳转博客详情
       toBlogDetail(b) {
-        location.href = "/blog-detail.html?id=" + b.id
+        location.href = `/blog-detail.html?id=${b.id}`;
       },
+
+      // 跳转其他页面
       toPage(i) {
         if (i === 5) {
-          location.href = "/ai-assistant.html"
+          location.href = "/ai-assistant.html";
         }
       }
     }
-  })
+  });
 </script>
 </body>
 </html>

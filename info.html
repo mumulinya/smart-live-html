@@ -230,7 +230,6 @@
 
     .content {
       background: #f8f9fa;
-      min-height: calc(100vh - 300px);
       position: relative;
       overflow: hidden;
     }
@@ -274,6 +273,9 @@
       user-select: none;
       -webkit-tap-highlight-color: transparent;
       pointer-events: auto;
+      /* 关键修复：防止内容过长导致变形 */
+      min-width: 0;
+      overflow: hidden;
     }
 
     .custom-tab-item::before {
@@ -322,14 +324,35 @@
       border-radius: 2px;
     }
 
-    .el-tabs {
-      display: none;
+    /* 关键修复：标签文本容器 */
+    .tab-text {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* 数量徽章样式 */
+    .count-badge {
+      font-size: 11px;
+      background: #ff4757;
+      color: white;
+      border-radius: 8px;
+      padding: 1px 4px;
+      margin-left: 4px;
+      min-width: 16px;
+      text-align: center;
+      line-height: 1.2;
+      font-weight: 500;
     }
 
     .tabs-container {
       position: relative;
-      height: 100%;
-      touch-action: pan-x; /* 允许横向滑动 */
+      height: 400px; /* 改为固定高度，确保可以滚动 */
+      touch-action: pan-x;
     }
 
     .tabs-content {
@@ -341,8 +364,8 @@
 
     .tab-pane {
       flex: 0 0 100%;
-      height: 100%;
-      overflow-y: auto;
+      height: 100%; /* 关键修复：使用父容器高度 */
+      overflow-y: auto; /* 关键修复：启用滚动 */
       -webkit-overflow-scrolling: touch;
       padding-bottom: 20px;
     }
@@ -351,23 +374,6 @@
       display: block;
       height: 100%;
       margin-top: 0;
-    }
-
-    .swipe-indicator {
-      text-align: center;
-      padding: 8px;
-      color: #999;
-      font-size: 12px;
-      background: white;
-      border-bottom: 1px solid #f0f0f0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-    }
-
-    .swipe-indicator i {
-      font-size: 14px;
     }
 
     .blog-item {
@@ -712,39 +718,39 @@
       font-size: 15px;
     }
 
-    .load-more {
+    /* 加载状态指示器样式 */
+    .loading-indicator {
       text-align: center;
-      padding: 20px;
-      color: #999;
+      padding: 15px;
+      color: #909399;
       font-size: 14px;
       background: white;
+    }
+
+    .loading-indicator .el-icon-loading {
+      margin-right: 5px;
+    }
+
+    .no-more-data {
+      text-align: center;
+      padding: 15px;
+      color: #C0C4CC;
+      font-size: 14px;
+      background: white;
+    }
+
+    .load-error {
+      text-align: center;
+      padding: 15px;
+      color: #F56C6C;
+      font-size: 14px;
+      background: white;
+    }
+
+    .load-error .retry-btn {
+      color: #409EFF;
       cursor: pointer;
-      transition: background-color 0.3s;
-    }
-
-    .load-more:hover {
-      background-color: #f9f9f9;
-      color: #666;
-    }
-
-    .loading-text {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .loading-text i {
-      margin-right: 8px;
-    }
-
-    .no-more {
-      color: #ccc;
-      cursor: default;
-    }
-
-    .no-more:hover {
-      background-color: white;
-      color: #ccc;
+      margin-left: 5px;
     }
 
     .foot-bar {
@@ -810,7 +816,6 @@
       max-width: 320px !important;
     }
 
-    /* 优化提示框按钮样式 */
     .el-message-box__btns {
       display: flex;
       justify-content: center;
@@ -823,50 +828,89 @@
       padding: 8px 15px;
     }
 
-    @media (max-width: 768px) {
-      .basic {
-        padding: 20px 15px;
-      }
-
-      .blog-item {
-        padding: 15px;
-      }
-
-      .user-item {
-        padding: 15px;
-      }
-
-      .review-item {
-        padding: 15px;
-      }
-
-      .blog-img {
-        width: 80px;
-        height: 80px;
-        margin-right: 15px;
-      }
-
-      .custom-tabs-header {
-        padding: 12px 12px 6px;
-      }
-
-      .custom-tab-item {
-        padding: 12px 6px;
-        font-size: 13px;
-        min-height: 44px;
-      }
+    /* 图片预览层样式 */
+    .image-preview-layer {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
     }
 
-    @media (max-width: 480px) {
-      .custom-tabs-header {
-        padding: 10px 10px 4px;
-      }
+    .preview-container {
+      background: white;
+      border-radius: 8px;
+      max-width: 90%;
+      max-height: 90%;
+      display: flex;
+      flex-direction: column;
+    }
 
-      .custom-tab-item {
-        padding: 10px 4px;
-        font-size: 12px;
-        min-height: 42px;
-      }
+    .preview-header {
+      padding: 15px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .preview-title {
+      font-weight: 600;
+    }
+
+    .close-btn {
+      cursor: pointer;
+      font-size: 18px;
+    }
+
+    .preview-content {
+      flex: 1;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .preview-image {
+      max-width: 100%;
+      max-height: 400px;
+      object-fit: contain;
+    }
+
+    .preview-footer {
+      padding: 15px;
+      border-top: 1px solid #eee;
+    }
+
+    .preview-nav {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .nav-btn {
+      background: #409EFF;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+
+    .nav-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .preview-counter {
+      font-size: 14px;
+      color: #666;
     }
   </style>
 </head>
@@ -907,6 +951,10 @@
       <div class="stat-label">关注</div>
     </div>
     <div class="stat-item" @click="switchTab('review')">
+      <div class="stat-number">{{stats.commentCount || 0}}</div>
+      <div class="stat-label">评价</div>
+    </div>
+    <div class="stat-item" @click="switchTab('review')">
       <div class="stat-number">{{stats.likeCount || 0}}</div>
       <div class="stat-label">获赞</div>
     </div>
@@ -922,85 +970,91 @@
       <div class="custom-tabs-nav">
         <div class="custom-tab-item"
              :class="{ active: activeName === 'note' }"
-             @click="switchTabWithFeedback('note')"
-             @touchstart="handleTabTouchStart">
-          笔记({{blogs.length}})
+             @click="switchTabWithFeedback('note')">
+          <div class="tab-text">
+            笔记
+            <span v-if="blogs.length > 0" class="count-badge">{{formatCount(blogs.length)}}</span>
+          </div>
         </div>
         <div class="custom-tab-item"
              :class="{ active: activeName === 'review' }"
-             @click="switchTabWithFeedback('review')"
-             @touchstart="handleTabTouchStart">
-          评价({{reviews.length}})
+             @click="switchTabWithFeedback('review')">
+          <div class="tab-text">
+            评价
+            <span v-if="reviews.length > 0" class="count-badge">{{formatCount(reviews.length)}}</span>
+          </div>
         </div>
         <div class="custom-tab-item"
              :class="{ active: activeName === 'fans' }"
-             @click="switchTabWithFeedback('fans')"
-             @touchstart="handleTabTouchStart">
-          粉丝({{fansList.length}})
+             @click="switchTabWithFeedback('fans')">
+          <div class="tab-text">
+            粉丝
+            <span v-if="fansList.length > 0" class="count-badge">{{formatCount(fansList.length)}}</span>
+          </div>
         </div>
         <div class="custom-tab-item"
              :class="{ active: activeName === 'follow' }"
-             @click="switchTabWithFeedback('follow')"
-             @touchstart="handleTabTouchStart">
-          关注({{followList.length}})
+             @click="switchTabWithFeedback('follow')">
+          <div class="tab-text">
+            关注
+            <span v-if="followList.length > 0" class="count-badge">{{formatCount(followList.length)}}</span>
+          </div>
         </div>
         <div class="custom-tab-item"
              :class="{ active: activeName === 'feed' }"
-             @click="switchTabWithFeedback('feed')"
-             @touchstart="handleTabTouchStart">
-          动态({{feeds.length}})
+             @click="switchTabWithFeedback('feed')">
+          <div class="tab-text">
+            动态
+            <span v-if="feeds.length > 0" class="count-badge">{{formatCount(feeds.length)}}</span>
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="swipe-indicator">
-      <i class="el-icon-back"></i>
-      左右滑动切换标签
-      <i class="el-icon-right"></i>
-    </div>
-
     <div class="custom-tabs-content">
-      <div class="tabs-container"
-           @touchstart="handleContainerTouchStart"
-           @touchmove="handleContainerTouchMove($event)"
-           @touchend="handleContainerTouchEnd">
+      <div class="tabs-container">
         <div class="tabs-content" :style="{ transform: `translateX(-${currentIndex * 100}%)` }">
 
           <!-- 笔记标签页 -->
-          <div class="tab-pane">
+          <div class="tab-pane" @scroll="onScroll($event, 'blog')">
             <div v-if="blogs.length > 0">
               <div v-for="b in blogs" :key="b.id" class="blog-item">
-                <div class="blog-img" @click="toBlogDetail(b)" @touchstart.stop>
+                <div class="blog-img" @click="toBlogDetail(b)">
                   <img :src="getFirstImage(b.images)" alt="">
                 </div>
                 <div class="blog-info">
-                  <div class="blog-title" @click="toBlogDetail(b)" @touchstart.stop>{{ truncateTitle(b.title, 20) }}</div>
+                  <div class="blog-title" @click="toBlogDetail(b)">{{ truncateTitle(b.title, 20) }}</div>
                   <div class="blog-meta">
                     <div class="blog-liked"
                          :class="{'active': b.isLike}"
-                         @click.stop="toggleLike(b)" @touchstart.stop>
+                         @click.stop="toggleLike(b)">
                       <img src="/imgs/thumbup.png" alt="">
                       {{b.liked || 0}}
                     </div>
-                    <div class="blog-comments" @click.stop="toBlogDetail(b)" @touchstart.stop>
+                    <div class="blog-comments" @click.stop="toBlogDetail(b)">
                       <i class="el-icon-chat-dot-round"></i>
                       {{b.comments || 0}}
                     </div>
-                    <div class="blog-share" @click.stop="shareBlog(b)" @touchstart.stop>
+                    <div class="blog-share" @click.stop="shareBlog(b)">
                       <i class="el-icon-share"></i>
                       分享
                     </div>
                   </div>
                 </div>
               </div>
-              <div class="load-more"
-                   :class="{'no-more': blogLoading || blogNoMore}"
-                   @click="loadMoreBlogs" @touchstart.stop>
-                <div class="loading-text" v-if="blogLoading">
-                  <i class="el-icon-loading"></i> 加载中...
-                </div>
-                <div v-else-if="blogNoMore">没有更多了</div>
-                <div v-else>加载更多</div>
+
+              <!-- 加载状态指示器 -->
+              <div class="loading-indicator" v-if="blogLoading">
+                <i class="el-icon-loading"></i> 正在加载更多笔记...
+              </div>
+
+              <div class="no-more-data" v-if="blogNoMore && !blogLoading">
+                <i class="el-icon-finished"></i> 没有更多笔记了
+              </div>
+
+              <div class="load-error" v-if="blogLoadError && !blogLoading">
+                <i class="el-icon-warning"></i> 加载失败
+                <span class="retry-btn" @click="retryLoadBlogs">点击重试</span>
               </div>
             </div>
             <div v-else class="empty-state">
@@ -1010,7 +1064,7 @@
           </div>
 
           <!-- 评价标签页 -->
-          <div class="tab-pane">
+          <div class="tab-pane" @scroll="onScroll($event, 'review')">
             <div v-if="reviews.length > 0">
               <div v-for="review in reviews" :key="review.id" class="review-item">
                 <div class="review-header">
@@ -1027,27 +1081,32 @@
                 </div>
                 <div class="review-content">{{review.content || '这个用户还没有写评价内容'}}</div>
                 <div class="review-images" v-if="review.images">
-                  <div class="review-image" v-for="(img, index) in review.images.split(',')" :key="index" @click="previewImage(img)" @touchstart.stop>
+                  <div class="review-image" v-for="(img, index) in review.images.split(',')" :key="index" @click="previewImage(img,index)">
                     <img :src="img" alt="">
                   </div>
                 </div>
                 <div class="review-footer">
                   <div class="review-time">{{formatTime(review.createTime)}}</div>
                   <div class="review-actions">
-                    <div class="review-action" @click.stop @touchstart.stop>
+                    <div class="review-action">
                       <i class="el-icon-thumb"></i> {{review.liked || 0}}
                     </div>
                   </div>
                 </div>
               </div>
-              <div class="load-more"
-                   :class="{'no-more': reviewLoading || reviewNoMore}"
-                   @click="loadMoreReviews" @touchstart.stop>
-                <div class="loading-text" v-if="reviewLoading">
-                  <i class="el-icon-loading"></i> 加载中...
-                </div>
-                <div v-else-if="reviewNoMore">没有更多了</div>
-                <div v-else>加载更多</div>
+
+              <!-- 加载状态指示器 -->
+              <div class="loading-indicator" v-if="reviewLoading">
+                <i class="el-icon-loading"></i> 正在加载更多评价...
+              </div>
+
+              <div class="no-more-data" v-if="reviewNoMore && !reviewLoading">
+                <i class="el-icon-finished"></i> 没有更多评价了
+              </div>
+
+              <div class="load-error" v-if="reviewLoadError && !reviewLoading">
+                <i class="el-icon-warning"></i> 加载失败
+                <span class="retry-btn" @click="retryLoadReviews">点击重试</span>
               </div>
             </div>
             <div v-else class="empty-state">
@@ -1057,31 +1116,35 @@
           </div>
 
           <!-- 粉丝标签页 -->
-          <div class="tab-pane">
+          <div class="tab-pane" @scroll="onScroll($event, 'fans')">
             <div class="user-list">
-
               <div v-if="fansList.length > 0">
                 <div v-for="user in fansList" :key="user.id" class="user-item">
-                  <div class="user-avatar" @click="toUserDetail(user)" @touchstart.stop>
+                  <div class="user-avatar" @click="toUserDetail(user)">
                     <img :src="user.icon || '/imgs/icons/default-icon.png'" alt="">
                   </div>
-                  <div class="user-info" @click="toUserDetail(user)" @touchstart.stop>
+                  <div class="user-info" @click="toUserDetail(user)">
                     <div class="user-name">{{user.nickName || '匿名用户'}}</div>
                     <div class="user-desc">{{user.introduce || '这个人很懒，什么都没写'}}</div>
                   </div>
                   <button class="follow-btn" :class="{'following': user.isFollow}"
-                          @click.stop="toggleFollow(user)" @touchstart.stop>
+                          @click.stop="toggleFollow(user)">
                     {{user.isFollow ? '已关注' : '关注'}}
                   </button>
                 </div>
-                <div class="load-more"
-                     :class="{'no-more': fansLoading || fansNoMore}"
-                     @click="loadMoreFans" @touchstart.stop>
-                  <div class="loading-text" v-if="fansLoading">
-                    <i class="el-icon-loading"></i> 加载中...
-                  </div>
-                  <div v-else-if="fansNoMore">没有更多了</div>
-                  <div v-else>加载更多</div>
+
+                <!-- 加载状态指示器 -->
+                <div class="loading-indicator" v-if="fansLoading">
+                  <i class="el-icon-loading"></i> 正在加载更多粉丝...
+                </div>
+
+                <div class="no-more-data" v-if="fansNoMore && !fansLoading">
+                  <i class="el-icon-finished"></i> 没有更多粉丝了
+                </div>
+
+                <div class="load-error" v-if="fansLoadError && !fansLoading">
+                  <i class="el-icon-warning"></i> 加载失败
+                  <span class="retry-btn" @click="retryLoadFans">点击重试</span>
                 </div>
               </div>
               <div v-else class="empty-state">
@@ -1092,29 +1155,34 @@
           </div>
 
           <!-- 关注标签页 -->
-          <div class="tab-pane">
+          <div class="tab-pane" @scroll="onScroll($event, 'follow')">
             <div class="user-list">
               <div v-if="followList.length > 0">
                 <div v-for="user in followList" :key="user.id" class="user-item">
-                  <div class="user-avatar" @click="toUserDetail(user)" @touchstart.stop>
+                  <div class="user-avatar" @click="toUserDetail(user)">
                     <img :src="user.icon || '/imgs/icons/default-icon.png'" alt="">
                   </div>
-                  <div class="user-info" @click="toUserDetail(user)" @touchstart.stop>
+                  <div class="user-info" @click="toUserDetail(user)">
                     <div class="user-name">{{user.nickName || '匿名用户'}}</div>
                     <div class="user-desc">{{user.introduce || '这个人很懒，什么都没写'}}</div>
                   </div>
-                  <button class="follow-btn following" @click.stop="unfollow(user)" @touchstart.stop>
+                  <button class="follow-btn following" @click.stop="unfollow(user)">
                     已关注
                   </button>
                 </div>
-                <div class="load-more"
-                     :class="{'no-more': followLoading || followNoMore}"
-                     @click="loadMoreFollows" @touchstart.stop>
-                  <div class="loading-text" v-if="followLoading">
-                    <i class="el-icon-loading"></i> 加载中...
-                  </div>
-                  <div v-else-if="followNoMore">没有更多了</div>
-                  <div v-else>加载更多</div>
+
+                <!-- 加载状态指示器 -->
+                <div class="loading-indicator" v-if="followLoading">
+                  <i class="el-icon-loading"></i> 正在加载更多关注...
+                </div>
+
+                <div class="no-more-data" v-if="followNoMore && !followLoading">
+                  <i class="el-icon-finished"></i> 没有更多关注了
+                </div>
+
+                <div class="load-error" v-if="followLoadError && !followLoading">
+                  <i class="el-icon-warning"></i> 加载失败
+                  <span class="retry-btn" @click="retryLoadFollows">点击重试</span>
                 </div>
               </div>
               <div v-else class="empty-state">
@@ -1125,40 +1193,45 @@
           </div>
 
           <!-- 动态标签页 -->
-          <div class="tab-pane">
+          <div class="tab-pane" @scroll="onScroll($event, 'feed')">
             <div v-if="feeds.length > 0">
               <div v-for="b in feeds" :key="b.id" class="blog-item">
-                <div class="blog-img" @click="toBlogDetail(b)" @touchstart.stop>
+                <div class="blog-img" @click="toBlogDetail(b)">
                   <img :src="getFirstImage(b.images)" alt="">
                 </div>
                 <div class="blog-info">
-                  <div class="blog-title" @click="toBlogDetail(b)" @touchstart.stop>{{ truncateTitle(b.title, 20) }}</div>
+                  <div class="blog-title" @click="toBlogDetail(b)">{{ truncateTitle(b.title, 20) }}</div>
                   <div class="blog-meta">
                     <div class="blog-liked"
                          :class="{'active': b.isLike}"
-                         @click.stop="toggleLike(b)" @touchstart.stop>
+                         @click.stop="toggleLike(b)">
                       <img src="/imgs/thumbup.png" alt="">
                       {{b.liked || 0}}
                     </div>
-                    <div class="blog-comments" @click.stop="toBlogDetail(b)" @touchstart.stop>
+                    <div class="blog-comments" @click.stop="toBlogDetail(b)">
                       <i class="el-icon-chat-dot-round"></i>
                       {{b.comments || 0}}
                     </div>
-                    <div class="blog-share" @click.stop="shareBlog(b)" @touchstart.stop>
+                    <div class="blog-share" @click.stop="shareBlog(b)">
                       <i class="el-icon-share"></i>
                       分享
                     </div>
                   </div>
                 </div>
               </div>
-              <div class="load-more"
-                   :class="{'no-more': feedLoading || feedNoMore}"
-                   @click="loadMoreFeeds" @touchstart.stop>
-                <div class="loading-text" v-if="feedLoading">
-                  <i class="el-icon-loading"></i> 加载中...
-                </div>
-                <div v-else-if="feedNoMore">没有更多了</div>
-                <div v-else>加载更多</div>
+
+              <!-- 加载状态指示器 -->
+              <div class="loading-indicator" v-if="feedLoading">
+                <i class="el-icon-loading"></i> 正在加载更多动态...
+              </div>
+
+              <div class="no-more-data" v-if="feedNoMore && !feedLoading">
+                <i class="el-icon-finished"></i> 没有更多动态了
+              </div>
+
+              <div class="load-error" v-if="feedLoadError && !feedLoading">
+                <i class="el-icon-warning"></i> 加载失败
+                <span class="retry-btn" @click="retryLoadFeeds">点击重试</span>
               </div>
             </div>
             <div v-else class="empty-state">
@@ -1172,6 +1245,29 @@
   </div>
 
   <foot-bar :active-btn="4" class="foot-bar"></foot-bar>
+  <!-- 图片预览层 -->
+  <div class="image-preview-layer" v-if="showImagePreview" @click="closeImagePreview">
+    <div class="preview-container" @click.stop>
+      <div class="preview-header">
+        <span class="preview-title">图片预览</span>
+        <i class="el-icon-close close-btn" @click="closeImagePreview"></i>
+      </div>
+      <div class="preview-content">
+        <img :src="currentPreviewImage" alt="预览图片" class="preview-image">
+      </div>
+      <div class="preview-footer">
+        <div class="preview-nav">
+          <button class="nav-btn" @click="prevImage" :disabled="currentPreviewIndex === 0">
+            <i class="el-icon-arrow-left"></i>
+          </button>
+          <span class="preview-counter">{{ currentPreviewIndex + 1 }} / {{ previewImages.length }}</span>
+          <button class="nav-btn" @click="nextImage" :disabled="currentPreviewIndex === previewImages.length - 1">
+            <i class="el-icon-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script src="./js/vue.js"></script>
@@ -1193,50 +1289,59 @@
         fansList: [],
         followList: [],
         feeds:[],
+        params: {
+          minTime: 0,
+          offset: 0,
+        },
         stats: {
           blogCount: 0,
           fansCount: 0,
           followCount: 0,
           likeCount: 0
         },
-        // 分页相关数据
+        // 分页数据
         blogCurrent: 1,
         blogSize: 10,
         blogLoading: false,
         blogNoMore: false,
+        blogLoadError: false,
 
         reviewCurrent: 1,
         reviewSize: 10,
         reviewLoading: false,
         reviewNoMore: false,
+        reviewLoadError: false,
 
         fansCurrent: 1,
         fansSize: 10,
         fansLoading: false,
         fansNoMore: false,
+        fansLoadError: false,
 
         followCurrent: 1,
         followSize: 10,
         followLoading: false,
         followNoMore: false,
+        followLoadError: false,
 
         feedCurrent: 1,
         feedSize: 10,
         feedLoading: false,
         feedNoMore: false,
+        feedLoadError: false,
 
         // 滑动相关数据
-        touchStartX: 0,
-        touchEndX: 0,
-        touchStartTime: 0,
         currentIndex: 0,
         tabOrder: ['note', 'review', 'fans', 'follow','feed'],
-        isSwiping: false,
-        isTabTouched: false,
 
-        // 点击防抖
-        lastClickTime: 0,
-        clickCooldown: 300
+        // 滚动节流
+        scrollThrottle: null,
+
+        // 图片预览相关
+        showImagePreview: false,
+        previewImages: [],
+        currentPreviewImage: '',
+        currentPreviewIndex: 0
       }
     },
     created() {
@@ -1249,80 +1354,130 @@
       }
     },
     methods: {
-      // 处理标签的触摸开始事件
-      handleTabTouchStart() {
-        this.isTabTouched = true;
-      },
-
-      // 处理容器的触摸开始事件
-      handleContainerTouchStart(e) {
-        if (this.isTabTouched) {
-          this.isTabTouched = false;
-          return;
-        }
-
-        this.touchStartX = e.touches[0].clientX;
-        this.touchStartTime = Date.now();
-        this.isSwiping = false;
-      },
-
-      // 处理容器的触摸移动事件
-      handleContainerTouchMove(e) {
-        if (this.isTabTouched) {
-          return;
-        }
-
-        this.touchEndX = e.touches[0].clientX;
-        const diff = Math.abs(this.touchStartX - this.touchEndX);
-
-        // 降低滑动判定阈值，提高灵敏度
-        if (diff > 5) {
-          this.isSwiping = true;
-          // 仅在需要时阻止默认行为，提高滑动流畅度
-          if (Math.abs(diff) > 15) {
-            e.preventDefault();
-          }
+      // 格式化数量显示
+      formatCount(count) {
+        if (count < 1000) {
+          return count;
+        } else if (count < 10000) {
+          return (count / 1000).toFixed(1) + 'k';
+        } else {
+          return (count / 10000).toFixed(1) + 'w';
         }
       },
 
-      // 处理容器的触摸结束事件
-      handleContainerTouchEnd() {
-        this.isTabTouched = false;
-
-        if (!this.isSwiping) {
-          return;
+      // 基于首页代码的滚动事件处理
+      onScroll(e, type) {
+        // 节流处理，避免频繁触发
+        if (this.scrollThrottle) {
+          clearTimeout(this.scrollThrottle);
         }
 
-        // 降低滑动距离和时间要求，使滑动更容易触发
-        const minSwipeDistance = 30;  // 原为50
-        const minSwipeTime = 50;      // 原为100
-        const diff = this.touchStartX - this.touchEndX;
-        const touchTime = Date.now() - this.touchStartTime;
+        this.scrollThrottle = setTimeout(() => {
+          const container = e.target;
+          const { scrollTop, clientHeight, scrollHeight } = container;
+          console.log(`${type} - ScrollTop: ${scrollTop}, ClientHeight: ${clientHeight}, ScrollHeight: ${scrollHeight}`);
+          console.log(`${type} - 距离底部: ${scrollHeight - scrollTop - clientHeight}`);
 
-        if (Math.abs(diff) > minSwipeDistance && touchTime > minSwipeTime) {
-          if (diff > 0) {
-            this.swipeToNext();
+          // 修复：当距离底部小于等于100px时触发（包括负数情况）
+          const distanceToBottom = scrollHeight - scrollTop - clientHeight;
+
+          // 检查状态
+          console.log(`${type} - 状态: isLoading=${this.isLoading(type)}, noMoreData=${this.noMoreData(type)}`);
+
+          if (distanceToBottom <= 100  // 距离底部小于等于100px
+                  && !this.isLoading(type)
+                  && !this.noMoreData(type)) {
+            console.log(`✅ 触发 ${type} 加载更多，距离底部: ${distanceToBottom}`);
+            this.loadMoreData(type);
           } else {
-            this.swipeToPrev();
+            console.log(`❌ 不触发 ${type}，原因:`, {
+              distanceToBottom,
+              isLoading: this.isLoading(type),
+              noMoreData: this.noMoreData(type)
+            });
           }
-        }
+        }, 150);
+      },
 
-        this.isSwiping = false;
+      // 检查是否正在加载
+      isLoading(type) {
+        switch(type) {
+          case 'blog': return this.blogLoading;
+          case 'review': return this.reviewLoading;
+          case 'fans': return this.fansLoading;
+          case 'follow': return this.followLoading;
+          case 'feed': return this.feedLoading;
+          default: return false;
+        }
+      },
+
+      // 检查是否无更多数据
+      noMoreData(type) {
+        switch(type) {
+          case 'blog': return this.blogNoMore;
+          case 'review': return this.reviewNoMore;
+          case 'fans': return this.fansNoMore;
+          case 'follow': return this.followNoMore;
+          case 'feed': return this.feedNoMore;
+          default: return false;
+        }
+      },
+
+      // 加载更多数据方法
+      loadMoreData(type) {
+        console.log(`执行加载更多: ${type}`);
+
+        switch(type) {
+          case 'blog':
+            this.loadMoreBlogs();
+            break;
+          case 'review':
+            this.loadMoreReviews();
+            break;
+          case 'fans':
+            this.loadMoreFans();
+            break;
+          case 'follow':
+            this.loadMoreFollows();
+            break;
+          case 'feed':
+            this.loadMoreFeeds();
+            break;
+        }
+      },
+
+      // 重试加载方法
+      retryLoadBlogs() {
+        this.blogLoadError = false;
+        this.loadMoreBlogs();
+      },
+
+      retryLoadReviews() {
+        this.reviewLoadError = false;
+        this.loadMoreReviews();
+      },
+
+      retryLoadFans() {
+        this.fansLoadError = false;
+        this.loadMoreFans();
+      },
+
+      retryLoadFollows() {
+        this.followLoadError = false;
+        this.loadMoreFollows();
+      },
+
+      retryLoadFeeds() {
+        this.feedLoadError = false;
+        this.loadMoreFeeds();
       },
 
       // 带反馈的标签切换
       switchTabWithFeedback(tabName) {
-        const now = Date.now();
-
-        if (now - this.lastClickTime < this.clickCooldown) {
-          return;
-        }
-
         if (this.activeName === tabName) {
           return;
         }
 
-        this.lastClickTime = now;
         this.activeName = tabName;
         this.currentIndex = this.tabOrder.indexOf(tabName);
         this.loadTabData(tabName);
@@ -1340,27 +1495,14 @@
         return title.substring(0, maxLength) + '...';
       },
 
-      // 滑动到下一个标签
-      swipeToNext() {
-        if (this.currentIndex < this.tabOrder.length - 1) {
-          this.currentIndex++;
-          this.activeName = this.tabOrder[this.currentIndex];
-          this.loadTabData(this.activeName);
-        }
-      },
-
-      // 滑动到上一个标签
-      swipeToPrev() {
-        if (this.currentIndex > 0) {
-          this.currentIndex--;
-          this.activeName = this.tabOrder[this.currentIndex];
-          this.loadTabData(this.activeName);
-        }
-      },
-
       // 加载标签数据
       loadTabData(tabName) {
         switch(tabName) {
+          case 'note':
+            if (this.blogs.length === 0) {
+              this.queryBlogs();
+            }
+            break;
           case 'fans':
             if (this.fansList.length === 0) {
               this.queryFans();
@@ -1392,14 +1534,14 @@
       },
 
       // 查询用户信息
-      async  queryUser() {
+      async queryUser() {
         console.log("queryUser")
         try {
-             let response=await axios.get("/app/user/me")
-                    this.user = response.data;
-                    this.queryUserInfo();
-                    this.queryUserStats();
-                    this.queryBlogs();
+          let response = await axios.get("/app/user/me")
+          this.user = response.data;
+          this.queryUserInfo();
+          this.queryUserStats();
+          this.queryBlogs();
         } catch (error) {
           console.error('查询用户信息失败:', error);
           this.$message({
@@ -1428,46 +1570,54 @@
       },
 
       // 查询用户统计信息
-       async queryUserStats() {
+      async queryUserStats() {
+        try {
+          let response = await axios.get("/app/user/stats/" + this.user.id)
+          this.stats = response.data;
+        } catch (error) {
+          console.error('获取用户统计信息失败:', error);
+          // 使用本地数据作为fallback
           this.stats = {
             blogCount: this.blogs.length,
             fansCount: this.fansList.length,
             followCount: this.followList.length,
             likeCount: this.blogs.reduce((sum, blog) => sum + (blog.liked || 0), 0)
           };
-          let response = await axios.get("/app/user/stats/" + this.user.id)
-              this.stats=response.data;
-        },
+        }
+      },
+
       // 查询笔记
       queryBlogs() {
         this.blogCurrent = 1;
         this.blogNoMore = false;
+        this.blogLoadError = false;
         axios.get("/app/blog/of/me", {
           params: {
             current: this.blogCurrent,
-            size: this.blogSize
           }
         })
                 .then(({data}) => {
                   this.blogs = data || [];
                   this.queryUserStats();
 
-                  if (this.blogs.length < this.blogSize) {
+                  if (!data || data.length === 0) {
                     this.blogNoMore = true;
                   }
                 })
                 .catch(err => {
                   console.error('获取笔记失败:', err);
                   this.blogs = [];
+                  this.blogLoadError = true;
                   this.queryUserStats();
                 })
       },
 
       // 加载更多笔记
       loadMoreBlogs() {
-        if (this.blogLoading || this.blogNoMore) return;
+        if (this.blogLoading || this.blogNoMore || this.blogLoadError) return;
 
         this.blogLoading = true;
+        this.blogLoadError = false;
         this.blogCurrent++;
 
         axios.get("/app/blog/of/me", {
@@ -1482,7 +1632,7 @@
                     this.blogs = [...this.blogs, ...newBlogs];
                   }
 
-                  if (newBlogs.length < this.blogSize) {
+                  if (newBlogs.length==0) {
                     this.blogNoMore = true;
                   }
 
@@ -1491,6 +1641,7 @@
                 .catch(err => {
                   console.error('加载更多笔记失败:', err);
                   this.blogCurrent--;
+                  this.blogLoadError = true;
                 })
                 .finally(() => {
                   this.blogLoading = false;
@@ -1501,6 +1652,7 @@
       queryReviews() {
         this.reviewCurrent = 1;
         this.reviewNoMore = false;
+        this.reviewLoadError = false;
         axios.get("/app/comment/of/me", {
           params: {
             current: this.reviewCurrent
@@ -1509,21 +1661,25 @@
                 .then(({data}) => {
                   this.reviews = data || [];
 
-                  if (this.reviews.length < this.reviewSize) {
+                  // 只有当没有返回任何数据时才标记为没有更多
+                  // 或者返回的数据明显少于预期（比如只有1-2条）时才标记
+                  if (!data || data.length === 0) {
                     this.reviewNoMore = true;
                   }
                 })
                 .catch(err => {
                   console.error('获取评价失败:', err);
                   this.reviews = [];
+                  this.reviewLoadError = true;
                 })
       },
 
       // 加载更多评价
       loadMoreReviews() {
-        if (this.reviewLoading || this.reviewNoMore) return;
+        if (this.reviewLoading || this.reviewNoMore || this.reviewLoadError) return;
 
         this.reviewLoading = true;
+        this.reviewLoadError = false;
         this.reviewCurrent++;
 
         axios.get("/app/comment/of/me", {
@@ -1537,13 +1693,15 @@
                     this.reviews = [...this.reviews, ...newReviews];
                   }
 
-                  if (newReviews.length < this.reviewSize) {
+                  // 只有在没有返回新数据时才标记为没有更多
+                  if (newReviews.length === 0) {
                     this.reviewNoMore = true;
                   }
                 })
                 .catch(err => {
                   console.error('加载更多评价失败:', err);
                   this.reviewCurrent--;
+                  this.reviewLoadError = true;
                 })
                 .finally(() => {
                   this.reviewLoading = false;
@@ -1554,31 +1712,33 @@
       queryFans() {
         this.fansCurrent = 1;
         this.fansNoMore = false;
+        this.fansLoadError = false;
         axios.get("/app/user/follow/fans", {
           params: {
             current: this.fansCurrent,
-            size: this.fansSize
           }
         })
                 .then(({data}) => {
                   this.fansList = data || [];
                   this.stats.fansCount = this.fansList.length;
 
-                  if (this.fansList.length < this.fansSize) {
+                  if (!data || data.length === 0) {
                     this.fansNoMore = true;
                   }
                 })
                 .catch(err => {
                   console.error('获取粉丝列表失败:', err);
                   this.fansList = [];
+                  this.fansLoadError = true;
                 })
       },
 
       // 加载更多粉丝
       loadMoreFans() {
-        if (this.fansLoading || this.fansNoMore) return;
+        if (this.fansLoading || this.fansNoMore || this.fansLoadError) return;
 
         this.fansLoading = true;
+        this.fansLoadError = false;
         this.fansCurrent++;
 
         axios.get("/app/user/follow/fans", {
@@ -1594,13 +1754,14 @@
                     this.stats.fansCount = this.fansList.length;
                   }
 
-                  if (newFans.length < this.fansSize) {
+                  if (newFans.length==0) {
                     this.fansNoMore = true;
                   }
                 })
                 .catch(err => {
                   console.error('加载更多粉丝失败:', err);
                   this.fansCurrent--;
+                  this.fansLoadError = true;
                 })
                 .finally(() => {
                   this.fansLoading = false;
@@ -1611,6 +1772,7 @@
       queryFollows() {
         this.followCurrent = 1;
         this.followNoMore = false;
+        this.followLoadError = false;
         axios.get("/app/user/follow/follows", {
           params: {
             current: this.followCurrent,
@@ -1621,27 +1783,28 @@
                   this.followList = data || [];
                   this.stats.followCount = this.followList.length;
 
-                  if (this.followList.length < this.followSize) {
+                  if (!data || data.length === 0) {
                     this.followNoMore = true;
                   }
                 })
                 .catch(err => {
                   console.error('获取关注列表失败:', err);
                   this.followList = [];
+                  this.followLoadError = true;
                 })
       },
 
       // 加载更多关注
       loadMoreFollows() {
-        if (this.followLoading || this.followNoMore) return;
+        if (this.followLoading || this.followNoMore || this.followLoadError) return;
 
         this.followLoading = true;
+        this.followLoadError = false;
         this.followCurrent++;
 
         axios.get("/app/user/follow/follows", {
           params: {
             current: this.followCurrent,
-            size: this.followSize
           }
         })
                 .then(({data}) => {
@@ -1651,13 +1814,14 @@
                     this.stats.followCount = this.followList.length;
                   }
 
-                  if (newFollows.length < this.followSize) {
+                  if (newFollows.length==0) {
                     this.followNoMore = true;
                   }
                 })
                 .catch(err => {
                   console.error('加载更多关注失败:', err);
                   this.followCurrent--;
+                  this.followLoadError = true;
                 })
                 .finally(() => {
                   this.followLoading = false;
@@ -1666,53 +1830,54 @@
 
       // 查询关注人笔记
       queryFeeds() {
-        this.feedCurrent = 1;
-        this.feedNoMore = false;
+        this.params.offset = 0;
+        this.params.minTime = new Date().getTime() + 1;
+        this.feedLoadError = false;
+        let {minTime, offset: os} = this.params;
         axios.get("/app/blog/of/follow", {
-          params: {
-            current: this.feedCurrent,
-            size: this.feedSize
+          params: {offset: os, lastId: minTime || new Date().getTime() + 1}
+        }).then(({data}) => {
+          let {list, ...params} = data;
+          this.feeds = list || [];
+          this.params = params;
+
+          if (!data || data.length === 0) {
+            this.feedNoMore = true;
           }
         })
-                .then(({data}) => {
-                  this.feeds = data || [];
-
-                  if (this.feeds.length < this.feedSize) {
-                    this.feedNoMore = true;
-                  }
-                })
                 .catch(err => {
                   console.error('获取动态失败:', err);
                   this.feeds = [];
+                  this.feedLoadError = true;
                 })
       },
 
       // 加载更多关注人笔记
       loadMoreFeeds() {
-        if (this.feedLoading || this.feedNoMore) return;
+        if (this.feedLoading || this.feedNoMore || this.feedLoadError) return;
 
         this.feedLoading = true;
-        this.feedCurrent++;
+        this.feedLoadError = false;
+        let {minTime, offset: os} = this.params;
 
         axios.get("/app/blog/of/follow", {
-          params: {
-            current: this.feedCurrent,
-            size: this.feedSize
-          }
+          params: {offset: os, lastId: minTime || new Date().getTime() + 1}
         })
                 .then(({data}) => {
-                  const newFeeds = data || [];
+                  let {list, ...params} = data;
+                  const newFeeds = list || [];
                   if (newFeeds.length > 0) {
                     this.feeds = [...this.feeds, ...newFeeds];
+                    this.params = params;
                   }
 
-                  if (newFeeds.length < this.feedSize) {
+                  if (newFeeds.length==0) {
                     this.feedNoMore = true;
                   }
                 })
                 .catch(err => {
                   console.error('加载更多动态失败:', err);
-                  this.feedCurrent--;
+                  this.feedLoadError = true;
                 })
                 .finally(() => {
                   this.feedLoading = false;
@@ -1766,16 +1931,10 @@
       toggleFollow(user) {
         axios.put("/app/user/follow/" + user.id + "/" + !user.isFollow)
                 .then(() => {
-                  this.$message.success(this.followed ? "已取消关注" : "已关注")
-                  user.followed = !user.followed
+                  this.$message.success(user.isFollow ? "已取消关注" : "已关注")
+                  user.isFollow = !user.isFollow
                   this.queryFans();
                 })
-      },
-
-      follow(user) {
-        user.isFollow = true;
-        this.$message.success('关注成功');
-        this.stats.followCount++;
       },
 
       unfollow(user) {
@@ -1813,8 +1972,57 @@
       },
 
       // 图片预览
-      previewImage(imgUrl) {
-        this.$message.info('图片预览功能');
+      previewImage(images, index) {
+        console.log('预览图片:', images, '类型:', typeof images);
+        let imageArray = [];
+
+        if (Array.isArray(images)) {
+          imageArray = images;
+        } else if (typeof images === 'string' && images.trim() !== '') {
+          imageArray = images.split(',').map(img => img.trim()).filter(img => img !== '');
+        }
+
+        if (!imageArray || imageArray.length === 0) {
+          this.$message.warning('没有可预览的图片');
+          return;
+        }
+
+        console.log('处理后的图片数组:', imageArray);
+
+        this.previewImages = imageArray.map(img => {
+          if (img.startsWith('http')) {
+            return img;
+          } else {
+            return `http://192.168.182.20:9000${img.startsWith('/') ? '' : '/'}${img}`;
+          }
+        });
+        this.currentPreviewIndex = index;
+        this.currentPreviewImage = this.previewImages[index];
+        this.showImagePreview = true;
+      },
+
+      // 关闭图片预览
+      closeImagePreview() {
+        this.showImagePreview = false;
+        this.previewImages = [];
+        this.currentPreviewImage = '';
+        this.currentPreviewIndex = 0;
+      },
+
+      // 上一张图片
+      prevImage() {
+        if (this.currentPreviewIndex > 0) {
+          this.currentPreviewIndex--;
+          this.currentPreviewImage = this.previewImages[this.currentPreviewIndex];
+        }
+      },
+
+      // 下一张图片
+      nextImage() {
+        if (this.currentPreviewIndex < this.previewImages.length - 1) {
+          this.currentPreviewIndex++;
+          this.currentPreviewImage = this.previewImages[this.currentPreviewIndex];
+        }
       },
 
       // 跳转到用户详情
@@ -1859,7 +2067,7 @@
           confirmButtonText: '确定',
           cancelButtonText: '取消',
           type: 'warning',
-          center: true, // 启用居中属性
+          center: true,
           customClass: 'logout-dialog'
         }).then(() => {
           axios.post("/app/auth/appLogout")
