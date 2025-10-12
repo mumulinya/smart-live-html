@@ -895,7 +895,7 @@
 
   <div class="stats">
     <div class="stat-item" @click="switchTab('note')">
-      <div class="stat-number">{{stats.noteCount || 0}}</div>
+      <div class="stat-number">{{stats.blogCount || 0}}</div>
       <div class="stat-label">笔记</div>
     </div>
     <div class="stat-item" @click="switchTab('fans')">
@@ -1059,6 +1059,7 @@
           <!-- 粉丝标签页 -->
           <div class="tab-pane">
             <div class="user-list">
+
               <div v-if="fansList.length > 0">
                 <div v-for="user in fansList" :key="user.id" class="user-item">
                   <div class="user-avatar" @click="toUserDetail(user)" @touchstart.stop>
@@ -1068,9 +1069,9 @@
                     <div class="user-name">{{user.nickName || '匿名用户'}}</div>
                     <div class="user-desc">{{user.introduce || '这个人很懒，什么都没写'}}</div>
                   </div>
-                  <button class="follow-btn" :class="{'following': user.isFollowed}"
+                  <button class="follow-btn" :class="{'following': user.isFollow}"
                           @click.stop="toggleFollow(user)" @touchstart.stop>
-                    {{user.isFollowed ? '已关注' : '关注'}}
+                    {{user.isFollow ? '已关注' : '关注'}}
                   </button>
                 </div>
                 <div class="load-more"
@@ -1193,7 +1194,7 @@
         followList: [],
         feeds:[],
         stats: {
-          noteCount: 0,
+          blogCount: 0,
           fansCount: 0,
           followCount: 0,
           likeCount: 0
@@ -1427,15 +1428,16 @@
       },
 
       // 查询用户统计信息
-      queryUserStats() {
-        this.stats = {
-          noteCount: this.blogs.length,
-          fansCount: this.fansList.length,
-          followCount: this.followList.length,
-          likeCount: this.blogs.reduce((sum, blog) => sum + (blog.liked || 0), 0)
-        };
-      },
-
+       async queryUserStats() {
+          this.stats = {
+            blogCount: this.blogs.length,
+            fansCount: this.fansList.length,
+            followCount: this.followList.length,
+            likeCount: this.blogs.reduce((sum, blog) => sum + (blog.liked || 0), 0)
+          };
+          let response = await axios.get("/app/user/stats/" + this.user.id)
+              this.stats=response.data;
+        },
       // 查询笔记
       queryBlogs() {
         this.blogCurrent = 1;
@@ -1762,21 +1764,22 @@
 
       // 关注/取消关注
       toggleFollow(user) {
-        if (user.isFollowed) {
-          this.unfollow(user);
-        } else {
-          this.follow(user);
-        }
+        axios.put("/app/user/follow/" + user.id + "/" + !user.isFollow)
+                .then(() => {
+                  this.$message.success(this.followed ? "已取消关注" : "已关注")
+                  user.followed = !user.followed
+                  this.queryFans();
+                })
       },
 
       follow(user) {
-        user.isFollowed = true;
+        user.isFollow = true;
         this.$message.success('关注成功');
         this.stats.followCount++;
       },
 
       unfollow(user) {
-        user.isFollowed = false;
+        user.isFollow = false;
         this.$message.success('取消关注成功');
         this.stats.followCount--;
         if (this.activeName === 'follow') {

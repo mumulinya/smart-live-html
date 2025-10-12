@@ -853,8 +853,11 @@
         if (!this.messageInput.trim() || this.isThinking) return;
 
         if (this.containsOrderKeywords(this.messageInput)){
+          console.log("用户信息为"+this.user.id)
           //查询用户信息，未登录则跳转登录页面
-          await this.queryUser();
+          if(this.user.id== null){
+            await this.queryUser();
+          }
         }
 
         const userMessageId = this.addMessage(this.messageInput, true, 'sending');
@@ -896,7 +899,7 @@
       async streamResponse(userInput, messageId) {
         try {
           console.log('开始流式请求');
-          const response = await fetch('/app-dev-api/app/ai/ai/chat2', {
+          const response = await fetch('/app-dev-api/app/ai/ai/chat', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -906,7 +909,8 @@
               sessionId: 'user-session-' + Date.now(),
               x: this.userLocation.x,
               y: this.userLocation.y,
-              district: this.userLocation.region.district
+              district: this.userLocation.region.district,
+              userId: this.user.id
             })
           });
 
