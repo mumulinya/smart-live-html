@@ -11,11 +11,65 @@
   <link href="./css/main.css" rel="stylesheet">
 
   <style type="text/css">
+    /* ====================================== 新增：加载遮罩层样式 ====================================== */
+    #app {
+      position: relative;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .loading-mask {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255, 255, 255, 0.95);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      transition: opacity 0.3s ease;
+    }
+
+    .loading-mask.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #ff6633;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 15px;
+    }
+
+    .loading-text {
+      font-size: 16px;
+      color: #666;
+      text-align: center;
+    }
+
+    .loading-subtext {
+      font-size: 14px;
+      color: #999;
+      margin-top: 8px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
     .header{
-        position: relative;
+      position: relative;
     }
     .foot-view span{
-        font-size: 12px;
+      font-size: 12px;
     }
     .liked{
 
@@ -565,6 +619,13 @@
 </head>
 <body>
 <div id="app">
+  <!-- 新增：加载遮罩层 -->
+  <div class="loading-mask" :class="{ hidden: !isLoading }">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">正在加载笔记详情</div>
+    <div class="loading-subtext">请稍候...</div>
+  </div>
+
   <div class="header">
     <div class="header-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
     <div class="header-title"></div>
@@ -581,7 +642,7 @@
     </div>
     <div class="basic">
       <div class="basic-icon" @click="toOtherInfo">
-        <img :src="blog.icon || '/imgs/icons/default-icon.png'" alt="">
+        <img :src="user.icon || '/imgs/icons/default-icon.png'" alt="">
       </div>
       <div class="basic-info">
         <div class="name">{{blog.name}}</div>
@@ -604,10 +665,10 @@
         <div class="name">{{shop.name}}</div>
         <div>
           <el-rate
-              v-model="shop.score/10">
+                  v-model="shop.score/10">
           </el-rate>
         </div>
-          <div class="shop-avg">￥{{shop.avgPrice}}/人</div>
+        <div class="shop-avg">￥{{shop.avgPrice}}/人</div>
       </div>
     </div>
     <div class="zan-box">
@@ -691,7 +752,7 @@
           </div>
         </div>
         <div
-            style="display: flex; justify-content: space-between;padding: 15px 0; border-top: 1px solid #f1f1f1; margin-top: 10px;">
+                style="display: flex; justify-content: space-between;padding: 15px 0; border-top: 1px solid #f1f1f1; margin-top: 10px;">
           <div @click="viewAllComments">查看全部{{blog.comments || 119}}条评价</div>
           <div><i class="el-icon-arrow-right"></i></div>
         </div>
@@ -714,10 +775,10 @@
     <div style="width: 40%">
     </div>
     <div class="foot-box">
-    <div class="foot-view" @click="checkLogin">
-      <i class="el-icon-chat-square"></i>
+      <div class="foot-view" @click="checkLogin">
+        <i class="el-icon-chat-square"></i>
+      </div>
     </div>
-  </div>
   </div>
   <!-- 在 body 末尾，footer 之前添加悬浮层 -->
   <div class="comment-modal" v-if="showCommentPublish" @click="closeCommentModal">
@@ -898,7 +959,14 @@
       showImagePreview: false,
       previewImages: [],
       currentPreviewIndex: 0,
-      currentPreviewImage: ''
+      currentPreviewImage: '',
+
+      // 新增：加载状态控制
+      isLoading: true,
+      // 数据加载完成计数器
+      dataLoadedCount: 0,
+      // 需要加载的数据总数
+      totalDataToLoad: 4 // 笔记信息、店铺信息、点赞列表、评论
     },
     created() {
       let id = util.getUrlParam("id");
@@ -906,6 +974,20 @@
       this.loadComments(id);
     },
     methods: {
+      // 新增：数据加载完成回调
+      onDataLoaded() {
+        this.dataLoadedCount++;
+        console.log(`数据加载进度: ${this.dataLoadedCount}/${this.totalDataToLoad}`);
+
+        // 当所有数据加载完成时隐藏遮罩层
+        if (this.dataLoadedCount >= this.totalDataToLoad) {
+          setTimeout(() => {
+            this.isLoading = false;
+            console.log('所有数据加载完成，隐藏遮罩层');
+          }, 500); // 延迟500ms隐藏，让用户看到加载完成
+        }
+      },
+
       init() {
         // 获得父容器节点
         this.container = this.$refs.swiper
@@ -927,28 +1009,43 @@
       },
       queryBlogById(id) {
         axios.get("/app/blog/" + id)
-          .then(({data}) => {
-            data.images = data.images.split(",")
-            this.blog = data;
-            this.$nextTick(this.init);
-            this.queryShopById(data.shopId)
-            this.queryLikeList(id);
-            this.queryLoginUser();
-          })
-          .catch(this.$message.error)
+                .then(({data}) => {
+                  data.images = data.images.split(",")
+                  data.images = data.images.map(image => fileURL + image);
+                  this.blog = data;
+                  this.$nextTick(this.init);
+                  this.queryShopById(data.shopId)
+                  this.queryLikeList(id);
+                  this.queryLoginUser();
+                  this.onDataLoaded(); // 新增：数据加载完成回调
+                })
+                .catch(error => {
+                  this.$message.error('获取笔记信息失败');
+                  this.onDataLoaded(); // 新增：即使失败也回调
+                })
       },
       queryShopById(shopId) {
         axios.get("/app/shop/" + shopId)
-          .then(({data}) => {
-            data.image = data.images.split(",")[0]
-            this.shop = data
-          })
-          .catch(this.$message.error)
+                .then(({data}) => {
+                  data.image = fileURL+data.images.split(",")[0]
+                  this.shop = data
+                  this.onDataLoaded(); // 新增：数据加载完成回调
+                })
+                .catch(error => {
+                  this.$message.error('获取店铺信息失败');
+                  this.onDataLoaded(); // 新增：即使失败也回调
+                })
       },
       queryLikeList(id){
         axios.get("/app/blog/likes/" + id)
-          .then(({data}) => this.likes = data)
-          .catch(this.$message.error)
+                .then(({data}) => {
+                  this.likes = data
+                  this.onDataLoaded(); // 新增：数据加载完成回调
+                })
+                .catch(error => {
+                  this.$message.error('获取点赞列表失败');
+                  this.onDataLoaded(); // 新增：即使失败也回调
+                })
       },
       addLike(){
         // 判断是否登录
@@ -957,23 +1054,23 @@
           location.href = "login.html"
         }
         axios.put("/app/blog/like/" +this.blog.id)
-          .then(({data}) => {
-            axios.get("/app/blog/" + this.blog.id)
-              .then(({data}) => {
-                data.images = data.images.split(",")
-                this.blog = data;
-                this.queryLikeList(this.blog.id);
-              })
-              .catch(this.$message.error)
-          })
-          .catch(err => {
-            this.$message.error(err)
-          })
+                .then(({data}) => {
+                  axios.get("/app/blog/" + this.blog.id)
+                          .then(({data}) => {
+                            data.images = data.images.split(",")
+                            this.blog = data;
+                            this.queryLikeList(this.blog.id);
+                          })
+                          .catch(this.$message.error)
+                })
+                .catch(err => {
+                  this.$message.error(err)
+                })
       },
       isFollowed(){
         axios.get("/app/user/follow/isFollow/" + this.blog.userId)
-          .then(({data}) => this.followed = data)
-          .catch(this.$message.error)
+                .then(({data}) => this.followed = data)
+                .catch(this.$message.error)
       },
       follow(){
         // 判断是否登录
@@ -982,11 +1079,11 @@
           location.href = "login.html"
         }
         axios.put("/app/user/follow/" + this.blog.userId + "/" + !this.followed)
-          .then(() => {
-            this.$message.success(this.followed ? "已取消关注" : "已关注")
-            this.followed = !this.followed
-          })
-          .catch(this.$message.error)
+                .then(() => {
+                  this.$message.success(this.followed ? "已取消关注" : "已关注")
+                  this.followed = !this.followed
+                })
+                .catch(this.$message.error)
       },
       formatTime(b) {
         return b.getFullYear() + "年" + (b.getMonth() + 1) + "月" + b.getDate() + "日 ";
@@ -998,14 +1095,15 @@
       queryLoginUser(){
         // 查询用户信息
         axios.get("/app/user/me")
-          .then(({ data }) => {
-            // 保存用户
-            this.user = data;
-            if(this.user.id !== this.blog.userId){
-              this.isFollowed();
-            }
-          })
-          .catch(console.log)
+                .then(({ data }) => {
+                  // 保存用户
+                  this.user = data;
+                  this.user.icon= fileURL + data.icon;
+                  if(this.user.id !== this.blog.userId){
+                    this.isFollowed();
+                  }
+                })
+                .catch(console.log)
       },
       checkLogin() {
         // 获取token
@@ -1037,19 +1135,23 @@
           } else {
             this.comments = [...this.comments, ...newComments];
             this.comments.forEach(comment => {
+              comment.userIcon=fileURL+comment.userIcon
               if(comment.isAIGenerated===true){
                 this.aiComment= comment
               }
               if(comment.images!=""&&comment.images!=null){
                 comment.images=comment.images.split(",")
+                comment.images=comment.images.map(image => fileURL + image);
               }
             })
             this.comments=this.comments.slice(0,3)
             this.page++;
           }
+          this.onDataLoaded(); // 新增：数据加载完成回调
         } catch (error) {
           console.error('加载评论失败:', error);
           this.$message.error('加载评论失败');
+          this.onDataLoaded(); // 新增：即使失败也回调
         } finally {
           this.loading = false;
         }
@@ -1177,8 +1279,8 @@
           if (file.type.startsWith('image/')) {
             const reader = new FileReader();
             //上传图片
-             let url=await this.fileSelected(file)
-              reader.onload = (e) => {
+            let url=await this.fileSelected(file)
+            reader.onload = (e) => {
               this.selectedImages.push({
                 file: file,
                 url: url
@@ -1265,7 +1367,7 @@
         }
       },
 
-         // 查看全部评论
+      // 查看全部评论
       viewAllComments() {
         location.href = "/comment-list.html?blogId=" + this.blog.id;
       },
@@ -1293,7 +1395,6 @@
           return;
         }
 
-        const formData = new FormData();
         this.comment.content=this.commentText
         this.comment.rating=this.commentRating
         this.comment.sourceId=this.blog.id
@@ -1301,18 +1402,18 @@
         this.comment.userId=this.user.id
         this.comment.parentId=0
         this.comment.answerId=0
-        this.comment.images=this.selectedImages.map(image => image.url).join(',');
-         axios.post('/app/comment/addComment', this.comment)
-        .then(({data}) => {
+        this.comment.images=this.selectedImages.map(image => image.url.split(filePrefix)[1] || image.url).join(',');
+        axios.post('/app/comment/addComment', this.comment)
+                .then(({data}) => {
                   this.$message.success('评价发布成功');
                   this.commentText = '';
                   this.commentRating = 5;
                   this.selectedImages = [];
                   this.showCommentPublish = false; // 发布成功后关闭模态框
                   // 可以在这里刷新评论列表
-          this.loadComments(this.blog.id);
-          this.queryBlogById(this.blog.id);
-        })
+                  this.loadComments(this.blog.id);
+                  this.queryBlogById(this.blog.id);
+                })
                 .catch(error => {
                   this.$message.error('发布失败，请重试');
                   console.error(error);

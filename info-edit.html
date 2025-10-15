@@ -28,6 +28,54 @@
       background: #f5f7fa;
     }
 
+    /* ====================================== 新增：加载遮罩层样式 ====================================== */
+    .loading-mask {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255, 255, 255, 0.95);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      transition: opacity 0.3s ease;
+    }
+
+    .loading-mask.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #409EFF;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 15px;
+    }
+
+    .loading-text {
+      font-size: 16px;
+      color: #666;
+      text-align: center;
+    }
+
+    .loading-subtext {
+      font-size: 14px;
+      color: #999;
+      margin-top: 8px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
     /* 头部样式优化 */
     .header {
       display: flex;
@@ -409,6 +457,13 @@
 </head>
 <body>
 <div id="app">
+  <!-- 新增：加载遮罩层 -->
+  <div class="loading-mask" :class="{ hidden: !isLoading }">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">正在加载用户资料</div>
+    <div class="loading-subtext">请稍候...</div>
+  </div>
+
   <div class="header">
     <div class="header-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
     <div class="header-title">资料编辑</div>
@@ -608,6 +663,12 @@
       tempIntroduce: '',
       tempNickName: '',
       isMobile: window.innerWidth < 768,
+      // 新增：页面加载状态控制
+      isLoading: true,
+      // 新增：数据加载完成计数器
+      dataLoadedCount: 0,
+      // 新增：需要加载的数据总数
+      totalDataToLoad: 2, // 用户基本信息、用户详细信息
       // 日期选择器配置 - 去掉快捷选项
       pickerOptions: {
         disabledDate(time) {
@@ -647,6 +708,20 @@
       window.removeEventListener('resize', this.handleResize);
     },
     methods: {
+      // 新增：数据加载完成回调
+      onDataLoaded() {
+        this.dataLoadedCount++;
+        console.log(`数据加载进度: ${this.dataLoadedCount}/${this.totalDataToLoad}`);
+
+        // 当所有数据加载完成时隐藏遮罩层
+        if (this.dataLoadedCount >= this.totalDataToLoad) {
+          setTimeout(() => {
+            this.isLoading = false;
+            console.log('所有数据加载完成，隐藏遮罩层');
+          }, 500); // 延迟500ms隐藏，让用户看到加载完成
+        }
+      },
+
       handleResize() {
         this.isMobile = window.innerWidth < 768;
       },
@@ -656,9 +731,11 @@
                 .then(({data}) => {
                   this.info = data;
                   this.saveUserInfo();
+                  this.onDataLoaded(); // 新增：数据加载完成回调
                 })
                 .catch(err => {
                   console.error('获取用户信息失败:', err);
+                  this.onDataLoaded(); // 新增：即使失败也回调
                 })
       },
       // 获取用户信息
@@ -667,9 +744,12 @@
                 .then(({data}) => {
                   // 保存用户
                   this.user = data;
-                  this.getUserInfo()
+                  this.user.icon=fileURL+this.user.icon;
+                  this.getUserInfo();
+                  this.onDataLoaded(); // 新增：数据加载完成回调
                 })
                 .catch(err => {
+                  this.onDataLoaded(); // 新增：即使失败也回调
                   location.href = "login.html"
                 })
       },
@@ -785,7 +865,7 @@
         await axios.post("app/file/appUpload", formData, config)
                 .then(({ data }) => {
                   if(data){
-                    avatarUrl = data;
+                    avatarUrl = data.split(filePrefix)[1];
                     // 更新用户信息
                     axios.post("app/user/update", {  icon: avatarUrl, id: this.user.id})
                             .then(({ data }) => {

@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>粉丝列表 - 智评生活</title>
+  <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+  <link rel="stylesheet" href="./css/element.css">
+  <link href="./css/index.css" rel="stylesheet">
+  <link href="./css/main.css" rel="stylesheet">
+  <style>
+    /* ====================================== 新增：加载遮罩层样式 ====================================== */
+    #app {
+      min-height: 100vh;
+      padding-bottom: 60px;
+      position: relative;
+      background: #f8f9fa;
+    }
+
+    .loading-mask {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255, 255, 255, 0.95);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      transition: opacity 0.3s ease;
+    }
+
+    .loading-mask.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #409EFF;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 15px;
+    }
+
+    .loading-text {
+      font-size: 16px;
+      color: #666;
+      text-align: center;
+    }
+
+    .loading-subtext {
+      font-size: 14px;
+      color: #999;
+      margin-top: 8px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      overflow-x: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background-color: #f8f9fa;
+      touch-action: pan-y;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      padding: 15px;
+      background: white;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-back-btn {
+      font-size: 18px;
+      color: #333;
+      cursor: pointer;
+      padding: 5px;
+      border-radius: 50%;
+      transition: background-color 0.3s;
+    }
+
+    .header-back-btn:hover {
+      background-color: #f5f5f5;
+    }
+
+    .header-title {
+      flex: 1;
+      text-align: center;
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    /* 用户列表容器 */
+    .users-container {
+      height: calc(100vh - 120px);
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .user-list {
+      background: white;
+      margin-top: 10px;
+    }
+
+    .user-item {
+      display: flex;
+      align-items: center;
+      padding: 18px 20px;
+      border-bottom: 1px solid #f0f0f0;
+      transition: all 0.3s;
+    }
+
+    .user-item:hover {
+      background-color: #f9f9f9;
+      transform: translateX(5px);
+    }
+
+    .user-avatar {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      margin-right: 15px;
+      flex-shrink: 0;
+      cursor: pointer;
+      overflow: hidden;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s;
+    }
+
+    .user-avatar:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    }
+
+    .user-avatar img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .user-info {
+      flex: 1;
+      cursor: pointer;
+    }
+
+    .user-name {
+      font-size: 16px;
+      color: #333;
+      margin-bottom: 5px;
+      font-weight: 500;
+      transition: color 0.3s;
+    }
+
+    .user-name:hover {
+      color: #409EFF;
+    }
+
+    .user-desc {
+      font-size: 13px;
+      color: #999;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 1;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .follow-btn {
+      padding: 7px 18px;
+      border: 1px solid #409EFF;
+      border-radius: 18px;
+      color: #409EFF;
+      font-size: 13px;
+      background: white;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-weight: 500;
+    }
+
+    .follow-btn:hover {
+      background: #409EFF;
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(64, 158, 255, 0.3);
+    }
+
+    .follow-btn.following {
+      background: #f0f0f0;
+      color: #999;
+      border-color: #f0f0f0;
+    }
+
+    .follow-btn.following:hover {
+      background: #e0e0e0;
+      border-color: #e0e0e0;
+      color: #777;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 80px 20px;
+      color: #999;
+      background: white;
+      margin-top: 10px;
+    }
+
+    .empty-icon {
+      font-size: 60px;
+      margin-bottom: 20px;
+      opacity: 0.4;
+    }
+
+    .empty-text {
+      font-size: 15px;
+    }
+
+    .loading-indicator {
+      text-align: center;
+      padding: 15px;
+      color: #909399;
+      font-size: 14px;
+      background: white;
+    }
+
+    .loading-indicator .el-icon-loading {
+      margin-right: 5px;
+    }
+
+    .no-more-data {
+      text-align: center;
+      padding: 15px;
+      color: #C0C4CC;
+      font-size: 14px;
+      background: white;
+    }
+
+    .load-error {
+      text-align: center;
+      padding: 15px;
+      color: #F56C6C;
+      font-size: 14px;
+      background: white;
+    }
+
+    .load-error .retry-btn {
+      color: #409EFF;
+      cursor: pointer;
+      margin-left: 5px;
+    }
+
+    .foot-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: white;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      border-top: 1px solid #eee;
+      z-index: 100;
+    }
+
+    .foot-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      height: 100%;
+      cursor: pointer;
+      transition: all 0.3s;
+      color: #666;
+      text-decoration: none;
+    }
+
+    .foot-btn.active {
+      color: #409EFF;
+    }
+
+    .foot-btn:hover {
+      background-color: #f9f9f9;
+    }
+
+    .foot-icon {
+      font-size: 22px;
+      margin-bottom: 4px;
+    }
+
+    .foot-text {
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+  <!-- 新增：加载遮罩层 -->
+  <div class="loading-mask" :class="{ hidden: !isLoading }">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">正在加载粉丝列表</div>
+    <div class="loading-subtext">请稍候...</div>
+  </div>
+
+  <div class="header">
+    <div class="header-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
+    <div class="header-title" v-if="stats.fansCount > 0">粉丝列表({{stats.fansCount}})</div>
+    <div class="header-title" v-else>粉丝列表</div>
+  </div>
+
+  <div class="users-container" @scroll="onScroll">
+    <div class="user-list">
+      <div v-if="fansList.length > 0">
+        <div v-for="user in fansList" :key="user.id" class="user-item">
+          <div class="user-avatar" @click="toUserDetail(user)">
+            <img :src="user.icon || '/imgs/icons/default-icon.png'" alt="">
+          </div>
+          <div class="user-info" @click="toUserDetail(user)">
+            <div class="user-name">{{user.nickName || '匿名用户'}}</div>
+            <div class="user-desc">{{user.introduce || '这个人很懒，什么都没写'}}</div>
+          </div>
+          <button class="follow-btn" :class="{'following': user.isFollow}"
+                  @click.stop="toggleFollow(user)">
+            {{user.isFollow ? '已关注' : '关注'}}
+          </button>
+        </div>
+
+        <div class="loading-indicator" v-if="fansLoading">
+          <i class="el-icon-loading"></i> 正在加载更多粉丝...
+        </div>
+
+        <div class="no-more-data" v-if="fansNoMore && !fansLoading">
+          <i class="el-icon-finished"></i> 没有更多粉丝了
+        </div>
+
+        <div class="load-error" v-if="fansLoadError && !fansLoading">
+          <i class="el-icon-warning"></i> 加载失败
+          <span class="retry-btn" @click="retryLoadFans">点击重试</span>
+        </div>
+      </div>
+      <div v-else class="empty-state">
+        <div class="empty-icon"><i class="el-icon-user"></i></div>
+        <div class="empty-text">还没有粉丝</div>
+      </div>
+    </div>
+  </div>
+
+  <foot-bar :active-btn="4" class="foot-bar"></foot-bar>
+</div>
+
+<script src="./js/vue.js"></script>
+<script src="./js/axios.min.js"></script>
+<script src="./js/element.js"></script>
+<script src="./js/common.js"></script>
+<script src="./js/footer.js"></script>
+<script>
+  new Vue({
+    el: '#app',
+    data() {
+      return {
+        user: {},
+        fansList: [],
+        stats: {
+          fansCount: 0
+        },
+        fansCurrent: 1,
+        fansSize: 10,
+        fansLoading: false,
+        fansNoMore: false,
+        fansLoadError: false,
+        // 滚动节流
+        scrollThrottle: null,
+        // 新增：加载状态控制
+        isLoading: true,
+        // 数据加载完成计数器
+        dataLoadedCount: 0,
+        // 需要加载的数据总数
+        totalDataToLoad: 2 // 用户信息、粉丝列表
+      }
+    },
+    created() {
+      this.queryUser();
+      this.queryFans();
+    },
+    methods: {
+      // 新增：数据加载完成回调
+      onDataLoaded() {
+        this.dataLoadedCount++;
+        console.log(`数据加载进度: ${this.dataLoadedCount}/${this.totalDataToLoad}`);
+
+        // 当所有数据加载完成时隐藏遮罩层
+        if (this.dataLoadedCount >= this.totalDataToLoad) {
+          setTimeout(() => {
+            this.isLoading = false;
+            console.log('所有数据加载完成，隐藏遮罩层');
+          }, 500); // 延迟500ms隐藏，让用户看到加载完成
+        }
+      },
+
+      // 滚动事件处理
+      onScroll(e) {
+        if (this.scrollThrottle) {
+          clearTimeout(this.scrollThrottle);
+        }
+
+        this.scrollThrottle = setTimeout(() => {
+          const container = e.target;
+          const { scrollTop, clientHeight, scrollHeight } = container;
+          const distanceToBottom = scrollHeight - scrollTop - clientHeight;
+
+          // 当距离底部小于100px时加载更多
+          if (distanceToBottom <= 100
+                  && !this.fansLoading
+                  && !this.fansNoMore
+                  && !this.fansLoadError) {
+            this.loadMoreFans();
+          }
+        }, 150);
+      },
+
+      // 查询用户信息
+      async queryUser() {
+        try {
+          let response = await axios.get("/app/user/me")
+          this.user = response.data;
+          await this.queryUserStats()
+          this.onDataLoaded(); // 新增：数据加载完成回调
+        } catch (error) {
+          console.error('查询用户信息失败:', error);
+          this.onDataLoaded(); // 新增：即使失败也回调
+          this.$message({
+            type: 'warning',
+            message: '请先登录',
+            duration: 1000,
+            onClose: () => {
+              location.href = "login.html";
+            }
+          });
+        }
+      },
+
+      // 查询粉丝列表
+      queryFans() {
+        this.fansCurrent = 1;
+        this.fansNoMore = false;
+        this.fansLoadError = false;
+        axios.get("/app/user/follow/fans", {
+          params: {
+            current: this.fansCurrent,
+          }
+        })
+                .then(({data}) => {
+                  data.forEach(item => {
+                    item.icon = fileURL + item.icon;
+                  });
+                  this.fansList = data || [];
+                  this.onDataLoaded(); // 新增：数据加载完成回调
+                  if (!data || data.length === 0) {
+                    this.fansNoMore = true;
+                  }
+                })
+                .catch(err => {
+                  console.error('获取粉丝列表失败:', err);
+                  this.fansList = [];
+                  this.fansLoadError = true;
+                  this.onDataLoaded(); // 新增：即使失败也回调
+                })
+      },
+
+      // 加载更多粉丝
+      loadMoreFans() {
+        if (this.fansLoading || this.fansNoMore || this.fansLoadError) return;
+
+        this.fansLoading = true;
+        this.fansLoadError = false;
+        this.fansCurrent++;
+
+        axios.get("/app/user/follow/fans", {
+          params: {
+            current: this.fansCurrent,
+            size: this.fansSize
+          }
+        })
+                .then(({data}) => {
+                  data.forEach(item => {
+                    item.icon = fileURL + item.icon;
+                  });
+                  const newFans = data || [];
+                  if (newFans.length > 0) {
+                    this.fansList = [...this.fansList, ...newFans];
+                  }
+                  if (newFans.length === 0) {
+                    this.fansNoMore = true;
+                  }
+                })
+                .catch(err => {
+                  console.error('加载更多粉丝失败:', err);
+                  this.fansCurrent--;
+                  this.fansLoadError = true;
+                })
+                .finally(() => {
+                  this.fansLoading = false;
+                });
+      },
+      // 查询用户统计信息
+      async queryUserStats() {
+        try {
+          let response = await axios.get("/app/user/stats/" + this.user.id)
+          this.stats = response.data;
+        } catch (error) {
+          console.error('获取用户统计信息失败:', error);
+          this.stats = {
+            likeCount: 0,
+            fansCount: 0,
+            followCount: 0
+          };
+        }
+      },
+      // 重试加载
+      retryLoadFans() {
+        this.fansLoadError = false;
+        this.loadMoreFans();
+      },
+
+      // 关注/取消关注
+      toggleFollow(user) {
+        axios.put("/app/user/follow/" + user.id + "/" + !user.isFollow)
+                .then(() => {
+                  this.$message.success(user.isFollow ? "已取消关注" : "已关注")
+                  user.isFollow = !user.isFollow
+                  this.queryFans();
+                })
+      },
+
+      // 跳转到用户详情
+      toUserDetail(user) {
+        if (user.id === this.user.id) {
+          location.href = "personal-homepage.html";
+        } else {
+          location.href = "other-info.html?id=" + user.id;
+        }
+      },
+
+      goBack() {
+        history.back();
+      }
+    }
+  });
+</script>
+</body>
+</html>

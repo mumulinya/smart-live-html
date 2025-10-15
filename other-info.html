@@ -37,6 +37,50 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      position: relative;
+    }
+
+    /* 新增：加载遮罩层样式 */
+    .loading-mask {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255, 255, 255, 0.95);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      transition: opacity 0.3s ease;
+    }
+
+    .loading-mask.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #07c160;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 15px;
+    }
+
+    .loading-text {
+      font-size: 16px;
+      color: #666;
+      text-align: center;
+    }
+
+    .loading-subtext {
+      font-size: 14px;
+      color: #999;
+      margin-top: 8px;
     }
 
     .header {
@@ -492,6 +536,117 @@
       to { transform: rotate(360deg); }
     }
 
+    /* 新增：店铺列表样式 */
+    .shop-item {
+      display: flex;
+      padding: 12px 15px;
+      background-color: #fff;
+      border-bottom: 1px solid #f5f5f5;
+      transition: background-color 0.2s;
+    }
+
+    .shop-item:hover {
+      background-color: #fafafa;
+    }
+
+    .shop-img {
+      width: 90px;
+      height: 90px;
+      border-radius: 6px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .shop-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .shop-info {
+      flex: 1;
+      padding-left: 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .shop-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #333;
+      line-height: 1.4;
+      margin-bottom: 5px;
+    }
+
+    .shop-rate {
+      display: flex;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+
+    .shop-rate .el-rate {
+      margin-right: 8px;
+    }
+
+    .shop-rate span {
+      font-size: 12px;
+      color: #999;
+    }
+
+    .shop-area {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 5px;
+    }
+
+    .shop-avg {
+      font-size: 12px;
+      color: #ff6633;
+      margin-bottom: 5px;
+    }
+
+    .shop-address {
+      display: flex;
+      align-items: center;
+      font-size: 12px;
+      color: #999;
+    }
+
+    .shop-address i {
+      margin-right: 4px;
+      font-size: 14px;
+    }
+
+    /* 收藏操作按钮 */
+    .collection-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .collection-btn {
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .view-btn {
+      background-color: #07c160;
+      color: white;
+    }
+
+    .uncollect-btn {
+      background-color: #ff6633;
+      color: white;
+    }
+
     /* 响应式调整 */
     @media (max-width: 375px) {
       .basic-icon {
@@ -506,7 +661,7 @@
         height: 26px;
       }
 
-      .blog-img {
+      .blog-img, .shop-img {
         width: 70px;
         height: 70px;
       }
@@ -523,6 +678,13 @@
 </head>
 <body>
 <div id="app">
+  <!-- 新增：加载遮罩层 -->
+  <div class="loading-mask" :class="{ hidden: !isLoading }">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">正在加载用户数据</div>
+    <div class="loading-subtext">请稍候...</div>
+  </div>
+
   <div class="header">
     <div class="header-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
     <div class="header-title">&nbsp;&nbsp;&nbsp;</div>
@@ -534,11 +696,11 @@
     </div>
     <div class="basic-info">
       <div class="name">{{ user.nickName || '未知用户' }}</div>
-      <span>杭州</span>
+      <span>{{user.city||'未知城市'}}</span>
     </div>
     <div class="action-buttons">
       <div class="logout-btn action-btn" @click="follow" v-if="user.id">
-        {{ followed ? "取消关注" : "关注" }}
+        {{ user.isFollow ? "取消关注" : "关注" }}
       </div>
       <div class="message-btn action-btn" @click="sendPrivateMessage" v-if="user.id">
         私信
@@ -554,15 +716,15 @@
   <!-- 用户数据统计卡片 -->
   <div class="stats-card">
     <div class="stat-item">
-      <div class="stat-value">{{ stats.fansCount }}</div>
+      <div class="stat-value">{{ stats.fansCount||0 }}</div>
       <div class="stat-label">粉丝</div>
     </div>
     <div class="stat-item">
-      <div class="stat-value">{{ stats.followCount }}</div>
+      <div class="stat-value">{{ stats.followCount||0 }}</div>
       <div class="stat-label">关注</div>
     </div>
     <div class="stat-item">
-      <div class="stat-value">{{ stats.likeCount }}</div>
+      <div class="stat-value">{{ stats.likeCount||0 }}</div>
       <div class="stat-label">获赞</div>
     </div>
   </div>
@@ -576,7 +738,7 @@
              @click="switchTabWithFeedback('note')">
           <div class="tab-text">
             笔记
-            <span v-if="notes.length > 0" class="count-badge">{{ formatCount(notes.length) }}</span>
+            <span v-if="stats.blogCount > 0" class="count-badge">{{ formatCount(stats.blogCount) }}</span>
           </div>
         </div>
         <div class="custom-tab-item"
@@ -584,15 +746,15 @@
              @click="switchTabWithFeedback('common')">
           <div class="tab-text">
             共同关注
-            <span v-if="commonFollows.length > 0" class="count-badge">{{ formatCount(commonFollows.length) }}</span>
+            <span v-if="stats.commonFollowCount > 0" class="count-badge">{{ formatCount(stats.commonFollowCount) }}</span>
           </div>
         </div>
         <div class="custom-tab-item"
              :class="{ active: activeName === 'collection' }"
              @click="switchTabWithFeedback('collection')">
           <div class="tab-text">
-            收藏
-            <span v-if="collections.length > 0" class="count-badge">{{ formatCount(collections.length) }}</span>
+            店铺收藏
+            <span v-if="stats.collectCount > 0" class="count-badge">{{ formatCount(stats.collectCount) }}</span>
           </div>
         </div>
       </div>
@@ -689,41 +851,54 @@
             </div>
           </div>
 
-          <!-- 收藏标签页 -->
+          <!-- 收藏标签页 - 只显示店铺收藏 -->
           <div class="tab-pane" @scroll="onScroll($event, 'collection')" ref="collectionPane">
             <div v-if="collections.length > 0">
-              <div v-for="item in collections" :key="item.id" class="blog-item">
-                <div class="blog-img" @click="toNoteDetail(item.note)">
-                  <img :src="getFirstImage(item.note.images)" alt="" @error="handleImgError($event)">
+              <div v-for="shop in collections" :key="shop.id" class="shop-item">
+                <div class="shop-img" @click="toShopDetail(shop)">
+                  <img :src="getFirstImage(shop.images)" alt="" @error="handleImgError($event)">
                 </div>
-                <div class="blog-info">
-                  <div class="blog-title" @click="toNoteDetail(item.note)">{{ truncateTitle(item.note.title, 20) }}</div>
-                  <div class="blog-meta">
-                    <div class="blog-liked"
-                         :class="{'active': item.note.isLike}"
-                         @click.stop="toggleLike(item.note)">
-                      <img src="/imgs/thumbup.png" alt="">
-                      {{ item.note.liked || 0 }}
-                    </div>
-                    <div class="blog-comments" @click.stop="toNoteDetail(item.note)">
-                      <i class="el-icon-chat-dot-round"></i>
-                      {{ item.note.comments || 0 }}
-                    </div>
-                    <div class="blog-share" @click.stop="shareNote(item.note)">
-                      <i class="el-icon-share"></i>
-                      分享
-                    </div>
+                <div class="shop-info">
+                  <div class="shop-title" @click="toShopDetail(shop)">{{ shop.name }}</div>
+                  <div class="shop-rate">
+                    <el-rate
+                            disabled
+                            v-model="shop.score/10"
+                            text-color="#F63"
+                            show-score
+                    ></el-rate>
+                    <span>{{ shop.comments }}条</span>
+                  </div>
+                  <div class="shop-area">
+                    <span>{{ shop.area }}</span>
+                    <span v-if="shop.distance">
+                      {{ shop.distance < 1000 ? shop.distance.toFixed(1) + 'm' : (shop.distance/1000).toFixed(1) + 'km' }}
+                    </span>
+                  </div>
+                  <div class="shop-avg">￥{{ shop.avgPrice }}/人</div>
+                  <div class="shop-address">
+                    <i class="el-icon-map-location"></i>
+                    <span>{{ shop.address }}</span>
+                  </div>
+                  <div class="collection-actions">
+                    <button class="collection-btn view-btn" @click.stop="toShopDetail(shop)">
+                      查看详情
+                    </button>
+                    <button class="collection-btn uncollect-btn" @click.stop="toggleFollowShop(shop)">
+                      <template v-if="shop.isFollow">取消收藏</template>
+                      <template v-else>收藏</template>
+                    </button>
                   </div>
                 </div>
               </div>
 
               <!-- 加载状态指示器 -->
               <div class="loading-indicator" v-if="collectionLoading">
-                <i class="el-icon-loading"></i> 正在加载更多收藏...
+                <i class="el-icon-loading"></i> 正在加载更多店铺收藏...
               </div>
 
               <div class="no-more-data" v-if="collectionNoMore && !collectionLoading">
-                <i class="el-icon-finished"></i> 没有更多收藏了
+                <i class="el-icon-finished"></i> 没有更多店铺收藏了
               </div>
 
               <div class="load-error" v-if="collectionLoadError && !collectionLoading">
@@ -733,7 +908,7 @@
             </div>
             <div v-else class="empty-state">
               <div class="empty-icon"><i class="el-icon-star-off"></i></div>
-              <div class="empty-text">还没有任何收藏</div>
+              <div class="empty-text">还没有收藏任何店铺</div>
             </div>
           </div>
         </div>
@@ -759,14 +934,24 @@
       currentIndex: 0, // 用于标签页切换的索引
       sessionId: "",
       info: {},
+      // 新增：加载状态控制
+      isLoading: true,
+      // 数据加载完成计数器
+      dataLoadedCount: 0,
+      // 需要加载的数据总数
+      totalDataToLoad: 6, // 用户信息、用户详情、统计数据、笔记、共同关注、收藏
+
       //统计标签
       stats: {
         blogCount: 0,
         fansCount: 0,
         followCount: 0,
-        likeCount: 0
+        likeCount: 0,
+        collectCount:0,
+        commonFollowCount: 0
       },
-
+      // 登录状态
+      token: sessionStorage.getItem("token") || '',
       // 各标签页数据
       notes: [],
       commonFollows: [],
@@ -815,6 +1000,20 @@
       });
     },
     methods: {
+      // 新增：数据加载完成回调
+      onDataLoaded() {
+        this.dataLoadedCount++;
+        console.log(`数据加载进度: ${this.dataLoadedCount}/${this.totalDataToLoad}`);
+
+        // 当所有数据加载完成时隐藏遮罩层
+        if (this.dataLoadedCount >= this.totalDataToLoad) {
+          setTimeout(() => {
+            this.isLoading = false;
+            console.log('所有数据加载完成，隐藏遮罩层');
+          }, 500); // 延迟500ms隐藏，让用户看到加载完成
+        }
+      },
+
       // 初始化测试数据
       initTestData() {
         // 笔记数据
@@ -835,18 +1034,24 @@
           isFollow: true
         }));
 
-        // 收藏数据
-        this.collections = Array(4).fill().map((_, i) => ({
-          id: i + 200,
-          note: {
-            id: i + 300,
-            title: `收藏笔记 ${i + 1}：这是一篇被收藏的笔记`,
-            images: '/imgs/icons/default-blog.png',
-            liked: i * 5,
-            comments: i * 2,
-            isLike: false
+        // 店铺收藏数据
+        this.collections = Array(3).fill().map((_, i) => ({
+          id: i + 400,
+          shop: {
+            id: i + 500,
+            name: `收藏店铺 ${i + 1}`,
+            images: '/imgs/icons/default-shop.png',
+            score: 4.5 + (i * 0.1),
+            comments: 50 + (i * 10),
+            area: '拱墅区',
+            distance: 500 + (i * 200),
+            avgPrice: 80 + (i * 20),
+            address: `杭州市拱墅区莫干山路${1000 + i}号`
           }
         }));
+
+        // 测试数据加载完成
+        this.onDataLoaded();
       },
 
       // 处理图片加载失败
@@ -885,7 +1090,7 @@
       getFirstImage(images) {
         if (!images) return '/imgs/icons/default-blog.png';
         const imgArr = images.split(',');
-        return imgArr[0] || '/imgs/icons/default-blog.png';
+        return fileURL+imgArr[0] || '/imgs/icons/default-blog.png';
       },
 
       // 截断标题
@@ -930,6 +1135,115 @@
             }
           }
         }, 300);
+      },
+
+      // 查询店铺收藏
+      queryCollections() {
+        if (!this.user.id) return;
+        this.collectionLoading = true;
+        this.collectionLoadError = false;
+        this.collectionCurrent = 1;
+
+        axios.get("/app/user/followShop/followShops", {
+          params: {
+            userId: this.user.id,
+            current: this.collectionCurrent
+          }
+        })
+                .then((response) => {
+                  const data = response.data || [];
+                  data.forEach(s => s.images = s.images.split(',')[0]);
+                  this.collections = data;
+                  this.collectionNoMore = false;
+                  this.collectionLoading = false;
+                  this.onDataLoaded(); // 新增：数据加载完成回调
+                })
+                .catch(err => {
+                  console.error("获取店铺收藏失败:", err);
+                  this.collectionLoading = false;
+                  this.collectionLoadError = true;
+                  this.onDataLoaded(); // 新增：即使失败也回调
+                });
+      },
+
+      // 加载更多店铺收藏
+      loadMoreCollections() {
+        if (this.collectionLoading || this.collectionLoadError || this.collectionNoMore) return;
+
+        this.collectionLoading = true;
+        this.collectionLoadError = false;
+        const nextPage = this.collectionCurrent + 1;
+
+        axios.get("/app/user/followShop/followShops", {
+          params: {
+            userId: this.user.id,
+            current: nextPage
+          }
+        })
+                .then((response) => {
+                  const newCollections = response.data || [];
+                  if (newCollections.length > 0) {
+                    this.collections = [...this.collections, ...newCollections];
+                    this.collectionCurrent = nextPage;
+                    if (newCollections.length < 5) {
+                      this.collectionNoMore = true;
+                    }
+                  } else {
+                    this.collectionNoMore = true;
+                  }
+                  this.collectionLoading = false;
+                })
+                .catch(err => {
+                  console.error("加载更多店铺收藏失败:", err);
+                  this.collectionLoading = false;
+                  this.collectionLoadError = true;
+                });
+      },
+
+      // 取消收藏店铺
+      toggleFollowShop(shop) {
+        if (!this.token) {
+          this.$message.error("请先登录");
+          setTimeout(() => {
+            location.href = "/login.html";
+          }, 200);
+          return;
+        }
+        const shopId = shop.id;
+        const followStatus = !shop.isFollow;
+
+        this.isFollowLoading = true;
+
+
+        axios.put('/app/user/followShop/'+ shopId + "/" + followStatus)
+                .then(({data}) => {
+                  // 文案改为"收藏"相关，适配按钮功能
+                  const successMsg = followStatus ? '收藏店铺成功，已添加到你的收藏夹～' : '已取消店铺收藏';
+                  this.$message.success(successMsg);
+                  shop.isFollow= followStatus;
+                })
+                .catch(error => {
+                  const errorMsg = followStatus ? '收藏失败，请重试' : '取消收藏失败，请重试';
+                  this.$message.error(errorMsg);
+                  console.error(error);
+                })
+                .finally(() => {
+                  this.isFollowLoading = false;
+                });
+      },
+
+      // 跳转到店铺详情
+      toShopDetail(shop) {
+        if (shop.id) {
+          location.href = `/shop-detail.html?id=${shop.id}`;
+        }
+      },
+
+      retryLoadCollections() {
+        this.collectionLoadError = false;
+        this.collectionNoMore = false;
+        this.collectionCurrent = 1;
+        this.queryCollections();
       },
 
       // 笔记数据加载 - 修复分页逻辑
@@ -1017,12 +1331,14 @@
                   }
 
                   this.noteLoading = false;
+                  this.onDataLoaded(); // 新增：数据加载完成回调
                   console.log('笔记加载完成，数量:', data.length, '是否有更多:', !this.noteNoMore);
                 })
                 .catch(err => {
                   console.error("获取笔记失败:", err);
                   this.noteLoading = false;
                   this.noteLoadError = true;
+                  this.onDataLoaded(); // 新增：即使失败也回调
                 });
       },
 
@@ -1048,15 +1364,20 @@
         })
                 .then((response) => {
                   const data = response.data || [];
+                  data.forEach(item=>{
+                    item.icon = fileURL + item.icon;
+                  })
                   this.commonFollows = data;
                   // 第一页不判断是否有更多
                   this.commonNoMore = false;
                   this.commonLoading = false;
+                  this.onDataLoaded(); // 新增：数据加载完成回调
                 })
                 .catch(err => {
                   console.error("获取共同关注失败:", err);
                   this.commonLoading = false;
                   this.commonLoadError = true;
+                  this.onDataLoaded(); // 新增：即使失败也回调
                 });
       },
 
@@ -1074,6 +1395,9 @@
           }
         })
                 .then((response) => {
+                  data.forEach(item=>{
+                    item.icon = fileURL + item.icon;
+                  })
                   const newFollows = response.data || [];
                   if (newFollows.length > 0) {
                     this.commonFollows = [...this.commonFollows, ...newFollows];
@@ -1101,79 +1425,12 @@
         this.queryCommonFollows();
       },
 
-      // 收藏数据加载
-      queryCollections() {
-        if (!this.user.id) return;
-        this.collectionLoading = true;
-        this.collectionLoadError = false;
-        this.collectionCurrent = 1;
-
-        axios.get("/app/collection/of/user", {
-          params: {
-            userId: this.user.id,
-            current: this.collectionCurrent
-          }
-        })
-                .then((response) => {
-                  const data = response.data || [];
-                  this.collections = data;
-                  // 第一页不判断是否有更多
-                  this.collectionNoMore = false;
-                  this.collectionLoading = false;
-                })
-                .catch(err => {
-                  console.error("获取收藏失败:", err);
-                  this.collectionLoading = false;
-                  this.collectionLoadError = true;
-                });
-      },
-
-      loadMoreCollections() {
-        if (this.collectionLoading || this.collectionLoadError || this.collectionNoMore) return;
-
-        this.collectionLoading = true;
-        this.collectionLoadError = false;
-        const nextPage = this.collectionCurrent + 1;
-
-        axios.get("/app/collection/of/user", {
-          params: {
-            userId: this.user.id,
-            current: nextPage
-          }
-        })
-                .then((response) => {
-                  const newCollections = response.data || [];
-                  if (newCollections.length > 0) {
-                    this.collections = [...this.collections, ...newCollections];
-                    this.collectionCurrent = nextPage;
-                    // 后端固定返回5条，所以当返回数据少于5条时标记为没有更多
-                    if (newCollections.length < 5) {
-                      this.collectionNoMore = true;
-                    }
-                  } else {
-                    this.collectionNoMore = true;
-                  }
-                  this.collectionLoading = false;
-                })
-                .catch(err => {
-                  console.error("加载更多收藏失败:", err);
-                  this.collectionLoading = false;
-                  this.collectionLoadError = true;
-                });
-      },
-
-      retryLoadCollections() {
-        this.collectionLoadError = false;
-        this.collectionNoMore = false;
-        this.collectionCurrent = 1;
-        this.queryCollections();
-      },
-
       // 获取登录用户信息
       queryLoginUser() {
         axios.get("/app/user/me")
                 .then((response) => {
                   this.loginUser = response.data || {};
+                  this.onDataLoaded(); // 新增：数据加载完成回调
                   // 如果已获取用户信息，加载共同关注
                   if (this.user.id) {
                     this.queryCommonFollows();
@@ -1182,6 +1439,7 @@
                 .catch(err => {
                   console.error("获取登录用户失败:", err);
                   this.loginUser = {};
+                  this.onDataLoaded(); // 新增：即使失败也回调
                 });
       },
 
@@ -1190,15 +1448,18 @@
         let id = util.getUrlParam("id");
         if (!id) {
           console.error("未获取到用户ID");
+          this.onDataLoaded(); // 新增：即使失败也回调
           return;
         }
 
         axios.get("/app/user/" + id)
                 .then((response) => {
                   this.user = response.data || {};
+                  this.user.icon = fileURL + response.data.icon;
+                  this.onDataLoaded(); // 新增：数据加载完成回调
                   this.queryUserInfo();
                   this.queryNotes();
-                  this.queryCollections();
+                  this.queryCollections(); // 加载店铺收藏
                   this.isFollowed();
                   this.isCreateSession();
                   this.queryUserStats();
@@ -1207,6 +1468,7 @@
                 .catch(err => {
                   console.error("获取用户信息失败:", err);
                   this.user = {};
+                  this.onDataLoaded(); // 新增：即使失败也回调
                 });
       },
 
@@ -1218,9 +1480,11 @@
                 .then((response) => {
                   const data = response.data || {};
                   this.stats = data;
+                  this.onDataLoaded(); // 新增：数据加载完成回调
                 })
                 .catch(err => {
                   console.log("获取统计数据失败:", err);
+                  this.onDataLoaded(); // 新增：即使失败也回调
                 });
       },
 
@@ -1233,13 +1497,15 @@
       queryUserInfo() {
         if (!this.user.id) return;
 
-        axios.get("/app/user/info/" + this.user.id)
+        axios.get("/app/user/info/getUserInfo/" + this.user.id)
                 .then((response) => {
                   this.info = response.data || {};
+                  this.onDataLoaded(); // 新增：数据加载完成回调
                 })
                 .catch(err => {
                   console.error("获取用户详情失败:", err);
                   this.info = {};
+                  this.onDataLoaded(); // 新增：即使失败也回调
                 });
       },
 

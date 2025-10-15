@@ -208,6 +208,7 @@
           await axios.get("/app/user/me")
                   .then(({ data }) => {
                     this.user = data;
+                    this.user.icon= fileURL + data.icon;
                   });
         } catch (error) {
           console.log(error);
@@ -262,7 +263,7 @@
           });
           const sessionInfo = response.data;
           this.contactName = sessionInfo.contactName || '未知用户';
-          this.contactAvatar = sessionInfo.contactAvatar;
+          this.contactAvatar = fileURL+sessionInfo.contactAvatar;
           this.fromUid = sessionInfo.fromUid;
           this.toUid = sessionInfo.toUid;
 

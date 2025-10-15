@@ -402,7 +402,7 @@
     <!-- 店铺列表 -->
     <div class="shop-list">
       <div v-for="shop in shopList" :key="shop.id" class="shop-item" @click="centerToShop(shop)">
-        <img :src="shop.avatar || '/imgs/default-shop.jpg'" alt="" class="shop-avatar">
+        <img :src="shop.images || '/imgs/default-shop.jpg'" alt="" class="shop-avatar">
         <div class="shop-info">
           <div class="shop-name">{{ shop.name }}</div>
           <div class="shop-rate">
@@ -1129,6 +1129,7 @@
             keyword: this.keyword
           }
         }).then(res => {
+          res.data.forEach(s => s.images = fileURL+s.images.split(',')[0]);
           this.shopList = res.data
           this.addShopMarkers();
           this.keyword = ''

@@ -819,6 +819,7 @@
         axios.get("/app/user/me")
                 .then(({ data }) => {
                   this.user = data;
+                  this.user.icon=fileURL+data.icon
                 })
                 .catch(console.log)
       },
@@ -844,11 +845,14 @@
           } else {
             this.comments = [...this.comments, ...newComments];
             this.comments.forEach(comment => {
+              comment.userIcon=fileURL+comment.userIcon
               if(comment.isAIGenerated===true){
                 this.aiComment= comment
               }
               if(comment.images!=""&&comment.images!=null){
                 comment.images=comment.images.split(",")
+                comment.images=comment.images.map(image => fileURL + image);
+
               }
             })
             this.page++;

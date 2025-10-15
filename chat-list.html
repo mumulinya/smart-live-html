@@ -329,7 +329,9 @@
               current: this.current
             }
           });
-
+          response.data.forEach(session => {
+           session.avatar= fileURL + session.avatar;
+          });
           const newSessions = response.data || [];
 
           if (newSessions.length === 0) {

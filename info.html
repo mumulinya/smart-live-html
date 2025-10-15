@@ -3,12 +3,67 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>智评生活 - 个人主页</title>
+  <title>个人主页</title>
   <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
   <link rel="stylesheet" href="./css/element.css">
   <link href="./css/index.css" rel="stylesheet">
   <link href="./css/main.css" rel="stylesheet">
   <style>
+    /* ====================================== 新增：加载遮罩层样式 ====================================== */
+    #app {
+      min-height: 100vh;
+      padding-bottom: 60px;
+      position: relative;
+      background: #f8f9fa;
+    }
+
+    .loading-mask {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255, 255, 255, 0.95);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      transition: opacity 0.3s ease;
+    }
+
+    .loading-mask.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #409EFF;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 15px;
+    }
+
+    .loading-text {
+      font-size: 16px;
+      color: #666;
+      text-align: center;
+    }
+
+    .loading-subtext {
+      font-size: 14px;
+      color: #999;
+      margin-top: 8px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
     * {
       margin: 0;
       padding: 0;
@@ -21,13 +76,6 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
       background-color: #f8f9fa;
       touch-action: pan-y;
-    }
-
-    #app {
-      min-height: 100vh;
-      padding-bottom: 60px;
-      position: relative;
-      background: #f8f9fa;
     }
 
     .header {
@@ -201,6 +249,65 @@
       color: #409EFF;
     }
 
+    .quick-actions {
+      display: flex;
+      background: white;
+      padding: 20px 0;
+      border-bottom: 1px solid #f0f0f0;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+      margin-top: 0;
+    }
+
+    .action-item {
+      flex: 1;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      padding: 12px 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .action-item::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      background: rgba(64, 158, 255, 0.1);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      transition: all 0.6s ease;
+    }
+
+    .action-item:active::after {
+      width: 100px;
+      height: 100px;
+    }
+
+    .action-icon {
+      font-size: 24px;
+      color: #409EFF;
+      margin-bottom: 8px;
+      transition: all 0.3s;
+    }
+
+    .action-label {
+      font-size: 14px;
+      color: #333;
+      font-weight: 500;
+      transition: color 0.3s;
+    }
+
+    .action-item:hover .action-icon {
+      transform: translateY(-3px);
+    }
+
+    .action-item:hover .action-label {
+      color: #409EFF;
+    }
+
     .introduce {
       padding: 18px 20px;
       background: white;
@@ -273,7 +380,6 @@
       user-select: none;
       -webkit-tap-highlight-color: transparent;
       pointer-events: auto;
-      /* 关键修复：防止内容过长导致变形 */
       min-width: 0;
       overflow: hidden;
     }
@@ -324,7 +430,6 @@
       border-radius: 2px;
     }
 
-    /* 关键修复：标签文本容器 */
     .tab-text {
       white-space: nowrap;
       overflow: hidden;
@@ -335,7 +440,6 @@
       justify-content: center;
     }
 
-    /* 数量徽章样式 */
     .count-badge {
       font-size: 11px;
       background: #ff4757;
@@ -351,7 +455,7 @@
 
     .tabs-container {
       position: relative;
-      height: 400px; /* 改为固定高度，确保可以滚动 */
+      height: 400px;
       touch-action: pan-x;
     }
 
@@ -364,8 +468,8 @@
 
     .tab-pane {
       flex: 0 0 100%;
-      height: 100%; /* 关键修复：使用父容器高度 */
-      overflow-y: auto; /* 关键修复：启用滚动 */
+      height: 100%;
+      overflow-y: auto;
       -webkit-overflow-scrolling: touch;
       padding-bottom: 20px;
     }
@@ -376,9 +480,8 @@
       margin-top: 0;
     }
 
+    /* 博客项样式 - 修改后的结构 */
     .blog-item {
-      display: flex;
-      padding: 20px;
       background: white;
       border-bottom: 1px solid #f0f0f0;
       transition: all 0.3s;
@@ -389,6 +492,56 @@
       background-color: #f9f9f9;
       transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .blog-user-info {
+      display: flex;
+      align-items: center;
+      padding: 15px 20px 12px;
+      border-bottom: 1px solid #f0f0f0;
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    .blog-user-info:hover {
+      background-color: #f8f9fa;
+    }
+
+    .user-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      overflow: hidden;
+      margin-right: 12px;
+      flex-shrink: 0;
+    }
+
+    .user-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .user-details {
+      flex: 1;
+    }
+
+    .user-nickname {
+      font-size: 14px;
+      font-weight: 500;
+      color: #333;
+      margin-bottom: 2px;
+    }
+
+    .blog-time {
+      font-size: 12px;
+      color: #999;
+    }
+
+    .blog-content {
+      display: flex;
+      padding: 0 20px 20px;
     }
 
     .blog-img {
@@ -485,220 +638,122 @@
       margin-right: 5px;
     }
 
-    .user-list {
-      background: white;
-    }
-
-    .user-item {
+    /* 新增：店铺列表样式 */
+    .shop-item {
       display: flex;
-      align-items: center;
-      padding: 18px 20px;
-      border-bottom: 1px solid #f0f0f0;
-      transition: all 0.3s;
+      padding: 12px 15px;
+      background-color: #fff;
+      border-bottom: 1px solid #f5f5f5;
+      transition: background-color 0.2s;
     }
 
-    .user-item:hover {
-      background-color: #f9f9f9;
-      transform: translateX(5px);
-    }
-
-    .user-avatar {
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      margin-right: 15px;
-      flex-shrink: 0;
-      cursor: pointer;
-      overflow: hidden;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-      transition: all 0.3s;
-    }
-
-    .user-avatar:hover {
-      transform: scale(1.05);
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
-    }
-
-    .user-avatar img {
-      width: 100%;
-      height: 100%;
-      border-radius: 50%;
-      object-fit: cover;
-    }
-
-    .user-info {
-      flex: 1;
-      cursor: pointer;
-    }
-
-    .user-name {
-      font-size: 16px;
-      color: #333;
-      margin-bottom: 5px;
-      font-weight: 500;
-      transition: color 0.3s;
-    }
-
-    .user-name:hover {
-      color: #409EFF;
-    }
-
-    .user-desc {
-      font-size: 13px;
-      color: #999;
-      line-height: 1.4;
-      display: -webkit-box;
-      -webkit-line-clamp: 1;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-
-    .follow-btn {
-      padding: 7px 18px;
-      border: 1px solid #409EFF;
-      border-radius: 18px;
-      color: #409EFF;
-      font-size: 13px;
-      background: white;
-      cursor: pointer;
-      transition: all 0.3s;
-      font-weight: 500;
-    }
-
-    .follow-btn:hover {
-      background: #409EFF;
-      color: white;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 8px rgba(64, 158, 255, 0.3);
-    }
-
-    .follow-btn.following {
-      background: #f0f0f0;
-      color: #999;
-      border-color: #f0f0f0;
-    }
-
-    .follow-btn.following:hover {
-      background: #e0e0e0;
-      border-color: #e0e0e0;
-      color: #777;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    }
-
-    .review-item {
-      padding: 20px;
-      background: white;
-      border-bottom: 1px solid #f0f0f0;
-      transition: all 0.3s;
-    }
-
-    .review-item:hover {
-      background-color: #f9f9f9;
+    .shop-item:hover {
+      background-color: #fafafa;
       transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     }
 
-    .review-header {
-      display: flex;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-
-    .review-avatar {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      margin-right: 12px;
+    .shop-img {
+      width: 90px;
+      height: 90px;
+      border-radius: 6px;
       overflow: hidden;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      flex-shrink: 0;
     }
 
-    .review-avatar img {
+    .shop-img img {
       width: 100%;
       height: 100%;
       object-fit: cover;
+      display: block;
     }
 
-    .review-user {
+    .shop-info {
       flex: 1;
+      padding-left: 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
     }
 
-    .review-user-name {
+    .shop-title {
       font-size: 15px;
+      font-weight: 600;
       color: #333;
-      margin-bottom: 4px;
-      font-weight: 500;
-    }
-
-    .review-rating {
-      color: #ff9900;
-      font-size: 13px;
-    }
-
-    .review-content {
-      font-size: 14px;
-      color: #333;
-      line-height: 1.6;
-      margin-bottom: 12px;
-    }
-
-    .review-images {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-bottom: 12px;
-    }
-
-    .review-image {
-      width: 80px;
-      height: 80px;
-      border-radius: 6px;
-      overflow: hidden;
+      line-height: 1.4;
+      margin-bottom: 5px;
       cursor: pointer;
-      transition: all 0.3s;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
     }
 
-    .review-image:hover {
-      transform: scale(1.05);
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    .shop-title:hover {
+      color: #409EFF;
     }
 
-    .review-image img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    .review-footer {
+    .shop-rate {
       display: flex;
       align-items: center;
+      margin-bottom: 5px;
+    }
+
+    .shop-rate .el-rate {
+      margin-right: 8px;
+    }
+
+    .shop-rate span {
+      font-size: 12px;
       color: #999;
-      font-size: 13px;
     }
 
-    .review-time {
-      flex: 1;
+    .shop-area {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 5px;
     }
 
-    .review-actions {
+    .shop-avg {
+      font-size: 12px;
+      color: #ff6633;
+      margin-bottom: 5px;
+    }
+
+    .shop-address {
       display: flex;
       align-items: center;
+      font-size: 12px;
+      color: #999;
     }
 
-    .review-action {
+    .shop-address i {
+      margin-right: 4px;
+      font-size: 14px;
+    }
+
+    /* 收藏操作按钮 */
+    .collection-actions {
       display: flex;
-      align-items: center;
-      margin-left: 15px;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .collection-btn {
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      border: none;
       cursor: pointer;
-      padding: 6px 10px;
-      border-radius: 6px;
-      transition: all 0.3s;
+      transition: all 0.2s;
     }
 
-    .review-action:hover {
-      background-color: #f5f5f5;
-      transform: translateY(-1px);
+    .view-btn {
+      background-color: #07c160;
+      color: white;
+    }
+
+    .uncollect-btn {
+      background-color: #ff6633;
+      color: white;
     }
 
     .empty-state {
@@ -718,7 +773,6 @@
       font-size: 15px;
     }
 
-    /* 加载状态指示器样式 */
     .loading-indicator {
       text-align: center;
       padding: 15px;
@@ -797,7 +851,6 @@
       font-size: 12px;
     }
 
-    /* 退出登录提示框居中样式 */
     .el-message-box__wrapper {
       display: flex;
       align-items: center;
@@ -828,7 +881,6 @@
       padding: 8px 15px;
     }
 
-    /* 图片预览层样式 */
     .image-preview-layer {
       position: fixed;
       top: 0;
@@ -912,10 +964,210 @@
       font-size: 14px;
       color: #666;
     }
+
+    /* 抖音风格点赞动画 */
+    .like-animation-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    .like-particle {
+      position: absolute;
+      font-size: 24px;
+      color: #ff2e63;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 10000;
+      user-select: none;
+      -webkit-user-select: none;
+      text-shadow: 0 0 10px rgba(255, 46, 99, 0.5);
+    }
+
+    .like-popup {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 20px 30px;
+      border-radius: 50px;
+      font-size: 18px;
+      font-weight: bold;
+      z-index: 10001;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: likePopup 1.5s ease-out forwards;
+    }
+
+    .like-popup i {
+      color: #ff2e63;
+      font-size: 24px;
+      animation: heartBeat 0.6s ease-in-out 3;
+    }
+
+    .unlike-popup {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 20px 30px;
+      border-radius: 50px;
+      font-size: 18px;
+      font-weight: bold;
+      z-index: 10001;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: unlikePopup 1.5s ease-out forwards;
+    }
+
+    .unlike-popup i {
+      color: #999;
+      font-size: 24px;
+    }
+
+    @keyframes likePopup {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.5);
+      }
+      20% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.1);
+      }
+      40% {
+        transform: translate(-50%, -50%) scale(1);
+      }
+      80% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.8);
+      }
+    }
+
+    @keyframes unlikePopup {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.5);
+      }
+      20% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.1);
+      }
+      40% {
+        transform: translate(-50%, -50%) scale(1);
+      }
+      80% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.8);
+      }
+    }
+
+    @keyframes heartBeat {
+      0% {
+        transform: scale(1);
+      }
+      25% {
+        transform: scale(1.3);
+      }
+      50% {
+        transform: scale(1);
+      }
+      75% {
+        transform: scale(1.3);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    /* 抖音风格获赞提示样式 */
+    .douyin-toast {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 15px 25px;
+      border-radius: 25px;
+      font-size: 16px;
+      font-weight: 500;
+      z-index: 10001;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      animation: douyinToast 2s ease-in-out forwards;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(10px);
+    }
+
+    .douyin-toast i {
+      color: #ff2e63;
+      font-size: 18px;
+      animation: heartPulse 1s ease-in-out infinite;
+    }
+
+    @keyframes douyinToast {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.8);
+      }
+      15% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.1);
+      }
+      30% {
+        transform: translate(-50%, -50%) scale(1);
+      }
+      70% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.9);
+      }
+    }
+
+    @keyframes heartPulse {
+      0% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.2);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
   </style>
 </head>
 <body>
 <div id="app">
+  <!-- 新增：加载遮罩层 -->
+  <div class="loading-mask" :class="{ hidden: !isLoading }">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">正在加载个人主页</div>
+    <div class="loading-subtext">请稍候...</div>
+  </div>
+
   <div class="header">
     <div class="header-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
     <div class="header-title">个人主页</div>
@@ -938,31 +1190,38 @@
   </div>
 
   <div class="stats">
-    <div class="stat-item" @click="switchTab('note')">
-      <div class="stat-number">{{stats.blogCount || 0}}</div>
-      <div class="stat-label">笔记</div>
-    </div>
-    <div class="stat-item" @click="switchTab('fans')">
-      <div class="stat-number">{{stats.fansCount || 0}}</div>
-      <div class="stat-label">粉丝</div>
+    <div class="stat-item" @click="showLikeCount">
+      <div class="stat-number">{{stats.likeCount || 0}}</div>
+      <div class="stat-label">获赞</div>
     </div>
     <div class="stat-item" @click="switchTab('follow')">
       <div class="stat-number">{{stats.followCount || 0}}</div>
       <div class="stat-label">关注</div>
     </div>
-    <div class="stat-item" @click="switchTab('review')">
-      <div class="stat-number">{{stats.commentCount || 0}}</div>
-      <div class="stat-label">评价</div>
-    </div>
-    <div class="stat-item" @click="switchTab('review')">
-      <div class="stat-number">{{stats.likeCount || 0}}</div>
-      <div class="stat-label">获赞</div>
+    <div class="stat-item" @click="switchTab('fans')">
+      <div class="stat-number">{{stats.fansCount || 0}}</div>
+      <div class="stat-label">粉丝</div>
     </div>
   </div>
 
   <div class="introduce" @click="toEdit">
     <span v-if="info.introduce">{{info.introduce}}</span>
     <span v-else>添加个人简介，让大家更好的认识你 <i class="el-icon-edit"></i></span>
+  </div>
+
+  <div class="quick-actions">
+    <div class="action-item" @click="goToReviews">
+      <div class="action-icon">
+        <i class="el-icon-chat-dot-round"></i>
+      </div>
+      <div class="action-label">我的评价</div>
+    </div>
+    <div class="action-item" @click="goToOrders">
+      <div class="action-icon">
+        <i class="el-icon-shopping-bag-1"></i>
+      </div>
+      <div class="action-label">我的订单</div>
+    </div>
   </div>
 
   <div class="content">
@@ -977,27 +1236,11 @@
           </div>
         </div>
         <div class="custom-tab-item"
-             :class="{ active: activeName === 'review' }"
-             @click="switchTabWithFeedback('review')">
+             :class="{ active: activeName === 'collection' }"
+             @click="switchTabWithFeedback('collection')">
           <div class="tab-text">
-            评价
-            <span v-if="reviews.length > 0" class="count-badge">{{formatCount(reviews.length)}}</span>
-          </div>
-        </div>
-        <div class="custom-tab-item"
-             :class="{ active: activeName === 'fans' }"
-             @click="switchTabWithFeedback('fans')">
-          <div class="tab-text">
-            粉丝
-            <span v-if="fansList.length > 0" class="count-badge">{{formatCount(fansList.length)}}</span>
-          </div>
-        </div>
-        <div class="custom-tab-item"
-             :class="{ active: activeName === 'follow' }"
-             @click="switchTabWithFeedback('follow')">
-          <div class="tab-text">
-            关注
-            <span v-if="followList.length > 0" class="count-badge">{{formatCount(followList.length)}}</span>
+            店铺收藏
+            <span v-if="collections.length > 0" class="count-badge">{{formatCount(collections.length)}}</span>
           </div>
         </div>
         <div class="custom-tab-item"
@@ -1019,31 +1262,44 @@
           <div class="tab-pane" @scroll="onScroll($event, 'blog')">
             <div v-if="blogs.length > 0">
               <div v-for="b in blogs" :key="b.id" class="blog-item">
-                <div class="blog-img" @click="toBlogDetail(b)">
-                  <img :src="getFirstImage(b.images)" alt="">
+                <!-- 用户信息头部 -->
+                <div class="blog-user-info" @click="toUserDetail(b)">
+                  <div class="user-avatar">
+                    <img :src="b.icon || '/imgs/icons/default-icon.png'" alt="用户头像">
+                  </div>
+                  <div class="user-details">
+                    <div class="user-nickname">{{ b.nickName || user.nickName || '匿名用户' }}</div>
+                    <div class="blog-time">{{ formatTime(b.createTime) }}</div>
+                  </div>
                 </div>
-                <div class="blog-info">
-                  <div class="blog-title" @click="toBlogDetail(b)">{{ truncateTitle(b.title, 20) }}</div>
-                  <div class="blog-meta">
-                    <div class="blog-liked"
-                         :class="{'active': b.isLike}"
-                         @click.stop="toggleLike(b)">
-                      <img src="/imgs/thumbup.png" alt="">
-                      {{b.liked || 0}}
-                    </div>
-                    <div class="blog-comments" @click.stop="toBlogDetail(b)">
-                      <i class="el-icon-chat-dot-round"></i>
-                      {{b.comments || 0}}
-                    </div>
-                    <div class="blog-share" @click.stop="shareBlog(b)">
-                      <i class="el-icon-share"></i>
-                      分享
+
+                <!-- 博客内容 -->
+                <div class="blog-content">
+                  <div class="blog-img" @click="toBlogDetail(b)">
+                    <img :src="getFirstImage(b.images)" alt="">
+                  </div>
+                  <div class="blog-info">
+                    <div class="blog-title" @click="toBlogDetail(b)">{{ truncateTitle(b.title, 20) }}</div>
+                    <div class="blog-meta">
+                      <div class="blog-liked"
+                           :class="{'active': b.isLike}"
+                           @click.stop="toggleLikeWithAnimation(b)">
+                        <img src="/imgs/thumbup.png" alt="">
+                        {{b.liked || 0}}
+                      </div>
+                      <div class="blog-comments" @click.stop="toBlogDetail(b)">
+                        <i class="el-icon-chat-dot-round"></i>
+                        {{b.comments || 0}}
+                      </div>
+                      <div class="blog-share" @click.stop="shareBlog(b)">
+                        <i class="el-icon-share"></i>
+                        分享
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <!-- 加载状态指示器 -->
               <div class="loading-indicator" v-if="blogLoading">
                 <i class="el-icon-loading"></i> 正在加载更多笔记...
               </div>
@@ -1063,132 +1319,63 @@
             </div>
           </div>
 
-          <!-- 评价标签页 -->
-          <div class="tab-pane" @scroll="onScroll($event, 'review')">
-            <div v-if="reviews.length > 0">
-              <div v-for="review in reviews" :key="review.id" class="review-item">
-                <div class="review-header">
-                  <div class="review-avatar">
-                    <img :src="user.icon || '/imgs/icons/default-icon.png'" alt="">
-                  </div>
-                  <div class="review-user">
-                    <div class="review-user-name">{{user.nickName}}</div>
-                    <div class="review-rating">
-                      <i class="el-icon-star-on" v-for="n in 5" :key="n"
-                         :style="{color: n <= (review.rating || 5) ? '#ff9900' : '#ddd'}"></i>
-                    </div>
-                  </div>
+          <!-- 店铺收藏标签页 -->
+          <div class="tab-pane" @scroll="onScroll($event, 'collection')">
+            <div v-if="collections.length > 0">
+              <div v-for="shop in collections" :key="shop.id" class="shop-item">
+                <div class="shop-img" @click="toShopDetail(shop)">
+                  <img :src="getFirstImage(shop.images)" alt="" @error="handleImgError($event)">
                 </div>
-                <div class="review-content">{{review.content || '这个用户还没有写评价内容'}}</div>
-                <div class="review-images" v-if="review.images">
-                  <div class="review-image" v-for="(img, index) in review.images.split(',')" :key="index" @click="previewImage(img,index)">
-                    <img :src="img" alt="">
+                <div class="shop-info">
+                  <div class="shop-title" @click="toShopDetail(shop)">{{ shop.name }}</div>
+                  <div class="shop-rate">
+                    <el-rate
+                            disabled
+                            v-model="shop.score/10"
+                            text-color="#F63"
+                            show-score
+                    ></el-rate>
+                    <span>{{ shop.comments }}条</span>
                   </div>
-                </div>
-                <div class="review-footer">
-                  <div class="review-time">{{formatTime(review.createTime)}}</div>
-                  <div class="review-actions">
-                    <div class="review-action">
-                      <i class="el-icon-thumb"></i> {{review.liked || 0}}
-                    </div>
+                  <div class="shop-area">
+                    <span>{{ shop.area }}</span>
+                    <span v-if="shop.distance">
+                      {{ shop.distance < 1000 ? shop.distance.toFixed(1) + 'm' : (shop.distance/1000).toFixed(1) + 'km' }}
+                    </span>
+                  </div>
+                  <div class="shop-avg">￥{{ shop.avgPrice }}/人</div>
+                  <div class="shop-address">
+                    <i class="el-icon-map-location"></i>
+                    <span>{{ shop.address }}</span>
+                  </div>
+                  <div class="collection-actions">
+                    <button class="collection-btn view-btn" @click.stop="toShopDetail(shop)">
+                      查看详情
+                    </button>
+                    <button class="collection-btn uncollect-btn" @click.stop="uncollectShop(shop.id)">
+                      取消收藏
+                    </button>
                   </div>
                 </div>
               </div>
 
               <!-- 加载状态指示器 -->
-              <div class="loading-indicator" v-if="reviewLoading">
-                <i class="el-icon-loading"></i> 正在加载更多评价...
+              <div class="loading-indicator" v-if="collectionLoading">
+                <i class="el-icon-loading"></i> 正在加载更多店铺收藏...
               </div>
 
-              <div class="no-more-data" v-if="reviewNoMore && !reviewLoading">
-                <i class="el-icon-finished"></i> 没有更多评价了
+              <div class="no-more-data" v-if="collectionNoMore && !collectionLoading">
+                <i class="el-icon-finished"></i> 没有更多店铺收藏了
               </div>
 
-              <div class="load-error" v-if="reviewLoadError && !reviewLoading">
+              <div class="load-error" v-if="collectionLoadError && !collectionLoading">
                 <i class="el-icon-warning"></i> 加载失败
-                <span class="retry-btn" @click="retryLoadReviews">点击重试</span>
+                <span class="retry-btn" @click="retryLoadCollections">点击重试</span>
               </div>
             </div>
             <div v-else class="empty-state">
-              <div class="empty-icon"><i class="el-icon-chat-dot-round"></i></div>
-              <div class="empty-text">还没有发布任何评价</div>
-            </div>
-          </div>
-
-          <!-- 粉丝标签页 -->
-          <div class="tab-pane" @scroll="onScroll($event, 'fans')">
-            <div class="user-list">
-              <div v-if="fansList.length > 0">
-                <div v-for="user in fansList" :key="user.id" class="user-item">
-                  <div class="user-avatar" @click="toUserDetail(user)">
-                    <img :src="user.icon || '/imgs/icons/default-icon.png'" alt="">
-                  </div>
-                  <div class="user-info" @click="toUserDetail(user)">
-                    <div class="user-name">{{user.nickName || '匿名用户'}}</div>
-                    <div class="user-desc">{{user.introduce || '这个人很懒，什么都没写'}}</div>
-                  </div>
-                  <button class="follow-btn" :class="{'following': user.isFollow}"
-                          @click.stop="toggleFollow(user)">
-                    {{user.isFollow ? '已关注' : '关注'}}
-                  </button>
-                </div>
-
-                <!-- 加载状态指示器 -->
-                <div class="loading-indicator" v-if="fansLoading">
-                  <i class="el-icon-loading"></i> 正在加载更多粉丝...
-                </div>
-
-                <div class="no-more-data" v-if="fansNoMore && !fansLoading">
-                  <i class="el-icon-finished"></i> 没有更多粉丝了
-                </div>
-
-                <div class="load-error" v-if="fansLoadError && !fansLoading">
-                  <i class="el-icon-warning"></i> 加载失败
-                  <span class="retry-btn" @click="retryLoadFans">点击重试</span>
-                </div>
-              </div>
-              <div v-else class="empty-state">
-                <div class="empty-icon"><i class="el-icon-user"></i></div>
-                <div class="empty-text">还没有粉丝</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 关注标签页 -->
-          <div class="tab-pane" @scroll="onScroll($event, 'follow')">
-            <div class="user-list">
-              <div v-if="followList.length > 0">
-                <div v-for="user in followList" :key="user.id" class="user-item">
-                  <div class="user-avatar" @click="toUserDetail(user)">
-                    <img :src="user.icon || '/imgs/icons/default-icon.png'" alt="">
-                  </div>
-                  <div class="user-info" @click="toUserDetail(user)">
-                    <div class="user-name">{{user.nickName || '匿名用户'}}</div>
-                    <div class="user-desc">{{user.introduce || '这个人很懒，什么都没写'}}</div>
-                  </div>
-                  <button class="follow-btn following" @click.stop="unfollow(user)">
-                    已关注
-                  </button>
-                </div>
-
-                <!-- 加载状态指示器 -->
-                <div class="loading-indicator" v-if="followLoading">
-                  <i class="el-icon-loading"></i> 正在加载更多关注...
-                </div>
-
-                <div class="no-more-data" v-if="followNoMore && !followLoading">
-                  <i class="el-icon-finished"></i> 没有更多关注了
-                </div>
-
-                <div class="load-error" v-if="followLoadError && !followLoading">
-                  <i class="el-icon-warning"></i> 加载失败
-                  <span class="retry-btn" @click="retryLoadFollows">点击重试</span>
-                </div>
-              </div>
-              <div v-else class="empty-state">
-                <div class="empty-icon"><i class="el-icon-star-off"></i></div>
-                <div class="empty-text">还没有关注任何人</div>
-              </div>
+              <div class="empty-icon"><i class="el-icon-star-off"></i></div>
+              <div class="empty-text">还没有收藏任何店铺</div>
             </div>
           </div>
 
@@ -1196,31 +1383,44 @@
           <div class="tab-pane" @scroll="onScroll($event, 'feed')">
             <div v-if="feeds.length > 0">
               <div v-for="b in feeds" :key="b.id" class="blog-item">
-                <div class="blog-img" @click="toBlogDetail(b)">
-                  <img :src="getFirstImage(b.images)" alt="">
+                <!-- 用户信息头部 -->
+                <div class="blog-user-info" @click="toUserDetail(b)">
+                  <div class="user-avatar">
+                    <img :src="b.icon || '/imgs/icons/default-icon.png'" alt="用户头像">
+                  </div>
+                  <div class="user-details">
+                    <div class="user-nickname">{{ b.name || '匿名用户' }}</div>
+                    <div class="blog-time">{{ formatTime(b.createTime) }}</div>
+                  </div>
                 </div>
-                <div class="blog-info">
-                  <div class="blog-title" @click="toBlogDetail(b)">{{ truncateTitle(b.title, 20) }}</div>
-                  <div class="blog-meta">
-                    <div class="blog-liked"
-                         :class="{'active': b.isLike}"
-                         @click.stop="toggleLike(b)">
-                      <img src="/imgs/thumbup.png" alt="">
-                      {{b.liked || 0}}
-                    </div>
-                    <div class="blog-comments" @click.stop="toBlogDetail(b)">
-                      <i class="el-icon-chat-dot-round"></i>
-                      {{b.comments || 0}}
-                    </div>
-                    <div class="blog-share" @click.stop="shareBlog(b)">
-                      <i class="el-icon-share"></i>
-                      分享
+
+                <!-- 博客内容 -->
+                <div class="blog-content">
+                  <div class="blog-img" @click="toBlogDetail(b)">
+                    <img :src="getFirstImage(b.images)" alt="">
+                  </div>
+                  <div class="blog-info">
+                    <div class="blog-title" @click="toBlogDetail(b)">{{ truncateTitle(b.title, 20) }}</div>
+                    <div class="blog-meta">
+                      <div class="blog-liked"
+                           :class="{'active': b.isLike}"
+                           @click.stop="toggleLikeWithAnimation(b)">
+                        <img src="/imgs/thumbup.png" alt="">
+                        {{b.liked || 0}}
+                      </div>
+                      <div class="blog-comments" @click.stop="toBlogDetail(b)">
+                        <i class="el-icon-chat-dot-round"></i>
+                        {{b.comments || 0}}
+                      </div>
+                      <div class="blog-share" @click.stop="shareBlog(b)">
+                        <i class="el-icon-share"></i>
+                        分享
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <!-- 加载状态指示器 -->
               <div class="loading-indicator" v-if="feedLoading">
                 <i class="el-icon-loading"></i> 正在加载更多动态...
               </div>
@@ -1245,29 +1445,9 @@
   </div>
 
   <foot-bar :active-btn="4" class="foot-bar"></foot-bar>
-  <!-- 图片预览层 -->
-  <div class="image-preview-layer" v-if="showImagePreview" @click="closeImagePreview">
-    <div class="preview-container" @click.stop>
-      <div class="preview-header">
-        <span class="preview-title">图片预览</span>
-        <i class="el-icon-close close-btn" @click="closeImagePreview"></i>
-      </div>
-      <div class="preview-content">
-        <img :src="currentPreviewImage" alt="预览图片" class="preview-image">
-      </div>
-      <div class="preview-footer">
-        <div class="preview-nav">
-          <button class="nav-btn" @click="prevImage" :disabled="currentPreviewIndex === 0">
-            <i class="el-icon-arrow-left"></i>
-          </button>
-          <span class="preview-counter">{{ currentPreviewIndex + 1 }} / {{ previewImages.length }}</span>
-          <button class="nav-btn" @click="nextImage" :disabled="currentPreviewIndex === previewImages.length - 1">
-            <i class="el-icon-arrow-right"></i>
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
+
+  <!-- 点赞动画容器 -->
+  <div class="like-animation-container" id="likeAnimationContainer"></div>
 </div>
 
 <script src="./js/vue.js"></script>
@@ -1285,19 +1465,17 @@
         activeBtn: 4,
         info: {},
         blogs: [],
-        reviews: [],
-        fansList: [],
-        followList: [],
-        feeds:[],
+        feeds: [],
+        collections: [], // 新增：店铺收藏数据
         params: {
           minTime: 0,
           offset: 0,
         },
         stats: {
-          blogCount: 0,
+          likeCount: 0,
           fansCount: 0,
           followCount: 0,
-          likeCount: 0
+          collectCount:0,
         },
         // 分页数据
         blogCurrent: 1,
@@ -1306,33 +1484,22 @@
         blogNoMore: false,
         blogLoadError: false,
 
-        reviewCurrent: 1,
-        reviewSize: 10,
-        reviewLoading: false,
-        reviewNoMore: false,
-        reviewLoadError: false,
-
-        fansCurrent: 1,
-        fansSize: 10,
-        fansLoading: false,
-        fansNoMore: false,
-        fansLoadError: false,
-
-        followCurrent: 1,
-        followSize: 10,
-        followLoading: false,
-        followNoMore: false,
-        followLoadError: false,
-
         feedCurrent: 1,
         feedSize: 10,
         feedLoading: false,
         feedNoMore: false,
         feedLoadError: false,
 
+        // 店铺收藏分页
+        collectionCurrent: 1,
+        collectionSize: 10,
+        collectionLoading: false,
+        collectionNoMore: false,
+        collectionLoadError: false,
+
         // 滑动相关数据
         currentIndex: 0,
-        tabOrder: ['note', 'review', 'fans', 'follow','feed'],
+        tabOrder: ['note', 'collection', 'feed'],
 
         // 滚动节流
         scrollThrottle: null,
@@ -1341,7 +1508,14 @@
         showImagePreview: false,
         previewImages: [],
         currentPreviewImage: '',
-        currentPreviewIndex: 0
+        currentPreviewIndex: 0,
+
+        // 新增：加载状态控制
+        isLoading: true,
+        // 数据加载完成计数器
+        dataLoadedCount: 0,
+        // 需要加载的数据总数
+        totalDataToLoad: 5 // 用户信息、用户详情、统计数据、笔记、店铺收藏、动态
       }
     },
     created() {
@@ -1354,6 +1528,269 @@
       }
     },
     methods: {
+      // 新增：数据加载完成回调
+      onDataLoaded() {
+        this.dataLoadedCount++;
+        console.log(`数据加载进度: ${this.dataLoadedCount}/${this.totalDataToLoad}`);
+
+        // 当所有数据加载完成时隐藏遮罩层
+        if (this.dataLoadedCount >= this.totalDataToLoad) {
+          setTimeout(() => {
+            this.isLoading = false;
+            console.log('所有数据加载完成，隐藏遮罩层');
+          }, 500); // 延迟500ms隐藏，让用户看到加载完成
+        }
+      },
+
+      // 处理图片加载失败
+      handleImgError(event) {
+        event.target.src = '/imgs/icons/default-icon.png';
+      },
+
+      // 查询店铺收藏
+      queryCollections() {
+        if (!this.user.id) return;
+        this.collectionLoading = true;
+        this.collectionLoadError = false;
+        this.collectionCurrent = 1;
+
+        axios.get("/app/user/followShop/followShops", {
+          params: {
+            userId: this.user.id,
+            current: this.collectionCurrent
+          }
+        })
+                .then(({data}) => {
+                  if (!data) {
+                    return
+                  }
+                  data.forEach(s => s.images = fileURL+s.images.split(',')[0]);
+                  this.collections = data || [];
+                  this.collectionNoMore = false;
+                  this.collectionLoading = false;
+                  this.onDataLoaded(); // 新增：数据加载完成回调
+                })
+                .catch(err => {
+                  console.error("获取店铺收藏失败:", err);
+                  this.collectionLoading = false;
+                  this.collectionLoadError = true;
+                  this.onDataLoaded(); // 新增：即使失败也回调
+                });
+      },
+
+      // 加载更多店铺收藏
+      loadMoreCollections() {
+        if (this.collectionLoading || this.collectionLoadError || this.collectionNoMore) return;
+
+        this.collectionLoading = true;
+        this.collectionLoadError = false;
+        const nextPage = this.collectionCurrent + 1;
+
+        axios.get("/app/user/followShop/followShops", {
+          params: {
+            userId: this.user.id,
+            type: 'shop',
+            current: nextPage
+          }
+        })
+                .then((response) => {
+                  response.data.forEach(s => s.images = fileURL+s.images.split(',')[0]);
+                  const newCollections = response.data || [];
+                  if (newCollections.length > 0) {
+                    this.collections = [...this.collections, ...newCollections];
+                    this.collectionCurrent = nextPage;
+                    if (newCollections.length < 5) {
+                      this.collectionNoMore = true;
+                    }
+                  } else {
+                    this.collectionNoMore = true;
+                  }
+                  this.collectionLoading = false;
+                })
+                .catch(err => {
+                  console.error("加载更多店铺收藏失败:", err);
+                  this.collectionLoading = false;
+                  this.collectionLoadError = true;
+                });
+      },
+
+      // 取消收藏店铺
+      uncollectShop(shopId) {
+        axios.put('/app/user/followShop/'+ shopId + "/" + false)
+                .then(() => {
+                  this.$message.success('取消收藏成功');
+                  // 从列表中移除
+                  this.collections = this.collections.filter(item => item.id !== shopId);
+                })
+                .catch(err => {
+                  console.error("取消收藏失败:", err);
+                  this.$message.error('取消收藏失败');
+                });
+      },
+
+      // 跳转到店铺详情
+      toShopDetail(shop) {
+        if (shop.id) {
+          location.href = `/shop-detail.html?id=${shop.id}`;
+        }
+      },
+
+      retryLoadCollections() {
+        this.collectionLoadError = false;
+        this.collectionNoMore = false;
+        this.collectionCurrent = 1;
+        this.queryCollections();
+      },
+
+      // 显示抖音风格获赞提示
+      showLikeCount() {
+        // 创建抖音风格提示
+        const toast = document.createElement('div');
+        toast.className = 'douyin-toast';
+
+        // 随机选择不同的提示语
+        const messages = [
+          `🎉 ${this.user.nickName || '你'}超有魅力！获得了${this.stats.likeCount || 0}个赞`,
+          `💖 太棒了！${this.user.nickName || '你'}收获了${this.stats.likeCount || 0}颗小心心`,
+          `✨ ${this.user.nickName || '你'}的才华被${this.stats.likeCount || 0}次认可`,
+          `🌟 哇！${this.user.nickName || '你'}已经收到${this.stats.likeCount || 0}个赞啦`,
+          `❤️ ${this.stats.likeCount || 0}个赞证明${this.user.nickName || '你'}超受欢迎`
+        ];
+
+        const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+        toast.innerHTML = `<i class="el-icon-star-on"></i> ${randomMessage}`;
+
+        document.body.appendChild(toast);
+
+        // 2秒后自动移除
+        setTimeout(() => {
+          if (toast.parentNode) {
+            toast.parentNode.removeChild(toast);
+          }
+        }, 2000);
+      },
+
+      // 带动画的点赞切换
+      toggleLikeWithAnimation(blog) {
+        if (blog.isLike) {
+          this.unlikeBlogWithAnimation(blog);
+        } else {
+          this.likeBlogWithAnimation(blog);
+        }
+      },
+
+      // 带动画的点赞
+      likeBlogWithAnimation(blog) {
+        blog.isLike = true;
+        blog.liked = (blog.liked || 0) + 1;
+        this.addLike(blog);
+
+        // 创建点赞动画
+        this.createLikeAnimation('点赞成功！');
+      },
+
+      // 带动画的取消点赞
+      unlikeBlogWithAnimation(blog) {
+        blog.isLike = false;
+        blog.liked = Math.max(0, (blog.liked || 0) - 1);
+        this.addLike(blog);
+
+        // 创建取消点赞动画
+        this.createUnlikeAnimation('取消点赞');
+      },
+
+      // 创建点赞动画
+      createLikeAnimation(message) {
+        const container = document.getElementById('likeAnimationContainer');
+
+        // 创建中心弹窗
+        const popup = document.createElement('div');
+        popup.className = 'like-popup';
+        popup.innerHTML = `<i class="el-icon-star-on"></i> ${message}`;
+        container.appendChild(popup);
+
+        // 创建粒子效果
+        for (let i = 0; i < 12; i++) {
+          setTimeout(() => {
+            const particle = document.createElement('div');
+            particle.className = 'like-particle';
+            particle.innerHTML = '❤';
+            particle.style.left = '50%';
+            particle.style.top = '50%';
+            particle.style.opacity = '1';
+
+            // 随机角度和距离
+            const angle = (i * 30) * Math.PI / 180;
+            const distance = 100 + Math.random() * 50;
+            const targetX = Math.cos(angle) * distance;
+            const targetY = Math.sin(angle) * distance;
+
+            // 动画
+            particle.animate([
+              {
+                transform: 'translate(-50%, -50%) scale(0)',
+                opacity: 0
+              },
+              {
+                transform: 'translate(-50%, -50%) scale(1)',
+                opacity: 1
+              },
+              {
+                transform: `translate(calc(-50% + ${targetX}px), calc(-50% + ${targetY}px)) scale(0.5)`,
+                opacity: 0
+              }
+            ], {
+              duration: 1000,
+              easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)'
+            });
+
+            container.appendChild(particle);
+
+            // 清理
+            setTimeout(() => {
+              if (particle.parentNode) {
+                particle.parentNode.removeChild(particle);
+              }
+            }, 1000);
+          }, i * 80);
+        }
+
+        // 清理弹窗
+        setTimeout(() => {
+          if (popup.parentNode) {
+            popup.parentNode.removeChild(popup);
+          }
+        }, 1500);
+      },
+
+      // 创建取消点赞动画
+      createUnlikeAnimation(message) {
+        const container = document.getElementById('likeAnimationContainer');
+
+        // 创建中心弹窗
+        const popup = document.createElement('div');
+        popup.className = 'unlike-popup';
+        popup.innerHTML = `<i class="el-icon-star-off"></i> ${message}`;
+        container.appendChild(popup);
+
+        // 清理弹窗
+        setTimeout(() => {
+          if (popup.parentNode) {
+            popup.parentNode.removeChild(popup);
+          }
+        }, 1500);
+      },
+
+      // 跳转到评价页面
+      goToReviews() {
+        location.href = 'reviews.html';
+      },
+
+      // 跳转到订单页面
+      goToOrders() {
+        location.href = 'orders.html';
+      },
+
       // 格式化数量显示
       formatCount(count) {
         if (count < 1000) {
@@ -1365,9 +1802,8 @@
         }
       },
 
-      // 基于首页代码的滚动事件处理
+      // 滚动事件处理
       onScroll(e, type) {
-        // 节流处理，避免频繁触发
         if (this.scrollThrottle) {
           clearTimeout(this.scrollThrottle);
         }
@@ -1375,26 +1811,12 @@
         this.scrollThrottle = setTimeout(() => {
           const container = e.target;
           const { scrollTop, clientHeight, scrollHeight } = container;
-          console.log(`${type} - ScrollTop: ${scrollTop}, ClientHeight: ${clientHeight}, ScrollHeight: ${scrollHeight}`);
-          console.log(`${type} - 距离底部: ${scrollHeight - scrollTop - clientHeight}`);
-
-          // 修复：当距离底部小于等于100px时触发（包括负数情况）
           const distanceToBottom = scrollHeight - scrollTop - clientHeight;
 
-          // 检查状态
-          console.log(`${type} - 状态: isLoading=${this.isLoading(type)}, noMoreData=${this.noMoreData(type)}`);
-
-          if (distanceToBottom <= 100  // 距离底部小于等于100px
+          if (distanceToBottom <= 100
                   && !this.isLoading(type)
                   && !this.noMoreData(type)) {
-            console.log(`✅ 触发 ${type} 加载更多，距离底部: ${distanceToBottom}`);
             this.loadMoreData(type);
-          } else {
-            console.log(`❌ 不触发 ${type}，原因:`, {
-              distanceToBottom,
-              isLoading: this.isLoading(type),
-              noMoreData: this.noMoreData(type)
-            });
           }
         }, 150);
       },
@@ -1403,9 +1825,7 @@
       isLoading(type) {
         switch(type) {
           case 'blog': return this.blogLoading;
-          case 'review': return this.reviewLoading;
-          case 'fans': return this.fansLoading;
-          case 'follow': return this.followLoading;
+          case 'collection': return this.collectionLoading;
           case 'feed': return this.feedLoading;
           default: return false;
         }
@@ -1415,9 +1835,7 @@
       noMoreData(type) {
         switch(type) {
           case 'blog': return this.blogNoMore;
-          case 'review': return this.reviewNoMore;
-          case 'fans': return this.fansNoMore;
-          case 'follow': return this.followNoMore;
+          case 'collection': return this.collectionNoMore;
           case 'feed': return this.feedNoMore;
           default: return false;
         }
@@ -1431,14 +1849,8 @@
           case 'blog':
             this.loadMoreBlogs();
             break;
-          case 'review':
-            this.loadMoreReviews();
-            break;
-          case 'fans':
-            this.loadMoreFans();
-            break;
-          case 'follow':
-            this.loadMoreFollows();
+          case 'collection':
+            this.loadMoreCollections();
             break;
           case 'feed':
             this.loadMoreFeeds();
@@ -1452,21 +1864,6 @@
         this.loadMoreBlogs();
       },
 
-      retryLoadReviews() {
-        this.reviewLoadError = false;
-        this.loadMoreReviews();
-      },
-
-      retryLoadFans() {
-        this.fansLoadError = false;
-        this.loadMoreFans();
-      },
-
-      retryLoadFollows() {
-        this.followLoadError = false;
-        this.loadMoreFollows();
-      },
-
       retryLoadFeeds() {
         this.feedLoadError = false;
         this.loadMoreFeeds();
@@ -1478,6 +1875,16 @@
           return;
         }
 
+        // 如果是粉丝、关注标签，跳转到独立页面
+        if (tabName === 'fans') {
+          location.href = 'fans.html';
+          return;
+        }
+        if (tabName === 'follow') {
+          location.href = 'follows.html';
+          return;
+        }
+
         this.activeName = tabName;
         this.currentIndex = this.tabOrder.indexOf(tabName);
         this.loadTabData(tabName);
@@ -1485,6 +1892,14 @@
 
       // 统计信息点击切换
       switchTab(tabName) {
+        if (tabName === 'fans') {
+          location.href = 'fans.html';
+          return;
+        }
+        if (tabName === 'follow') {
+          location.href = 'follows.html';
+          return;
+        }
         this.switchTabWithFeedback(tabName);
       },
 
@@ -1503,19 +1918,9 @@
               this.queryBlogs();
             }
             break;
-          case 'fans':
-            if (this.fansList.length === 0) {
-              this.queryFans();
-            }
-            break;
-          case 'follow':
-            if (this.followList.length === 0) {
-              this.queryFollows();
-            }
-            break;
-          case 'review':
-            if (this.reviews.length === 0) {
-              this.queryReviews();
+          case 'collection':
+            if (this.collections.length === 0) {
+              this.queryCollections();
             }
             break;
           case 'feed':
@@ -1530,7 +1935,7 @@
       getFirstImage(images) {
         if (!images) return '/imgs/default-blog.jpg';
         const imageArray = images.split(',');
-        return imageArray[0] || '/imgs/default-blog.jpg';
+        return fileURL+imageArray[0] || '/imgs/default-blog.jpg';
       },
 
       // 查询用户信息
@@ -1539,11 +1944,16 @@
         try {
           let response = await axios.get("/app/user/me")
           this.user = response.data;
+          this.user.icon=fileURL+this.user.icon;
+          this.onDataLoaded(); // 新增：数据加载完成回调
           this.queryUserInfo();
           this.queryUserStats();
           this.queryBlogs();
+          this.queryCollections(); // 新增：查询店铺收藏
+          this.queryFeeds();
         } catch (error) {
           console.error('查询用户信息失败:', error);
+          this.onDataLoaded(); // 新增：即使失败也回调
           this.$message({
             type: 'warning',
             message: '请先登录',
@@ -1562,10 +1972,12 @@
                   if (data) {
                     this.info = data;
                     sessionStorage.setItem("userInfo", JSON.stringify(data))
+                    this.onDataLoaded(); // 新增：数据加载完成回调
                   }
                 })
                 .catch(err => {
                   console.error('获取用户详情失败:', err);
+                  this.onDataLoaded(); // 新增：即使失败也回调
                 })
       },
 
@@ -1574,15 +1986,15 @@
         try {
           let response = await axios.get("/app/user/stats/" + this.user.id)
           this.stats = response.data;
+          this.onDataLoaded(); // 新增：数据加载完成回调
         } catch (error) {
           console.error('获取用户统计信息失败:', error);
-          // 使用本地数据作为fallback
           this.stats = {
-            blogCount: this.blogs.length,
-            fansCount: this.fansList.length,
-            followCount: this.followList.length,
-            likeCount: this.blogs.reduce((sum, blog) => sum + (blog.liked || 0), 0)
+            likeCount: 0,
+            fansCount: 0,
+            followCount: 0
           };
+          this.onDataLoaded(); // 新增：即使失败也回调
         }
       },
 
@@ -1598,7 +2010,11 @@
         })
                 .then(({data}) => {
                   this.blogs = data || [];
+                  this.blogs.forEach(blog => {
+                    blog.icon = fileURL + blog.icon;
+                  });
                   this.queryUserStats();
+                  this.onDataLoaded(); // 新增：数据加载完成回调
 
                   if (!data || data.length === 0) {
                     this.blogNoMore = true;
@@ -1609,6 +2025,7 @@
                   this.blogs = [];
                   this.blogLoadError = true;
                   this.queryUserStats();
+                  this.onDataLoaded(); // 新增：即使失败也回调
                 })
       },
 
@@ -1648,186 +2065,6 @@
                 });
       },
 
-      // 查询评价
-      queryReviews() {
-        this.reviewCurrent = 1;
-        this.reviewNoMore = false;
-        this.reviewLoadError = false;
-        axios.get("/app/comment/of/me", {
-          params: {
-            current: this.reviewCurrent
-          }
-        })
-                .then(({data}) => {
-                  this.reviews = data || [];
-
-                  // 只有当没有返回任何数据时才标记为没有更多
-                  // 或者返回的数据明显少于预期（比如只有1-2条）时才标记
-                  if (!data || data.length === 0) {
-                    this.reviewNoMore = true;
-                  }
-                })
-                .catch(err => {
-                  console.error('获取评价失败:', err);
-                  this.reviews = [];
-                  this.reviewLoadError = true;
-                })
-      },
-
-      // 加载更多评价
-      loadMoreReviews() {
-        if (this.reviewLoading || this.reviewNoMore || this.reviewLoadError) return;
-
-        this.reviewLoading = true;
-        this.reviewLoadError = false;
-        this.reviewCurrent++;
-
-        axios.get("/app/comment/of/me", {
-          params: {
-            current: this.reviewCurrent
-          }
-        })
-                .then(({data}) => {
-                  const newReviews = data || [];
-                  if (newReviews.length > 0) {
-                    this.reviews = [...this.reviews, ...newReviews];
-                  }
-
-                  // 只有在没有返回新数据时才标记为没有更多
-                  if (newReviews.length === 0) {
-                    this.reviewNoMore = true;
-                  }
-                })
-                .catch(err => {
-                  console.error('加载更多评价失败:', err);
-                  this.reviewCurrent--;
-                  this.reviewLoadError = true;
-                })
-                .finally(() => {
-                  this.reviewLoading = false;
-                });
-      },
-
-      // 查询粉丝列表
-      queryFans() {
-        this.fansCurrent = 1;
-        this.fansNoMore = false;
-        this.fansLoadError = false;
-        axios.get("/app/user/follow/fans", {
-          params: {
-            current: this.fansCurrent,
-          }
-        })
-                .then(({data}) => {
-                  this.fansList = data || [];
-                  this.stats.fansCount = this.fansList.length;
-
-                  if (!data || data.length === 0) {
-                    this.fansNoMore = true;
-                  }
-                })
-                .catch(err => {
-                  console.error('获取粉丝列表失败:', err);
-                  this.fansList = [];
-                  this.fansLoadError = true;
-                })
-      },
-
-      // 加载更多粉丝
-      loadMoreFans() {
-        if (this.fansLoading || this.fansNoMore || this.fansLoadError) return;
-
-        this.fansLoading = true;
-        this.fansLoadError = false;
-        this.fansCurrent++;
-
-        axios.get("/app/user/follow/fans", {
-          params: {
-            current: this.fansCurrent,
-            size: this.fansSize
-          }
-        })
-                .then(({data}) => {
-                  const newFans = data || [];
-                  if (newFans.length > 0) {
-                    this.fansList = [...this.fansList, ...newFans];
-                    this.stats.fansCount = this.fansList.length;
-                  }
-
-                  if (newFans.length==0) {
-                    this.fansNoMore = true;
-                  }
-                })
-                .catch(err => {
-                  console.error('加载更多粉丝失败:', err);
-                  this.fansCurrent--;
-                  this.fansLoadError = true;
-                })
-                .finally(() => {
-                  this.fansLoading = false;
-                });
-      },
-
-      // 查询关注列表
-      queryFollows() {
-        this.followCurrent = 1;
-        this.followNoMore = false;
-        this.followLoadError = false;
-        axios.get("/app/user/follow/follows", {
-          params: {
-            current: this.followCurrent,
-            size: this.followSize
-          }
-        })
-                .then(({data}) => {
-                  this.followList = data || [];
-                  this.stats.followCount = this.followList.length;
-
-                  if (!data || data.length === 0) {
-                    this.followNoMore = true;
-                  }
-                })
-                .catch(err => {
-                  console.error('获取关注列表失败:', err);
-                  this.followList = [];
-                  this.followLoadError = true;
-                })
-      },
-
-      // 加载更多关注
-      loadMoreFollows() {
-        if (this.followLoading || this.followNoMore || this.followLoadError) return;
-
-        this.followLoading = true;
-        this.followLoadError = false;
-        this.followCurrent++;
-
-        axios.get("/app/user/follow/follows", {
-          params: {
-            current: this.followCurrent,
-          }
-        })
-                .then(({data}) => {
-                  const newFollows = data || [];
-                  if (newFollows.length > 0) {
-                    this.followList = [...this.followList, ...newFollows];
-                    this.stats.followCount = this.followList.length;
-                  }
-
-                  if (newFollows.length==0) {
-                    this.followNoMore = true;
-                  }
-                })
-                .catch(err => {
-                  console.error('加载更多关注失败:', err);
-                  this.followCurrent--;
-                  this.followLoadError = true;
-                })
-                .finally(() => {
-                  this.followLoading = false;
-                });
-      },
-
       // 查询关注人笔记
       queryFeeds() {
         this.params.offset = 0;
@@ -1838,8 +2075,12 @@
           params: {offset: os, lastId: minTime || new Date().getTime() + 1}
         }).then(({data}) => {
           let {list, ...params} = data;
+          list.forEach(item => {
+            item.icon= fileURL + item.icon;
+          })
           this.feeds = list || [];
           this.params = params;
+          this.onDataLoaded(); // 新增：数据加载完成回调
 
           if (!data || data.length === 0) {
             this.feedNoMore = true;
@@ -1849,6 +2090,7 @@
                   console.error('获取动态失败:', err);
                   this.feeds = [];
                   this.feedLoadError = true;
+                  this.onDataLoaded(); // 新增：即使失败也回调
                 })
       },
 
@@ -1865,6 +2107,9 @@
         })
                 .then(({data}) => {
                   let {list, ...params} = data;
+                  list.forEach(item => {
+                    item.icon= fileURL + item.icon;
+                  })
                   const newFeeds = list || [];
                   if (newFeeds.length > 0) {
                     this.feeds = [...this.feeds, ...newFeeds];
@@ -1884,7 +2129,7 @@
                 });
       },
 
-      // 点赞/取消点赞
+      // 其他原有方法
       toggleLike(blog) {
         if (blog.isLike) {
           this.unlikeBlog(blog);
@@ -1893,19 +2138,16 @@
         }
       },
 
-      // 点赞
       likeBlog(blog) {
         blog.isLike = true;
         this.addLike(blog)
-        this.$message.success('点赞成功');
       },
 
-      // 取消点赞
       unlikeBlog(blog) {
         blog.isLike = false;
         this.addLike(blog)
-        this.$message.success('取消点赞');
       },
+
       addLike(b) {
         axios.put("app/blog/like/" + b.id)
                 .then(({data}) => {
@@ -1915,6 +2157,7 @@
                   this.$message.error(err)
                 })
       },
+
       queryBlogById(b) {
         axios.get("app/blog/" + b.id)
                 .then(({data}) => {
@@ -1927,26 +2170,6 @@
                 })
       },
 
-      // 关注/取消关注
-      toggleFollow(user) {
-        axios.put("/app/user/follow/" + user.id + "/" + !user.isFollow)
-                .then(() => {
-                  this.$message.success(user.isFollow ? "已取消关注" : "已关注")
-                  user.isFollow = !user.isFollow
-                  this.queryFans();
-                })
-      },
-
-      unfollow(user) {
-        user.isFollow = false;
-        this.$message.success('取消关注成功');
-        this.stats.followCount--;
-        if (this.activeName === 'follow') {
-          this.followList = this.followList.filter(u => u.id !== user.id);
-        }
-      },
-
-      // 分享笔记
       shareBlog(blog) {
         this.$confirm('分享到其他平台?', '分享', {
           confirmButtonText: '复制链接',
@@ -1957,11 +2180,9 @@
           this.copyToClipboard(url);
           this.$message.success('链接已复制到剪贴板');
         }).catch(() => {
-          // 用户取消
         });
       },
 
-      // 复制到剪贴板
       copyToClipboard(text) {
         const textarea = document.createElement('textarea');
         textarea.value = text;
@@ -1971,7 +2192,6 @@
         document.body.removeChild(textarea);
       },
 
-      // 图片预览
       previewImage(images, index) {
         console.log('预览图片:', images, '类型:', typeof images);
         let imageArray = [];
@@ -2000,46 +2220,20 @@
         this.currentPreviewImage = this.previewImages[index];
         this.showImagePreview = true;
       },
-
-      // 关闭图片预览
-      closeImagePreview() {
-        this.showImagePreview = false;
-        this.previewImages = [];
-        this.currentPreviewImage = '';
-        this.currentPreviewIndex = 0;
-      },
-
-      // 上一张图片
-      prevImage() {
-        if (this.currentPreviewIndex > 0) {
-          this.currentPreviewIndex--;
-          this.currentPreviewImage = this.previewImages[this.currentPreviewIndex];
-        }
-      },
-
-      // 下一张图片
-      nextImage() {
-        if (this.currentPreviewIndex < this.previewImages.length - 1) {
-          this.currentPreviewIndex++;
-          this.currentPreviewImage = this.previewImages[this.currentPreviewIndex];
-        }
-      },
-
-      // 跳转到用户详情
-      toUserDetail(user) {
-        if (user.id === this.user.id) {
+      toUserDetail(blog) {
+        if (blog.userId === this.user.id) {
+          // 如果是当前用户，刷新页面
           this.queryUser();
         } else {
-          location.href = "other-info.html?id=" + user.id;
+          // 如果是其他用户，跳转到对方主页
+          location.href = "other-info.html?id=" + blog.userId;
         }
       },
 
-      // 跳转到笔记详情
       toBlogDetail(blog) {
         location.href = "blog-detail.html?id=" + blog.id;
       },
 
-      // 格式化时间
       formatTime(time) {
         if (!time) return '';
         const date = new Date(time);

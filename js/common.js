@@ -1,4 +1,7 @@
 // let commonURL = "http://192.168.50.115:8081";
+window.minioURL = "http://192.168.182.20:9000"
+window.filePrefix="/smart-live" ;
+window.fileURL = minioURL + filePrefix;
 let commonURL = "/app-dev-api";
 // 设置后台服务地址
 axios.defaults.baseURL = commonURL;

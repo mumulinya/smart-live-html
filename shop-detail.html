@@ -4,14 +4,250 @@
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
   <title>智评生活</title>
-  <!-- 引入样式 -->
-  <link rel="stylesheet" href="./css/element.css">
-
-  <link href="./css/shop-detail.css" rel="stylesheet">
+  <!-- 引入样式：确保main.css在最前，覆盖默认样式 -->
   <link href="./css/main.css" rel="stylesheet">
+  <link rel="stylesheet" href="./css/element.css">
+  <link href="./css/shop-detail.css" rel="stylesheet">
 
   <style type="text/css">
-    /* 悬浮评论模态框样式 */
+    /* ====================================== 新增：加载遮罩层样式 ====================================== */
+    #app {
+      position: relative;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .loading-mask {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255, 255, 255, 0.95);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      transition: opacity 0.3s ease;
+    }
+
+    .loading-mask.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #ff6633;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 15px;
+    }
+
+    .loading-text {
+      font-size: 16px;
+      color: #666;
+      text-align: center;
+    }
+
+    .loading-subtext {
+      font-size: 14px;
+      color: #999;
+      margin-top: 8px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* ====================================== 核心修改：关注按钮（改为收藏按钮风格） ====================================== */
+    /* 适配main.css的底部按钮结构，统一使用.foot-item类名 */
+    .foot-item.follow-btn {
+      display: flex;
+      flex-direction: column; /* 垂直布局，与main.css底部导航一致 */
+      align-items: center;
+      justify-content: center;
+      flex: 1; /* 占满可用空间，与其他底部按钮对齐 */
+      height: 100%;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* 与main.css过渡曲线统一 */
+      position: relative;
+      opacity: 0.6; /* 默认非活跃状态透明度 */
+      padding: 0 8px; /* 增加内边距，避免内容拥挤 */
+    }
+
+    /* 收藏激活状态（与main.css.active风格统一） */
+    .foot-item.follow-btn.active {
+      opacity: 1;
+    }
+
+    /* 收藏按钮图标样式（适配main.css.foot-icon） */
+    .foot-item.follow-btn .foot-icon {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 4px; /* 图标与文字间距，与main.css一致 */
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .foot-item.follow-btn .foot-icon i {
+      font-size: 22px; /* 图标大小与main.css一致 */
+      color: #666;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* 收藏激活状态：图标上浮+变色（与main.css.active效果统一） */
+    .foot-item.follow-btn.active .foot-icon {
+      transform: translateY(-2px);
+    }
+
+    .foot-item.follow-btn.active .foot-icon i {
+      color: #ff6633; /* 与main.css.active颜色统一 */
+      transform: scale(1.15); /* 图标放大，增强反馈 */
+    }
+
+    /* 收藏按钮文字样式（适配main.css.foot-text） */
+    .foot-item.follow-btn .foot-text {
+      font-size: 11px; /* 文字大小与main.css一致 */
+      color: #666;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      font-weight: 500;
+      text-align: center; /* 文字居中，避免偏移 */
+    }
+
+    /* 收藏激活状态：文字变色（与main.css.active风格统一） */
+    .foot-item.follow-btn.active .foot-text {
+      color: #ff6633;
+      font-weight: 600;
+    }
+
+    /* 收藏按钮加载状态（新增，避免重复点击） */
+    .foot-item.follow-btn.loading {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    .foot-item.follow-btn.loading .foot-icon i {
+      color: #999;
+      transform: none;
+      animation: spin 1s linear infinite; /* 加载动画 */
+    }
+
+    /* ====================================== 核心修改：评论按钮（与main.css风格统一） ====================================== */
+    .foot-item.comment-btn {
+      display: flex;
+      flex-direction: column; /* 垂直布局，与main.css一致 */
+      align-items: center;
+      justify-content: center;
+      flex: 1; /* 占满可用空间，与其他底部按钮对齐 */
+      height: 100%;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      opacity: 0.6; /* 默认非活跃状态透明度 */
+      padding: 0 8px;
+    }
+
+    /* 评论按钮点击/活跃状态 */
+    .foot-item.comment-btn.active,
+    .foot-item.comment-btn:hover {
+      opacity: 1;
+    }
+
+    /* 评论按钮图标样式（适配main.css.foot-icon） */
+    .foot-item.comment-btn .foot-icon {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 4px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .foot-item.comment-btn .foot-icon i {
+      font-size: 22px;
+      color: #666;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* 评论按钮hover/活跃状态：图标上浮+变色 */
+    .foot-item.comment-btn.active .foot-icon,
+    .foot-item.comment-btn:hover .foot-icon {
+      transform: translateY(-2px);
+    }
+
+    .foot-item.comment-btn.active .foot-icon i,
+    .foot-item.comment-btn:hover .foot-icon i {
+      color: #ff6633; /* 与main.css活跃色统一 */
+      transform: scale(1.15);
+    }
+
+    /* 评论按钮文字样式（适配main.css.foot-text） */
+    .foot-item.comment-btn .foot-text {
+      font-size: 11px;
+      color: #666;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      font-weight: 500;
+      text-align: center;
+    }
+
+    /* 评论按钮hover/活跃状态：文字变色 */
+    .foot-item.comment-btn.active .foot-text,
+    .foot-item.comment-btn:hover .foot-text {
+      color: #ff6633;
+      font-weight: 600;
+    }
+
+    /* 评论按钮禁用状态（未登录时） */
+    .foot-item.comment-btn.disabled {
+      cursor: not-allowed;
+      opacity: 0.4;
+    }
+
+    .foot-item.comment-btn.disabled .foot-icon i,
+    .foot-item.comment-btn.disabled .foot-text {
+      color: #999;
+      transform: none;
+    }
+
+    /* ====================================== 底部操作栏布局：适配main.css.foot-bar ====================================== */
+    /* 替换原有.foot样式，使用main.css的.foot-bar结构 */
+    .foot-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 70px; /* 与main.css高度一致 */
+      background: white;
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      box-shadow: 0 -2px 20px rgba(0, 0, 0, 0.08); /* 与main.css阴影一致 */
+      z-index: 1000;
+      padding: 0 10px;
+      border-top: 1px solid #f0f0f0; /* 与main.css边框一致 */
+    }
+
+    /* 移除原有.foot和.foot-box样式，避免冲突 */
+    .foot {
+      display: none;
+    }
+
+    /* ====================================== 原有样式保持不变（以下代码未修改） ====================================== */
+    .header{
+      position: relative;
+    }
+    .liked{
+
+    }
+
     .comment-publish {
       background: #fff;
       margin: 0;
@@ -47,7 +283,7 @@
     }
 
     .publish-content {
-      margin-left: 42px; /* 头像宽度 + margin-right */
+      margin-left: 42px;
     }
 
     .publish-textarea {
@@ -204,12 +440,10 @@
       cursor: not-allowed;
     }
 
-    /* 适配您页面现有的样式 */
     .comment-publish {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     }
 
-    /* 确保与您页面中的其他元素对齐 */
     .publish-header {
       align-items: flex-start;
     }
@@ -218,7 +452,6 @@
       flex: 1;
     }
 
-    /* 响应式调整 */
     @media (max-width: 375px) {
       .comment-publish {
         padding: 12px 15px;
@@ -233,7 +466,18 @@
         width: 65px;
         height: 65px;
       }
+
+      /* 移动端适配：底部按钮文字缩小 */
+      .foot-item .foot-text {
+        font-size: 10px;
+      }
+
+      /* 移动端适配：底部栏高度调整（与main.css一致） */
+      .foot-bar {
+        height: 65px;
+      }
     }
+
     .comment-modal {
       position: fixed;
       top: 0;
@@ -306,12 +550,11 @@
       border-top: 1px solid #f0f0f0;
       margin-top: 15px;
     }
-    /* 隐藏原来位置的评论发布组件 */
+
     .comment-publish:not(.comment-modal .comment-publish) {
       display: none;
     }
 
-    /* 图片预览样式 */
     .image-preview-layer {
       position: fixed;
       top: 0;
@@ -420,9 +663,6 @@
       text-align: center;
     }
 
-
-
-    /* AI评论相关样式 - 头像大小与用户头像一致 */
     .ai-generated-comment {
       background: linear-gradient(135deg, #f8fbff 0%, #f0f7ff 100%);
       border: 1px solid #e1eeff;
@@ -447,7 +687,6 @@
       box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
     }
 
-    /* AI头像 - 完全与用户头像尺寸一致 */
     .ai-comment-icon {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
@@ -456,12 +695,12 @@
       justify-content: center;
       font-weight: bold;
       font-size: 14px;
-      width: 36px; /* 完全一致 */
-      height: 36px; /* 完全一致 */
-      border-radius: 50%; /* 完全一致 */
-      overflow: hidden; /* 完全一致 */
-      margin-right: 10px; /* 完全一致 */
-      flex-shrink: 0; /* 完全一致 */
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      overflow: hidden;
+      margin-right: 10px;
+      flex-shrink: 0;
       box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
     }
 
@@ -533,7 +772,6 @@
       font-weight: 600;
     }
 
-    /* 悬停效果 */
     .ai-generated-comment:hover {
       transform: translateY(-2px);
       box-shadow: 0 4px 16px rgba(74, 108, 247, 0.15);
@@ -544,192 +782,213 @@
       transform: scale(1.05);
       transition: transform 0.3s ease;
     }
-
-
-
   </style>
 </head>
 <body>
 <div id="app">
+  <!-- 新增：加载遮罩层 -->
+  <div class="loading-mask" :class="{ hidden: !isLoading }">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">正在加载店铺详情</div>
+    <div class="loading-subtext">请稍候...</div>
+  </div>
+
   <div class="header">
     <div class="header-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
     <div class="header-title"></div>
     <div class="header-share">...</div>
   </div>
-  <div style="height: 85%; overflow-y: scroll; overflow-x: hidden">
-  <div class="top-bar"></div>
-  <div class="shop-info-box">
-    <div class="shop-title">{{shop.name}}</div>
-    <div class="shop-rate">
-      <el-rate
-          disabled v-model="shop.score/10"
-          text-color="#F63"
-          show-score
-      ></el-rate>
-      <span>{{shop.comments}}条</span>
-    </div>
-    <div class="shop-rate-info"> 口味:4.9  环境:4.8  服务:4.7 </div>
-    <div class="shop-rank">
-      <img src="/imgs/bd.png" width="63" height="20" alt="">
-      <span>拱墅区好评榜第3名</span>
-      <div><i class="el-icon-arrow-right"></i></div>
-    </div>
-    <div class="shop-images">
-      <div v-for="(s,i) in shop.images" :key="i">
-        <img :src="s" alt="">
+  <div style="height: calc(100% - 70px); overflow-y: scroll; overflow-x: hidden;">
+    <!-- 内容区高度 = 屏幕高度 - 底部栏高度（70px），避免被底部栏遮挡 -->
+    <div class="top-bar"></div>
+    <div class="shop-info-box">
+      <div class="shop-title">{{shop.name}}</div>
+      <div class="shop-rate">
+        <el-rate
+                disabled v-model="shop.score/10"
+                text-color="#F63"
+                show-score
+        ></el-rate>
+        <span>{{shop.comments}}条</span>
       </div>
-    </div>
-    <div class="shop-address">
-      <div><i class="el-icon-map-location"></i></div>
-      <span>{{shop.address}}</span>
-      <div style="width: 10px; flex-grow: 2; text-align: center; color: #e1e2e3">|</div>
-      <div style="margin: 0 5px"><img src="https://p0.meituan.net/travelcube/bf684aa196c870810655e45b1e52ce843484.png@24w_16h_40q" alt=""></div>
-      <div><img src="https://p0.meituan.net/travelcube/9277ace32123e0c9f59dedf4407892221566.png@24w_24h_40q" alt=""></div>
-    </div>
-  </div>
-  <div class="shop-divider"></div>
-  <div class="shop-open-time">
-    <span><i class="el-icon-watch"></i></span>
-    <div>营业时间</div>
-    <div>{{shop.openHours}}</div>
-    <span class="line-right">查看详情 <i class="el-icon-arrow-right"></i></span>
-  </div>
-  <div class="shop-divider"></div>
-  <div class="shop-voucher">
-    <div>
-      <span class="voucher-icon">券</span>
-      <span style="font-weight: bold;">代金券</span>
-    </div>
-    <div class="voucher-box" v-for="v in vouchers" :key="v.id" v-if="!isEnd(v)">
-      <div class="voucher-circle">
-        <div class="voucher-b"></div>
-        <div class="voucher-b"></div>
-        <div class="voucher-b"></div>
+      <div class="shop-rate-info"> 口味:4.9  环境:4.8  服务:4.7 </div>
+      <div class="shop-rank">
+        <img src="/imgs/bd.png" width="63" height="20" alt="">
+        <span>拱墅区好评榜第3名</span>
+        <div><i class="el-icon-arrow-right"></i></div>
       </div>
-      <div class="voucher-left">
-        <div class="voucher-title">{{v.title}}</div>
-        <div class="voucher-subtitle">{{v.subTitle}}</div>
-        <div class="voucher-price"><div>￥ {{util.formatPrice(v.payValue)}}</div>  <span>{{(v.payValue*10)/v.actualValue}}折</span></div>
-      </div>
-      <div class="voucher-right">
-        <div v-if="v.type==1" class="seckill-box">
-          <div class="voucher-btn" :class="{'disable-btn': isNotBegin(v) || v.stock < 1}" @click="seckill(v)">限时抢购</div>
-          <div class="seckill-stock">剩余 <span>{{v.stock}}</span> 张</div>
-          <div class="seckill-time">{{formatTime(v)}}</div>
+      <div class="shop-images">
+        <div v-for="(s,i) in shop.images" :key="i">
+          <img :src="s" alt="">
         </div>
-        <div class="voucher-btn" v-else @click="buy(v)">抢购</div>
+      </div>
+      <div class="shop-address">
+        <div><i class="el-icon-map-location"></i></div>
+        <span>{{shop.address}}</span>
+        <div style="width: 10px; flex-grow: 2; text-align: center; color: #e1e2e3">|</div>
+        <div style="margin: 0 5px"><img src="https://p0.meituan.net/travelcube/bf684aa196c870810655e45b1e52ce843484.png@24w_16h_40q" alt=""></div>
+        <div><img src="https://p0.meituan.net/travelcube/9277ace32123e0c9f59dedf4407892221566.png@24w_24h_40q" alt=""></div>
       </div>
     </div>
-  </div>
-  <div class="shop-divider"></div>
-  <div class="shop-comments" v-show="this.comments!=0" >
-    <div class="comments-head" >
-      <div>网友评价 <span>({{shop.comments || 119}})</span></div>
+    <div class="shop-divider"></div>
+    <div class="shop-open-time">
+      <span><i class="el-icon-watch"></i></span>
+      <div>营业时间</div>
+      <div>{{shop.openHours}}</div>
+      <span class="line-right">查看详情 <i class="el-icon-arrow-right"></i></span>
     </div>
-    <div class="comment-tags">
-      <div class="tag">味道赞(19)</div>
-      <div class="tag">牛肉赞(16)</div>
-      <div class="tag">菜品不错(11)</div>
-      <div class="tag">回头客(4)</div>
-      <div class="tag">分量足(4)</div>
-      <div class="tag">停车方便(3)</div>
-      <div class="tag">海鲜棒(3)</div>
-      <div class="tag">饮品赞(3)</div>
-      <div class="tag">朋友聚餐(6)</div>
-    </div>
-    <div class="comment-list">
-
-
-      <!-- AI生成的评论 - 头像大小与用户头像一致 -->
-      <div class="comment-box ai-generated-comment" v-if="aiComment && aiComment.content">
-        <div class="comment-icon ai-comment-icon">
-          <i class="el-icon-magic"></i>
+    <div class="shop-divider"></div>
+    <div class="shop-voucher">
+      <div>
+        <span class="voucher-icon">券</span>
+        <span style="font-weight: bold;">代金券</span>
+      </div>
+      <div class="voucher-box" v-for="v in vouchers" :key="v.id" v-if="!isEnd(v)">
+        <div class="voucher-circle">
+          <div class="voucher-b"></div>
+          <div class="voucher-b"></div>
+          <div class="voucher-b"></div>
         </div>
-        <div class="comment-info ai-comment-info">
-          <div class="comment-user">
-            智评助手
-            <span class="ai-verified">
+        <div class="voucher-left">
+          <div class="voucher-title">{{v.title}}</div>
+          <div class="voucher-subtitle">{{v.subTitle}}</div>
+          <div class="voucher-price"><div>￥ {{util.formatPrice(v.payValue)}}</div>  <span>{{(v.payValue*10)/v.actualValue}}折</span></div>
+        </div>
+        <div class="voucher-right">
+          <div v-if="v.type==1" class="seckill-box">
+            <div class="voucher-btn" :class="{'disable-btn': isNotBegin(v) || v.stock < 1}" @click="seckill(v)">限时抢购</div>
+            <div class="seckill-stock">剩余 <span>{{v.stock}}</span> 张</div>
+            <div class="seckill-time">{{formatTime(v)}}</div>
+          </div>
+          <div class="voucher-btn" v-else @click="buy(v)">抢购</div>
+        </div>
+      </div>
+    </div>
+    <div class="shop-divider"></div>
+    <div class="shop-comments" v-show="this.comments!=0" >
+      <div class="comments-head" >
+        <div>网友评价 <span>({{shop.comments || 119}})</span></div>
+      </div>
+      <div class="comment-tags">
+        <div class="tag">味道赞(19)</div>
+        <div class="tag">牛肉赞(16)</div>
+        <div class="tag">菜品不错(11)</div>
+        <div class="tag">回头客(4)</div>
+        <div class="tag">分量足(4)</div>
+        <div class="tag">停车方便(3)</div>
+        <div class="tag">海鲜棒(3)</div>
+        <div class="tag">饮品赞(3)</div>
+        <div class="tag">朋友聚餐(6)</div>
+      </div>
+      <div class="comment-list">
+        <!-- AI生成的评论 -->
+        <div class="comment-box ai-generated-comment" v-if="aiComment && aiComment.content">
+          <div class="comment-icon ai-comment-icon">
+            <i class="el-icon-magic"></i>
+          </div>
+          <div class="comment-info ai-comment-info">
+            <div class="comment-user">
+              智评助手
+              <span class="ai-verified">
               <i class="el-icon-check"></i>
               官方认证
             </span>
+            </div>
+            <div class="comment-content">{{aiComment.content}}</div>
+            <div class="comment-stats">
+              <span class="ai-highlight">{{aiComment.createTime}}</span>
+            </div>
           </div>
-          <div class="comment-content">{{aiComment.content}}</div>
-          <div class="comment-stats">
-            <span class="ai-highlight">{{aiComment.createTime}}</span>
+          <div class="ai-generated-badge">AI生成</div>
+        </div>
+
+        <!-- 普通用户评论 -->
+        <div class="comment-box" v-for="comment in comments" :key="comment">
+          <div class="comment-icon">
+            <img :src="comment.userIcon || '/imgs/icons/default-icon.png'" alt="">
+          </div>
+          <div class="comment-info">
+            <div class="comment-user">
+              {{comment.nickName || '匿名用户'}}
+              <span>Lv{{comment.userLevel || 1}}</span>
+            </div>
+            <div style="display: flex; align-items: center; margin-bottom: 8px;">
+              <el-rate disabled v-model="comment.rating" style="margin-right: 8px;"></el-rate>
+              <span style="font-size: 12px; color: #ff6633;">{{comment.rating}}分</span>
+            </div>
+            <div class="comment-content">{{comment.content}}</div>
+
+            <div class="comment-images" v-if="comment.images && comment.images.length > 0">
+              <img
+                      v-for="(img, index) in comment.images"
+                      :key="index"
+                      :src="img"
+                      alt="评论图片"
+                      @click="previewImage(comment.images, index)"
+              >
+            </div>
+
+            <div class="comment-stats">
+              {{comment.createTime}} ·
+              浏览{{comment.viewCount || 0}} ·
+              评论{{comment.replyCount || 0}}
+            </div>
           </div>
         </div>
-        <div class="ai-generated-badge">AI生成</div>
-      </div>
-
-
-
-
-      <div class="comment-box" v-for="comment in comments" :key="comment">
-        <div class="comment-icon">
-          <img :src="comment.userIcon || '/imgs/icons/default-icon.png'" alt="">
+        <div
+                style="display: flex; justify-content: space-between;padding: 15px 0; border-top: 1px solid #f1f1f1; margin-top: 10px;">
+          <div @click="viewAllComments">查看全部{{shop.comments || 119}}条评价</div>
+          <div><i class="el-icon-arrow-right"></i></div>
         </div>
-        <div class="comment-info">
-          <div class="comment-user">
-            {{comment.nickName || '匿名用户'}}
-            <span>Lv{{comment.userLevel || 1}}</span>
-          </div>
-          <div style="display: flex; align-items: center; margin-bottom: 8px;">
-            <el-rate disabled v-model="comment.rating" style="margin-right: 8px;"></el-rate>
-            <span style="font-size: 12px; color: #ff6633;">{{comment.rating}}分</span>
-          </div>
-          <div class="comment-content">{{comment.content}}</div>
-
-          <div class="comment-images" v-if="comment.images && comment.images.length > 0">
-            <img
-                    v-for="(img, index) in comment.images"
-                    :key="index"
-                    :src="img"
-                    alt="评论图片"
-                    @click="previewImage(comment.images, index)"
-            >
-          </div>
-
-          <div class="comment-stats">
-            {{comment.createTime}} ·
-            浏览{{comment.viewCount || 0}} ·
-            评论{{comment.replyCount || 0}}
-          </div>
-        </div>
-      </div>
-      <div
-              style="display: flex; justify-content: space-between;padding: 15px 0; border-top: 1px solid #f1f1f1; margin-top: 10px;">
-        <div @click="viewAllComments">查看全部{{shop.comments || 119}}条评价</div>
-        <div><i class="el-icon-arrow-right"></i></div>
       </div>
     </div>
-  </div>
-  <div v-show="this.comments==0" class="shop-comments" >
-    暂无评论，快来发表第一条评论吧～
-  </div>
-  <div class="shop-divider"></div>
-  <div class="copyright">
-    copyright ©2021 mumulin.com
-  </div>
-  </div>
-  <div class="foot">
-<!--    <div class="foot-box">-->
-<!--      <div class="foot-view"  @click="addLike()">-->
-<!--        <svg t="1646634642977" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2187" width="26" height="26">-->
-<!--          <path d="M160 944c0 8.8-7.2 16-16 16h-32c-26.5 0-48-21.5-48-48V528c0-26.5 21.5-48 48-48h32c8.8 0 16 7.2 16 16v448zM96 416c-53 0-96 43-96 96v416c0 53 43 96 96 96h96c17.7 0 32-14.3 32-32V448c0-17.7-14.3-32-32-32H96zM505.6 64c16.2 0 26.4 8.7 31 13.9 4.6 5.2 12.1 16.3 10.3 32.4l-23.5 203.4c-4.9 42.2 8.6 84.6 36.8 116.4 28.3 31.7 68.9 49.9 111.4 49.9h271.2c6.6 0 10.8 3.3 13.2 6.1s5 7.5 4 14l-48 303.4c-6.9 43.6-29.1 83.4-62.7 112C815.8 944.2 773 960 728.9 960h-317c-33.1 0-59.9-26.8-59.9-59.9v-455c0-6.1 1.7-12 5-17.1 69.5-109 106.4-234.2 107-364h41.6z m0-64h-44.9C427.2 0 400 27.2 400 60.7c0 127.1-39.1 251.2-112 355.3v484.1c0 68.4 55.5 123.9 123.9 123.9h317c122.7 0 227.2-89.3 246.3-210.5l47.9-303.4c7.8-49.4-30.4-94.1-80.4-94.1H671.6c-50.9 0-90.5-44.4-84.6-95l23.5-203.4C617.7 55 568.7 0 505.6 0z" p-id="2188" :fill="blog.isLike ? '#ff6633' : '#82848a'"></path>-->
-<!--        </svg>-->
-<!--        <span :class="{liked: blog.isLike}">{{blog.liked}}</span>-->
-<!--      </div>-->
-<!--    </div>-->
-    <div style="width: 40%">
+    <div v-show="this.comments==0" class="shop-comments" >
+      暂无评论，快来发表第一条评论吧～
     </div>
-    <div class="foot-box">
-      <div class="foot-view" @click="checkLogin">
-        <i class="el-icon-chat-square"></i>
-      </div>
+    <div class="shop-divider"></div>
+    <div class="copyright">
+      copyright ©2021 mumulin.com
     </div>
   </div>
 
-  <!-- 在 body 末尾，footer 之前添加悬浮层 -->
+  <!-- ====================================== 核心修改：底部栏（使用main.css.foot-bar结构） ====================================== -->
+  <div class="foot-bar">
+    <!-- 收藏按钮（原关注按钮，适配main.css样式） -->
+    <div
+            class="foot-item follow-btn"
+            @click="toggleFollowShop"
+            :class="{active: isShopFollowed, loading: isFollowLoading}"
+            :disabled="isFollowLoading"
+    >
+      <div class="foot-icon">
+        <i class="el-icon-star-off" v-if="!isShopFollowed && !isFollowLoading"></i>
+        <i class="el-icon-star-on" v-if="isShopFollowed && !isFollowLoading"></i>
+        <i class="el-icon-loading" v-if="isFollowLoading"></i>
+      </div>
+      <div class="foot-text" v-if="!isFollowLoading">
+        {{isShopFollowed ? '已收藏' : '收藏'}}
+      </div>
+      <div class="foot-text" v-if="isFollowLoading">
+        {{isShopFollowed ? '取消中...' : '收藏中...'}}
+      </div>
+    </div>
+
+    <!-- 评论按钮（适配main.css样式） -->
+    <div
+            class="foot-item comment-btn"
+            @click="checkLogin"
+            :class="{disabled: !token}"
+    >
+      <div class="foot-icon">
+        <i class="el-icon-edit"></i>
+      </div>
+      <div class="foot-text">
+        发表评价
+      </div>
+    </div>
+  </div>
+
+  <!-- 评论模态框（原有代码未修改） -->
   <div class="comment-modal" v-if="showCommentPublish" @click="closeCommentModal">
     <div class="comment-modal-content" @click.stop>
       <div class="comment-publish">
@@ -816,7 +1075,7 @@
     </div>
   </div>
 
-  <!-- 图片预览层 -->
+  <!-- 图片预览层（原有代码未修改） -->
   <div class="image-preview-layer" v-if="showImagePreview" @click="closeImagePreview">
     <div class="preview-container" @click.stop>
       <div class="preview-header">
@@ -848,7 +1107,6 @@
 <script src="./js/element.js"></script>
 <script src="./js/common.js"></script>
 <script>
-
   const app = new Vue({
     el: "#app",
     data: {
@@ -856,10 +1114,6 @@
       shop: {},
       vouchers: [],
       showCommentPublish: false,
-      commentText: '',
-      commentRating: 5,
-      selectedImages: [],
-      isTextareaFocused: false,
       commentText: '',
       commentRating: 5,
       selectedImages: [],
@@ -881,21 +1135,54 @@
       showImagePreview: false,
       previewImages: [],
       currentPreviewIndex: 0,
-      currentPreviewImage: ''
+      currentPreviewImage: '',
+      // 收藏按钮相关（原关注按钮，名称适配）
+      isShopFollowed: false,
+      isFollowLoading: false,
+      // 登录状态
+      token: sessionStorage.getItem("token") || '',
+      // 分页加载相关（补充缺失变量）
+      loading: false,
+      noMore: false,
+      page: 1,
+      // 新增：加载状态控制
+      isLoading: true,
+      // 数据加载完成计数器
+      dataLoadedCount: 0,
+      // 需要加载的数据总数
+      totalDataToLoad: 5 // 店铺信息、优惠券、评论、用户信息、收藏状态
     },
     created() {
       // 获取参数
       let shopId = util.getUrlParam("id");
-      // 查询酒店信息
+
+      // 查询所有数据
       this.queryShopById(shopId);
-      // 查询优惠券信息
       this.queryVoucher(shopId);
-      // 查询评论信息
       this.loadComments(shopId);
-      // 查询当前登录用户
       this.queryLoginUser();
+      this.checkShopFollowStatus(shopId);
+
+      // 原isFollowed方法在created中调用，需确保shop.id已获取
+      setTimeout(() => {
+        this.isFollowed();
+      }, 100);
     },
     methods: {
+      // 新增：数据加载完成回调
+      onDataLoaded() {
+        this.dataLoadedCount++;
+        console.log(`数据加载进度: ${this.dataLoadedCount}/${this.totalDataToLoad}`);
+
+        // 当所有数据加载完成时隐藏遮罩层
+        if (this.dataLoadedCount >= this.totalDataToLoad) {
+          setTimeout(() => {
+            this.isLoading = false;
+            console.log('所有数据加载完成，隐藏遮罩层');
+          }, 500); // 延迟500ms隐藏，让用户看到加载完成
+        }
+      },
+
       goBack() {
         history.back();
       },
@@ -903,28 +1190,38 @@
         // 查询用户信息
         axios.get("/app/user/me")
                 .then(({ data }) => {
-                  // 保存用户
                   this.user = data;
-                  // if(this.user.id !== this.blog.userId){
-                  //   this.isFollowed();
-                  // }
+                  this.user.icon=fileURL+this.user.icon;
+                  this.onDataLoaded(); // 新增：数据加载完成回调
                 })
-                .catch(console.log)
+                .catch(error => {
+                  console.log('获取用户信息失败:', error);
+                  this.onDataLoaded(); // 新增：即使失败也回调
+                })
       },
       queryShopById(shopId) {
         axios.get("/app/shop/" + shopId)
                 .then(({data}) => {
                   data.images = data.images.split(",")
+                  data.images = data.images.map(image => fileURL + image);
                   this.shop = data
+                  this.onDataLoaded(); // 新增：数据加载完成回调
                 })
-                .catch(this.$message.error)
+                .catch(error => {
+                  this.$message.error('获取店铺信息失败');
+                  this.onDataLoaded(); // 新增：即使失败也回调
+                })
       },
       queryVoucher(shopId) {
         axios.get("/app/marketing/voucher/list/" + shopId)
                 .then(({data}) => {
                   this.vouchers = data;
+                  this.onDataLoaded(); // 新增：数据加载完成回调
                 })
-                .catch(this.$message.error)
+                .catch(error => {
+                  this.$message.error('获取优惠券失败');
+                  this.onDataLoaded(); // 新增：即使失败也回调
+                })
       },
       formatTime(v) {
         let b = new Date(v.beginTime);
@@ -945,9 +1242,8 @@
         return new Date(v.endTime).getTime() < new Date().getTime();
       },
       seckill(v) {
-        if (!token) {
+        if (!this.token) {
           this.$message.error("请先登录")
-          // 未登录，跳转
           setTimeout(() => {
             location.href = "/login.html"
           }, 200);
@@ -966,18 +1262,15 @@
           return;
         }
         let id = v.id;
-        // 秒杀抢购
         axios.post("/app/order/voucher-order/seckill/" + id)
                 .then(({data}) => {
-                  // 抢购成功，这里输出订单id，支付功能TODO
                   this.$message.success("抢购成功，订单id：" + data)
                 })
                 .catch(this.$message.error)
       },
       buy(v) {
-        if (!token) {
+        if (!this.token) {
           this.$message.error("请先登录")
-          // 未登录，跳转
           setTimeout(() => {
             location.href = "/login.html"
           }, 200);
@@ -985,22 +1278,17 @@
         }
         axios.post("/app/order/voucher-order/buy/" + v.id)
                 .then(({data}) => {
-                  // 抢购成功，这里输出订单id，支付功能TODO
                   this.$message.success("抢购成功，订单id：" + data)
                 })
                 .catch(this.$message.error)
       },
-      // 查看全部评论
       viewAllComments() {
         location.href = "/comment-list.html?shopId=" + this.shop.id;
       },
-      // 触发图片上传
       triggerImageUpload() {
         this.$refs.imageInput.click();
       },
-
-      // 处理图片上传
-      async  handleImageUpload(event) {
+      async handleImageUpload(event) {
         const files = event.target.files;
         if (files.length + this.selectedImages.length > 9) {
           this.$message.error('最多只能上传9张图片');
@@ -1010,7 +1298,6 @@
         for (let file of files) {
           if (file.type.startsWith('image/')) {
             const reader = new FileReader();
-            //上传图片
             let url=await this.fileSelected(file)
             reader.onload = (e) => {
               this.selectedImages.push({
@@ -1022,37 +1309,26 @@
           }
         }
       },
-
-      // 移除图片
       removeImage(index) {
         this.selectedImages.splice(index, 1);
       },
-      // 文本域聚焦
       onTextareaFocus() {
         this.isTextareaFocused = true;
       },
-
-      // 文本域失焦
       onTextareaBlur() {
-        // 延迟隐藏操作区域，避免点击发布按钮时失焦
         setTimeout(() => {
           if (!this.commentText) {
             this.isTextareaFocused = false;
           }
         }, 200);
       },
-
-      // 图片预览
       previewImage(images, index) {
         console.log('预览图片:', images, '类型:', typeof images);
-        // 处理图片数据 - 确保是数组格式
         let imageArray = [];
 
         if (Array.isArray(images)) {
-          // 如果已经是数组，直接使用
           imageArray = images;
         } else if (typeof images === 'string' && images.trim() !== '') {
-          // 如果是字符串，按逗号分割
           imageArray = images.split(',').map(img => img.trim()).filter(img => img !== '');
         }
 
@@ -1061,14 +1337,10 @@
           return;
         }
 
-        console.log('处理后的图片数组:', imageArray);
-
-        // 处理图片地址，确保是完整URL
         this.previewImages = imageArray.map(img => {
           if (img.startsWith('http')) {
             return img;
           } else {
-            // 如果是相对路径，添加基础URL
             return `http://192.168.182.20:9000${img.startsWith('/') ? '' : '/'}${img}`;
           }
         });
@@ -1076,34 +1348,28 @@
         this.currentPreviewImage = this.previewImages[index];
         this.showImagePreview = true;
       },
-
       closeImagePreview() {
         this.showImagePreview = false;
         this.previewImages = [];
         this.currentPreviewIndex = 0;
         this.currentPreviewImage = '';
       },
-
       prevImage() {
         if (this.currentPreviewIndex > 0) {
           this.currentPreviewIndex--;
           this.currentPreviewImage = this.previewImages[this.currentPreviewIndex];
         }
       },
-
       nextImage() {
         if (this.currentPreviewIndex < this.previewImages.length - 1) {
           this.currentPreviewIndex++;
           this.currentPreviewImage = this.previewImages[this.currentPreviewIndex];
         }
       },
-
-      // 关闭评论模态框
       closeCommentModal() {
         this.showCommentPublish = false;
-        this.cancelPublish(); // 清空内容
+        this.cancelPublish();
       },
-      // 发表评论
       publishComment() {
         if (!this.commentText.trim()) {
           this.$message.error('请输入评价内容');
@@ -1117,44 +1383,37 @@
         this.comment.userId=this.user.id
         this.comment.parentId=0
         this.comment.answerId=0
-        this.comment.images=this.selectedImages.map(image => image.url).join(',');
-        console.log("图片地址为"+this.comment.images)
+        this.comment.images=this.selectedImages.map(image => image.url.split(filePrefix)[1] || image.url).join(',');
         axios.post('/app/comment/addComment', this.comment)
                 .then(({data}) => {
                   this.$message.success('评价发布成功');
                   this.commentText = '';
                   this.commentRating = 5;
                   this.selectedImages = [];
-                  this.showCommentPublish = false; // 发布成功后关闭模态框
-                  // 可以在这里刷新评论列表
-                  this.loadComments(this.blog.id);
-                  this.queryBlogById(this.blog.id);
+                  this.showCommentPublish = false;
+                  this.loadComments(this.shop.id);
+                  this.queryShopById(this.shop.id);
                 })
                 .catch(error => {
                   this.$message.error('发布失败，请重试');
                   console.error(error);
                 });
       },
-      // 修改原有的cancelPublish方法
       cancelPublish() {
         this.commentText = '';
         this.commentRating = 5;
         this.selectedImages = [];
         this.isTextareaFocused = false;
-        this.showCommentPublish = false; // 关闭模态框
+        this.showCommentPublish = false;
       },
-      // 图片上传
       async fileSelected(file) {
         let formData = new FormData();
         formData.append("file", file);
 
-        // 微服务环境下可能需要添加服务路由头
         const config = {
           headers: {
-            // 如果网关需要，添加服务路由信息
-            // 'X-Service-Id': 'file-service'
           },
-          timeout: 30000 // 微服务调用链较长，增加超时时间
+          timeout: 30000
         };
         let url
         await axios.post("/app/file/appUpload", formData, config)
@@ -1162,7 +1421,6 @@
                 .catch(this.$message.error);
         return url
       },
-      //加载评论
       async loadComments(id) {
         if (this.loading || this.noMore) return;
 
@@ -1172,12 +1430,18 @@
             params: {
               sourceId: id,
               sourceType: 2,
-              current: 1
+              current: this.page
             }
           });
 
           const newComments = response.data.list || response.data;
+          newComments.forEach(comment => {
+            comment.userIcon=fileURL+comment.userIcon
+            if (comment.images != "" && comment.images != null) {
+              comment.images = comment.images.split(",")
+              comment.images=comment.images.map(image => fileURL + image);
 
+            }});
           if (newComments.length === 0) {
             this.noMore = true;
           } else {
@@ -1186,28 +1450,88 @@
               if(comment.isAIGenerated===true){
                 this.aiComment= comment
               }
-              if (comment.images != "" && comment.images != null) {
-                comment.images = comment.images.split(",")
-              }
             })
             this.comments = this.comments.slice(0, 3)
             this.page++;
           }
+          this.onDataLoaded(); // 新增：数据加载完成回调
         } catch (error) {
           console.error('加载评论失败:', error);
           this.$message.error('加载评论失败');
+          this.onDataLoaded(); // 新增：即使失败也回调
         } finally {
           this.loading = false;
         }
       },
       checkLogin() {
-        // 获取token
-        let token = sessionStorage.getItem("token");
-        if (!token) {
-          location.href = "login.html"
-        } else {
-          this.showCommentPublish = true
+        if (!this.token) {
+          this.$message.error("请先登录");
+          setTimeout(() => {
+            location.href = "login.html"
+          }, 200);
+          return;
         }
+        this.showCommentPublish = true
+      },
+
+      checkShopFollowStatus(shopId) {
+        if (!this.token) return;
+
+        axios.get(`/app/follow/shop/status?shopId=${shopId}`)
+                .then(({data}) => {
+                  this.isShopFollowed = data.isFollowed;
+                  this.onDataLoaded(); // 新增：数据加载完成回调
+                })
+                .catch(error => {
+                  console.error('检查收藏状态失败:', error);
+                  this.onDataLoaded(); // 新增：即使失败也回调
+                });
+      },
+
+      isFollowed(){
+        if (!this.shop.id) return; // 确保shop.id已存在
+        axios.get("/app/user/followShop/isFollow/" + this.shop.id)
+                .then(({data}) => {
+                  this.isShopFollowed = data;
+                  this.onDataLoaded(); // 新增：数据加载完成回调
+                })
+                .catch(error => {
+                  this.$message.error('检查收藏状态失败');
+                  this.onDataLoaded(); // 新增：即使失败也回调
+                })
+      },
+      // 收藏按钮逻辑
+      toggleFollowShop() {
+        if (!this.token) {
+          this.$message.error("请先登录");
+          setTimeout(() => {
+            location.href = "/login.html";
+          }, 200);
+          return;
+        }
+
+        if (this.isFollowLoading) return;
+
+        const shopId = this.shop.id;
+        const followStatus = !this.isShopFollowed;
+
+        this.isFollowLoading = true;
+
+        axios.put('/app/user/followShop/'+ shopId + "/" + followStatus)
+                .then(({data}) => {
+                  // 文案改为"收藏"相关，适配按钮功能
+                  const successMsg = followStatus ? '收藏店铺成功，已添加到你的收藏夹～' : '已取消店铺收藏';
+                  this.$message.success(successMsg);
+                  this.isShopFollowed = followStatus;
+                })
+                .catch(error => {
+                  const errorMsg = followStatus ? '收藏失败，请重试' : '取消收藏失败，请重试';
+                  this.$message.error(errorMsg);
+                  console.error(error);
+                })
+                .finally(() => {
+                  this.isFollowLoading = false;
+                });
       }
     }
   })

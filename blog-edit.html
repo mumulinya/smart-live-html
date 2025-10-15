@@ -489,7 +489,6 @@
 <script src="./js/common.js"></script>
 <script src="./js/footer.js"></script>
 <script>
-
   const app = new Vue({
     el: "#app",
     data() {
@@ -559,7 +558,10 @@
         this.isSubmitting = true;
 
         let {...data} = this.params;
-        data.images = this.fileList.join(",");
+        // data.images = this.fileList.join(",");
+        data.images = this.fileList.map(url =>
+                url.split(filePrefix)[1] || url
+        ).join(",");
         data.shopId = this.selectedShop.id;
 
         axios.post("/app/blog", data)

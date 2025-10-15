@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>我的评价 - 智评生活</title>
+  <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+  <link rel="stylesheet" href="./css/element.css">
+  <link href="./css/index.css" rel="stylesheet">
+  <link href="./css/main.css" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      overflow-x: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background-color: #f8f9fa;
+      touch-action: pan-y;
+    }
+
+    #app {
+      min-height: 100vh;
+      padding-bottom: 60px;
+      position: relative;
+      background: #f8f9fa;
+    }
+
+    /* ====================================== 新增：加载遮罩层样式 ====================================== */
+    .loading-mask {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255, 255, 255, 0.95);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      transition: opacity 0.3s ease;
+    }
+
+    .loading-mask.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #409EFF;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 15px;
+    }
+
+    .loading-text {
+      font-size: 16px;
+      color: #666;
+      text-align: center;
+    }
+
+    .loading-subtext {
+      font-size: 14px;
+      color: #999;
+      margin-top: 8px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      padding: 15px;
+      background: white;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-back-btn {
+      font-size: 18px;
+      color: #333;
+      cursor: pointer;
+      padding: 5px;
+      border-radius: 50%;
+      transition: background-color 0.3s;
+    }
+
+    .header-back-btn:hover {
+      background-color: #f5f5f5;
+    }
+
+    .header-title {
+      flex: 1;
+      text-align: center;
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .reviews-container {
+      height: calc(100vh - 120px);
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .review-item {
+      padding: 20px;
+      background: white;
+      border-bottom: 1px solid #f0f0f0;
+      transition: all 0.3s;
+      margin-top: 10px;
+    }
+
+    .review-item:hover {
+      background-color: #f9f9f9;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .review-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .review-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      margin-right: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .review-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .review-user {
+      flex: 1;
+    }
+
+    .review-user-name {
+      font-size: 15px;
+      color: #333;
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+
+    .review-rating {
+      color: #ff9900;
+      font-size: 13px;
+    }
+
+    .review-content {
+      font-size: 14px;
+      color: #333;
+      line-height: 1.6;
+      margin-bottom: 12px;
+    }
+
+    .review-images {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .review-image {
+      width: 80px;
+      height: 80px;
+      border-radius: 6px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .review-image:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    }
+
+    .review-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .review-footer {
+      display: flex;
+      align-items: center;
+      color: #999;
+      font-size: 13px;
+    }
+
+    .review-time {
+      flex: 1;
+    }
+
+    .review-actions {
+      display: flex;
+      align-items: center;
+    }
+
+    .review-action {
+      display: flex;
+      align-items: center;
+      margin-left: 15px;
+      cursor: pointer;
+      padding: 6px 10px;
+      border-radius: 6px;
+      transition: all 0.3s;
+    }
+
+    .review-action:hover {
+      background-color: #f5f5f5;
+      transform: translateY(-1px);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 80px 20px;
+      color: #999;
+      background: white;
+      margin-top: 10px;
+    }
+
+    .empty-icon {
+      font-size: 60px;
+      margin-bottom: 20px;
+      opacity: 0.4;
+    }
+
+    .empty-text {
+      font-size: 15px;
+    }
+
+    .loading-indicator {
+      text-align: center;
+      padding: 15px;
+      color: #909399;
+      font-size: 14px;
+      background: white;
+    }
+
+    .loading-indicator .el-icon-loading {
+      margin-right: 5px;
+    }
+
+    .no-more-data {
+      text-align: center;
+      padding: 15px;
+      color: #C0C4CC;
+      font-size: 14px;
+      background: white;
+    }
+
+    .load-error {
+      text-align: center;
+      padding: 15px;
+      color: #F56C6C;
+      font-size: 14px;
+      background: white;
+    }
+
+    .load-error .retry-btn {
+      color: #409EFF;
+      cursor: pointer;
+      margin-left: 5px;
+    }
+
+    .foot-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: white;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      border-top: 1px solid #eee;
+      z-index: 100;
+    }
+
+    .foot-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      height: 100%;
+      cursor: pointer;
+      transition: all 0.3s;
+      color: #666;
+      text-decoration: none;
+    }
+
+    .foot-btn.active {
+      color: #409EFF;
+    }
+
+    .foot-btn:hover {
+      background-color: #f9f9f9;
+    }
+
+    .foot-icon {
+      font-size: 22px;
+      margin-bottom: 4px;
+    }
+
+    .foot-text {
+      font-size: 12px;
+    }
+
+    .image-preview-layer {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .preview-container {
+      background: white;
+      border-radius: 8px;
+      max-width: 90%;
+      max-height: 90%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .preview-header {
+      padding: 15px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .preview-title {
+      font-weight: 600;
+    }
+
+    .close-btn {
+      cursor: pointer;
+      font-size: 18px;
+    }
+
+    .preview-content {
+      flex: 1;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .preview-image {
+      max-width: 100%;
+      max-height: 400px;
+      object-fit: contain;
+    }
+
+    .preview-footer {
+      padding: 15px;
+      border-top: 1px solid #eee;
+    }
+
+    .preview-nav {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .nav-btn {
+      background: #409EFF;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+
+    .nav-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .preview-counter {
+      font-size: 14px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+  <!-- 新增：加载遮罩层 -->
+  <div class="loading-mask" :class="{ hidden: !isLoading }">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">正在加载评价数据</div>
+    <div class="loading-subtext">请稍候...</div>
+  </div>
+
+  <div class="header">
+    <div class="header-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
+    <div class="header-title" v-if="stats.commentCount > 0">我的评价({{stats.commentCount}})</div>
+    <div class="header-title" v-else>我的评价</div>
+  </div>
+
+  <div class="reviews-container" @scroll="onScroll">
+    <div v-if="reviews.length > 0">
+      <div v-for="review in reviews" :key="review.id" class="review-item">
+        <div class="review-header">
+          <div class="review-avatar">
+            <img :src="user.icon || '/imgs/icons/default-icon.png'" alt="">
+          </div>
+          <div class="review-user">
+            <div class="review-user-name">{{user.nickName}}</div>
+            <div class="review-rating">
+              <i class="el-icon-star-on" v-for="n in 5" :key="n"
+                 :style="{color: n <= (review.rating || 5) ? '#ff9900' : '#ddd'}"></i>
+            </div>
+          </div>
+        </div>
+        <div class="review-content">{{review.content || '这个用户还没有写评价内容'}}</div>
+        <div class="review-images" v-if="review.images">
+          <div class="review-image" v-for="(img, index) in review.images" :key="index" @click="previewImage(review.images,index)">
+            <img :src="img" alt="">
+          </div>
+        </div>
+        <div class="review-footer">
+          <div class="review-time">{{formatTime(review.createTime)}}</div>
+          <div class="review-actions">
+            <div class="review-action">
+              <i class="el-icon-thumb"></i> {{review.liked || 0}}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="loading-indicator" v-if="reviewLoading">
+        <i class="el-icon-loading"></i> 正在加载更多评价...
+      </div>
+
+      <div class="no-more-data" v-if="reviewNoMore && !reviewLoading">
+        <i class="el-icon-finished"></i> 没有更多评价了
+      </div>
+
+      <div class="load-error" v-if="reviewLoadError && !reviewLoading">
+        <i class="el-icon-warning"></i> 加载失败
+        <span class="retry-btn" @click="retryLoadReviews">点击重试</span>
+      </div>
+    </div>
+    <div v-else class="empty-state">
+      <div class="empty-icon"><i class="el-icon-chat-dot-round"></i></div>
+      <div class="empty-text">还没有发布任何评价</div>
+    </div>
+  </div>
+
+  <foot-bar :active-btn="4" class="foot-bar"></foot-bar>
+
+  <!-- 图片预览层 -->
+  <div class="image-preview-layer" v-if="showImagePreview" @click="closeImagePreview">
+    <div class="preview-container" @click.stop>
+      <div class="preview-header">
+        <span class="preview-title">图片预览</span>
+        <i class="el-icon-close close-btn" @click="closeImagePreview"></i>
+      </div>
+      <div class="preview-content">
+        <img :src="currentPreviewImage" alt="预览图片" class="preview-image">
+      </div>
+      <div class="preview-footer">
+        <div class="preview-nav">
+          <button class="nav-btn" @click="prevImage" :disabled="currentPreviewIndex === 0">
+            <i class="el-icon-arrow-left"></i>
+          </button>
+          <span class="preview-counter">{{ currentPreviewIndex + 1 }} / {{ previewImages.length }}</span>
+          <button class="nav-btn" @click="nextImage" :disabled="currentPreviewIndex === previewImages.length - 1">
+            <i class="el-icon-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="./js/vue.js"></script>
+<script src="./js/axios.min.js"></script>
+<script src="./js/element.js"></script>
+<script src="./js/common.js"></script>
+<script src="./js/footer.js"></script>
+<script>
+  new Vue({
+    el: '#app',
+    data() {
+      return {
+        user: {},
+        reviews: [],
+        stats: {
+          commentCount: 0
+        },
+        reviewCurrent: 1,
+        reviewSize: 10,
+        reviewLoading: false,
+        reviewNoMore: false,
+        reviewLoadError: false,
+        showImagePreview: false,
+        previewImages: [],
+        currentPreviewImage: '',
+        currentPreviewIndex: 0,
+        // 滚动节流
+        scrollThrottle: null,
+        // 新增：加载状态控制
+        isLoading: true,
+        // 数据加载完成计数器
+        dataLoadedCount: 0,
+        // 需要加载的数据总数
+        totalDataToLoad: 2 // 用户信息、评价列表
+      }
+    },
+    created() {
+      this.queryUser();
+      this.queryReviews();
+    },
+    methods: {
+      // 新增：数据加载完成回调
+      onDataLoaded() {
+        this.dataLoadedCount++;
+        console.log(`数据加载进度: ${this.dataLoadedCount}/${this.totalDataToLoad}`);
+
+        // 当所有数据加载完成时隐藏遮罩层
+        if (this.dataLoadedCount >= this.totalDataToLoad) {
+          setTimeout(() => {
+            this.isLoading = false;
+            console.log('所有数据加载完成，隐藏遮罩层');
+          }, 500); // 延迟500ms隐藏，让用户看到加载完成
+        }
+      },
+
+      // 滚动事件处理
+      onScroll(e) {
+        if (this.scrollThrottle) {
+          clearTimeout(this.scrollThrottle);
+        }
+
+        this.scrollThrottle = setTimeout(() => {
+          const container = e.target;
+          const { scrollTop, clientHeight, scrollHeight } = container;
+          const distanceToBottom = scrollHeight - scrollTop - clientHeight;
+
+          // 当距离底部小于100px时加载更多
+          if (distanceToBottom <= 100
+                  && !this.reviewLoading
+                  && !this.reviewNoMore
+                  && !this.reviewLoadError) {
+            this.loadMoreReviews();
+          }
+        }, 150);
+      },
+
+      // 查询用户信息
+      async queryUser() {
+        try {
+          let response = await axios.get("/app/user/me")
+          this.user = response.data;
+          this.user.icon = fileURL + response.data.icon;
+          await this.queryUserStats();
+          this.onDataLoaded(); // 新增：数据加载完成回调
+        } catch (error) {
+          console.error('查询用户信息失败:', error);
+          this.onDataLoaded(); // 新增：即使失败也回调
+          this.$message({
+            type: 'warning',
+            message: '请先登录',
+            duration: 1000,
+            onClose: () => {
+              location.href = "login.html";
+            }
+          });
+        }
+      },
+
+      // 查询评价
+      queryReviews() {
+        this.reviewCurrent = 1;
+        this.reviewNoMore = false;
+        this.reviewLoadError = false;
+        axios.get("/app/comment/of/me", {
+          params: {
+            current: this.reviewCurrent
+          }
+        })
+                .then(({data}) => {
+                  this.reviews = data || [];
+                  this.onDataLoaded(); // 新增：数据加载完成回调
+                  if (!data || data.length === 0) {
+                    this.reviewNoMore = true;
+                  }
+                  this.reviews = this.reviews.map(review => {
+                    if(review.images!=""&&review.images!=null){
+                      review.images=review.images.split(",")
+                      review.images = review.images.map(image => fileURL + image);
+                    }
+                    return review;
+                  });
+                })
+                .catch(err => {
+                  console.error('获取评价失败:', err);
+                  this.reviews = [];
+                  this.reviewLoadError = true;
+                  this.onDataLoaded(); // 新增：即使失败也回调
+                })
+      },
+
+      // 加载更多评价
+      loadMoreReviews() {
+        if (this.reviewLoading || this.reviewNoMore || this.reviewLoadError) return;
+
+        this.reviewLoading = true;
+        this.reviewLoadError = false;
+        this.reviewCurrent++;
+
+        axios.get("/app/comment/of/me", {
+          params: {
+            current: this.reviewCurrent
+          }
+        })
+                .then(({data}) => {
+                  data= data.map(review => {
+                    if(review.images!=""&&review.images!=null){
+                      review.images=review.images.split(",")
+                      review.images = review.images.map(image => fileURL + image);
+                    }
+                    return review;
+                  });
+                  const newReviews = data || [];
+                  if (newReviews.length > 0) {
+                    this.reviews = [...this.reviews, ...newReviews];
+                  }
+                  if (newReviews.length === 0) {
+                    this.reviewNoMore = true;
+                  }
+                })
+                .catch(err => {
+                  console.error('加载更多评价失败:', err);
+                  this.reviewCurrent--;
+                  this.reviewLoadError = true;
+                })
+                .finally(() => {
+                  this.reviewLoading = false;
+                });
+      },
+
+      // 查询用户统计信息
+      async queryUserStats() {
+        try {
+          let response = await axios.get("/app/user/stats/" + this.user.id)
+          this.stats = response.data;
+        } catch (error) {
+          console.error('获取用户统计信息失败:', error);
+          this.stats = {
+            likeCount: 0,
+            fansCount: 0,
+            followCount: 0
+          };
+        }
+      },
+      // 重试加载
+      retryLoadReviews() {
+        this.reviewLoadError = false;
+        this.loadMoreReviews();
+      },
+
+      // 图片预览
+      previewImage(images, index) {
+        let imageArray = [];
+
+        if (Array.isArray(images)) {
+          imageArray = images;
+        } else if (typeof images === 'string' && images.trim() !== '') {
+          imageArray = images.split(',').map(img => img.trim()).filter(img => img !== '');
+        }
+
+        if (!imageArray || imageArray.length === 0) {
+          this.$message.warning('没有可预览的图片');
+          return;
+        }
+
+        this.previewImages = imageArray.map(img => {
+          if (img.startsWith('http')) {
+            return img;
+          } else {
+            return `http://192.168.182.20:9000${img.startsWith('/') ? '' : '/'}${img}`;
+          }
+        });
+        this.currentPreviewIndex = index;
+        this.currentPreviewImage = this.previewImages[index];
+        this.showImagePreview = true;
+      },
+
+      closeImagePreview() {
+        this.showImagePreview = false;
+        this.previewImages = [];
+        this.currentPreviewImage = '';
+        this.currentPreviewIndex = 0;
+      },
+
+      prevImage() {
+        if (this.currentPreviewIndex > 0) {
+          this.currentPreviewIndex--;
+          this.currentPreviewImage = this.previewImages[this.currentPreviewIndex];
+        }
+      },
+
+      nextImage() {
+        if (this.currentPreviewIndex < this.previewImages.length - 1) {
+          this.currentPreviewIndex++;
+          this.currentPreviewImage = this.previewImages[this.currentPreviewIndex];
+        }
+      },
+
+      formatTime(time) {
+        if (!time) return '';
+        const date = new Date(time);
+        const now = new Date();
+        const diff = now - date;
+
+        if (diff < 60000) return '刚刚';
+        if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前';
+        if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前';
+        if (diff < 604800000) return Math.floor(diff / 86400000) + '天前';
+
+        return date.getFullYear() + '-' + (date.getMonth() + 1) + '-' + date.getDate();
+      },
+
+      goBack() {
+        history.back();
+      }
+    }
+  });
+</script>
+</body>
+</html>

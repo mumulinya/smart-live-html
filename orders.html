@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>我的订单 - 智评生活</title>
+  <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+  <link rel="stylesheet" href="./css/element.css">
+  <link href="./css/index.css" rel="stylesheet">
+  <link href="./css/main.css" rel="stylesheet">
+  <style>
+    /* ====================================== 新增：加载遮罩层样式 ====================================== */
+    #app {
+      min-height: 100vh;
+      padding-bottom: 60px;
+      position: relative;
+      background: #f8f9fa;
+    }
+
+    .loading-mask {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255, 255, 255, 0.95);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      transition: opacity 0.3s ease;
+    }
+
+    .loading-mask.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #409EFF;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 15px;
+    }
+
+    .loading-text {
+      font-size: 16px;
+      color: #666;
+      text-align: center;
+    }
+
+    .loading-subtext {
+      font-size: 14px;
+      color: #999;
+      margin-top: 8px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      overflow-x: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background-color: #f8f9fa;
+      touch-action: pan-y;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      padding: 15px;
+      background: white;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-back-btn {
+      font-size: 18px;
+      color: #333;
+      cursor: pointer;
+      padding: 5px;
+      border-radius: 50%;
+      transition: background-color 0.3s;
+    }
+
+    .header-back-btn:hover {
+      background-color: #f5f5f5;
+    }
+
+    .header-title {
+      flex: 1;
+      text-align: center;
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    /* 订单列表容器 */
+    .orders-container {
+      height: calc(100vh - 120px);
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* 订单列表样式 */
+    .order-list {
+      background: white;
+      margin-top: 10px;
+    }
+
+    .order-item {
+      margin-bottom: 12px;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      transition: all 0.3s;
+      border: 1px solid #f0f0f0;
+    }
+
+    .order-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .order-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 20px;
+      background: #fafafa;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .order-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .order-number {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 4px;
+    }
+
+    .order-time {
+      font-size: 12px;
+      color: #999;
+    }
+
+    .order-status {
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .status-unpaid {
+      background: #fff7e6;
+      color: #fa8c16;
+    }
+
+    .status-paid {
+      background: #f6ffed;
+      color: #52c41a;
+    }
+
+    .status-used {
+      background: #e6f7ff;
+      color: #1890ff;
+    }
+
+    .status-cancelled {
+      background: #fff2f0;
+      color: #ff4d4f;
+    }
+
+    .status-refunding {
+      background: #fff7e6;
+      color: #fa8c16;
+    }
+
+    .status-refunded {
+      background: #f6f6f6;
+      color: #666;
+    }
+
+    .order-content {
+      padding: 20px;
+    }
+
+    .voucher-info {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .voucher-title {
+      font-size: 16px;
+      color: #333;
+      font-weight: 600;
+      line-height: 1.4;
+      cursor: pointer;
+      transition: color 0.3s;
+    }
+
+    .voucher-title:hover {
+      color: #409EFF;
+    }
+
+    .voucher-subtitle {
+      font-size: 14px;
+      color: #666;
+      line-height: 1.4;
+    }
+
+    .voucher-rules {
+      font-size: 13px;
+      color: #999;
+      line-height: 1.4;
+      margin-top: 8px;
+      padding: 8px 12px;
+      background: #f8f9fa;
+      border-radius: 4px;
+    }
+
+    .voucher-price {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px dashed #f0f0f0;
+    }
+
+    .price-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .price-label {
+      font-size: 12px;
+      color: #999;
+      margin-bottom: 4px;
+    }
+
+    .price-value {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .pay-value {
+      color: #ff4757;
+    }
+
+    .actual-value {
+      color: #52c41a;
+    }
+
+    .order-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 20px;
+      background: #fafafa;
+      border-top: 1px solid #f0f0f0;
+    }
+
+    .order-total {
+      font-size: 16px;
+      color: #333;
+      font-weight: 600;
+    }
+
+    .order-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .order-btn {
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.3s;
+      border: 1px solid;
+      background: white;
+    }
+
+    .btn-primary {
+      color: #409EFF;
+      border-color: #409EFF;
+    }
+
+    .btn-primary:hover {
+      background: #409EFF;
+      color: white;
+    }
+
+    .btn-secondary {
+      color: #666;
+      border-color: #d9d9d9;
+    }
+
+    .btn-secondary:hover {
+      background: #f5f5f5;
+      border-color: #999;
+    }
+
+    .btn-danger {
+      color: #ff4757;
+      border-color: #ff4757;
+    }
+
+    .btn-danger:hover {
+      background: #ff4757;
+      color: white;
+    }
+
+    /* 订单详情弹窗样式 */
+    .order-detail-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      padding: 20px;
+    }
+
+    .order-detail-content {
+      background: white;
+      border-radius: 8px;
+      width: 100%;
+      max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .order-detail-header {
+      padding: 20px;
+      border-bottom: 1px solid #f0f0f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .order-detail-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .order-detail-close {
+      font-size: 18px;
+      color: #999;
+      cursor: pointer;
+      padding: 5px;
+    }
+
+    .order-detail-close:hover {
+      color: #666;
+    }
+
+    .order-detail-body {
+      padding: 20px;
+    }
+
+    .detail-section {
+      margin-bottom: 20px;
+    }
+
+    .detail-section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .detail-row {
+      display: flex;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .detail-label {
+      color: #666;
+      width: 80px;
+      flex-shrink: 0;
+    }
+
+    .detail-value {
+      color: #333;
+      flex: 1;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 80px 20px;
+      color: #999;
+      background: white;
+      margin-top: 10px;
+    }
+
+    .empty-icon {
+      font-size: 60px;
+      margin-bottom: 20px;
+      opacity: 0.4;
+    }
+
+    .empty-text {
+      font-size: 15px;
+    }
+
+    .loading-indicator {
+      text-align: center;
+      padding: 15px;
+      color: #909399;
+      font-size: 14px;
+      background: white;
+    }
+
+    .loading-indicator .el-icon-loading {
+      margin-right: 5px;
+    }
+
+    .no-more-data {
+      text-align: center;
+      padding: 15px;
+      color: #C0C4CC;
+      font-size: 14px;
+      background: white;
+    }
+
+    .load-error {
+      text-align: center;
+      padding: 15px;
+      color: #F56C6C;
+      font-size: 14px;
+      background: white;
+    }
+
+    .load-error .retry-btn {
+      color: #409EFF;
+      cursor: pointer;
+      margin-left: 5px;
+    }
+
+    .foot-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: white;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      border-top: 1px solid #eee;
+      z-index: 100;
+    }
+
+    .foot-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      height: 100%;
+      cursor: pointer;
+      transition: all 0.3s;
+      color: #666;
+      text-decoration: none;
+    }
+
+    .foot-btn.active {
+      color: #409EFF;
+    }
+
+    .foot-btn:hover {
+      background-color: #f9f9f9;
+    }
+
+    .foot-icon {
+      font-size: 22px;
+      margin-bottom: 4px;
+    }
+
+    .foot-text {
+      font-size: 12px;
+    }
+
+    /* 消息提示居中样式 */
+    .el-message {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      top: 50% !important;
+      left: 50% !important;
+      transform: translate(-50%, -50%) !important;
+      min-width: 300px;
+    }
+
+    .el-message__content {
+      text-align: center;
+    }
+
+    /* 对话框居中样式 */
+    .el-message-box {
+      position: absolute;
+      top: 50% !important;
+      left: 50% !important;
+      transform: translate(-50%, -50%) !important;
+      margin-top: 0 !important;
+    }
+
+    /* 自定义对话框样式 */
+    .pay-confirm-dialog,
+    .cancel-confirm-dialog,
+    .use-voucher-dialog,
+    .refund-confirm-dialog {
+      position: absolute;
+      top: 50% !important;
+      left: 50% !important;
+      transform: translate(-50%, -50%) !important;
+      margin-top: 0 !important;
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+  <!-- 新增：加载遮罩层 -->
+  <div class="loading-mask" :class="{ hidden: !isLoading }">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">正在加载订单数据</div>
+    <div class="loading-subtext">请稍候...</div>
+  </div>
+
+  <div class="header">
+    <div class="header-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
+    <div class="header-title"v-if="stats.orderCount > 0">我的订单({{stats.orderCount}})</div>
+    <div class="header-title" v-else>我的订单</div>
+  </div>
+
+  <div class="orders-container" @scroll="onScroll">
+    <div class="order-list">
+      <div v-if="orders.length > 0">
+        <div v-for="order in orders" :key="order.id" class="order-item">
+          <div class="order-header">
+            <div class="order-info">
+              <div class="order-number">订单号: {{order.orderNumber || 'ORD' + order.id}}</div>
+              <div class="order-time">{{formatTime(order.createTime)}}</div>
+            </div>
+            <div class="order-status" :class="getOrderStatusClass(order.status)">
+              {{getOrderStatusText(order.status)}}
+            </div>
+          </div>
+
+          <div class="order-content">
+            <div class="voucher-info">
+              <div class="voucher-title" @click="goToShop(order.voucher.shopId)">
+                {{order.voucher.title}}
+              </div>
+              <div class="voucher-subtitle" v-if="order.voucher.subTitle">{{order.voucher.subTitle}}</div>
+              <div class="voucher-rules" v-if="order.voucher.rules">{{order.voucher.rules}}</div>
+              <div class="voucher-price">
+                <div class="price-item">
+                  <div class="price-label">支付金额</div>
+                  <div class="price-value pay-value">¥{{formatPrice(order.voucher.payValue)}}</div>
+                </div>
+                <div class="price-item">
+                  <div class="price-label">抵扣金额</div>
+                  <div class="price-value actual-value">¥{{formatPrice(order.voucher.actualValue)}}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="order-footer">
+            <div class="order-total">
+              实付: ¥{{formatPrice(order.voucher.payValue)}}
+            </div>
+            <div class="order-actions">
+              <button class="order-btn btn-secondary" @click="viewOrderDetail(order)">
+                查看详情
+              </button>
+              <button v-if="order.status === 1"
+                      class="order-btn btn-primary"
+                      @click="payOrder(order)">
+                立即支付
+              </button>
+              <button v-if="order.status === 1"
+                      class="order-btn btn-danger"
+                      @click="cancelOrder(order)">
+                取消订单
+              </button>
+              <button v-if="order.status === 2"
+                      class="order-btn btn-primary"
+                      @click="useVoucher(order)">
+                立即使用
+              </button>
+              <button v-if="order.status === 2"
+                      class="order-btn btn-danger"
+                      @click="applyRefund(order)">
+                申请退款
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="loading-indicator" v-if="orderLoading">
+          <i class="el-icon-loading"></i> 正在加载更多订单...
+        </div>
+
+        <div class="no-more-data" v-if="orderNoMore && !orderLoading">
+          <i class="el-icon-finished"></i> 没有更多订单了
+        </div>
+
+        <div class="load-error" v-if="orderLoadError && !orderLoading">
+          <i class="el-icon-warning"></i> 加载失败
+          <span class="retry-btn" @click="retryLoadOrders">点击重试</span>
+        </div>
+      </div>
+      <div v-else class="empty-state">
+        <div class="empty-icon"><i class="el-icon-shopping-cart-2"></i></div>
+        <div class="empty-text">还没有任何订单</div>
+      </div>
+    </div>
+  </div>
+
+  <foot-bar :active-btn="4" class="foot-bar"></foot-bar>
+
+  <!-- 订单详情弹窗 -->
+  <div class="order-detail-modal" v-if="showOrderDetail" @click="closeOrderDetail">
+    <div class="order-detail-content" @click.stop>
+      <div class="order-detail-header">
+        <div class="order-detail-title">订单详情</div>
+        <i class="el-icon-close order-detail-close" @click="closeOrderDetail"></i>
+      </div>
+      <div class="order-detail-body" v-if="currentOrder">
+        <div class="detail-section">
+          <div class="detail-section-title">订单信息</div>
+          <div class="detail-row">
+            <div class="detail-label">订单号:</div>
+            <div class="detail-value">{{currentOrder.orderNumber || 'ORD' + currentOrder.id}}</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">下单时间:</div>
+            <div class="detail-value">{{formatTime(currentOrder.createTime)}}</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">订单状态:</div>
+            <div class="detail-value">{{getOrderStatusText(currentOrder.status)}}</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">支付方式:</div>
+            <div class="detail-value">{{getPayTypeText(currentOrder.payType)}}</div>
+          </div>
+          <div class="detail-row" v-if="currentOrder.payTime">
+            <div class="detail-label">支付时间:</div>
+            <div class="detail-value">{{formatTime(currentOrder.payTime)}}</div>
+          </div>
+          <div class="detail-row" v-if="currentOrder.useTime">
+            <div class="detail-label">使用时间:</div>
+            <div class="detail-value">{{formatTime(currentOrder.useTime)}}</div>
+          </div>
+        </div>
+
+        <div class="detail-section" v-if="currentOrder.voucher">
+          <div class="detail-section-title">优惠券信息</div>
+          <div class="detail-row">
+            <div class="detail-label">券名称:</div>
+            <div class="detail-value">{{currentOrder.voucher.title}}</div>
+          </div>
+          <div class="detail-row" v-if="currentOrder.voucher.subTitle">
+            <div class="detail-label">副标题:</div>
+            <div class="detail-value">{{currentOrder.voucher.subTitle}}</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">支付金额:</div>
+            <div class="detail-value">¥{{formatPrice(currentOrder.voucher.payValue)}}</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">抵扣金额:</div>
+            <div class="detail-value">¥{{formatPrice(currentOrder.voucher.actualValue)}}</div>
+          </div>
+          <div class="detail-row" v-if="currentOrder.voucher.rules">
+            <div class="detail-label">使用规则:</div>
+            <div class="detail-value">{{currentOrder.voucher.rules}}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="./js/vue.js"></script>
+<script src="./js/axios.min.js"></script>
+<script src="./js/element.js"></script>
+<script src="./js/common.js"></script>
+<script src="./js/footer.js"></script>
+<script>
+  new Vue({
+    el: '#app',
+    data() {
+      return {
+        user: {},
+        orders: [],
+        stats: {
+          orderCount: 0
+        },
+        orderCurrent: 1,
+        orderSize: 10,
+        orderLoading: false,
+        orderNoMore: false,
+        orderLoadError: false,
+        showOrderDetail: false,
+        currentOrder: null,
+        // 滚动节流
+        scrollThrottle: null,
+        // 新增：加载状态控制
+        isLoading: true,
+        // 数据加载完成计数器
+        dataLoadedCount: 0,
+        // 需要加载的数据总数
+        totalDataToLoad: 2 // 用户信息、订单列表
+      }
+    },
+    created() {
+      this.queryUser();
+      this.queryOrders();
+    },
+    methods: {
+      // 新增：数据加载完成回调
+      onDataLoaded() {
+        this.dataLoadedCount++;
+        console.log(`数据加载进度: ${this.dataLoadedCount}/${this.totalDataToLoad}`);
+
+        // 当所有数据加载完成时隐藏遮罩层
+        if (this.dataLoadedCount >= this.totalDataToLoad) {
+          setTimeout(() => {
+            this.isLoading = false;
+            console.log('所有数据加载完成，隐藏遮罩层');
+          }, 500); // 延迟500ms隐藏，让用户看到加载完成
+        }
+      },
+
+      // 滚动事件处理
+      onScroll(e) {
+        if (this.scrollThrottle) {
+          clearTimeout(this.scrollThrottle);
+        }
+
+        this.scrollThrottle = setTimeout(() => {
+          const container = e.target;
+          const { scrollTop, clientHeight, scrollHeight } = container;
+          const distanceToBottom = scrollHeight - scrollTop - clientHeight;
+
+          // 当距离底部小于100px时加载更多
+          if (distanceToBottom <= 100
+                  && !this.orderLoading
+                  && !this.orderNoMore
+                  && !this.orderLoadError) {
+            this.loadMoreOrders();
+          }
+        }, 150);
+      },
+
+      // 查询用户信息
+      async queryUser() {
+        try {
+          let response = await axios.get("/app/user/me")
+          this.user = response.data;
+          await this.queryUserStats();
+          this.onDataLoaded(); // 新增：数据加载完成回调
+        } catch (error) {
+          console.error('查询用户信息失败:', error);
+          this.onDataLoaded(); // 新增：即使失败也回调
+          this.$message({
+            type: 'warning',
+            message: '请先登录',
+            duration: 1000,
+            center: true,
+            onClose: () => {
+              location.href = "login.html";
+            }
+          });
+        }
+      },
+
+      // 查询订单列表
+      queryOrders() {
+        this.orderCurrent = 1;
+        this.orderNoMore = false;
+        this.orderLoadError = false;
+        axios.get("/app/order/voucher-order/of/me")
+                .then(({data}) => {
+                  this.orders = data || [];
+                  // 为每个订单查询优惠券详情
+                  this.orders.forEach(order => {
+                    this.queryVoucherDetail(order);
+                  });
+                  this.onDataLoaded(); // 新增：数据加载完成回调
+                  if (!data || data.length === 0) {
+                    this.orderNoMore = true;
+                  }
+                })
+                .catch(err => {
+                  console.error('获取订单列表失败:', err);
+                  this.orders = [];
+                  this.orderLoadError = true;
+                  this.onDataLoaded(); // 新增：即使失败也回调
+                })
+      },
+
+      // 查询优惠券详情
+      queryVoucherDetail(order) {
+        if (!order.voucherId) return;
+
+        axios.get(`/app/marketing/voucher/${order.voucherId}`)
+                .then(({data}) => {
+                  order.voucher = data;
+                  this.$forceUpdate();
+                })
+                .catch(err => {
+                  console.error('获取优惠券详情失败:', err);
+                });
+      },
+
+      // 加载更多订单
+      loadMoreOrders() {
+        if (this.orderLoading || this.orderNoMore || this.orderLoadError) return;
+
+        this.orderLoading = true;
+        this.orderLoadError = false;
+        this.orderCurrent++;
+
+        axios.get("/app/order/voucher-order/of/me",{
+          params: {
+            current: this.orderCurrent,
+          }
+        })
+                .then(({data}) => {
+                  const newOrders = data || [];
+                  if (newOrders.length > 0) {
+                    this.orders = [...this.orders, ...newOrders];
+                    newOrders.forEach(order => {
+                      this.queryVoucherDetail(order);
+                    });
+                  }
+                  if (newOrders.length === 0) {
+                    this.orderNoMore = true;
+                  }
+                })
+                .catch(err => {
+                  console.error('加载更多订单失败:', err);
+                  this.orderCurrent--;
+                  this.orderLoadError = true;
+                })
+                .finally(() => {
+                  this.orderLoading = false;
+                });
+      },
+
+      // 查询用户统计信息
+      async queryUserStats() {
+        try {
+          let response = await axios.get("/app/user/stats/" + this.user.id)
+          this.stats = response.data;
+        } catch (error) {
+          console.error('获取用户统计信息失败:', error);
+          this.stats = {
+            likeCount: 0,
+            fansCount: 0,
+            followCount: 0
+          };
+        }
+      },
+
+      // 重试加载
+      retryLoadOrders() {
+        this.orderLoadError = false;
+        this.loadMoreOrders();
+      },
+
+      // 格式化价格（分转元）
+      formatPrice(price) {
+        if (!price) return '0.00';
+        const priceNum = typeof price === 'string' ? parseFloat(price) : price;
+        return (priceNum / 100).toFixed(2);
+      },
+
+      // 获取订单状态类名
+      getOrderStatusClass(status) {
+        const statusMap = {
+          '1': 'status-unpaid',
+          '2': 'status-paid',
+          '3': 'status-used',
+          '4': 'status-cancelled',
+          '5': 'status-refunding',
+          '6': 'status-refunded'
+        };
+        return statusMap[status] || 'status-unpaid';
+      },
+
+      // 获取订单状态文本
+      getOrderStatusText(status) {
+        const statusMap = {
+          '1': '待支付',
+          '2': '已支付',
+          '3': '已使用',
+          '4': '已取消',
+          '5': '退款中',
+          '6': '已退款'
+        };
+        return statusMap[status] || '未知状态';
+      },
+
+      // 获取支付方式文本
+      getPayTypeText(payType) {
+        const payTypeMap = {
+          '1': '余额支付',
+          '2': '支付宝',
+          '3': '微信支付'
+        };
+        return payTypeMap[payType] || '未知支付方式';
+      },
+
+      // 查看订单详情
+      viewOrderDetail(order) {
+        this.currentOrder = order;
+        this.showOrderDetail = true;
+      },
+
+      // 关闭订单详情
+      closeOrderDetail() {
+        this.showOrderDetail = false;
+        this.currentOrder = null;
+      },
+
+      // 跳转到店铺列表
+      goToShop(shopId) {
+        if (shopId) {
+          // 跳转到店铺列表页面，并传递shopId参数
+          window.location.href = `shop-detail.html?id=${shopId}`;
+        } else {
+          this.$message({
+            message: '店铺信息不存在',
+            type: 'warning',
+            center: true
+          });
+        }
+      },
+
+      // 支付订单
+      payOrder(order) {
+        this.$confirm(`确定要支付订单 <strong>${order.orderNumber || 'ORD' + order.id}</strong> 吗？<br>支付金额: <span style="color: #ff4757; font-weight: bold;">¥${this.formatPrice(order.voucher.payValue)}</span>`, '确认支付', {
+          confirmButtonText: '确认支付',
+          cancelButtonText: '再想想',
+          type: 'info',
+          dangerouslyUseHTMLString: true,
+          customClass: 'pay-confirm-dialog',
+          center: true
+        }).then(() => {
+          axios.post(`/app/order/voucher-order/pay/${order.id}`)
+                  .then(() => {
+                    this.$message({
+                      message: `🎉 支付成功！订单 ${order.orderNumber || 'ORD' + order.id} 已完成支付`,
+                      type: 'success',
+                      duration: 3000,
+                      center: true
+                    });
+                    order.status = 2;
+                    this.queryOrders();
+                  })
+                  .catch(err => {
+                    console.error('支付失败:', err);
+                    this.$message({
+                      message: '😔 支付失败，请检查网络或余额后重试',
+                      type: 'error',
+                      center: true
+                    });
+                  });
+        });
+      },
+
+      // 取消订单
+      cancelOrder(order) {
+        this.$confirm(`确定要取消订单 <strong>${order.orderNumber || 'ORD' + order.id}</strong> 吗？<br><span style="color: #ff4757;">取消后订单将无法恢复</span>`, '取消订单', {
+          confirmButtonText: '确定取消',
+          cancelButtonText: '继续支付',
+          type: 'warning',
+          dangerouslyUseHTMLString: true,
+          customClass: 'cancel-confirm-dialog',
+          center: true
+        }).then(() => {
+          axios.post(`/app/order/voucher-order/cancel/${order.id}`)
+                  .then(() => {
+                    this.$message({
+                      message: `✅ 订单 ${order.orderNumber || 'ORD' + order.id} 已成功取消`,
+                      type: 'success',
+                      duration: 3000,
+                      center: true
+                    });
+                    order.status = 4;
+                    this.queryOrders();
+                  })
+                  .catch(err => {
+                    console.error('取消订单失败:', err);
+                    this.$message({
+                      message: '❌ 取消订单失败，请稍后重试',
+                      type: 'error',
+                      center: true
+                    });
+                  });
+        });
+      },
+
+      // 使用优惠券
+      useVoucher(order) {
+        this.$confirm(`确定要使用优惠券 <strong>${order.voucher.title}</strong> 吗？<br>使用后优惠券将立即生效`, '使用优惠券', {
+          confirmButtonText: '立即使用',
+          cancelButtonText: '稍后使用',
+          type: 'info',
+          dangerouslyUseHTMLString: true,
+          customClass: 'use-voucher-dialog',
+          center: true
+        }).then(() => {
+          axios.post(`/app/order/voucher-order/use/${order.id}`)
+                  .then(() => {
+                    this.$message({
+                      message: `🎊 优惠券使用成功！${order.voucher.title} 已生效`,
+                      type: 'success',
+                      duration: 3000,
+                      center: true
+                    });
+                    order.status = 3;
+                    this.queryOrders();
+                  })
+                  .catch(err => {
+                    console.error('使用优惠券失败:', err);
+                    this.$message({
+                      message: '😔 使用优惠券失败，请稍后重试',
+                      type: 'error',
+                      center: true
+                    });
+                  });
+        });
+      },
+
+      // 申请退款
+      applyRefund(order) {
+        this.$confirm(`确定要为订单 <strong>${order.orderNumber || 'ORD' + order.id}</strong> 申请退款吗？<br><span style="color: #fa8c16;">退款申请提交后将在1-3个工作日内处理</span>`, '申请退款', {
+          confirmButtonText: '申请退款',
+          cancelButtonText: '暂不退款',
+          type: 'warning',
+          dangerouslyUseHTMLString: true,
+          customClass: 'refund-confirm-dialog',
+          center: true
+        }).then(() => {
+          axios.post(`/app/order/voucher-order/refund/${order.id}`)
+                  .then(() => {
+                    this.$message({
+                      message: `📝 退款申请已提交！订单 ${order.orderNumber || 'ORD' + order.id} 正在处理中`,
+                      type: 'success',
+                      duration: 4000,
+                      center: true
+                    });
+                    order.status = 5;
+                    this.queryOrders();
+                  })
+                  .catch(err => {
+                    console.error('申请退款失败:', err);
+                    this.$message({
+                      message: '❌ 退款申请失败，请稍后重试或联系客服',
+                      type: 'error',
+                      center: true
+                    });
+                  });
+        });
+      },
+
+      formatTime(time) {
+        if (!time) return '';
+        const date = new Date(time);
+        const now = new Date();
+        const diff = now - date;
+
+        if (diff < 60000) return '刚刚';
+        if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前';
+        if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前';
+        if (diff < 604800000) return Math.floor(diff / 86400000) + '天前';
+
+        return date.getFullYear() + '-' + (date.getMonth() + 1) + '-' + date.getDate();
+      },
+
+      goBack() {
+        history.back();
+      }
+    }
+  });
+</script>
+</body>
+</html>
