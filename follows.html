@@ -306,6 +306,70 @@
     .foot-text {
       font-size: 12px;
     }
+
+    /* 确认对话框居中样式 */
+    .center-confirm-dialog {
+      text-align: center;
+    }
+
+    .center-confirm-dialog .el-message-box__header {
+      justify-content: center;
+    }
+
+    .center-confirm-dialog .el-message-box__title {
+      text-align: center;
+      width: 100%;
+    }
+
+    .center-confirm-dialog .el-message-box__content {
+      text-align: center;
+    }
+
+    .center-confirm-dialog .el-message-box__btns {
+      text-align: center;
+      justify-content: center;
+    }
+
+    /* 消息提示居中样式 */
+    .center-message {
+      text-align: center;
+      justify-content: center;
+    }
+
+    .center-message .el-message__content {
+      text-align: center;
+      display: block;
+    }
+
+    /* 强制覆盖 Element UI 默认样式 */
+    .el-message-box {
+      text-align: center !important;
+    }
+
+    .el-message-box__header {
+      text-align: center !important;
+    }
+
+    .el-message-box__content {
+      text-align: center !important;
+    }
+
+    .el-message-box__btns {
+      text-align: center !important;
+      display: flex !important;
+      justify-content: center !important;
+    }
+
+    .el-message {
+      justify-content: center !important;
+      left: 50% !important;
+      transform: translateX(-50%) !important;
+    }
+
+    .el-message__content {
+      text-align: center !important;
+    }
+
   </style>
 </head>
 <body>
@@ -459,7 +523,7 @@
         this.followCurrent = 1;
         this.followNoMore = false;
         this.followLoadError = false;
-        axios.get("/app/user/follow/follows", {
+        axios.get("/app/follow/followUser/follows", {
           params: {
             current: this.followCurrent,
             size: this.followSize
@@ -491,7 +555,7 @@
         this.followLoadError = false;
         this.followCurrent++;
 
-        axios.get("/app/user/follow/follows", {
+        axios.get("/app/follow/followUser/follows", {
           params: {
             current: this.followCurrent,
           }
@@ -544,9 +608,11 @@
         this.$confirm('确定要取消关注吗？', '取消关注', {
           confirmButtonText: '确定',
           cancelButtonText: '取消',
-          type: 'warning'
+          type: 'warning',
+          center: true,  // 这个参数让对话框居中显示
+          customClass: 'center-dialog'  // 可选：自定义样式类
         }).then(() => {
-          axios.put("/app/user/follow/" + user.id + "/false")
+          axios.put("/app/follow/followUser/" + user.id + "/false")
                   .then(() => {
                     this.$message.success('取消关注成功');
                     this.queryFollows(); // 重新加载列表

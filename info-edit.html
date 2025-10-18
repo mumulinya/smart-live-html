@@ -873,6 +873,7 @@
                               if (data) {
                                 this.$message.success('头像上传成功');
                                 this.user.icon = avatarUrl;
+                                this.checkLogin()
                                 event.target.value = '';
                               } else {
                                 this.$message.error(data.msg || '上传失败');

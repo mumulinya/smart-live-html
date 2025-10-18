@@ -466,7 +466,7 @@
         this.fansCurrent = 1;
         this.fansNoMore = false;
         this.fansLoadError = false;
-        axios.get("/app/user/follow/fans", {
+        axios.get("/app/follow/followUser/fans", {
           params: {
             current: this.fansCurrent,
           }
@@ -497,7 +497,7 @@
         this.fansLoadError = false;
         this.fansCurrent++;
 
-        axios.get("/app/user/follow/fans", {
+        axios.get("/app/follow/followUser/fans", {
           params: {
             current: this.fansCurrent,
             size: this.fansSize
@@ -546,7 +546,7 @@
 
       // 关注/取消关注
       toggleFollow(user) {
-        axios.put("/app/user/follow/" + user.id + "/" + !user.isFollow)
+        axios.put("/app/follow/followUser/" + user.id + "/" + !user.isFollow)
                 .then(() => {
                   this.$message.success(user.isFollow ? "已取消关注" : "已关注")
                   user.isFollow = !user.isFollow

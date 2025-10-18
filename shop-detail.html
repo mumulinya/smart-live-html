@@ -1161,8 +1161,6 @@
       this.queryVoucher(shopId);
       this.loadComments(shopId);
       this.queryLoginUser();
-      this.checkShopFollowStatus(shopId);
-
       // 原isFollowed方法在created中调用，需确保shop.id已获取
       setTimeout(() => {
         this.isFollowed();
@@ -1262,7 +1260,7 @@
           return;
         }
         let id = v.id;
-        axios.post("/app/order/voucher-order/seckill/" + id)
+        axios.post("/app/marketing/voucher/seckill/" + id)
                 .then(({data}) => {
                   this.$message.success("抢购成功，订单id：" + data)
                 })
@@ -1276,7 +1274,7 @@
           }, 200);
           return;
         }
-        axios.post("/app/order/voucher-order/buy/" + v.id)
+        axios.post("/app/marketing/voucher/buy/" + v.id)
                 .then(({data}) => {
                   this.$message.success("抢购成功，订单id：" + data)
                 })
@@ -1473,24 +1471,9 @@
         }
         this.showCommentPublish = true
       },
-
-      checkShopFollowStatus(shopId) {
-        if (!this.token) return;
-
-        axios.get(`/app/follow/shop/status?shopId=${shopId}`)
-                .then(({data}) => {
-                  this.isShopFollowed = data.isFollowed;
-                  this.onDataLoaded(); // 新增：数据加载完成回调
-                })
-                .catch(error => {
-                  console.error('检查收藏状态失败:', error);
-                  this.onDataLoaded(); // 新增：即使失败也回调
-                });
-      },
-
       isFollowed(){
         if (!this.shop.id) return; // 确保shop.id已存在
-        axios.get("/app/user/followShop/isFollow/" + this.shop.id)
+        axios.get("/app/follow/followShop/isFollow/" + this.shop.id)
                 .then(({data}) => {
                   this.isShopFollowed = data;
                   this.onDataLoaded(); // 新增：数据加载完成回调
@@ -1517,7 +1500,7 @@
 
         this.isFollowLoading = true;
 
-        axios.put('/app/user/followShop/'+ shopId + "/" + followStatus)
+        axios.put('/app/follow/followShop/'+ shopId + "/" + followStatus)
                 .then(({data}) => {
                   // 文案改为"收藏"相关，适配按钮功能
                   const successMsg = followStatus ? '收藏店铺成功，已添加到你的收藏夹～' : '已取消店铺收藏';

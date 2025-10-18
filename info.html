@@ -12,7 +12,7 @@
     /* ====================================== 新增：加载遮罩层样式 ====================================== */
     #app {
       min-height: 100vh;
-      padding-bottom: 60px;
+      padding-bottom: 60px; /* 为底部导航栏预留空间 */
       position: relative;
       background: #f8f9fa;
     }
@@ -339,6 +339,8 @@
       background: #f8f9fa;
       position: relative;
       overflow: hidden;
+      /* 修改：调整内容区域高度 */
+      min-height: calc(100vh - 400px);
     }
 
     .custom-tabs-header {
@@ -453,30 +455,37 @@
       font-weight: 500;
     }
 
+    /* 修改：重新设计标签页容器 */
     .tabs-container {
       position: relative;
-      height: 400px;
+      height: auto;
+      min-height: 400px;
       touch-action: pan-x;
     }
 
     .tabs-content {
       display: flex;
-      height: 100%;
+      height: auto;
+      min-height: 400px;
       transition: transform 0.3s ease;
       will-change: transform;
     }
 
+    /* 修改：重新设计标签页内容区域 */
     .tab-pane {
       flex: 0 0 100%;
-      height: 100%;
+      height: auto;
+      min-height: 400px;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
-      padding-bottom: 20px;
+      padding-bottom: 80px; /* 增加底部内边距 */
+      margin-bottom: 0;
     }
 
     .custom-tabs-content {
       display: block;
-      height: 100%;
+      height: auto;
+      min-height: 400px;
       margin-top: 0;
     }
 
@@ -807,6 +816,7 @@
       margin-left: 5px;
     }
 
+    /* 修改：底部导航栏样式调整 */
     .foot-bar {
       position: fixed;
       bottom: 0;
@@ -819,6 +829,7 @@
       align-items: center;
       border-top: 1px solid #eee;
       z-index: 100;
+      box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
     }
 
     .foot-btn {
@@ -1155,6 +1166,22 @@
       }
       100% {
         transform: scale(1);
+      }
+    }
+
+    /* 新增：底部安全区域适配 */
+    @supports (padding-bottom: env(safe-area-inset-bottom)) {
+      #app {
+        padding-bottom: calc(60px + env(safe-area-inset-bottom));
+      }
+
+      .foot-bar {
+        height: calc(60px + env(safe-area-inset-bottom));
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+
+      .tab-pane {
+        padding-bottom: calc(80px + env(safe-area-inset-bottom));
       }
     }
   </style>
@@ -1554,7 +1581,7 @@
         this.collectionLoadError = false;
         this.collectionCurrent = 1;
 
-        axios.get("/app/user/followShop/followShops", {
+        axios.get("/app/follow/followShop/followShops", {
           params: {
             userId: this.user.id,
             current: this.collectionCurrent
@@ -1586,7 +1613,7 @@
         this.collectionLoadError = false;
         const nextPage = this.collectionCurrent + 1;
 
-        axios.get("/app/user/followShop/followShops", {
+        axios.get("/app/follow/followShop/followShops", {
           params: {
             userId: this.user.id,
             type: 'shop',
@@ -1616,7 +1643,7 @@
 
       // 取消收藏店铺
       uncollectShop(shopId) {
-        axios.put('/app/user/followShop/'+ shopId + "/" + false)
+        axios.put('/app/follow/followShop/'+ shopId + "/" + false)
                 .then(() => {
                   this.$message.success('取消收藏成功');
                   // 从列表中移除

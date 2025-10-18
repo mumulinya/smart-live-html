@@ -1144,7 +1144,7 @@
         this.collectionLoadError = false;
         this.collectionCurrent = 1;
 
-        axios.get("/app/user/followShop/followShops", {
+        axios.get("/app/follow/followShop/followShops", {
           params: {
             userId: this.user.id,
             current: this.collectionCurrent
@@ -1174,7 +1174,7 @@
         this.collectionLoadError = false;
         const nextPage = this.collectionCurrent + 1;
 
-        axios.get("/app/user/followShop/followShops", {
+        axios.get("/app/follow/followShop/followShops", {
           params: {
             userId: this.user.id,
             current: nextPage
@@ -1215,7 +1215,7 @@
         this.isFollowLoading = true;
 
 
-        axios.put('/app/user/followShop/'+ shopId + "/" + followStatus)
+        axios.put('/app/follow/followShop/'+ shopId + "/" + followStatus)
                 .then(({data}) => {
                   // 文案改为"收藏"相关，适配按钮功能
                   const successMsg = followStatus ? '收藏店铺成功，已添加到你的收藏夹～' : '已取消店铺收藏';
@@ -1356,7 +1356,7 @@
         this.commonLoadError = false;
         this.commonCurrent = 1;
 
-        axios.get("/app/user/follow/common", {
+        axios.get("/app/follow/followUser/common", {
           params: {
             userId: this.user.id,
             current: this.commonCurrent
@@ -1388,7 +1388,7 @@
         this.commonLoadError = false;
         const nextPage = this.commonCurrent + 1;
 
-        axios.get("/app/user/follow/common", {
+        axios.get("/app/follow/followUser/common", {
           params: {
             userId: this.user.id,
             current: nextPage
@@ -1460,7 +1460,6 @@
                   this.queryUserInfo();
                   this.queryNotes();
                   this.queryCollections(); // 加载店铺收藏
-                  this.isFollowed();
                   this.isCreateSession();
                   this.queryUserStats();
                   this.queryCommonFollows();
@@ -1508,30 +1507,16 @@
                   this.onDataLoaded(); // 新增：即使失败也回调
                 });
       },
-
-      // 查询关注状态
-      isFollowed() {
-        if (!this.user.id) return;
-
-        axios.get("/app/user/follow/isFollow/" + this.user.id)
-                .then((response) => {
-                  this.followed = !!response.data;
-                })
-                .catch(err => {
-                  console.error("查询关注状态失败:", err);
-                  this.followed = false;
-                });
-      },
-
       // 关注/取消关注用户
       follow() {
         if (!this.user.id) return;
 
-        axios.put("/app/user/follow/" + this.user.id + "/" + !this.followed)
+        axios.put("/app/follow/followUser/" + this.user.id + "/" + !this.followed)
                 .then(() => {
                   this.$message.success(this.followed ? "已取消关注" : "已关注");
                   this.followed = !this.followed;
                   this.queryUserStats();
+                  this.queryUser()
                 })
                 .catch(err => {
                   console.error("关注操作失败:", err);
@@ -1629,7 +1614,7 @@
       // 跳转到笔记详情
       toNoteDetail(note) {
         if (note.id) {
-          location.href = `/note-detail.html?id=${note.id}`;
+          location.href = `/blog-detail.html?id=${note.id}`;
         }
       }
     }

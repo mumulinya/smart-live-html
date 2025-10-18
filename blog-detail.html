@@ -642,7 +642,7 @@
     </div>
     <div class="basic">
       <div class="basic-icon" @click="toOtherInfo">
-        <img :src="user.icon || '/imgs/icons/default-icon.png'" alt="">
+        <img :src="blog.icon || '/imgs/icons/default-icon.png'" alt="">
       </div>
       <div class="basic-info">
         <div class="name">{{blog.name}}</div>
@@ -1012,6 +1012,7 @@
                 .then(({data}) => {
                   data.images = data.images.split(",")
                   data.images = data.images.map(image => fileURL + image);
+                  data.icon = fileURL + data.icon;
                   this.blog = data;
                   this.$nextTick(this.init);
                   this.queryShopById(data.shopId)
@@ -1039,6 +1040,9 @@
       queryLikeList(id){
         axios.get("/app/blog/likes/" + id)
                 .then(({data}) => {
+                  data.forEach(user => {
+                    user.icon = fileURL + user.icon
+                  })
                   this.likes = data
                   this.onDataLoaded(); // 新增：数据加载完成回调
                 })
@@ -1068,7 +1072,7 @@
                 })
       },
       isFollowed(){
-        axios.get("/app/user/follow/isFollow/" + this.blog.userId)
+        axios.get("/app/follow/followUser/isFollow/" + this.blog.userId)
                 .then(({data}) => this.followed = data)
                 .catch(this.$message.error)
       },
@@ -1078,7 +1082,7 @@
         if (!token) {
           location.href = "login.html"
         }
-        axios.put("/app/user/follow/" + this.blog.userId + "/" + !this.followed)
+        axios.put("/app/follow/followUser/" + this.blog.userId + "/" + !this.followed)
                 .then(() => {
                   this.$message.success(this.followed ? "已取消关注" : "已关注")
                   this.followed = !this.followed
@@ -1129,7 +1133,13 @@
           });
 
           const newComments = response.data.list || response.data;
-
+          newComments.forEach(comment => {
+            comment.userIcon=fileURL+comment.userIcon
+            if(comment.images!=""&&comment.images!=null){
+              comment.images=comment.images.split(",")
+              comment.images=comment.images.map(image => fileURL + image);
+            }
+          })
           if (newComments.length === 0) {
             this.noMore = true;
           } else {
@@ -1138,10 +1148,6 @@
               comment.userIcon=fileURL+comment.userIcon
               if(comment.isAIGenerated===true){
                 this.aiComment= comment
-              }
-              if(comment.images!=""&&comment.images!=null){
-                comment.images=comment.images.split(",")
-                comment.images=comment.images.map(image => fileURL + image);
               }
             })
             this.comments=this.comments.slice(0,3)

@@ -14,7 +14,124 @@
       border-radius: 20px;
     }
 
-    /* ====================================== 新增：加载遮罩层样式 ====================================== */
+    /* ====================================== 新增：简洁分类标签导航样式 ====================================== */
+    .category-nav {
+      display: flex;
+      align-items: center;
+      padding: 12px 15px;
+      background: white;
+      border-bottom: 1px solid #f0f0f0;
+      position: relative;
+    }
+
+    .category-tabs {
+      display: flex;
+      overflow-x: auto;
+      flex: 1;
+      white-space: nowrap;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none; /* Firefox */
+      margin-right: 10px;
+    }
+
+    .category-tabs::-webkit-scrollbar {
+      display: none; /* Chrome, Safari, Edge */
+    }
+
+    .category-tab {
+      flex-shrink: 0;
+      padding: 8px 12px;
+      margin-right: 15px;
+      color: #666;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      border: none;
+      background: none;
+    }
+
+    .category-tab.active {
+      color: #409EFF;
+      font-weight: 500;
+    }
+
+    .category-tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 20px;
+      height: 2px;
+      background: #409EFF;
+      border-radius: 1px;
+    }
+
+    .more-categories {
+      flex-shrink: 0;
+      padding: 8px 12px;
+      color: #909399;
+      font-size: 14px;
+      cursor: pointer;
+      border: none;
+      background: none;
+      display: flex;
+      align-items: center;
+    }
+
+    .more-categories i {
+      margin-left: 4px;
+      transition: transform 0.3s ease;
+    }
+
+    .more-categories.active i {
+      transform: rotate(180deg);
+    }
+
+    /* 下拉菜单样式 */
+    .category-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: white;
+      border: 1px solid #e6e8eb;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+      max-height: 300px;
+      overflow-y: auto;
+      display: none;
+    }
+
+    .category-dropdown.show {
+      display: block;
+    }
+
+    .dropdown-category {
+      padding: 12px 15px;
+      color: #333;
+      font-size: 14px;
+      cursor: pointer;
+      border-bottom: 1px solid #f0f0f0;
+      transition: background-color 0.2s ease;
+    }
+
+    .dropdown-category:last-child {
+      border-bottom: none;
+    }
+
+    .dropdown-category:hover {
+      background: #f5f7fa;
+    }
+
+    .dropdown-category.active {
+      color: #409EFF;
+      background: #f0f7ff;
+    }
+
+    /* ====================================== 加载遮罩层样式 ====================================== */
     .loading-mask {
       position: fixed;
       top: 0;
@@ -89,13 +206,13 @@
       color: #F56C6C;
     }
 
-    /* 博客列表容器样式 - 关键修复 */
+    /* 修改：重新设计博客列表容器样式 */
     .blog-list {
-      /* 计算高度：可视区域高度 - 顶部元素总高度（根据实际布局调整） */
-      height: calc(100vh - 220px);
-      overflow-y: auto; /* 启用纵向滚动 */
-      overflow-x: hidden; /* 禁止横向滚动 */
-      padding: 10px 0;
+      height: calc(100vh - 260px);
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 10px 0 80px; /* 增加底部内边距 */
+      margin-bottom: 0;
     }
 
     /* 加载提示样式 */
@@ -104,6 +221,42 @@
       padding: 15px 0;
       color: #909399;
       font-size: 12px;
+    }
+
+    /* 修改：底部导航栏样式调整 */
+    .footer-container {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: white;
+      box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+      height: 60px;
+    }
+
+    /* 修改：整体布局调整 */
+    #app {
+      min-height: 100vh;
+      padding-bottom: 60px; /* 为底部导航栏预留空间 */
+      position: relative;
+      background: #f8f9fa;
+    }
+
+    /* 修改：安全区域适配 */
+    @supports (padding-bottom: env(safe-area-inset-bottom)) {
+      #app {
+        padding-bottom: calc(60px + env(safe-area-inset-bottom));
+      }
+
+      .footer-container {
+        height: calc(60px + env(safe-area-inset-bottom));
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+
+      .blog-list {
+        padding-bottom: calc(80px + env(safe-area-inset-bottom));
+      }
     }
   </style>
 </head>
@@ -151,6 +304,42 @@
     </div>
   </div>
 
+  <!-- 新增：简洁分类标签导航 -->
+  <div class="category-nav">
+    <div class="category-tabs">
+      <div
+              v-for="category in visibleCategories"
+              :key="category.id"
+              class="category-tab"
+              :class="{ active: activeCategory === category.id }"
+              @click="switchCategory(category.id)"
+      >
+        {{ category.name }}
+      </div>
+    </div>
+    <div
+            class="more-categories"
+            :class="{ active: showDropdown }"
+            @click="toggleDropdown"
+    >
+      更多
+      <i class="el-icon-arrow-down"></i>
+    </div>
+
+    <!-- 下拉菜单 -->
+    <div class="category-dropdown" :class="{ show: showDropdown }">
+      <div
+              v-for="category in dropdownCategories"
+              :key="category.id"
+              class="dropdown-category"
+              :class="{ active: activeCategory === category.id }"
+              @click="switchCategoryFromDropdown(category.id)"
+      >
+        {{ category.name }}
+      </div>
+    </div>
+  </div>
+
   <!-- 博客列表（绑定滚动事件） -->
   <div class="blog-list" @scroll="onScroll">
     <div class="blog-box" v-for="b in blogs" :key="b.id">
@@ -176,7 +365,10 @@
     </div>
   </div>
 
-  <foot-bar :active-btn="1"></foot-bar>
+  <!-- 底部导航栏容器 -->
+  <div class="footer-container">
+    <foot-bar :active-btn="1"></foot-bar>
+  </div>
 </div>
 
 <script src="./js/vue.js"></script>
@@ -190,10 +382,26 @@
     data: {
       isReachBottom: false,
       types: [], // 类型列表
-      blogs: [], // 播客列表
+      blogs: [], // 博客列表
       current: 1, // 当前页码
       isLoading: false, // 加载状态标记
       noMoreData: false, // 无更多数据标记
+      // 新增：分类相关数据
+      categories: [
+        { id: 'hot', name: '热门博客' },
+        { id: 'food', name: '美食' },
+        { id: 'ktv', name: 'KTV' },
+        { id: 'beauty', name: '丽人·美发' },
+        { id: 'fitness', name: '健身运动' },
+        { id: 'massage', name: '按摩·足疗' },
+        { id: 'spa', name: '美容SPA' },
+        { id: 'parenting', name: '亲子游乐' },
+        { id: 'bar', name: '酒吧' },
+        { id: 'party', name: '轰趴馆' },
+        { id: 'eyelash', name: '美睫·美甲' }
+      ],
+      activeCategory: 'hot', // 当前选中的分类
+      showDropdown: false, // 是否显示下拉菜单
       // 定位相关数据
       locationLoading: false,
       locationError: false,
@@ -205,13 +413,13 @@
         y: 30.334229,
         region: {}
       },
-      // 新增：防抖标记，防止重复请求
+      // 防抖标记，防止重复请求
       isRequesting: false,
-      // 新增：页面加载状态控制
+      // 页面加载状态控制
       pageLoading: true,
-      // 新增：数据加载完成计数器
+      // 数据加载完成计数器
       dataLoadedCount: 0,
-      // 新增：需要加载的数据总数
+      // 需要加载的数据总数
       totalDataToLoad: 3 // 类型列表、博客列表、定位信息
     },
     computed: {
@@ -220,15 +428,94 @@
         if (this.usingCachedLocation && !this.locationError) return "已使用缓存位置";
         if (this.locationError) return "定位失败，使用默认位置";
         return "";
+      },
+      // 可见的分类标签（前5个）
+      visibleCategories() {
+        return this.categories.slice(0, 5);
+      },
+      // 下拉菜单中的分类（剩余的）
+      dropdownCategories() {
+        return this.categories.slice(5);
       }
     },
     created() {
       this.queryTypes();
       this.queryHotBlogsScroll();
       this.initLocation();
+
+      // 点击页面其他地方关闭下拉菜单
+      document.addEventListener('click', this.closeDropdown);
+    },
+    beforeDestroy() {
+      document.removeEventListener('click', this.closeDropdown);
     },
     methods: {
-      // 新增：数据加载完成回调
+      // 切换分类
+      switchCategory(categoryId) {
+        if (this.activeCategory === categoryId) return;
+
+        this.activeCategory = categoryId;
+        this.blogs = []; // 清空当前博客列表
+        this.current = 1; // 重置页码
+        this.noMoreData = false; // 重置无更多数据标记
+        this.closeDropdown(); // 关闭下拉菜单
+
+        // 根据分类加载数据
+        if (categoryId === 'hot') {
+          this.queryHotBlogsScroll();
+        } else {
+          this.queryBlogsByCategory(categoryId);
+        }
+      },
+
+      // 从下拉菜单切换分类
+      switchCategoryFromDropdown(categoryId) {
+        this.switchCategory(categoryId);
+      },
+
+      // 切换下拉菜单显示状态
+      toggleDropdown(event) {
+        event.stopPropagation(); // 阻止事件冒泡
+        this.showDropdown = !this.showDropdown;
+      },
+
+      // 关闭下拉菜单
+      closeDropdown() {
+        this.showDropdown = false;
+      },
+
+      // 根据分类查询博客
+      queryBlogsByCategory(category) {
+        if (this.isLoading || this.isRequesting) return;
+
+        this.isLoading = true;
+        this.isRequesting = true;
+
+        axios.get(`/app/blog/category/${category}?current=${this.current}`)
+                .then(({ data }) => {
+                  if (!data || data.length === 0) {
+                    this.noMoreData = true;
+                    return;
+                  }
+                  // 处理图片路径
+                  data.forEach(b => {
+                    b.img = fileURL+b.images?.split(",")[0] || '';
+                  });
+                  this.blogs = this.blogs.concat(data);
+                  this.current++;
+                })
+                .catch(err => {
+                  this.$message.error('博客加载失败');
+                  console.error('博客请求错误:', err);
+                })
+                .finally(() => {
+                  this.isLoading = false;
+                  this.isReachBottom = false;
+                  this.isRequesting = false;
+                });
+      },
+
+      // 数据加载完成回调
       onDataLoaded() {
         this.dataLoadedCount++;
         console.log(`数据加载进度: ${this.dataLoadedCount}/${this.totalDataToLoad}`);
@@ -286,7 +573,7 @@
           this.currentCity = cachedLocation.region?.city || cachedLocation.region?.province || '杭州';
           this.usingCachedLocation = true;
           this.showLocationStatusMessage();
-          this.onDataLoaded(); // 新增：数据加载完成回调
+          this.onDataLoaded(); // 数据加载完成回调
         } else {
           this.getLocation();
         }
@@ -344,7 +631,7 @@
           this.locationError = true;
           this.locationLoading = false;
           this.showLocationStatusMessage();
-          this.onDataLoaded(); // 新增：即使失败也回调
+          this.onDataLoaded(); // 即使失败也回调
           return;
         }
 
@@ -382,7 +669,7 @@
 
                   this.locationLoading = false;
                   this.showLocationStatusMessage();
-                  this.onDataLoaded(); // 新增：数据加载完成回调
+                  this.onDataLoaded(); // 数据加载完成回调
                 },
                 (error) => {
                   console.error('定位失败:', error);
@@ -390,7 +677,7 @@
                   this.locationLoading = false;
                   this.showLocationStatusMessage();
                   this.$message.warning('定位失败，使用默认位置');
-                  this.onDataLoaded(); // 新增：即使失败也回调
+                  this.onDataLoaded(); // 即使失败也回调
                 },
                 options
         );
@@ -418,11 +705,11 @@
         axios.get("/app/shop/shop-type/list")
                 .then(({ data }) => {
                   this.types = data || [];
-                  this.onDataLoaded(); // 新增：数据加载完成回调
+                  this.onDataLoaded(); // 数据加载完成回调
                 })
                 .catch(err => {
                   this.$message.error('类型加载失败');
-                  this.onDataLoaded(); // 新增：即使失败也回调
+                  this.onDataLoaded(); // 即使失败也回调
                 });
       },
 
@@ -439,7 +726,7 @@
                   if (!data || data.length === 0) {
                     // 无数据时标记为无更多
                     this.noMoreData = true;
-                    this.onDataLoaded(); // 新增：数据加载完成回调
+                    this.onDataLoaded(); // 数据加载完成回调
                     return;
                   }
                   // 处理图片路径
@@ -449,12 +736,12 @@
                   // 追加数据（而非覆盖）
                   this.blogs = this.blogs.concat(data);
                   this.current++; // 页码自增
-                  this.onDataLoaded(); // 新增：数据加载完成回调
+                  this.onDataLoaded(); // 数据加载完成回调
                 })
                 .catch(err => {
                   this.$message.error('博客加载失败');
                   console.error('博客请求错误:', err);
-                  this.onDataLoaded(); // 新增：即使失败也回调
+                  this.onDataLoaded(); // 即使失败也回调
                 })
                 .finally(() => {
                   // 无论成功失败，结束加载状态
@@ -499,8 +786,12 @@
                 && !this.noMoreData
                 && !this.isRequesting) { // 添加请求标记检查
           this.isReachBottom = true;
-          // 加载下一页
-          this.queryHotBlogsScroll();
+          // 根据当前分类加载下一页
+          if (this.activeCategory === 'hot') {
+            this.queryHotBlogsScroll();
+          } else {
+            this.queryBlogsByCategory(this.activeCategory);
+          }
         }
       },
 
