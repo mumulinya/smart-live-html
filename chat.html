@@ -43,6 +43,16 @@
     .no-more { text-align: center; padding: 20px; color: #999; font-size: 14px; }
     .empty-messages { text-align: center; padding: 60px 20px; color: #999; }
     .empty-messages i { font-size: 48px; margin-bottom: 16px; color: #ddd; }
+    .connection-status { position: fixed; top: 60px; left: 0; right: 0; background: #ff9800; color: white; text-align: center; padding: 8px; font-size: 14px; z-index: 1000; }
+    .connection-status.connected { background: #07c160; }
+    .connection-status.error { background: #f56c6c; }
+    .message-status { font-size: 12px; color: #999; margin-top: 4px; text-align: right; }
+    .message-status.sending { color: #ff9800; }
+    .message-status.sent { color: #07c160; }
+    .message-status.failed { color: #f56c6c; }
+    .auth-status { position: fixed; top: 100px; left: 0; right: 0; background: #2196f3; color: white; text-align: center; padding: 6px; font-size: 12px; z-index: 1000; }
+    .message-read-status { font-size: 10px; color: #07c160; margin-top: 2px; text-align: right; }
+    .message-delivered-status { font-size: 10px; color: #999; margin-top: 2px; text-align: right; }
   </style>
 </head>
 <body>
@@ -50,6 +60,14 @@
   <div class="global-loading" v-if="pageLoading">
     <div class="loading-spinner"></div>
     <div class="loading-text">{{loadingText}}</div>
+  </div>
+
+  <div class="connection-status" :class="wsStatus" v-if="showConnectionStatus">
+    {{connectionStatusText}}
+  </div>
+
+  <div class="auth-status" v-if="showAuthStatus">
+    {{authStatusText}}
   </div>
 
   <div class="refresh-loading" v-if="refreshLoading && !pageLoading">
@@ -76,18 +94,30 @@
         <span class="time-label">{{ formatGroupTime(msgGroup.time) }}</span>
       </div>
 
-      <div v-for="msg in msgGroup.messages" :key="msg.id"
+      <div v-for="msg in msgGroup.messages" :key="msg.id || msg.tempId"
            class="message-container"
            :class="{'message-container-left': !msg.isSelf, 'message-container-right': msg.isSelf}">
 
         <div class="avatar" :class="{'avatar-left': !msg.isSelf, 'avatar-right': msg.isSelf}">
-          <img v-if="msg.isSelf" class="avatar-image" :src="user.icon" :alt="user.icon" @error="handleAvatarError">
-          <img v-else class="avatar-image" :src="contactAvatar" :alt="contactAvatar" @error="handleAvatarError">
+          <img v-if="msg.isSelf && user.icon" class="avatar-image" :src="user.icon" :alt="user.nickname" @error="handleAvatarError">
+          <img v-else-if="!msg.isSelf && contactAvatar" class="avatar-image" :src="contactAvatar" :alt="contactName" @error="handleAvatarError">
+          <div v-else class="avatar-fallback">
+            {{ msg.isSelf ? (user.nickname || '我').charAt(0) : (contactName || '友').charAt(0) }}
+          </div>
         </div>
 
         <div class="message-content">
           <div v-if="!msg.isSystem" class="message" :class="{'message-left': !msg.isSelf, 'message-right': msg.isSelf}">
             {{msg.content}}
+            <!-- 消息状态显示 -->
+            <div v-if="msg.isSelf" class="message-status-container">
+              <div class="message-status" :class="msg.status" v-if="msg.status === 'sending' || msg.status === 'failed'">
+                {{getStatusText(msg.status)}}
+              </div>
+              <div v-else-if="msg.dbStatus === 1" class="message-read-status">已读</div>
+              <div v-else-if="msg.dbStatus === 2" class="message-delivered-status">已送达</div>
+              <div v-else class="message-status sent">{{getStatusText('sent')}}</div>
+            </div>
           </div>
         </div>
       </div>
@@ -116,6 +146,219 @@
 <script src="./js/common.js"></script>
 <script src="./js/footer.js"></script>
 <script>
+  // ========== 全局 WebSocket 类定义 ==========
+  // WebSocket 管理类
+  class ChatWebSocket {
+    constructor() {
+      this.ws = null;
+      this.isConnected = false;
+      this.isAuthenticated = false;
+      this.reconnectTimer = null;
+      this.reconnectAttempts = 0;
+      this.maxReconnectAttempts = 5;
+      this.token = null;
+      this.messageCallbacks = [];
+      this.connectionCallbacks = [];
+      this.authCallbacks = [];
+    }
+
+    connect(token,sessionId) {
+      this.token = token;
+      this.sessionId = sessionId;
+      if (this.ws) {
+        this.disconnect();
+      }
+
+      const wsUrl = `ws://localhost:8080/app/chat/ws/chat`;
+      console.log('🔗 私聊页面连接WebSocket:', wsUrl);
+
+      try {
+        this.ws = new WebSocket(wsUrl);
+
+        this.ws.onopen = () => {
+          console.log('✅ 私聊页面WebSocket连接成功');
+          this.isConnected = true;
+          this.reconnectAttempts = 0;
+          this.notifyConnectionCallbacks('connected');
+          this.sendAuthMessage();
+        };
+
+        this.ws.onmessage = (event) => {
+          console.log('📨 私聊页面收到消息:', event.data);
+          try {
+            const message = JSON.parse(event.data);
+            this.handleServerMessage(message);
+          } catch (error) {
+            console.error('解析消息失败:', error);
+          }
+        };
+
+        this.ws.onclose = (event) => {
+          console.log('🔌 私聊页面WebSocket连接关闭:', event.code, event.reason);
+          this.isConnected = false;
+          this.isAuthenticated = false;
+          this.notifyConnectionCallbacks('disconnected');
+          this.notifyAuthCallbacks('disconnected');
+          this.tryReconnect();
+        };
+
+        this.ws.onerror = (error) => {
+          console.error('❌ 私聊页面WebSocket错误:', error);
+          this.notifyConnectionCallbacks('error');
+        };
+
+      } catch (error) {
+        console.error('创建WebSocket连接失败:', error);
+      }
+    }
+
+    sendAuthMessage() {
+      if (this.token && this.isConnected) {
+        const authMessage = {
+          type: 'AUTH',
+          data: { token: this.token,sessionId:this.sessionId },
+          timestamp: Date.now()
+        };
+        this.ws.send(JSON.stringify(authMessage));
+        console.log('🔐 私聊页面发送认证消息');
+      }
+    }
+
+    handleServerMessage(message) {
+      switch (message.type) {
+        case 'AUTH_SUCCESS':
+          console.log('✅ 私聊页面身份认证成功');
+          this.isAuthenticated = true;
+          this.notifyAuthCallbacks('success', message.data);
+          break;
+        case 'AUTH_FAILED':
+          console.error('❌ 私聊页面身份认证失败:', message.data);
+          this.isAuthenticated = false;
+          this.notifyAuthCallbacks('failed', message.data);
+          break;
+        case 'NEW_MESSAGE':
+          this.notifyMessageCallbacks(message);
+          break;
+        case 'MESSAGE_SENT':
+          this.notifyMessageCallbacks(message);
+          break;
+        case 'SYSTEM_MESSAGE':
+          this.notifyMessageCallbacks(message);
+          break;
+        case 'MESSAGE_STATUS_UPDATE': // 🔥 新增：处理消息状态更新
+          this.notifyMessageCallbacks(message);
+          break;
+        case 'PONG':
+          console.log('❤️ 私聊页面收到心跳回复');
+          break;
+        default:
+          console.log('私聊页面未知消息类型:', message.type);
+      }
+    }
+
+    sendMessage(type, data) {
+      if (this.ws && this.isConnected) {
+        const message = { type, data, timestamp: Date.now() };
+        this.ws.send(JSON.stringify(message));
+        console.log('📤 私聊页面发送消息:', message);
+        return true;
+      } else {
+        console.error('❌ 私聊页面WebSocket未连接或未认证');
+        return false;
+      }
+    }
+
+    disconnect() {
+      if (this.ws) {
+        this.ws.close();
+        this.ws = null;
+      }
+      this.isConnected = false;
+      this.isAuthenticated = false;
+      if (this.reconnectTimer) {
+        clearTimeout(this.reconnectTimer);
+      }
+    }
+
+    tryReconnect() {
+      if (this.reconnectAttempts < this.maxReconnectAttempts && this.token) {
+        this.reconnectAttempts++;
+        const delay = Math.min(3000 * this.reconnectAttempts, 30000);
+        console.log(`私聊页面${delay/1000}秒后尝试重连... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+        this.reconnectTimer = setTimeout(() => this.connect(this.token,this.sessionId), delay);
+      } else {
+        console.error('私聊页面达到最大重连次数，停止重连');
+        this.notifyConnectionCallbacks('failed');
+      }
+    }
+
+    onMessage(callback) { this.messageCallbacks.push(callback); }
+    onConnectionChange(callback) { this.connectionCallbacks.push(callback); }
+    onAuthChange(callback) { this.authCallbacks.push(callback); }
+
+    notifyMessageCallbacks(message) {
+      this.messageCallbacks.forEach(callback => {
+        try { callback(message); } catch (error) { console.error('私聊页面消息回调执行错误:', error); }
+      });
+    }
+
+    notifyConnectionCallbacks(status) {
+      this.connectionCallbacks.forEach(callback => {
+        try { callback(status); } catch (error) { console.error('私聊页面连接状态回调执行错误:', error); }
+      });
+    }
+
+    notifyAuthCallbacks(status, data) {
+      this.authCallbacks.forEach(callback => {
+        try { callback(status, data); } catch (error) { console.error('私聊页面认证状态回调执行错误:', error); }
+      });
+    }
+  }
+
+  // 全局 WebSocket 管理器
+  class GlobalWebSocketManager {
+    constructor() {
+      this.chatWebSocket = null;
+      this.messageCallbacks = new Map();
+    }
+
+    init(token, sessionId) {
+      if (!this.chatWebSocket) {
+        this.chatWebSocket = new ChatWebSocket();
+      }
+      // 只有在有token且未连接时才连接
+      if (token && (!this.chatWebSocket.isConnected || this.chatWebSocket.token !== token)) {
+        this.chatWebSocket.connect(token, sessionId);
+        this.chatWebSocket.onMessage((message) => this.dispatchMessage(message));
+      }
+      return this.chatWebSocket;
+    }
+
+    getWebSocket() { return this.chatWebSocket; }
+    registerCallback(namespace, callback) { this.messageCallbacks.set(namespace, callback); }
+    unregisterCallback(namespace) { this.messageCallbacks.delete(namespace); }
+
+    dispatchMessage(message) {
+      this.messageCallbacks.forEach((callback, namespace) => {
+        try { callback(message); } catch (error) { console.error(`私聊页面消息回调执行错误 [${namespace}]:`, error); }
+      });
+    }
+
+    sendMessage(type, data) {
+      return this.chatWebSocket ? this.chatWebSocket.sendMessage(type, data) : false;
+    }
+  }
+
+  // ========== 全局管理器初始化 ==========
+  // 如果全局管理器不存在，创建它
+  if (!window.globalWsManager) {
+    console.log('🆕 私聊页面创建全局WebSocket管理器');
+    window.globalWsManager = new GlobalWebSocketManager();
+  } else {
+    console.log('✅ 私聊页面检测到全局WebSocket管理器已存在');
+  }
+
+  // ========== Vue 应用代码 ==========
   const app = new Vue({
     el: "#app",
     data: {
@@ -133,30 +376,32 @@
       refreshLoading: false,
       firstLoad: true,
       loadingText: '正在加载...',
-      user: {},
+      user: { id: 0, nickname: '我', icon: '' },
       contactUser: {},
-      userAvatarMap: new Map(),
       isSending: false,
       autoScroll: true,
-      isAtBottom: true, // 新增：判断是否在底部
-    },
-    mounted() {
-      // 首次加载后滚动到底部
-      this.loadChatMessagesWithLoading();
+      isAtBottom: true,
+      wsStatus: 'disconnected',
+      showConnectionStatus: false,
+      connectionStatusText: '连接中...',
+      showAuthStatus: false,
+      authStatusText: '认证中...',
+      forceEnableSend: false,
+      statusCheckInterval: null
     },
     computed: {
       groupedMessages() {
         const groups = [];
         let currentGroup = null;
-        const normalMessages = this.messages.filter(msg => !msg.isSystem);
+
+        const normalMessages = this.messages
+                .filter(msg => !msg.isSystem)
+                .sort((a, b) => new Date(a.createTime) - new Date(b.createTime));
+
         normalMessages.forEach(msg => {
           const groupTime = this.getGroupTime(msg.createTime);
           if (!currentGroup || currentGroup.time !== groupTime) {
-            currentGroup = {
-              time: groupTime,
-              messages: [],
-              showTime: true
-            };
+            currentGroup = { time: groupTime, messages: [], showTime: true };
             groups.push(currentGroup);
           }
           currentGroup.messages.push(msg);
@@ -167,7 +412,12 @@
         return this.messages.filter(msg => msg.isSystem);
       },
       isSendDisabled() {
-        return !this.messageInput || this.messageInput.trim() === '' || this.isSending;
+        const isEmpty = !this.messageInput || this.messageInput.trim() === '';
+        return isEmpty || this.isSending || (!this.forceEnableSend && !this.isWebSocketReady);
+      },
+      isWebSocketReady() {
+        const chatWebSocket = window.globalWsManager ? window.globalWsManager.getWebSocket() : null;
+        return chatWebSocket && chatWebSocket.isConnected && chatWebSocket.isAuthenticated;
       }
     },
     created() {
@@ -175,23 +425,296 @@
       this.getChatSession();
       this.handlePageRefresh();
       this.queryLoginUser();
+
+      this.statusCheckInterval = setInterval(() => {
+        this.checkMessageStatus();
+      }, 30000);
     },
     mounted() {
       this.scrollToBottom();
+
+      // 设置当前活跃会话
+      this.setCurrentActiveSession();
+    },
+    beforeDestroy() {
+      // 离开页面时清除活跃会话
+      this.clearCurrentActiveSession();
+
+      // 移除消息回调
+      if (window.globalWsManager) {
+        window.globalWsManager.unregisterCallback('private-chat-' + this.sessionId);
+      }
+      if (this.statusCheckInterval) {
+        clearInterval(this.statusCheckInterval);
+      }
     },
     methods: {
-      showPageLoading(text = '正在加载...') {
-        this.pageLoading = true;
-        this.loadingText = text;
+      // 设置当前活跃会话
+      setCurrentActiveSession() {
+        if (window.globalWsManager && this.sessionId) {
+          window.globalWsManager.sendMessage('UPDATE_ACTIVE_SESSION', {
+            sessionId: this.sessionId
+          });
+          console.log('👀 设置当前活跃会话:', this.sessionId);
+        }
       },
-      hidePageLoading() {
-        this.pageLoading = false;
-        this.refreshLoading = false;
+
+      // 清除当前活跃会话
+      clearCurrentActiveSession() {
+        if (window.globalWsManager) {
+          window.globalWsManager.sendMessage('UPDATE_ACTIVE_SESSION', {
+            sessionId: null
+          });
+          console.log('🚪 清除当前活跃会话');
+        }
       },
-      showRefreshLoading(text = '正在刷新...') {
-        this.refreshLoading = true;
-        this.loadingText = text;
+
+      checkMessageStatus() {
+        const now = Date.now();
+        const sendingMessages = this.messages.filter(msg =>
+                msg.status === 'sending' &&
+                msg.tempId &&
+                now - parseInt(msg.tempId.split('_')[1]) > 10000
+        );
+
+        if (sendingMessages.length > 0) {
+          console.log('发现长时间发送中的消息:', sendingMessages);
+          sendingMessages.forEach(msg => {
+            const messageIndex = this.messages.findIndex(m => m.tempId === msg.tempId);
+            if (messageIndex !== -1) {
+              this.messages[messageIndex].status = 'failed';
+              this.$set(this.messages, messageIndex, { ...this.messages[messageIndex] });
+            }
+          });
+          this.$message.warning('部分消息发送超时，请重新发送');
+        }
       },
+
+      initWebSocket() {
+        console.log('🔗 私聊页面初始化WebSocket连接');
+        this.createOptimizedWebSocket();
+      },
+
+      createOptimizedWebSocket() {
+        const token = this.getToken();
+        if (!token) {
+          console.error('未找到token，无法创建连接');
+          this.updateConnectionStatus('error', '未登录');
+          this.forceEnableSend = true;
+          return;
+        }
+
+        console.log('🔗 创建优化的WebSocket连接');
+
+        // 使用全局管理器
+        if (!window.globalWsManager) {
+          window.globalWsManager = new GlobalWebSocketManager();
+        }
+         //传入会话id
+        const chatWebSocket = window.globalWsManager.init(token,this.sessionId);
+
+        this.setupWebSocketListeners(chatWebSocket);
+
+        chatWebSocket.onConnectionChange((status) => {
+          console.log('🔔 连接状态变化:', status);
+          this.handleConnectionStatusChange(status);
+        });
+
+        // 连接状态提示
+        this.updateConnectionStatus('connecting', '连接中...');
+
+        setTimeout(() => {
+          if (!chatWebSocket.isConnected) {
+            console.log('⏳ WebSocket连接稍慢，请耐心等待...');
+          }
+        }, 2000);
+      },
+
+      setupWebSocketListeners(chatWebSocket) {
+        // 注册私聊页面的回调
+        window.globalWsManager.registerCallback('private-chat-' + this.sessionId, (message) => {
+          this.handleWebSocketMessage(message);
+        });
+
+        // 更新连接状态
+        if (chatWebSocket.isConnected) {
+          this.updateConnectionStatus('connected', '连接成功', 2000);
+          // 连接成功后设置当前活跃会话
+          this.$nextTick(() => {
+            this.setCurrentActiveSession();
+          });
+        } else {
+          this.updateConnectionStatus('connecting', '连接中...');
+        }
+      },
+
+      handleConnectionStatusChange(status) {
+        switch (status) {
+          case 'connected':
+            this.updateConnectionStatus('connected', '连接成功', 2000);
+            // 连接成功后设置当前活跃会话
+            this.setCurrentActiveSession();
+            break;
+          case 'disconnected':
+            this.updateConnectionStatus('disconnected', '连接断开');
+            break;
+          case 'error':
+            this.updateConnectionStatus('error', '连接错误');
+            break;
+          case 'failed':
+            this.updateConnectionStatus('error', '连接失败');
+            break;
+        }
+      },
+
+      handleWebSocketMessage(message) {
+        console.log('🔔 私聊页面收到WebSocket消息:', message);
+
+        // 针对 MESSAGE_SENT 消息特殊处理 - 它可能没有 sessionId
+        if (message.type === 'MESSAGE_SENT') {
+          console.log('✅ 处理消息发送成功回调，跳过会话检查');
+          this.handleMessageSent(message.data);
+          return;
+        }
+
+        // 🔥 新增：处理消息状态更新（如已读状态）
+        if (message.type === 'MESSAGE_STATUS_UPDATE') {
+          console.log('🔄 处理消息状态更新:', message.data);
+          this.handleMessageStatusUpdate(message.data);
+          return;
+        }
+
+        // 其他消息类型（NEW_MESSAGE, SYSTEM_MESSAGE）才进行会话检查
+        if (message.data && message.data.sessionId != this.sessionId) {
+          console.log('🚫 忽略非当前会话的消息: 消息会话=' + message.data.sessionId + ', 当前会话=' + this.sessionId);
+          return;
+        }
+
+        switch (message.type) {
+          case 'NEW_MESSAGE':
+            console.log('💬 处理新消息');
+            this.handleNewMessage(message.data);
+            break;
+          case 'SYSTEM_MESSAGE':
+            console.log('ℹ️ 处理系统消息');
+            this.handleSystemMessage(message.data);
+            break;
+          default:
+            console.log('❓ 未知消息类型:', message.type);
+        }
+      },
+
+      // 🔥 统一处理消息状态更新
+      handleMessageStatusUpdate(messageData) {
+        console.log('处理消息状态更新数据:', messageData);
+
+        // 如果是批量已读通知
+        if (messageData.type === 'BATCH_MESSAGES_READ') {
+          const sessionId = messageData.sessionId;
+          const newStatus = messageData.status;
+
+          console.log('🔄 批量更新会话消息状态:', sessionId);
+
+          // 更新当前会话中所有自己发送的消息状态为已读
+          this.messages.forEach((msg, index) => {
+            if (msg.isSelf && msg.sessionId == sessionId && msg.dbStatus !== newStatus) {
+              msg.dbStatus = newStatus;
+              this.$set(this.messages, index, { ...msg });
+            }
+          });
+
+          console.log('✅ 批量消息状态更新完成');
+        }
+        // 如果是单个消息已读通知
+        else if (messageData.type === 'MESSAGE_READ') {
+          const messageId = messageData.messageId;
+          const newStatus = messageData.status;
+
+          const messageIndex = this.messages.findIndex(msg => msg.id == messageId);
+          if (messageIndex !== -1) {
+            this.messages[messageIndex].dbStatus = newStatus;
+            this.$set(this.messages, messageIndex, { ...this.messages[messageIndex] });
+          }
+        }
+      },
+
+      handleNewMessage(messageData) {
+        console.log('处理新消息数据:', messageData);
+
+        const newMessage = {
+          id: messageData.id,
+          sessionId: messageData.sessionId,
+          fromUid: messageData.fromUid || messageData.fromUserId,
+          toUid: messageData.toUid || messageData.toUserId,
+          content: messageData.content,
+          createTime: messageData.createTime || new Date().toISOString(),
+          isSelf: (messageData.fromUid || messageData.fromUserId) === this.user.id,
+          isSystem: false,
+          status: 'sent',
+          dbStatus: messageData.status // 数据库状态（1已读，2已送达）
+        };
+
+        if (!this.messages.find(msg => msg.id === newMessage.id)) {
+          this.messages.push(newMessage);
+          this.scrollToBottom();
+          console.log('✅ 新消息已添加到界面:', newMessage);
+        }
+      },
+
+      handleMessageSent(messageData) {
+        console.log('🔔 消息发送成功回调:', messageData);
+        const tempId = messageData.tempId;
+        const messageId = messageData.messageId;
+
+        console.log('🔍 寻找临时消息:', tempId);
+        const messageIndex = this.messages.findIndex(msg => msg.tempId === tempId);
+
+        if (messageIndex !== -1) {
+          console.log('✅ 找到临时消息，更新状态');
+          this.messages[messageIndex].id = messageId;
+          this.messages[messageIndex].status = 'sent';
+          this.messages[messageIndex].tempId = undefined;
+          this.$set(this.messages, messageIndex, { ...this.messages[messageIndex] });
+          console.log('✅ 临时消息更新为正式消息:', messageId);
+        } else {
+          console.log('❌ 未找到对应的临时消息，tempId:', tempId);
+        }
+      },
+
+      handleSystemMessage(messageData) {
+        this.messages.push({
+          id: 'system_' + Date.now(),
+          content: messageData.content,
+          isSelf: false,
+          isSystem: true,
+          createTime: new Date().toISOString()
+        });
+        this.scrollToBottom();
+      },
+
+      getStatusText(status) {
+        const statusMap = { 'sending': '发送中...', 'sent': '已发送', 'failed': '发送失败' };
+        return statusMap[status] || '';
+      },
+
+      updateConnectionStatus(status, text, autoHide = null) {
+        this.wsStatus = status;
+        this.connectionStatusText = text;
+        this.showConnectionStatus = true;
+        if (autoHide && status === 'connected') {
+          setTimeout(() => this.showConnectionStatus = false, autoHide);
+        }
+      },
+
+      getToken() {
+        const token = sessionStorage.getItem('token');
+        return token;
+      },
+
+      showPageLoading(text = '正在加载...') { this.pageLoading = true; this.loadingText = text; },
+      hidePageLoading() { this.pageLoading = false; this.refreshLoading = false; },
+      showRefreshLoading(text = '正在刷新...') { this.refreshLoading = true; this.loadingText = text; },
+
       handlePageRefresh() {
         if (this.firstLoad) {
           this.showPageLoading('正在加载聊天消息...');
@@ -199,36 +722,35 @@
         } else {
           this.showRefreshLoading('正在刷新...');
         }
-        setTimeout(() => {
-          this.hidePageLoading();
-        }, 800);
       },
+
       async queryLoginUser() {
         try {
-          await axios.get("/app/user/me")
-                  .then(({ data }) => {
-                    this.user = data;
-                    this.user.icon= fileURL + data.icon;
-                  });
+          const response = await axios.get("/app/user/me");
+          this.user = response.data;
+          if (this.user.icon) this.user.icon = fileURL + this.user.icon;
+          console.log('用户信息:', this.user);
+
+          // 用户信息获取成功后初始化 WebSocket
+          this.initWebSocket();
+          await this.loadChatMessagesWithLoading();
+
         } catch (error) {
-          console.log(error);
+          console.error('获取用户信息失败:', error);
           this.hidePageLoading();
+          // 即使获取用户信息失败也初始化WebSocket
+          this.initWebSocket();
         }
       },
+
       async loadChatMessagesWithLoading() {
         if (this.loading) return;
-
         this.loading = true;
 
         try {
-          const response = await axios.get('/app/chat/message/list', {
-            params: {
-              sessionId: this.sessionId,
-              current: 1
-            }
-          });
-
+          const response = await axios.get('/app/chat/message/list', { params: { sessionId: this.sessionId, current: 1 } });
           const newMessages = response.data || [];
+          console.log('从API加载的消息:', newMessages);
 
           if (newMessages.length === 0) {
             this.messages = [];
@@ -237,36 +759,34 @@
             const processedMessages = newMessages.map(msg => ({
               ...msg,
               isSelf: msg.fromUid === this.user.id,
-              isSystem: msg.messageType === 'system'
+              isSystem: false,
+              status: 'sent',
+              dbStatus: msg.status // 数据库状态
             }));
 
             this.messages = processedMessages;
             this.current = 1;
             this.noMore = false;
-
-            // 首次加载后滚动到底部
             this.scrollToBottom();
           }
         } catch (error) {
           console.error('加载聊天消息失败:', error);
+          this.$message.error('加载消息失败');
         } finally {
           this.loading = false;
           this.hidePageLoading();
         }
       },
+
       async getChatSession() {
         try {
-          const response = await axios.get('/app/chat/chatSession', {
-            params: {
-              sessionId: this.sessionId
-            }
-          });
+          const response = await axios.get('/app/chat/chatSession', { params: { sessionId: this.sessionId } });
           const sessionInfo = response.data;
           this.contactName = sessionInfo.contactName || '未知用户';
-          this.contactAvatar = fileURL+sessionInfo.contactAvatar;
+          this.contactAvatar = fileURL + (sessionInfo.contactAvatar || '');
           this.fromUid = sessionInfo.fromUid;
           this.toUid = sessionInfo.toUid;
-
+          console.log('会话信息:', sessionInfo);
           await this.loadChatMessagesWithLoading();
         } catch (error) {
           console.error('获取会话信息失败:', error);
@@ -274,27 +794,19 @@
           this.hidePageLoading();
         }
       },
+
       getGroupTime(timeStr) {
         if (!timeStr) return '';
         try {
           const date = new Date(timeStr);
-          const now = new Date();
-          const diff = now - date;
+          return date.toLocaleDateString() + ' ' +
+                  date.getHours().toString().padStart(2, '0') + ':' +
+                  date.getMinutes().toString().padStart(2, '0');
+        } catch (e) { return timeStr; }
+      },
 
-          if (date.toDateString() === now.toDateString()) {
-            return date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
-          } else if (date.toDateString() === new Date(now - 86400000).toDateString()) {
-            return '昨天 ' + date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
-          } else {
-            return date.getFullYear() + '年' + (date.getMonth() + 1) + '月' + date.getDate() + '日';
-          }
-        } catch (e) {
-          return timeStr;
-        }
-      },
-      formatGroupTime(groupTime) {
-        return groupTime;
-      },
+      formatGroupTime(groupTime) { return groupTime; },
+
       scrollToBottom() {
         this.$nextTick(() => {
           const container = this.$refs.chatMessages;
@@ -304,16 +816,16 @@
           }
         });
       },
+
       async sendMessage() {
-        // 检查禁用状态
         if (this.isSendDisabled) {
-          console.log('发送按钮被禁用');
+          this.showDisabledReason();
           return;
         }
 
         const content = this.messageInput.trim();
         if (!content) {
-          console.log('消息内容为空');
+          this.$message.warning('请输入消息内容');
           return;
         }
 
@@ -321,48 +833,49 @@
         this.isSending = true;
 
         try {
-          // 立即更新UI，提升用户体验
+          const tempId = 'temp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+
           const tempMessage = {
-            id: Date.now(),
+            id: tempId,
+            tempId: tempId,
             sessionId: this.sessionId,
             fromUid: this.user.id,
             toUid: this.toUid,
             content: content,
             createTime: new Date().toISOString(),
             isSelf: true,
-            isSystem: false
+            isSystem: false,
+            status: 'sending'
           };
+
+          console.log('创建临时消息:', tempMessage);
 
           this.messages.push(tempMessage);
           this.messageInput = '';
+          this.scrollToBottom();
 
-          // 滚动到底部
-          this.$nextTick(() => {
-            this.scrollToBottom();
-          });
-
-          // 发送请求到后端
-          console.log('发送请求到后端...');
-          const response = await axios.post('/app/chat/message/send', {
-            sessionId: this.sessionId,
-            fromUid: this.user.id,
-            toUid: this.toUid,
-            content: content,
-            messageType: 'text'
-          });
-
-          console.log('收到响应:', response);
-
-          if (response && response.data) {
-            if (response.data.code === 200) {
-              this.$message.success('消息发送成功');
-            } else {
-              const errorMsg = response.data.msg || '发送失败';
-              this.$message.error(errorMsg);
-            }
+          let sendResult = false;
+          if (window.globalWsManager) {
+            sendResult = window.globalWsManager.sendMessage('CHAT_MESSAGE', {
+              toUserId: this.toUid,
+              content: content,
+              sessionId: this.sessionId,
+              tempId: tempId
+            });
+            console.log('通过WebSocket发送消息，结果:', sendResult);
           } else {
-            console.error('响应数据异常:', response);
-            this.$message.error('服务器响应异常');
+            console.log('⚠️ WebSocket未就绪，使用模拟发送');
+            setTimeout(() => this.handleMessageSent({ tempId: tempId, messageId: Date.now() }), 500);
+            sendResult = true;
+          }
+
+          if (!sendResult) {
+            const messageIndex = this.messages.findIndex(msg => msg.tempId === tempId);
+            if (messageIndex !== -1) {
+              this.messages[messageIndex].status = 'failed';
+              this.$set(this.messages, messageIndex, { ...this.messages[messageIndex] });
+            }
+            this.$message.error('发送失败，请检查连接状态');
           }
 
         } catch (error) {
@@ -370,28 +883,33 @@
           this.$message.error('发送消息失败: ' + (error.message || '未知错误'));
         } finally {
           this.isSending = false;
-          console.log('发送流程结束');
         }
       },
-      goBack() {
-        location.href = "/chat-list.html";
+
+      showDisabledReason() {
+        const reasons = [];
+        if (!this.messageInput || this.messageInput.trim() === '') reasons.push('消息内容为空');
+        if (this.isSending) reasons.push('正在发送中');
+        if (!this.forceEnableSend && !this.isWebSocketReady) reasons.push('WebSocket未就绪');
+
+        console.log('发送按钮禁用原因:', reasons);
+        this.$message.warning(`发送按钮禁用: ${reasons.join(', ')}`);
       },
+
+      goBack() { location.href = "/chat-list.html"; },
+
       handleScroll() {
         const container = this.$refs.chatMessages;
         if (!container) return;
 
-        const scrollTop = container.scrollTop;
-        const scrollHeight = container.scrollHeight;
-        const clientHeight = container.clientHeight;
-
-        // 判断是否在底部
+        const { scrollTop, scrollHeight, clientHeight } = container;
         this.isAtBottom = (scrollHeight - scrollTop - clientHeight) <= 50;
 
-        // 滚动到顶部时加载更多历史消息
         if (scrollTop === 0 && !this.loading && !this.noMore) {
           this.loadMoreMessages();
         }
       },
+
       async loadMoreMessages() {
         if (this.loading || this.noMore) return;
 
@@ -400,13 +918,7 @@
 
         try {
           const nextPage = this.current + 1;
-          const response = await axios.get('/app/chat/message/list', {
-            params: {
-              sessionId: this.sessionId,
-              current: nextPage
-            }
-          });
-
+          const response = await axios.get('/app/chat/message/list', { params: { sessionId: this.sessionId, current: nextPage } });
           const newMessages = response.data || [];
 
           if (newMessages.length === 0) {
@@ -417,14 +929,14 @@
           const processedMessages = newMessages.map(msg => ({
             ...msg,
             isSelf: msg.fromUid === this.user.id,
-            isSystem: msg.messageType === 'system'
+            isSystem: false,
+            status: 'sent',
+            dbStatus: msg.status // 数据库状态
           }));
 
-          // 历史消息插入到列表开头
           this.messages = [...processedMessages, ...this.messages];
           this.current = nextPage;
 
-          // 保持滚动位置
           this.$nextTick(() => {
             const container = this.$refs.chatMessages;
             const newScrollHeight = container.scrollHeight;
@@ -437,12 +949,14 @@
           this.loading = false;
         }
       },
+
       refreshMessages() {
         this.messages = [];
         this.current = 1;
         this.noMore = false;
         this.loadChatMessagesWithLoading();
       },
+
       handleAvatarError(event) {
         event.target.style.display = 'none';
         const avatarElement = event.target.parentElement;

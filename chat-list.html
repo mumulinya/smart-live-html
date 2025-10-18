@@ -4,7 +4,6 @@
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
   <title>智评生活 - 聊天</title>
-  <!-- 引入样式 -->
   <link rel="stylesheet" href="./css/element.css">
   <link href="./css/main.css" rel="stylesheet">
 
@@ -93,7 +92,6 @@
       right: 5px;
     }
 
-    /* 🔥 新增：加载样式 */
     .global-loading {
       position: fixed;
       top: 0;
@@ -131,7 +129,6 @@
       color: #999;
     }
 
-    /* 页面刷新加载提示 */
     .refresh-loading {
       position: sticky;
       top: 60px;
@@ -174,17 +171,38 @@
       color: #999;
       font-size: 14px;
     }
+
+    .connection-status {
+      position: fixed;
+      top: 60px;
+      left: 0;
+      right: 0;
+      background: #ff9800;
+      color: white;
+      text-align: center;
+      padding: 8px;
+      font-size: 14px;
+      z-index: 1000;
+    }
+    .connection-status.connected {
+      background: #07c160;
+    }
+    .connection-status.error {
+      background: #f56c6c;
+    }
   </style>
 </head>
 <body>
 <div id="app">
-  <!-- 🔥 新增：全局加载遮罩 -->
   <div class="global-loading" v-if="pageLoading">
     <div class="loading-spinner"></div>
     <div class="loading-text">{{loadingText}}</div>
   </div>
 
-  <!-- 🔥 新增：页面刷新加载提示 -->
+  <div class="connection-status" :class="wsStatus" v-if="showConnectionStatus">
+    {{connectionStatusText}}
+  </div>
+
   <div class="refresh-loading" v-if="refreshLoading && !pageLoading">
     <i class="el-icon-loading"></i> {{loadingText}}
   </div>
@@ -229,50 +247,391 @@
 
 <script src="./js/vue.js"></script>
 <script src="./js/axios.min.js"></script>
-<!-- 引入组件库 -->
 <script src="./js/element.js"></script>
 <script src="./js/common.js"></script>
 <script src="./js/footer.js"></script>
 <script>
+  // WebSocket 管理类（与私聊页面相同）
+  class ChatWebSocket {
+    constructor() {
+      this.ws = null;
+      this.isConnected = false;
+      this.isAuthenticated = false;
+      this.reconnectTimer = null;
+      this.reconnectAttempts = 0;
+      this.maxReconnectAttempts = 5;
+      this.token = null;
+      this.messageCallbacks = [];
+      this.connectionCallbacks = [];
+      this.authCallbacks = [];
+    }
+
+    connect(token) {
+      this.token = token;
+
+      if (this.ws) {
+        this.disconnect();
+      }
+
+      const wsUrl = `ws://localhost:8080/app/chat/ws/chat`;
+      console.log('🔗 消息列表连接WebSocket:', wsUrl);
+
+      try {
+        this.ws = new WebSocket(wsUrl);
+
+        this.ws.onopen = () => {
+          console.log('✅ 消息列表WebSocket连接成功');
+          this.isConnected = true;
+          this.reconnectAttempts = 0;
+          this.notifyConnectionCallbacks('connected');
+          this.sendAuthMessage();
+        };
+
+        this.ws.onmessage = (event) => {
+          console.log('📨 消息列表收到消息:', event.data);
+          try {
+            const message = JSON.parse(event.data);
+            this.handleServerMessage(message);
+          } catch (error) {
+            console.error('解析消息失败:', error);
+          }
+        };
+
+        this.ws.onclose = (event) => {
+          console.log('🔌 消息列表WebSocket连接关闭:', event.code, event.reason);
+          this.isConnected = false;
+          this.isAuthenticated = false;
+          this.notifyConnectionCallbacks('disconnected');
+          this.notifyAuthCallbacks('disconnected');
+          this.tryReconnect();
+        };
+
+        this.ws.onerror = (error) => {
+          console.error('❌ 消息列表WebSocket错误:', error);
+          this.notifyConnectionCallbacks('error');
+        };
+
+      } catch (error) {
+        console.error('创建WebSocket连接失败:', error);
+      }
+    }
+
+    sendAuthMessage() {
+      if (this.token && this.isConnected) {
+        const authMessage = {
+          type: 'AUTH',
+          data: { token: this.token },
+          timestamp: Date.now()
+        };
+        this.ws.send(JSON.stringify(authMessage));
+        console.log('🔐 消息列表发送认证消息');
+      }
+    }
+
+    handleServerMessage(message) {
+      switch (message.type) {
+        case 'AUTH_SUCCESS':
+          console.log('✅ 消息列表身份认证成功');
+          this.isAuthenticated = true;
+          this.notifyAuthCallbacks('success', message.data);
+          break;
+        case 'AUTH_FAILED':
+          console.error('❌ 消息列表身份认证失败:', message.data);
+          this.isAuthenticated = false;
+          this.notifyAuthCallbacks('failed', message.data);
+          break;
+        case 'NEW_MESSAGE':
+          this.notifyMessageCallbacks(message);
+          break;
+        case 'MESSAGE_SENT':
+          this.notifyMessageCallbacks(message);
+          break;
+        case 'SYSTEM_MESSAGE':
+          this.notifyMessageCallbacks(message);
+          break;
+        case 'PONG':
+          console.log('❤️ 消息列表收到心跳回复');
+          break;
+        default:
+          console.log('消息列表未知消息类型:', message.type);
+      }
+    }
+
+    sendMessage(type, data) {
+      if (this.ws && this.isConnected) {
+        const message = { type, data, timestamp: Date.now() };
+        this.ws.send(JSON.stringify(message));
+        console.log('📤 消息列表发送消息:', message);
+        return true;
+      } else {
+        console.error('❌ 消息列表WebSocket未连接或未认证');
+        return false;
+      }
+    }
+
+    disconnect() {
+      if (this.ws) {
+        this.ws.close();
+        this.ws = null;
+      }
+      this.isConnected = false;
+      this.isAuthenticated = false;
+      if (this.reconnectTimer) {
+        clearTimeout(this.reconnectTimer);
+      }
+    }
+
+    tryReconnect() {
+      if (this.reconnectAttempts < this.maxReconnectAttempts && this.token) {
+        this.reconnectAttempts++;
+        const delay = Math.min(3000 * this.reconnectAttempts, 30000);
+        console.log(`消息列表${delay/1000}秒后尝试重连... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+        this.reconnectTimer = setTimeout(() => this.connect(this.token), delay);
+      } else {
+        console.error('消息列表达到最大重连次数，停止重连');
+        this.notifyConnectionCallbacks('failed');
+      }
+    }
+
+    onMessage(callback) { this.messageCallbacks.push(callback); }
+    onConnectionChange(callback) { this.connectionCallbacks.push(callback); }
+    onAuthChange(callback) { this.authCallbacks.push(callback); }
+
+    notifyMessageCallbacks(message) {
+      this.messageCallbacks.forEach(callback => {
+        try { callback(message); } catch (error) { console.error('消息列表消息回调执行错误:', error); }
+      });
+    }
+
+    notifyConnectionCallbacks(status) {
+      this.connectionCallbacks.forEach(callback => {
+        try { callback(status); } catch (error) { console.error('消息列表连接状态回调执行错误:', error); }
+      });
+    }
+
+    notifyAuthCallbacks(status, data) {
+      this.authCallbacks.forEach(callback => {
+        try { callback(status, data); } catch (error) { console.error('消息列表认证状态回调执行错误:', error); }
+      });
+    }
+  }
+
+  // 全局 WebSocket 管理器
+  class GlobalWebSocketManager {
+    constructor() {
+      this.chatWebSocket = null;
+      this.messageCallbacks = new Map();
+    }
+
+    init(token) {
+      if (!this.chatWebSocket) {
+        this.chatWebSocket = new ChatWebSocket();
+      }
+      if (token && (!this.chatWebSocket.isConnected || this.chatWebSocket.token !== token)) {
+        this.chatWebSocket.connect(token);
+        this.chatWebSocket.onMessage((message) => this.dispatchMessage(message));
+      }
+      return this.chatWebSocket;
+    }
+
+    getWebSocket() { return this.chatWebSocket; }
+    registerCallback(namespace, callback) { this.messageCallbacks.set(namespace, callback); }
+    unregisterCallback(namespace) { this.messageCallbacks.delete(namespace); }
+
+    dispatchMessage(message) {
+      this.messageCallbacks.forEach((callback, namespace) => {
+        try { callback(message); } catch (error) { console.error(`消息列表消息回调执行错误 [${namespace}]:`, error); }
+      });
+    }
+
+    sendMessage(type, data) {
+      return this.chatWebSocket ? this.chatWebSocket.sendMessage(type, data) : false;
+    }
+  }
+
+  // 创建全局实例
+  window.globalWsManager = new GlobalWebSocketManager();
+
   const app = new Vue({
     el: "#app",
     data: {
       loading: false,
       noMore: false,
       current: 1,
-      user:{},
+      user: {},
       userSessionList: [],
-
-      // 加载状态
       pageLoading: false,
       refreshLoading: false,
       firstLoad: true,
       loadingText: '正在加载...',
+      wsStatus: 'disconnected',
+      showConnectionStatus: false,
+      connectionStatusText: '连接中...'
     },
     created() {
       this.handlePageRefresh();
       this.queryLoginUser();
     },
+    beforeDestroy() {
+      window.globalWsManager.unregisterCallback('chat-list');
+    },
     methods: {
-      // 显示页面加载
-      showPageLoading(text = '正在加载...') {
-        this.pageLoading = true;
-        this.loadingText = text;
+      initWebSocket() {
+        const token = this.getToken();
+        if (!token) {
+          console.error('未找到 token');
+          return;
+        }
+
+        console.log('🔐 消息列表页面初始化WebSocket连接');
+        const chatWebSocket = window.globalWsManager.init(token);
+
+        chatWebSocket.onConnectionChange((status) => {
+          console.log('🔔 消息列表连接状态变化:', status);
+          this.handleConnectionStatusChange(status);
+        });
+
+        chatWebSocket.onAuthChange((status, data) => this.handleAuthStatusChange(status, data));
+
+        // 🔥 关键：注册消息列表的回调，处理 NEW_MESSAGE
+        window.globalWsManager.registerCallback('chat-list', (message) => {
+          console.log('📨 消息列表回调收到消息:', {
+            type: message.type,
+            data: message.data
+          });
+          this.handleWebSocketMessage(message);
+        });
+
+        this.updateConnectionStatus('connecting', '连接中...');
+
+        setTimeout(() => {
+          if (!chatWebSocket.isConnected) {
+            console.log('⏳ WebSocket连接稍慢，请耐心等待...');
+          }
+        }, 2000);
       },
 
-      // 隐藏页面加载
-      hidePageLoading() {
-        this.pageLoading = false;
-        this.refreshLoading = false;
+      // 🔥 关键：处理 WebSocket 消息
+      handleWebSocketMessage(message) {
+        console.log('🔔 消息列表处理WebSocket消息:', message.type);
+
+        switch (message.type) {
+          case 'NEW_MESSAGE':
+            console.log('💬 收到新消息，更新消息列表');
+            this.handleNewMessage(message.data);
+            break;
+          case 'MESSAGE_SENT':
+            console.log('✅ 消息发送成功（在消息列表页面忽略）');
+            break;
+          case 'SYSTEM_MESSAGE':
+            console.log('ℹ️ 系统消息:', message.data);
+            if (message.data && message.data.content) {
+              this.$message.info(message.data.content);
+            }
+            break;
+          default:
+            console.log('❓ 未知消息类型:', message.type);
+        }
       },
 
-      // 显示刷新加载
-      showRefreshLoading(text = '正在刷新...') {
-        this.refreshLoading = true;
-        this.loadingText = text;
+      // 🔥 关键：处理新消息，更新消息列表
+      handleNewMessage(messageData) {
+        console.log('💬 处理新消息数据:', messageData);
+
+        // 验证必要字段
+        if (!messageData.sessionId) {
+          console.error('❌ 新消息缺少sessionId，无法更新列表');
+          return;
+        }
+
+        const sessionId = messageData.sessionId;
+        const fromUid = messageData.fromUid;
+        const currentUserId = this.user.id;
+
+        console.log('🔍 消息详情:', {
+          sessionId: sessionId,
+          消息来自: fromUid,
+          当前用户: currentUserId,
+          是否自己发送: fromUid === currentUserId
+        });
+
+        // 查找现有会话
+        const sessionIndex = this.userSessionList.findIndex(
+                session => session.sessionId == sessionId
+        );
+
+        if (sessionIndex !== -1) {
+          console.log('✅ 找到现有会话，索引:', sessionIndex);
+          const session = this.userSessionList[sessionIndex];
+
+          // 如果消息不是当前用户发送的，增加未读数
+          if (fromUid !== currentUserId) {
+            session.unread = (session.unread || 0) + 1;
+            console.log('🔴 增加未读计数:', session.unread);
+          } else {
+            console.log('✅ 消息来自自己，不增加未读计数');
+          }
+
+          // 更新最后消息和时间
+          session.lastMessage = messageData.content || '新消息';
+          session.lastTime = messageData.createTime || new Date().toISOString();
+
+          console.log('📝 更新会话内容:', {
+            lastMessage: session.lastMessage,
+            lastTime: session.lastTime,
+            unread: session.unread
+          });
+
+          // 将更新的会话移到最前面
+          const updatedSession = this.userSessionList.splice(sessionIndex, 1)[0];
+          this.userSessionList.unshift(updatedSession);
+
+          console.log('✅ 消息列表已更新，会话移到最前面');
+
+        } else {
+          console.log('🆕 收到新会话消息，重新加载列表');
+          // 对于新会话，重新加载列表获取完整信息
+          this.refreshList();
+        }
       },
 
-      // 页面刷新处理
+      handleConnectionStatusChange(status) {
+        switch (status) {
+          case 'connected':
+            this.updateConnectionStatus('connected', '连接成功', 2000);
+            console.log('🎉 消息列表WebSocket连接成功，可以接收实时更新');
+            break;
+          case 'disconnected': this.updateConnectionStatus('disconnected', '连接断开'); break;
+          case 'error': this.updateConnectionStatus('error', '连接错误'); break;
+          case 'failed': this.updateConnectionStatus('error', '连接失败'); break;
+        }
+      },
+
+      handleAuthStatusChange(status, data) {
+        if (status === 'success') {
+          console.log('✅ 消息列表用户认证成功，可以接收消息');
+        } else {
+          console.error('❌ 消息列表认证失败:', data);
+        }
+      },
+
+      updateConnectionStatus(status, text, autoHide = null) {
+        this.wsStatus = status;
+        this.connectionStatusText = text;
+        this.showConnectionStatus = true;
+        if (autoHide && status === 'connected') {
+          setTimeout(() => this.showConnectionStatus = false, autoHide);
+        }
+      },
+
+      getToken() {
+        return sessionStorage.getItem('token');
+      },
+
+      showPageLoading(text = '正在加载...') { this.pageLoading = true; this.loadingText = text; },
+      hidePageLoading() { this.pageLoading = false; this.refreshLoading = false; },
+      showRefreshLoading(text = '正在刷新...') { this.refreshLoading = true; this.loadingText = text; },
+
       handlePageRefresh() {
         if (this.firstLoad) {
           this.showPageLoading('正在加载聊天列表...');
@@ -280,72 +639,36 @@
         } else {
           this.showRefreshLoading('正在刷新...');
         }
-
-        setTimeout(() => {
-          this.hidePageLoading();
-        }, 800);
+        setTimeout(() => this.hidePageLoading(), 800);
       },
 
-      // 查询登录用户
       async queryLoginUser() {
         try {
-          await axios.get("/app/user/me")
-                  .then(({ data }) => {
-                    this.user = data;
-                  });
+          await axios.get("/app/user/me").then(({ data }) => this.user = data);
+          this.initWebSocket();
           await this.loadUserSessionWithLoading();
         } catch (error) {
-          this.$message({
-            type: 'warning',
-            message: '请先登录',
-            duration: 1000, // 1秒后自动关闭
-            onClose: () => {
-              location.href = "login.html"; // 提示关闭后跳转
-            }
-          });
+          this.$message({ type: 'warning', message: '请先登录', duration: 1000, onClose: () => location.href = "login.html" });
           this.hidePageLoading();
-          return;
         }
       },
 
-      // 增强的加载聊天列表方法
       async loadUserSessionWithLoading() {
         if (this.loading || this.noMore) return;
-
-        // 显示对应的加载状态
-        if (this.userSessionList.length === 0) {
-          this.showPageLoading('正在加载聊天列表...');
-        } else {
-          this.showRefreshLoading('加载更多聊天...');
-        }
+        if (this.userSessionList.length === 0) this.showPageLoading('正在加载聊天列表...');
+        else this.showRefreshLoading('加载更多聊天...');
 
         this.loading = true;
-
         try {
-          // 获取用户会话列表
-          const response = await axios.get('/app/chat/userSession/list', {
-            params: {
-              userId: this.user.id,
-              current: this.current
-            }
-          });
-          response.data.forEach(session => {
-           session.avatar= fileURL + session.avatar;
-          });
+          const response = await axios.get('/app/chat/userSession/list', { params: { userId: this.user.id, current: this.current } });
+          response.data.forEach(session => session.avatar = fileURL + session.avatar);
           const newSessions = response.data || [];
 
           if (newSessions.length === 0) {
             this.noMore = true;
-            if (this.current === 1) {
-              this.userSessionList = [];
-            }
+            if (this.current === 1) this.userSessionList = [];
           } else {
-            // 如果是第一页，直接替换；否则追加
-            if (this.current === 1) {
-              this.userSessionList = newSessions;
-            } else {
-              this.userSessionList = [...this.userSessionList, ...newSessions];
-            }
+            this.userSessionList = this.current === 1 ? newSessions : [...this.userSessionList, ...newSessions];
           }
         } catch (error) {
           console.error('加载聊天列表失败:', error);
@@ -356,58 +679,33 @@
         }
       },
 
-      toChat(sessionId) {
-        // 跳转到私聊页面
-        location.href = "/chat.html?sessionId=" + sessionId;
-      },
+      toChat(sessionId) { location.href = "/chat.html?sessionId=" + sessionId; },
+      search() { alert('搜索功能暂未实现'); },
 
-      search() {
-        // 搜索功能
-        alert('搜索功能暂未实现');
-      },
-
-      // 滚动加载 - 修复版
       handleScroll() {
         const container = this.$refs.chatList;
         if (!container) return;
-
-        const scrollTop = container.scrollTop;
-        const scrollHeight = container.scrollHeight;
-        const clientHeight = container.clientHeight;
-
-        // 距离底部50px时加载更多
+        const { scrollTop, scrollHeight, clientHeight } = container;
         if (scrollHeight - scrollTop - clientHeight < 50 && !this.loading && !this.noMore) {
-          this.current++; // 🔥 增加current值
-          this.loadUserSessionWithLoading(); // ✅ 这里会发送请求
+          this.current++;
+          this.loadUserSessionWithLoading();
         }
       },
 
-      // 时间格式化
       formatTime(timeStr) {
         if (!timeStr) return '';
-
         try {
           const date = new Date(timeStr);
           const now = new Date();
           const diff = now - date;
-
-          if (diff < 60000) { // 1分钟内
-            return '刚刚';
-          } else if (diff < 3600000) { // 1小时内
-            return Math.floor(diff / 60000) + '分钟前';
-          } else if (diff < 86400000) { // 1天内
-            return Math.floor(diff / 3600000) + '小时前';
-          } else if (diff < 2592000000) { // 30天内
-            return Math.floor(diff / 86400000) + '天前';
-          } else {
-            return date.getFullYear() + '年' + (date.getMonth() + 1) + '月' + date.getDate() + '日';
-          }
-        } catch (e) {
-          return timeStr;
-        }
+          if (diff < 60000) return '刚刚';
+          else if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前';
+          else if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前';
+          else if (diff < 2592000000) return Math.floor(diff / 86400000) + '天前';
+          else return date.getFullYear() + '年' + (date.getMonth() + 1) + '月' + date.getDate() + '日';
+        } catch (e) { return timeStr; }
       },
 
-      // 手动刷新方法
       refreshList() {
         this.userSessionList = [];
         this.current = 1;
@@ -415,6 +713,7 @@
         this.loadUserSessionWithLoading();
       }
     }
-  })</script>
+  });
+</script>
 </body>
 </html>
