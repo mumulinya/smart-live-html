@@ -460,6 +460,7 @@
       current: 1,
       user: {},
       userSessionList: [],
+      token: sessionStorage.getItem("token") || '',
       pageLoading: false,
       refreshLoading: false,
       firstLoad: true,
@@ -469,13 +470,28 @@
       connectionStatusText: '连接中...'
     },
     created() {
-      this.handlePageRefresh();
-      this.queryLoginUser();
+      this.isLogin();
     },
     beforeDestroy() {
       window.globalWsManager.unregisterCallback('chat-list');
     },
     methods: {
+      isLogin(){
+        if (!this.token) {
+          this.$message({
+            type: 'warning',
+            message: '请先登录',
+            duration: 1000,
+            onClose: () => {
+              location.href = "login.html";
+            }
+          });
+          return ;
+        }else {
+          this.handlePageRefresh();
+          this.queryLoginUser();
+        }
+      },
       initWebSocket() {
         const token = this.getToken();
         if (!token) {

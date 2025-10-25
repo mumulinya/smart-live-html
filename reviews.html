@@ -436,7 +436,7 @@
           <div class="review-avatar">
             <img :src="user.icon || '/imgs/icons/default-icon.png'" alt="">
           </div>
-          <div class="review-user">
+          <div class="review-user" >
             <div class="review-user-name">{{user.nickName}}</div>
             <div class="review-rating">
               <i class="el-icon-star-on" v-for="n in 5" :key="n"
@@ -444,7 +444,7 @@
             </div>
           </div>
         </div>
-        <div class="review-content">{{review.content || '这个用户还没有写评价内容'}}</div>
+        <div class="review-content" @click="toSourceDetail(review)">{{review.content || '这个用户还没有写评价内容'}}</div>
         <div class="review-images" v-if="review.images">
           <div class="review-image" v-for="(img, index) in review.images" :key="index" @click="previewImage(review.images,index)">
             <img :src="img" alt="">
@@ -692,7 +692,13 @@
         this.reviewLoadError = false;
         this.loadMoreReviews();
       },
-
+      toSourceDetail(review){
+        if(review.sourceType==1){
+          location.href = "blog-detail.html?id="+review.sourceId;
+        }else if(review.sourceType==2){
+          location.href = "shop-detail.html?id="+review.sourceId;
+        }
+      },
       // 图片预览
       previewImage(images, index) {
         let imageArray = [];

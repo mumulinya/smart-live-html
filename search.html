@@ -1,0 +1,2686 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>搜索 - 智评生活</title>
+  <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+  <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", Arial, sans-serif;
+    }
+
+    body {
+      background-color: #f8f9fa;
+      color: #333;
+    }
+
+    #app {
+      max-width: 750px;
+      margin: 0 auto;
+      background: #fff;
+      min-height: 100vh;
+    }
+
+    /* 搜索头部 */
+    .search-header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: white;
+      padding: 10px 15px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .search-input-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+    }
+
+    .search-input {
+      flex: 1;
+    }
+
+    .search-btn {
+      background: #409EFF;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 10px 16px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s;
+      white-space: nowrap;
+    }
+
+    .search-btn:hover {
+      background: #66b1ff;
+    }
+
+    .search-btn:active {
+      background: #3a8ee6;
+    }
+
+    .cancel-btn {
+      color: #409EFF;
+      font-size: 14px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    /* 定位状态显示 */
+    .location-status {
+      padding: 8px 15px;
+      background: #f8f9fa;
+      color: #909399;
+      font-size: 12px;
+      border-bottom: 1px solid #f0f0f0;
+      transition: all 0.3s ease;
+      max-height: 40px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .location-status.hidden {
+      max-height: 0;
+      padding: 0;
+      border-bottom: none;
+    }
+
+    .location-status.success {
+      color: #67C23A;
+      background: #f0f9f4;
+    }
+
+    .location-status.error {
+      color: #F56C6C;
+      background: #fef0f0;
+    }
+
+    /* 搜索分类筛选 */
+    .search-filters {
+      display: flex;
+      padding: 12px 15px;
+      background: white;
+      border-bottom: 1px solid #f0f0f0;
+      overflow-x: auto;
+      gap: 10px;
+    }
+
+    .filter-tab {
+      padding: 6px 12px;
+      border-radius: 16px;
+      background: #f5f7fa;
+      color: #606266;
+      font-size: 13px;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .filter-tab.active {
+      background: #409EFF;
+      color: white;
+    }
+
+    /* 分类筛选区域 */
+    .category-filter-area {
+      position: relative;
+    }
+
+    /* 美团式筛选栏 */
+    .meituan-filter-bar {
+      display: flex;
+      background: white;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .filter-item {
+      flex: 1;
+      text-align: center;
+      padding: 12px 8px;
+      font-size: 14px;
+      color: #333;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.3s;
+      border-bottom: 2px solid transparent;
+    }
+
+    .filter-item.active {
+      color: #409EFF;
+      border-bottom-color: #409EFF;
+    }
+
+    .filter-item .filter-text {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .filter-item .el-icon-arrow-down {
+      transition: transform 0.3s;
+    }
+
+    .filter-item.active .el-icon-arrow-down {
+      transform: rotate(180deg);
+    }
+
+    /* 筛选面板 - 直接展开在下方 */
+    .filter-content {
+      background: white;
+      border-bottom: 1px solid #f0f0f0;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+
+    .filter-content.show {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    /* 商铺类型筛选面板 */
+    .shop-type-panel {
+      padding: 15px;
+    }
+
+    .shop-type-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .shop-type-item {
+      padding: 8px 12px;
+      border: 1px solid #e6e8eb;
+      border-radius: 6px;
+      text-align: center;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: white;
+    }
+
+    .shop-type-item:hover {
+      border-color: #409EFF;
+      color: #409EFF;
+    }
+
+    .shop-type-item.active {
+      background: #409EFF;
+      color: white;
+      border-color: #409EFF;
+    }
+
+    /* 距离筛选面板 */
+    .distance-panel {
+      padding: 15px;
+    }
+
+    .distance-options {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .distance-option {
+      padding: 10px 15px;
+      border: 1px solid #e6e8eb;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: white;
+    }
+
+    .distance-option:hover {
+      border-color: #409EFF;
+      color: #409EFF;
+    }
+
+    .distance-option.active {
+      background: #409EFF;
+      color: white;
+      border-color: #409EFF;
+    }
+
+    /* 评分筛选面板 */
+    .score-panel {
+      padding: 15px;
+    }
+
+    .score-options {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .score-option {
+      padding: 10px 15px;
+      border: 1px solid #e6e8eb;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: white;
+    }
+
+    .score-option:hover {
+      border-color: #409EFF;
+      color: #409EFF;
+    }
+
+    .score-option.active {
+      background: #409EFF;
+      color: white;
+      border-color: #409EFF;
+    }
+
+    /* 代金券类型筛选面板 */
+    .voucher-type-panel {
+      padding: 15px;
+    }
+
+    .voucher-type-options {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .voucher-type-option {
+      padding: 10px 15px;
+      border: 1px solid #e6e8eb;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: white;
+    }
+
+    .voucher-type-option:hover {
+      border-color: #409EFF;
+      color: #409EFF;
+    }
+
+    .voucher-type-option.active {
+      background: #409EFF;
+      color: white;
+      border-color: #409EFF;
+    }
+
+    /* 状态筛选面板 */
+    .status-panel {
+      padding: 15px;
+    }
+
+    .status-options {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .status-option {
+      padding: 10px 15px;
+      border: 1px solid #e6e8eb;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: white;
+    }
+
+    .status-option:hover {
+      border-color: #409EFF;
+      color: #409EFF;
+    }
+
+    .status-option.active {
+      background: #409EFF;
+      color: white;
+      border-color: #409EFF;
+    }
+
+    /* 已选条件显示 */
+    .selected-filters {
+      padding: 10px 15px;
+      background: #f8f9fa;
+      border-bottom: 1px solid #f0f0f0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .selected-filter-tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 8px;
+      background: #409EFF;
+      color: white;
+      border-radius: 12px;
+      font-size: 12px;
+      gap: 4px;
+    }
+
+    .selected-filter-tag .close {
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .clear-all {
+      color: #409EFF;
+      font-size: 12px;
+      cursor: pointer;
+      margin-left: auto;
+    }
+
+    /* 搜索结果区域 */
+    .search-results {
+      padding: 15px;
+    }
+
+    .result-section {
+      margin-bottom: 20px;
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 500;
+      margin-bottom: 10px;
+      color: #333;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .section-more {
+      font-size: 12px;
+      color: #409EFF;
+      cursor: pointer;
+    }
+
+    /* 商铺卡片样式 */
+    .shop-box {
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      margin-bottom: 12px;
+      display: flex;
+    }
+
+    .shop-img {
+      width: 100px;
+      height: 100px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .shop-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .shop-info {
+      flex: 1;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .shop-title {
+      font-size: 15px;
+      font-weight: 500;
+      color: #333;
+      margin-bottom: 5px;
+    }
+
+    .shop-rate {
+      display: flex;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+
+    .shop-area {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #909399;
+      margin-bottom: 5px;
+    }
+
+    .shop-avg {
+      font-size: 12px;
+      color: #F56C6C;
+      margin-bottom: 5px;
+    }
+
+    .shop-address {
+      display: flex;
+      align-items: center;
+      font-size: 12px;
+      color: #909399;
+    }
+
+    .shop-address i {
+      margin-right: 4px;
+    }
+
+    /* 博客卡片样式 */
+    .blog-box {
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      margin-bottom: 12px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .blog-img {
+      width: 100%;
+      height: 140px;
+      overflow: hidden;
+      background: #f8f9fa;
+    }
+
+    .blog-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .blog-content {
+      padding: 10px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .blog-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: #333;
+      line-height: 1.4;
+      margin-bottom: 8px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .blog-foot {
+      display: flex;
+      align-items: center;
+      margin-top: auto;
+    }
+
+    .blog-user-icon {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      overflow: hidden;
+      margin-right: 5px;
+    }
+
+    .blog-user-icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .blog-user-name {
+      font-size: 11px;
+      color: #666;
+      flex: 1;
+    }
+
+    .blog-liked {
+      display: flex;
+      align-items: center;
+      font-size: 11px;
+      color: #909399;
+    }
+
+    /* 代金券卡片样式 */
+    .voucher-box {
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      padding: 12px;
+      position: relative;
+      border-left: 4px solid #F56C6C;
+    }
+
+    .voucher-left {
+      flex: 1;
+      padding: 0 10px;
+    }
+
+    .voucher-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: #333;
+      margin-bottom: 5px;
+    }
+
+    .voucher-subtitle {
+      font-size: 12px;
+      color: #909399;
+      margin-bottom: 5px;
+    }
+
+    .voucher-price {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .voucher-price div {
+      font-size: 18px;
+      font-weight: bold;
+      color: #F56C6C;
+    }
+
+    .voucher-price span {
+      font-size: 11px;
+      color: #F56C6C;
+      background: rgba(245, 108, 108, 0.1);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .voucher-right {
+      flex-shrink: 0;
+      text-align: center;
+    }
+
+    .voucher-btn {
+      padding: 8px 16px;
+      background: #F56C6C;
+      color: white;
+      border: none;
+      border-radius: 16px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .voucher-btn:hover {
+      background: #f78989;
+      transform: translateY(-1px);
+    }
+
+    .voucher-btn.disable-btn {
+      background: #c0c4cc;
+      cursor: not-allowed;
+    }
+
+    .voucher-btn.disable-btn:hover {
+      background: #c0c4cc;
+      transform: none;
+    }
+
+    .voucher-shop {
+      font-size: 12px;
+      color: #909399;
+      margin-bottom: 5px;
+      display: flex;
+      align-items: center;
+    }
+
+    .voucher-shop i {
+      margin-right: 4px;
+      color: #409EFF;
+    }
+
+    .voucher-shop-name {
+      color: #409EFF;
+      font-weight: 500;
+      margin-left: 4px;
+    }
+
+    /* 秒杀券特殊样式 */
+    .seckill-box {
+      text-align: center;
+    }
+
+    .seckill-stock {
+      font-size: 10px;
+      color: #909399;
+      margin: 4px 0;
+    }
+
+    .seckill-stock span {
+      color: #F56C6C;
+      font-weight: bold;
+    }
+
+    .seckill-time {
+      font-size: 10px;
+      color: #E6A23C;
+      background: rgba(230, 162, 60, 0.1);
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-top: 4px;
+    }
+
+    /* 秒杀券特殊边框 */
+    .voucher-box.seckill {
+      border-left: 4px solid #E6A23C;
+      background: linear-gradient(135deg, #fff 0%, #fff9f0 100%);
+    }
+
+    .voucher-box.seckill .voucher-btn {
+      background: #E6A23C;
+    }
+
+    .voucher-box.seckill .voucher-btn:hover {
+      background: #ebb563;
+    }
+
+    /* 秒杀券特殊标签 */
+    .seckill-badge {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      background: linear-gradient(135deg, #E6A23C, #F56C6C);
+      color: white;
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 0 8px 0 8px;
+      font-weight: bold;
+    }
+
+    /* 用户卡片样式 */
+    .user-box {
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      padding: 15px;
+      transition: all 0.3s;
+    }
+
+    .user-box:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    }
+
+    .user-avatar {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      overflow: hidden;
+      margin-right: 15px;
+      flex-shrink: 0;
+    }
+
+    .user-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .user-info {
+      flex: 1;
+    }
+
+    .user-name {
+      font-size: 16px;
+      font-weight: 500;
+      color: #333;
+      margin-bottom: 5px;
+    }
+
+    .user-desc {
+      font-size: 13px;
+      color: #909399;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 1;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .follow-btn {
+      padding: 7px 18px;
+      border: 1px solid #409EFF;
+      border-radius: 18px;
+      color: #409EFF;
+      font-size: 13px;
+      background: white;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-weight: 500;
+    }
+
+    .follow-btn:hover {
+      background: #409EFF;
+      color: white;
+    }
+
+    .follow-btn.following {
+      background: #f0f0f0;
+      color: #999;
+      border-color: #f0f0f0;
+    }
+
+    /* 空状态 */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #909399;
+    }
+
+    .empty-state img {
+      width: 80px;
+      height: 80px;
+      margin-bottom: 16px;
+      opacity: 0.6;
+    }
+
+    .empty-state p {
+      margin: 8px 0;
+      font-size: 14px;
+    }
+
+    /* 分类空状态 */
+    .category-empty {
+      text-align: center;
+      padding: 30px 20px;
+      color: #c0c4cc;
+      background: #f8f9fa;
+      border-radius: 8px;
+      margin: 10px 0;
+    }
+
+    .category-empty p {
+      margin: 0;
+      font-size: 14px;
+    }
+
+    /* 加载状态 */
+    .loading-mask {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255, 255, 255, 0.95);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      transition: opacity 0.3s ease;
+    }
+
+    .loading-mask.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #409EFF;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 15px;
+    }
+
+    .loading-text {
+      font-size: 16px;
+      color: #666;
+      text-align: center;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* 历史搜索 */
+    .search-history {
+      padding: 15px;
+    }
+
+    .history-title {
+      font-size: 14px;
+      color: #909399;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .history-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .history-tag {
+      padding: 6px 12px;
+      background: #f5f7fa;
+      border-radius: 16px;
+      font-size: 13px;
+      color: #606266;
+      cursor: pointer;
+    }
+
+    /* 热门搜索 */
+    .hot-search {
+      padding: 15px;
+    }
+
+    .hot-title {
+      font-size: 14px;
+      color: #909399;
+      margin-bottom: 10px;
+    }
+
+    .hot-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .hot-tag {
+      padding: 6px 12px;
+      background: #f5f7fa;
+      border-radius: 16px;
+      font-size: 13px;
+      color: #606266;
+      cursor: pointer;
+    }
+
+    .hot-tag.hot {
+      color: #F56C6C;
+    }
+
+    /* 代金券分类标题 */
+    .voucher-category-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #333;
+      margin: 15px 0 10px 0;
+      padding-left: 8px;
+      border-left: 3px solid #409EFF;
+    }
+
+    .voucher-category-title.seckill {
+      border-left-color: #E6A23C;
+    }
+
+    .voucher-category-title.normal {
+      border-left-color: #67C23A;
+    }
+
+    /* 加载更多样式 */
+    .load-more {
+      text-align: center;
+      padding: 15px;
+      color: #909399;
+      font-size: 14px;
+    }
+
+    .load-more-btn {
+      padding: 8px 20px;
+      background: #f5f7fa;
+      border: 1px solid #e6e8eb;
+      border-radius: 4px;
+      color: #606266;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .load-more-btn:hover {
+      background: #e4e7ed;
+    }
+
+    .load-more-btn:disabled {
+      background: #f5f7fa;
+      color: #c0c4cc;
+      cursor: not-allowed;
+    }
+
+    .loading-dots {
+      display: inline-block;
+      position: relative;
+      width: 20px;
+      height: 10px;
+    }
+
+    .loading-dots:after {
+      content: "...";
+      position: absolute;
+      animation: dots 1.5s infinite;
+    }
+    /* 移动端对话框样式 */
+    .mobile-dialog .el-message-box {
+      width: 80vw !important;
+      max-width: 300px;
+      min-width: 280px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    .mobile-dialog .el-message-box__header {
+      padding: 20px 20px 10px;
+    }
+
+    .mobile-dialog .el-message-box__title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #303133;
+    }
+
+    .mobile-dialog .el-message-box__content {
+      padding: 15px 20px;
+    }
+
+    .mobile-dialog .el-message-box__message {
+      font-size: 16px;
+      color: #606266;
+      line-height: 1.5;
+    }
+
+    .mobile-dialog .el-message-box__btns {
+      padding: 10px 20px 20px;
+      display: flex;
+      gap: 12px;
+    }
+
+    .mobile-dialog .el-button {
+      flex: 1;
+      height: 44px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 500;
+      border: none;
+    }
+
+    .mobile-dialog .el-button--primary {
+      background: #F56C6C;
+    }
+
+    .mobile-dialog .el-button--primary:hover {
+      background: #f78989;
+    }
+
+    .mobile-dialog .el-button--default {
+      background: #f5f7fa;
+      color: #606266;
+    }
+
+    .mobile-dialog .el-button--default:hover {
+      background: #e4e7ed;
+    }
+
+    /* 移动端消息提示样式 */
+    .mobile-message {
+      min-width: auto !important;
+      width: 70vw !important;
+      max-width: 250px;
+      border-radius: 8px;
+      padding: 12px 16px;
+    }
+
+    .mobile-message .el-message__content {
+      font-size: 14px;
+    }
+
+    /* 响应式适配 */
+    @media (max-width: 480px) {
+      .mobile-dialog .el-message-box {
+        width: 85vw !important;
+        margin: 0 10px;
+      }
+
+      .mobile-dialog .el-message-box__title {
+        font-size: 17px;
+      }
+
+      .mobile-dialog .el-message-box__message {
+        font-size: 15px;
+      }
+
+      .mobile-dialog .el-button {
+        height: 42px;
+        font-size: 15px;
+      }
+    }
+
+    @media (max-width: 320px) {
+      .mobile-dialog .el-message-box {
+        width: 90vw !important;
+        min-width: 260px;
+      }
+    }
+    @keyframes dots {
+      0%, 20% { content: "."; }
+      40% { content: ".."; }
+      60%, 100% { content: "..."; }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+  <!-- 搜索头部 -->
+  <div class="search-header">
+    <div class="search-input-container">
+      <div class="search-input">
+        <el-input
+                v-model="searchKeyword"
+                placeholder="搜索商铺、博客、代金券、用户"
+                prefix-icon="el-icon-search"
+                @keyup.enter="doSearch"
+                clearable
+        ></el-input>
+      </div>
+      <button class="search-btn" @click="doSearch">搜索</button>
+      <div class="cancel-btn" @click="goBack">取消</div>
+    </div>
+  </div>
+
+  <!-- 定位状态显示 -->
+  <div class="location-status" :class="{
+        'success': usingCachedLocation && !locationLoading && !locationError,
+        'error': locationError,
+        'hidden': !showLocationStatus
+      }" v-if="showLocationStatus">
+    <i class="el-icon-loading" v-if="locationLoading"></i>
+    <i class="el-icon-location" v-else-if="usingCachedLocation && !locationError"></i>
+    <i class="el-icon-warning" v-else-if="locationError"></i>
+    {{ locationStatusText }}
+  </div>
+
+  <!-- 搜索分类筛选 -->
+  <div class="search-filters" v-if="hasSearched">
+    <div class="filter-tab" :class="{ active: activeFilter === 'all' }" @click="setFilter('all')">
+      全部
+    </div>
+    <div class="filter-tab" :class="{ active: activeFilter === 'shops' }" @click="setFilter('shops')">
+      商铺
+    </div>
+    <div class="filter-tab" :class="{ active: activeFilter === 'vouchers' }" @click="setFilter('vouchers')">
+      代金券
+    </div>
+    <div class="filter-tab" :class="{ active: activeFilter === 'blogs' }" @click="setFilter('blogs')">
+      博客
+    </div>
+    <div class="filter-tab" :class="{ active: activeFilter === 'users' }" @click="setFilter('users')">
+      用户
+    </div>
+  </div>
+
+  <!-- 各分类筛选区域 -->
+  <div class="category-filter-area" v-if="hasSearched">
+    <!-- 商铺筛选 -->
+    <div v-if="activeFilter === 'shops'">
+      <!-- 在美团式筛选栏中添加价格筛选 -->
+      <div class="meituan-filter-bar">
+        <div class="filter-item"
+             :class="{ active: activeFilterTab === 'type' }"
+             @click="toggleFilterTab('type')">
+          <div class="filter-text">
+            {{ selectedShopType ? getShopTypeName(selectedShopType) : '分类' }}
+            <i class="el-icon-arrow-down"></i>
+          </div>
+        </div>
+        <div class="filter-item"
+             :class="{ active: activeFilterTab === 'distance' }"
+             @click="toggleFilterTab('distance')">
+          <div class="filter-text">
+            {{ selectedDistance || '距离' }}
+            <i class="el-icon-arrow-down"></i>
+          </div>
+        </div>
+        <div class="filter-item"
+             :class="{ active: activeFilterTab === 'score' }"
+             @click="toggleFilterTab('score')">
+          <div class="filter-text">
+            {{ selectedScore || '评分' }}
+            <i class="el-icon-arrow-down"></i>
+          </div>
+        </div>
+        <div class="filter-item"
+             :class="{ active: activeFilterTab === 'price' }"
+             @click="toggleFilterTab('price')">
+          <div class="filter-text">
+            {{ selectedPrice || '人均' }}
+            <i class="el-icon-arrow-down"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- 筛选内容直接展开 -->
+      <div class="filter-content" :class="{ show: activeFilterTab === 'type' }">
+        <div class="shop-type-panel">
+          <div class="shop-type-grid">
+            <div class="shop-type-item"
+                 v-for="type in shopTypes"
+                 :key="type.id"
+                 :class="{ active: selectedShopType === type.id }"
+                 @click="selectShopType(type.id)">
+              {{ type.name }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-content" :class="{ show: activeFilterTab === 'distance' }">
+        <div class="distance-panel">
+          <div class="distance-options">
+            <div class="distance-option"
+                 v-for="distance in distanceOptions"
+                 :key="distance.value"
+                 :class="{ active: selectedDistance === distance.label }"
+                 @click="selectDistance(distance)">
+              {{ distance.label }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-content" :class="{ show: activeFilterTab === 'score' }">
+        <div class="score-panel">
+          <div class="score-options">
+            <div class="score-option"
+                 v-for="score in scoreOptions"
+                 :key="score.value"
+                 :class="{ active: selectedScore === score.label }"
+                 @click="selectScore(score)">
+              {{ score.label }}
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- 添加价格筛选面板 -->
+      <div class="filter-content" :class="{ show: activeFilterTab === 'price' }">
+        <div class="score-panel">
+          <div class="score-options">
+            <div class="score-option"
+                 v-for="price in priceOptions"
+                 :key="price.value"
+                 :class="{ active: selectedPrice === price.label }"
+                 @click="selectPrice(price)">
+              {{ price.label }}
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- 已选条件显示 -->
+      <div class="selected-filters" v-if="hasSelectedFilters">
+        <div class="selected-filter-tag" v-if="selectedShopType">
+          {{ getShopTypeName(selectedShopType) }}
+          <span class="close" @click="removeShopType">×</span>
+        </div>
+        <div class="selected-filter-tag" v-if="selectedDistance">
+          {{ selectedDistance }}
+          <span class="close" @click="removeDistance">×</span>
+        </div>
+        <div class="selected-filter-tag" v-if="selectedScore">
+          {{ selectedScore }}
+          <span class="close" @click="removeScore">×</span>
+        </div>
+        <div class="selected-filter-tag" v-if="selectedPrice">
+          {{ selectedPrice }}
+          <span class="close" @click="removePrice">×</span>
+        </div>
+        <div class="clear-all" @click="clearAllFilters">清除全部</div>
+      </div>
+    </div>
+
+    <!-- 代金券筛选 -->
+    <div v-if="activeFilter === 'vouchers'">
+      <div class="meituan-filter-bar">
+        <div class="filter-item"
+             :class="{ active: activeFilterTab === 'voucherType' }"
+             @click="toggleFilterTab('voucherType')">
+          <div class="filter-text">
+            {{ getVoucherTypeName(selectedVoucherType) || '类型' }}
+            <i class="el-icon-arrow-down"></i>
+          </div>
+        </div>
+        <div class="filter-item"
+             :class="{ active: activeFilterTab === 'status' }"
+             @click="toggleFilterTab('status')">
+          <div class="filter-text">
+            {{ getStatusName(selectedStatus) || '状态' }}
+            <i class="el-icon-arrow-down"></i>
+          </div>
+        </div>
+        <div class="filter-item"
+             :class="{ active: activeFilterTab === 'voucherShopType' }"
+             @click="toggleFilterTab('voucherShopType')">
+          <div class="filter-text">
+            {{ selectedVoucherShopType ? getShopTypeName(selectedVoucherShopType) : '分类' }}
+            <i class="el-icon-arrow-down"></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-content" :class="{ show: activeFilterTab === 'voucherType' }">
+        <div class="voucher-type-panel">
+          <div class="voucher-type-options">
+            <div class="voucher-type-option"
+                 v-for="type in voucherTypeOptions"
+                 :key="type.value"
+                 :class="{ active: selectedVoucherType === type.value }"
+                 @click="selectVoucherType(type)">
+              {{ type.label }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-content" :class="{ show: activeFilterTab === 'status' }">
+        <div class="status-panel">
+          <div class="status-options">
+            <div class="status-option"
+                 v-for="status in statusOptions"
+                 :key="status.value"
+                 :class="{ active: selectedStatus === status.value }"
+                 @click="selectStatus(status)">
+              {{ status.label }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-content" :class="{ show: activeFilterTab === 'voucherShopType' }">
+        <div class="shop-type-panel">
+          <div class="shop-type-grid">
+            <div class="shop-type-item"
+                 v-for="type in shopTypes"
+                 :key="type.id"
+                 :class="{ active: selectedVoucherShopType === type.id }"
+                 @click="selectVoucherShopType(type.id)">
+              {{ type.name }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="selected-filters" v-if="hasVoucherSelectedFilters">
+        <div class="selected-filter-tag" v-if="selectedVoucherType">
+          {{ getVoucherTypeName(selectedVoucherType) }}
+          <span class="close" @click="removeVoucherType">×</span>
+        </div>
+        <div class="selected-filter-tag" v-if="selectedStatus">
+          {{ getStatusName(selectedStatus) }}
+          <span class="close" @click="removeStatus">×</span>
+        </div>
+        <div class="selected-filter-tag" v-if="selectedVoucherShopType">
+          {{ getShopTypeName(selectedVoucherShopType) }}
+          <span class="close" @click="removeVoucherShopType">×</span>
+        </div>
+        <div class="clear-all" @click="clearVoucherFilters">清除全部</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 搜索结果区域 -->
+  <div class="search-results" v-if="hasSearched">
+    <!-- 用户搜索结果 -->
+    <div class="result-section" v-if="activeFilter === 'all' || activeFilter === 'users'">
+      <div class="section-title">
+        <span>用户 ({{userResults.length}})</span>
+        <span class="section-more" @click="viewMore('users')" v-if="activeFilter === 'all' && userResults.length > 0">查看更多</span>
+      </div>
+      <div class="category-empty" v-if="userResults.length === 0 && !pagination.users.loading">
+        <p>暂无相关用户</p>
+      </div>
+      <div class="user-box" v-for="user in limitedUserResults" :key="'user-' + user.id" @click="toUserDetail(user)">
+        <div class="user-avatar">
+          <img :src="user.icon || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop&crop=face'" alt="用户头像">
+        </div>
+        <div class="user-info">
+          <div class="user-name">{{user.nickName || '匿名用户'}}</div>
+          <div class="user-desc">{{user.introduce || '这个人很懒，什么都没写'}}</div>
+        </div>
+        <button class="follow-btn" :class="{'following': user.isFollow}" @click.stop="toggleFollow(user)">
+          {{user.isFollow ? '已关注' : '关注'}}
+        </button>
+      </div>
+
+      <!-- 用户加载更多 -->
+      <div class="load-more" v-if="activeFilter === 'users' && userResults.length > 0">
+        <button class="load-more-btn"
+                @click="loadMore('users')"
+                :disabled="pagination.users.loading || !pagination.users.hasMore">
+          <span v-if="pagination.users.loading">加载中<span class="loading-dots"></span></span>
+          <span v-else-if="pagination.users.hasMore">加载更多</span>
+          <span v-else>没有更多了</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 商铺搜索结果 -->
+    <div class="result-section" v-if="activeFilter === 'all' || activeFilter === 'shops'">
+      <div class="section-title">
+        <span>商铺 ({{shopResults.length}})</span>
+        <span class="section-more" @click="viewMore('shops')" v-if="activeFilter === 'all' && shopResults.length > 0">查看更多</span>
+      </div>
+      <div class="category-empty" v-if="shopResults.length === 0 && !pagination.shops.loading">
+        <p>暂无相关商铺</p>
+      </div>
+      <div class="shop-box" v-for="shop in limitedShopResults" :key="'shop-' + shop.id" @click="toShopDetail(shop.id)">
+        <div class="shop-img">
+          <img :src="shop.images || 'https://images.unsplash.com/photo-1551782450-17144efb9c50?w=400&h=300&fit=crop'" :alt="shop.name">
+        </div>
+        <div class="shop-info">
+          <div class="shop-title">{{shop.name}}</div>
+          <div class="shop-rate">
+            <el-rate disabled :value="shop.score / 10" text-color="#F63" show-score></el-rate>
+            <span>{{shop.comments}}条</span>
+          </div>
+          <div class="shop-area">
+            <span>{{shop.area}}</span>
+            <span v-if="shop.distance">{{formatDistance(shop.distance)}}</span>
+          </div>
+          <div class="shop-avg">￥{{shop.avgPrice}}/人</div>
+          <div class="shop-address">
+            <i class="el-icon-map-location"></i>
+            <span>{{shop.address}}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 商铺加载更多 -->
+      <div class="load-more" v-if="activeFilter === 'shops' && shopResults.length > 0">
+        <button class="load-more-btn"
+                @click="loadMore('shops')"
+                :disabled="pagination.shops.loading || !pagination.shops.hasMore">
+          <span v-if="pagination.shops.loading">加载中<span class="loading-dots"></span></span>
+          <span v-else-if="pagination.shops.hasMore">加载更多</span>
+          <span v-else>没有更多了</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 博客搜索结果 -->
+    <div class="result-section" v-if="activeFilter === 'all' || activeFilter === 'blogs'">
+      <div class="section-title">
+        <span>博客 ({{blogResults.length}})</span>
+        <span class="section-more" @click="viewMore('blogs')" v-if="activeFilter === 'all' && blogResults.length > 0">查看更多</span>
+      </div>
+      <div class="category-empty" v-if="blogResults.length === 0 && !pagination.blogs.loading">
+        <p>暂无相关博客</p>
+      </div>
+      <div class="blog-box" v-for="blog in limitedBlogResults" :key="'blog-' + blog.id" @click="toBlogDetail(blog.id)">
+        <div class="blog-img">
+          <img :src="getBlogImage(blog.images) || 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&h=300&fit=crop'" :alt="blog.title">
+        </div>
+        <div class="blog-content">
+          <div class="blog-title">{{blog.title || '无标题'}}</div>
+          <div class="blog-foot">
+            <div class="blog-user-icon">
+              <img :src="blog.icon || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop&crop=face'" alt="用户头像">
+            </div>
+            <div class="blog-user-name">{{blog.name || '匿名用户'}}</div>
+            <div class="blog-liked">
+              <svg t="1646634642977" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2187" width="14" height="14">
+                <path d="M160 944c0 8.8-7.2 16-16 16h-32c-26.5 0-48-21.5-48-48V528c0-26.5 21.5-48 48-48h32c8.8 0 16 7.2 16 16v448zM96 416c-53 0-96 43-96 96v416c0 53 43 96 96 96h96c17.7 0 32-14.3 32-32V448c0-17.7-14.3-32-32-32H96zM505.6 64c16.2 0 26.4 8.7 31 13.9 4.6 5.2 12.1 16.3 10.3 32.4l-23.5 203.4c-4.9 42.2 8.6 84.6 36.8 116.4 28.3 31.7 68.9 49.9 111.4 49.9h271.2c6.6 0 10.8 3.3 13.2 6.1s5 7.5 4 14l-48 303.4c-6.9 43.6-29.1 83.4-62.7 112C815.8 944.2 773 960 728.9 960h-317c-33.1 0-59.9-26.8-59.9-59.9v-455c0-6.1 1.7-12 5-17.1 69.5-109 106.4-234.2 107-364h41.6z m0-64h-44.9C427.2 0 400 27.2 400 60.7c0 127.1-39.1 251.2-112 355.3v484.1c0 68.4 55.5 123.9 123.9 123.9h317c122.7 0 227.2-89.3 246.3-210.5l47.9-303.4c7.8-49.4-30.4-94.1-80.4-94.1H671.6c-50.9 0-90.5-44.4-84.6-95l23.5-203.4C617.7 55 568.7 0 505.6 0z" p-id="2188" :fill="blog.isLike ? '#ff6633' : '#82848a'"></path>
+              </svg>
+              {{blog.liked || 0}}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 博客加载更多 -->
+      <div class="load-more" v-if="activeFilter === 'blogs' && blogResults.length > 0">
+        <button class="load-more-btn"
+                @click="loadMore('blogs')"
+                :disabled="pagination.blogs.loading || !pagination.blogs.hasMore">
+          <span v-if="pagination.blogs.loading">加载中<span class="loading-dots"></span></span>
+          <span v-else-if="pagination.blogs.hasMore">加载更多</span>
+          <span v-else>没有更多了</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 代金券搜索结果 -->
+    <div class="result-section" v-if="activeFilter === 'all' || activeFilter === 'vouchers'">
+      <div class="section-title">
+        <span>代金券 ({{voucherResults.length}})</span>
+        <span class="section-more" @click="viewMore('vouchers')" v-if=" activeFilter === 'all' && voucherResults.length > 0">查看更多</span>
+      </div>
+      <div class="category-empty" v-if="voucherResults.length === 0 && !pagination.vouchers.loading">
+        <p>暂无相关代金券</p>
+      </div>
+
+      <!-- 秒杀券区域 -->
+      <div v-if="seckillVouchers.length > 0">
+        <div class="voucher-category-title seckill">限时秒杀券</div>
+        <div class="voucher-box" v-for="voucher in limitedSeckillVouchers" :key="'seckill-' + voucher.id" :class="{'seckill': voucher.type === 1}" @click="toVoucherDetail(voucher)">
+          <div class="seckill-badge">秒杀</div>
+          <div class="voucher-left">
+            <div class="voucher-title">{{voucher.title}}</div>
+            <div class="voucher-shop" v-if="voucher.shopName">
+              <i class="el-icon-shop"></i>
+              适用商铺：<span class="voucher-shop-name">{{voucher.shopName}}</span>
+            </div>
+            <div class="voucher-subtitle">{{voucher.subTitle}}</div>
+            <div class="voucher-price">
+              <div>￥ {{voucher.payValue}}</div>
+              <span>{{calculateDiscount(voucher)}}折</span>
+            </div>
+          </div>
+          <div class="voucher-right">
+            <div class="seckill-box">
+              <div class="voucher-btn" :class="{'disable-btn': isNotBegin(voucher) || voucher.stock < 1}" @click.stop="seckillVoucher(voucher)">
+                限时抢购
+              </div>
+              <div class="seckill-stock">剩余 <span>{{voucher.stock}}</span> 张</div>
+              <div class="seckill-time">{{formatTime(voucher)}}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 普通券区域 -->
+      <div v-if="normalVouchers.length > 0">
+        <div class="voucher-category-title normal">普通代金券</div>
+        <div class="voucher-box" v-for="voucher in limitedNormalVouchers" :key="'normal-' + voucher.id" @click="toVoucherDetail(voucher)">
+          <div class="voucher-left">
+            <div class="voucher-title">{{voucher.title}}</div>
+            <div class="voucher-shop" v-if="voucher.shopName">
+              <i class="el-icon-shop"></i>
+              适用商铺：<span class="voucher-shop-name">{{voucher.shopName}}</span>
+            </div>
+            <div class="voucher-subtitle">{{voucher.subTitle}}</div>
+            <div class="voucher-price">
+              <div>￥ {{voucher.payValue}}</div>
+              <span>{{calculateDiscount(voucher)}}折</span>
+            </div>
+          </div>
+          <div class="voucher-right">
+            <div class="voucher-btn" @click.stop="buyVoucher(voucher)">抢购</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 代金券加载更多 -->
+      <div class="load-more" v-if="activeFilter === 'vouchers' && voucherResults.length > 0">
+        <button class="load-more-btn"
+                @click="loadMore('vouchers')"
+                :disabled="pagination.vouchers.loading || !pagination.vouchers.hasMore">
+          <span v-if="pagination.vouchers.loading">加载中<span class="loading-dots"></span></span>
+          <span v-else-if="pagination.vouchers.hasMore">加载更多</span>
+          <span v-else>没有更多了</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 全局空状态 -->
+    <div class="empty-state" v-if="hasSearched && totalResults === 0 && !isLoading">
+      <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiByeD0iOCIgZmlsbD0iI0Y4RjlGQSIvPgo8cGF0aCBkPSJNNDAgNDJMMzIgMzRMMzQgMzJMNDAgMzhMNDYgMzJMNDggMzRMNDAgNDJaIiBmaWxsPSIjQzBDNEY0Ii8+CjxwYXRoIGQ9Ik00MCA0MkwzMiAzNEwzNCAzMkw0MCAzOEw0NiAzMkw0OCAzNEw0MCA0MloiIGZpbGw9IiNDMEM0RjQiLz4KPC9zdmc+Cg==" alt="暂无搜索结果">
+      <p>没有找到相关结果</p>
+      <p style="font-size: 12px; color: #c0c4cc;">尝试更换关键词或筛选条件</p>
+    </div>
+  </div>
+
+  <!-- 搜索前显示历史和热门搜索 -->
+  <div v-if="!hasSearched">
+    <!-- 历史搜索 -->
+    <div class="search-history" v-if="searchHistory.length > 0">
+      <div class="history-title">
+        <span>历史搜索</span>
+        <span @click="clearHistory" style="cursor: pointer;">清除</span>
+      </div>
+      <div class="history-tags">
+        <div class="history-tag" v-for="item in searchHistory" :key="item" @click="searchFromHistory(item)">
+          {{item}}
+        </div>
+      </div>
+    </div>
+
+    <!-- 热门搜索 -->
+    <div class="hot-search">
+      <div class="hot-title">热门搜索</div>
+      <div class="hot-tags">
+        <div class="hot-tag" :class="{hot: index < 3}" v-for="(item, index) in hotSearch" :key="item" @click="searchFromHot(item)">
+          {{item}}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 加载遮罩层 -->
+  <div class="loading-mask" :class="{ hidden: !isLoading }">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">搜索中...</div>
+  </div>
+</div>
+<script src="./js/vue.js"></script>
+<script src="./js/axios.min.js"></script>
+<!-- 引入组件库 -->
+<script src="./js/element.js"></script>
+<script src="./js/common.js"></script>
+<script>
+  new Vue({
+    el: '#app',
+    data: {
+      searchKeyword: "",
+      activeFilter: "all",
+      token: sessionStorage.getItem("token") || '',
+      loginUser: {},
+      shopResults: [],
+      blogResults: [],
+      voucherResults: [],
+      userResults: [],
+      isLoading: false,
+      hasSearched: false,
+      searchHistory: ["火锅", "咖啡", "日料", "奶茶", "烧烤", "美食博主"],
+      hotSearch: ["火锅", "奶茶", "咖啡", "日料", "烧烤", "甜品", "自助餐", "川菜", "美食探店"],
+      currentSearchKeyword: "",
+
+      // 美团式筛选相关
+      activeFilterTab: null,
+
+      // 商铺筛选
+      selectedShopType: "",
+      selectedDistance: "",
+      selectedScore: "",
+      selectedPrice: "",
+
+      // 代金券筛选
+      selectedVoucherType: "",
+      selectedStatus: "",
+      selectedVoucherShopType: "",
+
+      // 筛选选项
+      distanceOptions: [
+        { label: "1km以内", value: "1km" },
+        { label: "3km以内", value: "3km" },
+        { label: "5km以内", value: "5km" },
+        { label: "10km以内", value: "10km" },
+        { label: "全城", value: "" }
+      ],
+      scoreOptions: [
+        { label: "3.0分以上", value: "30" },
+        { label: "3.5分以上", value: "35" },
+        { label: "4.0分以上", value: "40" },
+        { label: "4.5分以上", value: "45" },
+        { label: "4.8分以上", value: "48" }
+      ],
+      // 价格筛选
+      priceOptions: [
+        { label: "50元以下", value: 50 },
+        { label: "100元以下", value: 100 },
+        { label: "150元以下", value: 150 },
+        { label: "200元以下", value: 200 },
+        { label: "不限价格", value: "" }
+      ],
+      voucherTypeOptions: [
+        { label: "普通券", value: "0" },
+        { label: "秒杀券", value: "1" }
+      ],
+      statusOptions: [
+        { label: "上架", value: "1" },
+        { label: "下架", value: "2" },
+        { label: "过期", value: "3" }
+      ],
+
+      // 商铺类型数据
+      shopTypes: [],
+
+      // 定位相关数据
+      locationLoading: false,
+      locationError: false,
+      usingCachedLocation: false,
+      showLocationStatus: false,
+
+      // 筛选条件
+      locationFilter: {
+        lon: "",
+        lat: "",
+        distance: "all"
+      },
+
+      // 分页相关数据
+      pagination: {
+        shops: { page: 1, hasMore: true, loading: false },
+        blogs: { page: 1, hasMore: true, loading: false },
+        vouchers: { page: 1, hasMore: true, loading: false },
+        users: { page: 1, hasMore: true, loading: false }
+      }
+    },
+    computed: {
+      totalResults() {
+        return this.shopResults.length + this.blogResults.length + this.voucherResults.length + this.userResults.length;
+      },
+      limitedShopResults() {
+        return this.activeFilter === 'all' ? this.shopResults.slice(0, 3) : this.shopResults;
+      },
+      limitedBlogResults() {
+        return this.activeFilter === 'all' ? this.blogResults.slice(0, 3) : this.blogResults;
+      },
+      limitedUserResults() {
+        return this.activeFilter === 'all' ? this.userResults.slice(0, 3) : this.userResults;
+      },
+      seckillVouchers() {
+        return this.voucherResults.filter(v => v.type === 1);
+      },
+      normalVouchers() {
+        return this.voucherResults.filter(v => v.type === 0);
+      },
+      limitedSeckillVouchers() {
+        return this.activeFilter === 'all' ? this.seckillVouchers.slice(0, 2) : this.seckillVouchers;
+      },
+      limitedNormalVouchers() {
+        return this.activeFilter === 'all' ? this.normalVouchers.slice(0, 2) : this.normalVouchers;
+      },
+      locationStatusText() {
+        if (this.locationLoading) return "定位中...";
+        if (this.usingCachedLocation && !this.locationError) return "已使用缓存位置";
+        if (this.locationError) return "定位失败，使用默认位置";
+        return "";
+      },
+      hasSelectedFilters() {
+        return this.selectedShopType || this.selectedDistance || this.selectedScore || this.selectedPrice;
+      },
+      hasVoucherSelectedFilters() {
+        return this.selectedVoucherType || this.selectedStatus || this.selectedVoucherShopType;
+      }
+    },
+    created() {
+      this.isLogin()
+      this.initLocation();
+      this.queryShopTypes();
+      this.getHotSearch();
+      // 初始化滚动监听
+      this.initScrollListener();
+    },
+    methods: {
+      isLogin(){
+        if (this.token) {
+          setTimeout(() => {
+            this.queryLoginUser();
+          }, 100);
+        }
+      },
+      // 获取登录用户信息
+      queryLoginUser() {
+        axios.get("/app/user/me")
+                .then((response) => {
+                  this.loginUser = response.data || {};
+                  this.getSearchHistory();
+                })
+                .catch(err => {
+                  console.error("获取登录用户失败:", err);
+                  this.loginUser = {};
+                });
+      },
+      // 添加搜索历史
+      async addSearchHistory(keyword) {
+        try {
+          const userId = this.loginUser.id;
+          if (!userId) {
+            this.addToLocalHistory(keyword);
+            return;
+          }
+
+          await axios.post('/app/es/search/history', {
+            userId,
+            keyword
+          });
+          // 刷新历史搜索列表
+          await this.getSearchHistory();
+        } catch (error) {
+          console.error('添加搜索历史失败:', error);
+          this.addToLocalHistory(keyword);
+        }
+      },
+      // 本地存储也实现去重
+      addToLocalHistory(keyword) {
+        let history = JSON.parse(localStorage.getItem('local_search_history') || '[]');
+
+        // 先移除已存在的相同关键词
+        history = history.filter(item => item !== keyword);
+
+        // 添加到开头
+        history.unshift(keyword);
+
+        // 限制数量
+        if (history.length > 10) {
+          history = history.slice(0, 10);
+        }
+
+        localStorage.setItem('local_search_history', JSON.stringify(history));
+        this.searchHistory = history;
+      },
+      // 清空历史记录
+       clearHistory() {
+        try {
+           this.$confirm('确定要清空所有搜索历史吗？', '提示', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning',
+            customClass: 'mobile-dialog', // 移动端样式类
+            closeOnClickModal: false, // 禁止点击遮罩关闭
+            closeOnPressEscape: false, // 禁止ESC键关闭
+            showClose: false // 隐藏关闭按钮
+          }).then(async () => {
+            const userId = this.loginUser.id;
+            if (userId) {
+              // 调用后端API清空
+              await axios.delete('/app/es/search/history', {
+                params: { userId }
+              });
+            } else {
+              // 清空本地存储
+              localStorage.removeItem('local_search_history');
+            }
+            // 更新前端数据
+            this.searchHistory = [];
+
+            this.$message({
+              type: 'success',
+              message: '搜索历史已清空'
+            });
+          }).catch(() => {
+            // 用户取消操作
+          });
+        } catch (error) {
+          console.error('清空历史记录失败:', error);
+          this.$message.error('清空失败，请重试');
+        }
+      },
+      // 获取历史搜索（需要用户登录）
+      async getSearchHistory() {
+        try {
+          if(!this.token){
+            return;
+          }
+          const userId = this.loginUser.id;
+          const response = await axios.get('/app/es/search/history', {
+            params: { userId }
+          });
+
+          if (response.data && response.success) {
+            this.searchHistory = response.data || [];
+          }
+        } catch (error) {
+          console.error('获取搜索历史失败:', error);
+          // 降级处理：从localStorage获取
+          this.fallbackToLocalHistory();
+        }
+      },
+
+      // 获取热门搜索
+      async getHotSearch() {
+        try {
+          const response = await axios.get('/app/es/search/hot');
+
+          if (response.data && response.success) {
+            this.hotSearch = response.data || [];
+          } else {
+            // 使用默认热门搜索
+            this.hotSearch = this.getDefaultHotSearch();
+          }
+        } catch (error) {
+          console.error('获取热门搜索失败:', error);
+          this.hotSearch = this.getDefaultHotSearch();
+        }
+      },
+      // 完整的搜索流程（包含记录行为）
+      async doSearch() {
+        // 验证输入
+        if (!this.validateSearchInput()) return;
+        //添加搜索历史
+        await this.addSearchHistory(this.searchKeyword)
+        // 记录搜索
+        await this.recordSearch(this.searchKeyword);
+        // 执行搜索
+        await this.executeSearch();
+      },
+      // 验证搜索输入
+      validateSearchInput() {
+        if (!this.searchKeyword.trim()) {
+          this.$message.warning("请输入搜索关键词");
+          return false;
+        }
+        return true;
+      },
+      // 记录搜索统计
+      async recordSearch(keyword) {
+        try {
+          await axios.post('/app/es/search/record', {
+            keyword: keyword
+          });
+        } catch (error) {
+          console.error('记录搜索失败:', error);
+          // 静默失败
+        }
+      },
+
+      // 获取商铺类型
+      queryShopTypes() {
+        axios.get("/app/shop/shop-type/list")
+                .then(({data}) => {
+                  if (data && data.data) {
+                    this.shopTypes = data.data;
+                  } else {
+                    this.shopTypes = data || [];
+                  }
+                })
+                .catch(err => {
+                  console.log("获取商铺类型失败:", err);
+                  this.$message.error("获取商铺类型失败");
+                  // 使用默认数据
+                  this.shopTypes = [
+                    { id: 1, name: "火锅" },
+                    { id: 2, name: "烧烤" },
+                    { id: 3, name: "日料" },
+                    { id: 4, name: "川菜" },
+                    { id: 5, name: "湘菜" },
+                    { id: 6, name: "粤菜" },
+                    { id: 7, name: "咖啡" },
+                    { id: 8, name: "奶茶" },
+                    { id: 9, name: "甜品" }
+                  ];
+                });
+      },
+
+      // 初始化滚动监听
+      initScrollListener() {
+        window.addEventListener('scroll', this.handleScroll);
+      },
+
+      // 处理滚动事件
+      handleScroll() {
+        // 如果当前不是在分类页面，不触发滚动加载
+        if (this.activeFilter === 'all') return;
+
+        // 如果正在加载，不重复触发
+        if (this.pagination[this.activeFilter].loading) return;
+
+        // 如果没有更多数据，不触发
+        if (!this.pagination[this.activeFilter].hasMore) return;
+
+        // 计算滚动位置
+        const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+        const windowHeight = window.innerHeight;
+        const scrollHeight = document.documentElement.scrollHeight || document.body.scrollHeight;
+
+        // 距离底部100px时触发加载
+        if (scrollTop + windowHeight >= scrollHeight - 100) {
+          this.loadMore(this.activeFilter);
+        }
+      },
+
+      // 加载更多数据
+      loadMore(type) {
+        if (this.pagination[type].loading || !this.pagination[type].hasMore) return;
+
+        this.pagination[type].loading = true;
+        this.pagination[type].page++;
+
+        switch (type) {
+          case 'shops':
+            this.searchShops(true);
+            break;
+          case 'blogs':
+            this.searchBlogs(true);
+            break;
+          case 'vouchers':
+            this.searchVouchers(true);
+            break;
+          case 'users':
+            this.searchUsers(true);
+            break;
+        }
+      },
+
+      // 美团式筛选方法
+      toggleFilterTab(tab) {
+        if (this.activeFilterTab === tab) {
+          this.activeFilterTab = null;
+        } else {
+          this.activeFilterTab = tab;
+        }
+      },
+
+      // 商铺筛选方法
+      selectShopType(typeId) {
+        this.selectedShopType = typeId;
+        this.executeSearch();
+        this.activeFilterTab = null;
+      },
+
+      selectDistance(distance) {
+        this.selectedDistance = distance.label;
+        this.locationFilter.distance = distance.value;
+        this.executeSearch();
+        this.activeFilterTab = null;
+      },
+
+      selectScore(score) {
+        this.selectedScore = score.label;
+        this.executeSearch();
+        this.activeFilterTab = null;
+      },
+
+      removeShopType() {
+        this.selectedShopType = "";
+        this.executeSearch();
+      },
+
+      removeDistance() {
+        this.selectedDistance = "";
+        this.locationFilter.distance = "all";
+        this.executeSearch();
+      },
+
+      removeScore() {
+        this.selectedScore = "";
+        this.executeSearch();
+      },
+      selectPrice(price) {
+        this.selectedPrice = price.label;
+        this.executeSearch();
+        this.activeFilterTab = null;
+      },
+
+      removePrice() {
+        this.selectedPrice = "";
+        this.executeSearch();
+      },
+
+      clearAllFilters() {
+        this.selectedShopType = "";
+        this.selectedDistance = "";
+        this.selectedScore = "";
+        this.selectedPrice = "";
+        this.locationFilter.distance = "";
+        this.executeSearch();
+      },
+
+      // 代金券筛选方法
+      selectVoucherType(type) {
+        this.selectedVoucherType = type.value;
+        this.executeSearch();
+        this.activeFilterTab = null;
+      },
+
+      selectStatus(status) {
+        this.selectedStatus = status.value;
+        this.executeSearch();
+        this.activeFilterTab = null;
+      },
+
+      selectVoucherShopType(typeId) {
+        this.selectedVoucherShopType = typeId;
+        this.executeSearch();
+        this.activeFilterTab = null;
+      },
+
+      removeVoucherType() {
+        this.selectedVoucherType = "";
+        this.executeSearch();
+      },
+
+      removeStatus() {
+        this.selectedStatus = "";
+        this.executeSearch();
+      },
+
+      removeVoucherShopType() {
+        this.selectedVoucherShopType = "";
+        this.executeSearch();
+      },
+
+      clearVoucherFilters() {
+        this.selectedVoucherType = "";
+        this.selectedStatus = "";
+        this.selectedVoucherShopType = "";
+        this.executeSearch();
+      },
+
+      getShopTypeName(typeId) {
+        const type = this.shopTypes.find(t => t.id === typeId);
+        return type ? type.name : '';
+      },
+
+      getVoucherTypeName(typeValue) {
+        const type = this.voucherTypeOptions.find(t => t.value === typeValue);
+        return type ? type.label : '';
+      },
+
+      getStatusName(statusValue) {
+        const status = this.statusOptions.find(s => s.value === statusValue);
+        return status ? status.label : '';
+      },
+
+      setFilter(filter) {
+        if (this.activeFilter !== filter) {
+          this.activeFilter = filter;
+          this.activeFilterTab = null;
+
+          // 清除其他分类的筛选条件
+          if (filter !== 'shops') {
+            this.selectedShopType = "";
+            this.selectedDistance = "";
+            this.selectedScore = "";
+          }
+          if (filter !== 'vouchers') {
+            this.selectedVoucherType = "";
+            this.selectedStatus = "";
+            this.selectedVoucherShopType = "";
+          }
+
+          if (this.hasSearched && this.searchKeyword.trim()) {
+            this.executeSearch();
+          }
+        } else {
+          this.activeFilter = filter;
+        }
+      },
+
+      async executeSearch() {
+        this.currentSearchKeyword = this.searchKeyword.trim();
+
+        if (!this.searchHistory.includes(this.currentSearchKeyword)) {
+          this.searchHistory.unshift(this.currentSearchKeyword);
+          if (this.searchHistory.length > 10) {
+            this.searchHistory.pop();
+          }
+        }
+
+        // 重置分页状态
+        this.resetPagination();
+
+        this.isLoading = true;
+        this.hasSearched = true;
+
+        try {
+          if (this.activeFilter === 'all') {
+            await this.searchAll();
+          } else {
+            await this.searchByType(this.activeFilter);
+          }
+        } catch (error) {
+          console.error('搜索失败:', error);
+          this.$message.error('搜索失败，请重试');
+        } finally {
+          this.isLoading = false;
+        }
+      },
+
+      // 重置分页状态
+      resetPagination() {
+        Object.keys(this.pagination).forEach(key => {
+          this.pagination[key] = {
+            page: 1,
+            hasMore: true,
+            loading: false
+          };
+        });
+      },
+
+      async searchAll() {
+        const requests = [
+          this.searchShops(),
+          this.searchBlogs(),
+          this.searchVouchers(),
+          this.searchUsers()
+        ];
+        await Promise.all(requests);
+      },
+
+      async searchByType(type) {
+        this.clearOtherResults(type);
+        switch (type) {
+          case 'shops':
+            await this.searchShops();
+            break;
+          case 'blogs':
+            await this.searchBlogs();
+            break;
+          case 'vouchers':
+            await this.searchVouchers();
+            break;
+          case 'users':
+            await this.searchUsers();
+            break;
+        }
+      },
+
+      clearOtherResults(currentType) {
+        const types = ['shops', 'blogs', 'vouchers', 'users'];
+        types.forEach(type => {
+          if (type !== currentType) {
+            this[`${type}Results`] = [];
+          }
+        });
+      },
+
+      // 构建筛选条件Map
+      buildFilters() {
+        const filters = {};
+
+        if (this.activeFilter === 'shops') {
+          // 商铺类型筛选
+          if (this.selectedShopType) {
+            filters.typeId = this.selectedShopType;
+          }
+          // 评分筛选
+          if (this.selectedScore) {
+            const scoreOption = this.scoreOptions.find(s => s.label === this.selectedScore);
+            if (scoreOption) {
+              filters.minScore = parseInt(scoreOption.value);
+            }
+          }
+          // 价格筛选
+          if (this.selectedPrice) {
+            const priceOption = this.priceOptions.find(p => p.label === this.selectedPrice);
+            if (priceOption && priceOption.value !== "") {
+              filters.maxPrice = priceOption.value;
+            }
+          }
+        } else if (this.activeFilter === 'vouchers') {
+          // 代金券类型筛选
+          if (this.selectedVoucherType) {
+            filters.type = parseInt(this.selectedVoucherType);
+          }
+          // 状态筛选
+          if (this.selectedStatus) {
+            filters.status = parseInt(this.selectedStatus);
+          }
+          // 适用商铺类型筛选
+          if (this.selectedVoucherShopType) {
+            filters.typeId = this.selectedVoucherShopType;
+          }
+        }
+
+        return filters;
+      },
+
+      async searchShops(isLoadMore = false) {
+        try {
+          // 构建筛选条件Map
+          const filters = this.buildFilters();
+
+          // 如果有筛选条件，使用POST请求
+          const params = {
+            keyword: this.currentSearchKeyword,
+            filters: filters,
+            page: this.pagination.shops.page,
+            size: this.activeFilter === 'shops' ? 10 : 3,
+            lat: this.locationFilter.lat,
+            lon: this.locationFilter.lon,
+            distance: this.locationFilter.distance
+          };
+
+          const response = await axios.post('/app/es/search/shops',  params );
+          if (response.data &&  response.success) {
+            const newData = response.data.list || [];
+
+            if (isLoadMore) {
+              // 追加数据
+              this.shopResults = [...this.shopResults, ...newData];
+            } else {
+              // 替换数据
+              this.shopResults = newData;
+            }
+
+            // 更新分页状态
+            this.pagination.shops.hasMore = newData.length >= params.size;
+          } else {
+            if (!isLoadMore) {
+              this.shopResults = [];
+            }
+          }
+        } catch (error) {
+          console.error('搜索商铺失败:', error);
+          if (!isLoadMore) {
+            this.shopResults = [];
+          }
+          this.$message.error('搜索商铺失败，请重试');
+        } finally {
+          this.pagination.shops.loading = false;
+        }
+      },
+
+      async searchBlogs(isLoadMore = false) {
+        try {
+          const params = {
+            keyword: this.currentSearchKeyword,
+            page: this.pagination.blogs.page,
+            size: this.activeFilter === 'blogs' ? 10 : 3
+          };
+
+          const response = await axios.get('/app/es/search/blogs', { params });
+
+          if (response.data &&  response.success) {
+            const newData = response.data.list || [];
+
+            if (isLoadMore) {
+              // 追加数据
+              this.blogResults = [...this.blogResults, ...newData];
+            } else {
+              // 替换数据
+              this.blogResults = newData;
+            }
+
+            // 更新分页状态
+            this.pagination.blogs.hasMore = newData.length >= params.size;
+          } else {
+            if (!isLoadMore) {
+              this.blogResults = [];
+            }
+            this.$message.error(response.data.message || '搜索博客失败');
+          }
+        } catch (error) {
+          console.error('搜索博客失败:', error);
+          if (!isLoadMore) {
+            this.blogResults = [];
+          }
+          this.$message.error('搜索博客失败，请重试');
+        } finally {
+          this.pagination.blogs.loading = false;
+        }
+      },
+
+      async searchVouchers(isLoadMore = false) {
+        try {
+          // 构建筛选条件Map
+          const filters = this.buildFilters();
+
+          const params = {
+            keyword: this.currentSearchKeyword,
+            filters: filters,
+            page: this.pagination.vouchers.page,
+            size: this.activeFilter === 'vouchers' ? 10 : 4
+          }
+          const response = await axios.post('/app/es/search/vouchers', params);
+          if (response.data &&  response.success) {
+            const newData = response.data.list || [];
+
+            if (isLoadMore) {
+              // 追加数据
+              this.voucherResults = [...this.voucherResults, ...newData];
+            } else {
+              // 替换数据
+              this.voucherResults = newData;
+            }
+
+            // 更新分页状态
+            this.pagination.vouchers.hasMore = newData.length >= params.size;
+          } else {
+            if (!isLoadMore) {
+              this.voucherResults = [];
+            }
+          }
+        } catch (error) {
+          console.error('搜索代金券失败:', error);
+          if (!isLoadMore) {
+            this.voucherResults = [];
+          }
+          this.$message.error('搜索代金券失败，请重试');
+        } finally {
+          this.pagination.vouchers.loading = false;
+        }
+      },
+
+      async searchUsers(isLoadMore = false) {
+        try {
+          const params = {
+            keyword: this.currentSearchKeyword,
+            page: this.pagination.users.page,
+            size: this.activeFilter === 'users' ? 10 : 3
+          };
+
+          const response = await axios.get('/app/es/search/users', { params });
+          if (response.data &&  response.success) {
+            const newData = response.data.list || [];
+
+            if (isLoadMore) {
+              // 追加数据
+              this.userResults = [...this.userResults, ...newData];
+            } else {
+              // 替换数据
+              this.userResults = newData;
+            }
+
+            // 更新分页状态
+            this.pagination.users.hasMore = newData.length >= params.size;
+          } else {
+            if (!isLoadMore) {
+              this.userResults = [];
+            }
+          }
+        } catch (error) {
+          console.error('搜索用户失败:', error);
+          if (!isLoadMore) {
+            this.userResults = [];
+          }
+          this.$message.error('搜索用户失败，请重试');
+        } finally {
+          this.pagination.users.loading = false;
+        }
+      },
+
+      // 定位相关方法
+      initLocation() {
+        const cachedLocation = this.getCachedLocation();
+        if (cachedLocation) {
+          this.locationFilter.lon = cachedLocation.x;
+          this.locationFilter.lat = cachedLocation.y;
+          this.usingCachedLocation = true;
+          this.locationError = false;
+          this.showLocationStatusMessage();
+        } else {
+          this.getLocation();
+        }
+      },
+
+      getCachedLocation() {
+        try {
+          const cached = localStorage.getItem('user_location');
+          if (cached) {
+            const location = JSON.parse(cached);
+            const cacheTime = localStorage.getItem('user_location_time');
+            const now = new Date().getTime();
+            if (cacheTime && (now - parseInt(cacheTime)) < 24 * 60 * 60 * 1000) {
+              return location;
+            } else {
+              this.clearLocationCache();
+              return null;
+            }
+          }
+        } catch (error) {
+          this.clearLocationCache();
+        }
+        return null;
+      },
+
+      saveLocationToCache(x, y, region) {
+        try {
+          const location = { x, y, region };
+          localStorage.setItem('user_location', JSON.stringify(location));
+          localStorage.setItem('user_location_time', new Date().getTime().toString());
+        } catch (error) {
+          console.log("保存位置缓存失败:", error);
+        }
+      },
+
+      clearLocationCache() {
+        try {
+          localStorage.removeItem('user_location');
+          localStorage.removeItem('user_location_time');
+        } catch (error) {
+          console.log("清除位置缓存失败:", error);
+        }
+      },
+
+      getLocation() {
+        this.showLocationStatus = true;
+        this.locationLoading = true;
+        this.locationError = false;
+        this.usingCachedLocation = false;
+
+        if (!navigator.geolocation) {
+          this.locationError = true;
+          this.locationLoading = false;
+          this.showLocationStatusMessage();
+          return;
+        }
+
+        const options = {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 60000
+        };
+
+        navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                  const convertedCoord = this.transformWGS84ToGCJ02(position.coords.longitude, position.coords.latitude)
+                  const longitude = convertedCoord.lng;
+                  const latitude = convertedCoord.lat;
+
+                  this.locationFilter.lon = longitude;
+                  this.locationFilter.lat = latitude;
+
+                  try {
+                    const regionInfo = await this.getRegionInfo(longitude, latitude);
+                    if (regionInfo) {
+                      this.saveLocationToCache(longitude, latitude, regionInfo);
+                      this.$message({
+                        message: `定位成功：${regionInfo.district}`,
+                        type: 'success',
+                        duration: 2000
+                      });
+                    } else {
+                      throw new Error('获取地区信息失败');
+                    }
+                  } catch (error) {
+                    this.saveLocationToCache(longitude, latitude, null);
+                    this.$message({
+                      message: '定位成功（地区信息获取失败）',
+                      type: 'warning',
+                      duration: 2000
+                    });
+                  }
+
+                  this.locationLoading = false;
+                  this.usingCachedLocation = false;
+                  this.showLocationStatusMessage();
+                },
+                (error) => {
+                  this.locationError = true;
+                  this.locationLoading = false;
+                  this.showLocationStatusMessage();
+                  this.$message({
+                    message: '定位失败，使用默认位置',
+                    type: 'warning',
+                    duration: 2000
+                  });
+                },
+                options
+        );
+      },
+
+      async getRegionInfo(lng, lat) {
+        try {
+          const response = await fetch(
+                  `https://restapi.amap.com/v3/geocode/regeo?key=60bdbf9b9cf98025c397ee43e8c25871&location=${lng},${lat}`
+          );
+          const data = await response.json();
+          if (data.status === '1' && data.regeocode) {
+            const address = data.regeocode.addressComponent;
+            return {
+              province: address.province,
+              city: address.city || address.province,
+              district: address.district,
+              township: address.township,
+              fullAddress: data.regeocode.formatted_address
+            };
+          } else {
+            throw new Error(`API返回错误: ${data.info}`);
+          }
+        } catch (error) {
+          return null;
+        }
+      },
+
+      transformWGS84ToGCJ02(lng, lat) {
+        const x = lng - 0.0065;
+        const y = lat - 0.0060;
+        return { lng: x, lat: y };
+      },
+
+      showLocationStatusMessage() {
+        this.showLocationStatus = true;
+        setTimeout(() => {
+          this.hideLocationStatus();
+        }, 3000);
+      },
+
+      hideLocationStatus() {
+        this.showLocationStatus = false;
+      },
+
+      // 其他方法
+      formatDistance(distance) {
+        if (distance < 1000) {
+          return distance.toFixed(0) + 'm';
+        } else {
+          return (distance / 1000).toFixed(1) + 'km';
+        }
+      },
+
+      getBlogImage(images) {
+        if (!images) return '';
+        const imageArray = images.split(',');
+        return imageArray[0] || '';
+      },
+
+      calculateDiscount(voucher) {
+        if (!voucher.payValue || !voucher.actualValue) return 0;
+        const discount = (voucher.payValue / voucher.actualValue * 10).toFixed(1);
+        return discount;
+      },
+
+      isNotBegin(voucher) {
+        if (!voucher.beginTime) return false;
+        return new Date(voucher.beginTime).getTime() > new Date().getTime();
+      },
+
+      isEnd(voucher) {
+        if (!voucher.endTime) return false;
+        return new Date(voucher.endTime).getTime() < new Date().getTime();
+      },
+
+      formatTime(voucher) {
+        if (!voucher.beginTime || !voucher.endTime) return '';
+        let b = new Date(voucher.beginTime);
+        let e = new Date(voucher.endTime);
+        return b.getMonth() + 1 + "月" + b.getDate() + "日 "
+                + b.getHours() + ":" + this.formatMinutes(b.getMinutes())
+                + " ~ " + (e.getMonth() + 1) + "月" + e.getDate() + "日 "
+                + e.getHours() + ":" + this.formatMinutes(e.getMinutes());
+      },
+
+      formatMinutes(m) {
+        if (m < 10) m = "0" + m
+        return m;
+      },
+
+      seckillVoucher(voucher) {
+        if (this.isNotBegin(voucher)) {
+          this.$message.error("代金券抢购尚未开始！");
+          return;
+        }
+        if (this.isEnd(voucher)) {
+          this.$message.error("代金券抢购已经结束！");
+          return;
+        }
+        if (voucher.stock < 1) {
+          this.$message.error("库存不足，请刷新再试试！");
+          return;
+        }
+        this.$message.success("秒杀代金券抢购成功！");
+      },
+
+      buyVoucher(voucher) {
+        this.$message.success("普通代金券抢购成功！");
+      },
+
+      toVoucherDetail(voucher) {
+        location.href = `/shop-detail.html?id=`+voucher.shopId;
+      },
+
+      toShopDetail(id) {
+        if (id) {
+          location.href = `/shop-detail.html?id=`+id;
+        }
+      },
+
+      toBlogDetail(id) {
+        location.href = "blog-detail.html?id=" + id;
+      },
+
+      toUserDetail(user) {
+        location.href = "other-info.html?id=" + user.id;
+      },
+      //关注
+      toggleFollow(user) {
+        if (!this.token) {
+          this.$message.error("请先登录");
+          setTimeout(() => {
+            location.href = "/login.html";
+          }, 200);
+          return;
+        }
+        const isFollow = !user.isFollow;
+        axios.put(`/app/user/follow/${user.id}/${isFollow}`)
+                .then(() => {
+                  user.isFollow = isFollow;
+                  this.$message.success(isFollow ? "关注成功" : "取消关注成功");
+                })
+                .catch(err => {
+                  location.href = "/login.html";
+                  console.error("关注操作失败:", err);
+                  this.$message.error("操作失败，请稍后重试");
+                });
+      },
+
+      goBack() {
+        if (this.hasSearched) {
+          this.hasSearched = false;
+          this.searchKeyword = "";
+        } else {
+          location.href = "index.html";
+        }
+      },
+
+      searchFromHistory(keyword) {
+        this.searchKeyword = keyword;
+        this.doSearch();
+      },
+
+      searchFromHot(keyword) {
+        this.searchKeyword = keyword;
+        this.doSearch();
+      },
+      viewMore(type) {
+        this.activeFilter = type;
+        if (this.currentSearchKeyword) {
+          this.searchByType(type);
+        }
+        window.scrollTo(0, 0);
+      },
+    }
+  });
+</script>
+</body>
+</html>

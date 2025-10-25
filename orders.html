@@ -9,7 +9,48 @@
   <link href="./css/index.css" rel="stylesheet">
   <link href="./css/main.css" rel="stylesheet">
   <style>
-    /* ====================================== 新增：加载遮罩层样式 ====================================== */
+    /* ====================================== 新增：倒计时样式 ====================================== */
+    .countdown-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      padding: 8px 12px;
+      background: #fff7e6;
+      border-radius: 6px;
+      border-left: 3px solid #fa8c16;
+    }
+
+    .countdown-icon {
+      color: #fa8c16;
+      font-size: 14px;
+    }
+
+    .countdown-text {
+      font-size: 13px;
+      color: #666;
+    }
+
+    .countdown-time {
+      font-weight: 600;
+      color: #fa541c;
+      font-size: 14px;
+    }
+
+    .countdown-warning {
+      background: #fff2f0;
+      border-left-color: #ff4d4f;
+    }
+
+    .countdown-warning .countdown-icon {
+      color: #ff4d4f;
+    }
+
+    .countdown-warning .countdown-time {
+      color: #ff4d4f;
+    }
+
+    /* ====================================== 原有样式保持不变 ====================================== */
     #app {
       min-height: 100vh;
       padding-bottom: 60px;
@@ -584,6 +625,16 @@
               </div>
               <div class="voucher-subtitle" v-if="order.voucher.subTitle">{{order.voucher.subTitle}}</div>
               <div class="voucher-rules" v-if="order.voucher.rules">{{order.voucher.rules}}</div>
+
+              <!-- 新增：倒计时显示 -->
+              <div v-if="order.status === 1 && order.countdown > 0"
+                   class="countdown-container"
+                   :class="{ 'countdown-warning': order.countdown <= 300000 }">
+                <i class="el-icon-time countdown-icon"></i>
+                <span class="countdown-text">剩余支付时间:</span>
+                <span class="countdown-time">{{formatCountdown(order.countdown)}}</span>
+              </div>
+
               <div class="voucher-price">
                 <div class="price-item">
                   <div class="price-label">支付金额</div>
@@ -673,6 +724,15 @@
             <div class="detail-label">订单状态:</div>
             <div class="detail-value">{{getOrderStatusText(currentOrder.status)}}</div>
           </div>
+
+          <!-- 新增：订单详情中的倒计时显示 -->
+          <div class="detail-row" v-if="currentOrder.status === 1 && currentOrder.countdown > 0">
+            <div class="detail-label">剩余时间:</div>
+            <div class="detail-value" style="color: #fa541c; font-weight: 500;">
+              {{formatCountdown(currentOrder.countdown)}}
+            </div>
+          </div>
+
           <div class="detail-row">
             <div class="detail-label">支付方式:</div>
             <div class="detail-value">{{getPayTypeText(currentOrder.payType)}}</div>
@@ -744,14 +804,97 @@
         // 数据加载完成计数器
         dataLoadedCount: 0,
         // 需要加载的数据总数
-        totalDataToLoad: 2 // 用户信息、订单列表
+        totalDataToLoad: 2, // 用户信息、订单列表
+        // 新增：倒计时定时器
+        countdownTimer: null,
+        // 新增：支付时间限制（15分钟）
+        PAYMENT_TIME_LIMIT: 15 * 60 * 1000 // 15分钟
       }
     },
     created() {
       this.queryUser();
       this.queryOrders();
     },
+    mounted() {
+      // 启动倒计时定时器
+      this.startCountdownTimer();
+    },
+    beforeDestroy() {
+      // 清理定时器
+      if (this.countdownTimer) {
+        clearInterval(this.countdownTimer);
+      }
+    },
     methods: {
+      // 新增：启动倒计时定时器
+      startCountdownTimer() {
+        // 每秒更新一次倒计时
+        this.countdownTimer = setInterval(() => {
+          this.updateAllCountdowns();
+        }, 1000);
+      },
+
+      // 新增：初始化所有订单的倒计时
+      initAllCountdowns() {
+        const now = new Date().getTime();
+
+        this.orders.forEach(order => {
+          // 只处理待支付订单
+          if (order.status === 1 && order.createTime) {
+            const createTime = new Date(order.createTime).getTime();
+            const timePassed = now - createTime;
+            const timeLeft = this.PAYMENT_TIME_LIMIT - timePassed; // 15分钟倒计时
+
+            if (timeLeft > 0) {
+              // 初始化倒计时
+              order.countdown = timeLeft;
+            } else {
+              // 倒计时结束，自动取消订单
+              order.countdown = 0;
+            }
+          }
+        });
+
+        // 强制更新视图
+        this.$forceUpdate();
+      },
+
+      // 新增：更新所有订单的倒计时
+      updateAllCountdowns() {
+        this.orders.forEach(order => {
+          // 只处理待支付订单
+          if (order.status === 1 && order.countdown > 0) {
+            order.countdown -= 1000; // 减少1秒
+
+            if (order.countdown <= 0) {
+              order.countdown = 0;
+            }
+          }
+        });
+
+        // 如果当前查看的订单详情是待支付状态，也更新其倒计时
+        if (this.currentOrder && this.currentOrder.status === 1) {
+          const currentOrderInList = this.orders.find(o => o.id === this.currentOrder.id);
+          if (currentOrderInList && currentOrderInList.countdown !== undefined) {
+            this.currentOrder.countdown = currentOrderInList.countdown;
+          }
+        }
+
+        // 强制更新视图
+        this.$forceUpdate();
+      },
+
+      // 新增：格式化倒计时显示
+      formatCountdown(milliseconds) {
+        if (milliseconds <= 0) return '00:00';
+
+        const totalSeconds = Math.floor(milliseconds / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+
+        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      },
+
       // 新增：数据加载完成回调
       onDataLoaded() {
         this.dataLoadedCount++;
@@ -825,6 +968,9 @@
                   if (!data || data.length === 0) {
                     this.orderNoMore = true;
                   }
+
+                  // 新增：初始化所有订单的倒计时
+                  this.initAllCountdowns();
                 })
                 .catch(err => {
                   console.error('获取订单列表失败:', err);
@@ -872,6 +1018,9 @@
                   if (newOrders.length === 0) {
                     this.orderNoMore = true;
                   }
+
+                  // 新增：初始化新加载订单的倒计时
+                  this.initAllCountdowns();
                 })
                 .catch(err => {
                   console.error('加载更多订单失败:', err);
@@ -949,7 +1098,7 @@
 
       // 查看订单详情
       viewOrderDetail(order) {
-        this.currentOrder = order;
+        this.currentOrder = {...order};
         this.showOrderDetail = true;
       },
 
@@ -992,6 +1141,10 @@
                       center: true
                     });
                     order.status = 2;
+                    // 支付成功后清除倒计时
+                    if (order.countdown !== undefined) {
+                      order.countdown = 0;
+                    }
                     this.queryOrders();
                   })
                   .catch(err => {
@@ -1024,6 +1177,10 @@
                       center: true
                     });
                     order.status = 4;
+                    // 取消订单后清除倒计时
+                    if (order.countdown !== undefined) {
+                      order.countdown = 0;
+                    }
                     this.queryOrders();
                   })
                   .catch(err => {

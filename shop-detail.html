@@ -1150,7 +1150,7 @@
       // 数据加载完成计数器
       dataLoadedCount: 0,
       // 需要加载的数据总数
-      totalDataToLoad: 5 // 店铺信息、优惠券、评论、用户信息、收藏状态
+      totalDataToLoad: 3 // 店铺信息、优惠券、评论
     },
     created() {
       // 获取参数
@@ -1160,13 +1160,16 @@
       this.queryShopById(shopId);
       this.queryVoucher(shopId);
       this.loadComments(shopId);
-      this.queryLoginUser();
-      // 原isFollowed方法在created中调用，需确保shop.id已获取
-      setTimeout(() => {
-        this.isFollowed();
-      }, 100);
+      this.isLogin();
     },
     methods: {
+      isLogin(){
+        if (this.token) {
+          this.queryLoginUser();
+          setTimeout(() => {
+            this.isFollowed();
+          }, 100);        }
+      },
       // 新增：数据加载完成回调
       onDataLoaded() {
         this.dataLoadedCount++;
@@ -1190,11 +1193,9 @@
                 .then(({ data }) => {
                   this.user = data;
                   this.user.icon=fileURL+this.user.icon;
-                  this.onDataLoaded(); // 新增：数据加载完成回调
                 })
                 .catch(error => {
                   console.log('获取用户信息失败:', error);
-                  this.onDataLoaded(); // 新增：即使失败也回调
                 })
       },
       queryShopById(shopId) {
@@ -1476,11 +1477,8 @@
         axios.get("/app/follow/followShop/isFollow/" + this.shop.id)
                 .then(({data}) => {
                   this.isShopFollowed = data;
-                  this.onDataLoaded(); // 新增：数据加载完成回调
                 })
                 .catch(error => {
-                  this.$message.error('检查收藏状态失败');
-                  this.onDataLoaded(); // 新增：即使失败也回调
                 })
       },
       // 收藏按钮逻辑

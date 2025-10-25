@@ -14,7 +14,7 @@
       border-radius: 20px;
     }
 
-    /* ====================================== 新增：简洁分类标签导航样式 ====================================== */
+    /* ====================================== 简洁分类标签导航样式 ====================================== */
     .category-nav {
       display: flex;
       align-items: center;
@@ -131,6 +131,122 @@
       background: #f0f7ff;
     }
 
+    /* ====================================== 博客列表样式优化 ====================================== */
+    .blog-list {
+      height: calc(100vh - 240px);
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 8px 10px 70px; /* 减少上下内边距 */
+      margin-bottom: 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr; /* 两列布局 */
+      gap: 8px; /* 减少卡片间距 */
+    }
+
+    /* 博客卡片 - 调整大小 */
+    .blog-box {
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      display: flex;
+      flex-direction: column;
+      min-height: 200px; /* 确保最小高度 */
+    }
+
+    .blog-img {
+      width: 100%;
+      height: 140px; /* 减小图片高度 */
+      overflow: hidden;
+      background: #f8f9fa; /* 图片加载失败时的背景色 */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .blog-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .blog-img .img-placeholder {
+      color: #c0c4cc;
+      font-size: 14px;
+      text-align: center;
+    }
+
+    .blog-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 6px 10px 8px;
+    }
+
+    .blog-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: #333;
+      line-height: 1.4;
+      margin-bottom: 6px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1;
+    }
+
+    .blog-foot {
+      display: flex;
+      align-items: center;
+      margin-top: auto; /* 确保底部信息始终在底部 */
+    }
+
+    .blog-user-icon {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      overflow: hidden;
+      margin-right: 5px;
+      background: #f0f0f0; /* 用户头像加载失败时的背景 */
+    }
+
+    .blog-user-icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .blog-user-name {
+      font-size: 11px;
+      color: #666;
+      flex: 1;
+    }
+
+    .blog-liked {
+      display: flex;
+      align-items: center;
+      font-size: 11px;
+      color: #909399;
+      cursor: pointer;
+    }
+
+    .blog-liked svg {
+      margin-right: 3px;
+      width: 12px;
+      height: 12px;
+    }
+
+    /* 加载提示样式 */
+    .scroll-tip {
+      text-align: center;
+      padding: 12px 0;
+      color: #909399;
+      font-size: 12px;
+      grid-column: 1 / -1; /* 跨两列 */
+    }
+
     /* ====================================== 加载遮罩层样式 ====================================== */
     .loading-mask {
       position: fixed;
@@ -206,23 +322,6 @@
       color: #F56C6C;
     }
 
-    /* 修改：重新设计博客列表容器样式 */
-    .blog-list {
-      height: calc(100vh - 260px);
-      overflow-y: auto;
-      overflow-x: hidden;
-      padding: 10px 0 80px; /* 增加底部内边距 */
-      margin-bottom: 0;
-    }
-
-    /* 加载提示样式 */
-    .scroll-tip {
-      text-align: center;
-      padding: 15px 0;
-      color: #909399;
-      font-size: 12px;
-    }
-
     /* 修改：底部导航栏样式调整 */
     .footer-container {
       position: fixed;
@@ -255,8 +354,33 @@
       }
 
       .blog-list {
-        padding-bottom: calc(80px + env(safe-area-inset-bottom));
+        padding-bottom: calc(70px + env(safe-area-inset-bottom));
       }
+    }
+
+    /* 空状态提示 */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #909399;
+      grid-column: 1 / -1; /* 跨两列 */
+    }
+
+    .empty-state img {
+      width: 80px;
+      height: 80px;
+      margin-bottom: 16px;
+      opacity: 0.6;
+    }
+
+    .empty-state p {
+      margin: 8px 0;
+      font-size: 14px;
+    }
+
+    /* 新增：搜索输入框点击样式 */
+    .search-input-clickable {
+      cursor: pointer;
     }
   </style>
 </head>
@@ -287,7 +411,14 @@
       {{ currentCity || '定位中...' }}
     </div>
     <div class="search-input">
-      <el-input size="mini" placeholder="请输入商户名、地点">
+      <!-- 修改：添加点击事件跳转到搜索页面 -->
+      <el-input
+              size="mini"
+              placeholder="请输入商户名、地点"
+              class="search-input-clickable"
+              @focus="toSearchPage"
+              readonly
+      >
         <i slot="prefix" class="el-input__icon el-icon-search"></i>
       </el-input>
     </div>
@@ -307,6 +438,15 @@
   <!-- 新增：简洁分类标签导航 -->
   <div class="category-nav">
     <div class="category-tabs">
+      <!-- 热门博客标签 -->
+      <div
+              class="category-tab"
+              :class="{ active: activeCategory === 'hot' }"
+              @click="switchCategory('hot')"
+      >
+        热门
+      </div>
+      <!-- 动态店铺类型标签 -->
       <div
               v-for="category in visibleCategories"
               :key="category.id"
@@ -321,13 +461,14 @@
             class="more-categories"
             :class="{ active: showDropdown }"
             @click="toggleDropdown"
+            v-if="dropdownCategories.length > 0"
     >
       更多
       <i class="el-icon-arrow-down"></i>
     </div>
 
     <!-- 下拉菜单 -->
-    <div class="category-dropdown" :class="{ show: showDropdown }">
+    <div class="category-dropdown" :class="{ show: showDropdown }" v-if="dropdownCategories.length > 0">
       <div
               v-for="category in dropdownCategories"
               :key="category.id"
@@ -342,17 +483,41 @@
 
   <!-- 博客列表（绑定滚动事件） -->
   <div class="blog-list" @scroll="onScroll">
+    <!-- 空状态提示 -->
+    <div class="empty-state" v-if="blogs.length === 0 && !isLoading">
+      <img src="/imgs/empty-blog.png" alt="暂无博客">
+      <p>暂无博客内容</p>
+      <p style="font-size: 12px; color: #c0c4cc;">快去发布第一篇博客吧</p>
+    </div>
+
+    <!-- 博客卡片 - 两列布局 -->
     <div class="blog-box" v-for="b in blogs" :key="b.id">
-      <div class="blog-img" @click="toBlogDetail(b)"><img :src="b.img" alt=""></div>
-      <div class="blog-title">{{b.title}}</div>
-      <div class="blog-foot">
-        <div class="blog-user-icon"><img :src="b.icon || '/imgs/icons/default-icon.png'" alt=""></div>
-        <div class="blog-user-name">{{b.name}}</div>
-        <div class="blog-liked" @click="addLike(b)">
-          <svg t="1646634642977" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2187" width="14" height="14">
-            <path d="M160 944c0 8.8-7.2 16-16 16h-32c-26.5 0-48-21.5-48-48V528c0-26.5 21.5-48 48-48h32c8.8 0 16 7.2 16 16v448zM96 416c-53 0-96 43-96 96v416c0 53 43 96 96 96h96c17.7 0 32-14.3 32-32V448c0-17.7-14.3-32-32-32H96zM505.6 64c16.2 0 26.4 8.7 31 13.9 4.6 5.2 12.1 16.3 10.3 32.4l-23.5 203.4c-4.9 42.2 8.6 84.6 36.8 116.4 28.3 31.7 68.9 49.9 111.4 49.9h271.2c6.6 0 10.8 3.3 13.2 6.1s5 7.5 4 14l-48 303.4c-6.9 43.6-29.1 83.4-62.7 112C815.8 944.2 773 960 728.9 960h-317c-33.1 0-59.9-26.8-59.9-59.9v-455c0-6.1 1.7-12 5-17.1 69.5-109 106.4-234.2 107-364h41.6z m0-64h-44.9C427.2 0 400 27.2 400 60.7c0 127.1-39.1 251.2-112 355.3v484.1c0 68.4 55.5 123.9 123.9 123.9h317c122.7 0 227.2-89.3 246.3-210.5l47.9-303.4c7.8-49.4-30.4-94.1-80.4-94.1H671.6c-50.9 0-90.5-44.4-84.6-95l23.5-203.4C617.7 55 568.7 0 505.6 0z" p-id="2188" :fill="b.isLike ? '#ff6633' : '#82848a'"></path>
-          </svg>
-          {{b.liked}}
+      <div class="blog-img" @click="toBlogDetail(b)">
+        <img
+                :src="b.img"
+                :alt="b.title"
+                @error="handleImageError($event, b)"
+                @load="handleImageLoad($event, b)"
+        >
+        <div class="img-placeholder" v-if="b.imgError">图片加载失败</div>
+      </div>
+      <div class="blog-content">
+        <div class="blog-title">{{b.title || '无标题'}}</div>
+        <div class="blog-foot">
+          <div class="blog-user-icon">
+            <img
+                    :src="b.icon || '/imgs/icons/default-icon.png'"
+                    alt="用户头像"
+                    @error="handleAvatarError($event)"
+            >
+          </div>
+          <div class="blog-user-name">{{b.name || '匿名用户'}}</div>
+          <div class="blog-liked" @click="addLike(b)">
+            <svg t="1646634642977" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2187" width="14" height="14">
+              <path d="M160 944c0 8.8-7.2 16-16 16h-32c-26.5 0-48-21.5-48-48V528c0-26.5 21.5-48 48-48h32c8.8 0 16 7.2 16 16v448zM96 416c-53 0-96 43-96 96v416c0 53 43 96 96 96h96c17.7 0 32-14.3 32-32V448c0-17.7-14.3-32-32-32H96zM505.6 64c16.2 0 26.4 8.7 31 13.9 4.6 5.2 12.1 16.3 10.3 32.4l-23.5 203.4c-4.9 42.2 8.6 84.6 36.8 116.4 28.3 31.7 68.9 49.9 111.4 49.9h271.2c6.6 0 10.8 3.3 13.2 6.1s5 7.5 4 14l-48 303.4c-6.9 43.6-29.1 83.4-62.7 112C815.8 944.2 773 960 728.9 960h-317c-33.1 0-59.9-26.8-59.9-59.9v-455c0-6.1 1.7-12 5-17.1 69.5-109 106.4-234.2 107-364h41.6z m0-64h-44.9C427.2 0 400 27.2 400 60.7c0 127.1-39.1 251.2-112 355.3v484.1c0 68.4 55.5 123.9 123.9 123.9h317c122.7 0 227.2-89.3 246.3-210.5l47.9-303.4c7.8-49.4-30.4-94.1-80.4-94.1H671.6c-50.9 0-90.5-44.4-84.6-95l23.5-203.4C617.7 55 568.7 0 505.6 0z" p-id="2188" :fill="b.isLike ? '#ff6633' : '#82848a'"></path>
+            </svg>
+            {{b.liked || 0}}
+          </div>
         </div>
       </div>
     </div>
@@ -386,20 +551,8 @@
       current: 1, // 当前页码
       isLoading: false, // 加载状态标记
       noMoreData: false, // 无更多数据标记
-      // 新增：分类相关数据
-      categories: [
-        { id: 'hot', name: '热门博客' },
-        { id: 'food', name: '美食' },
-        { id: 'ktv', name: 'KTV' },
-        { id: 'beauty', name: '丽人·美发' },
-        { id: 'fitness', name: '健身运动' },
-        { id: 'massage', name: '按摩·足疗' },
-        { id: 'spa', name: '美容SPA' },
-        { id: 'parenting', name: '亲子游乐' },
-        { id: 'bar', name: '酒吧' },
-        { id: 'party', name: '轰趴馆' },
-        { id: 'eyelash', name: '美睫·美甲' }
-      ],
+      // 分类相关数据 - 现在基于店铺类型动态生成
+      categories: [], // 动态分类列表
       activeCategory: 'hot', // 当前选中的分类
       showDropdown: false, // 是否显示下拉菜单
       // 定位相关数据
@@ -429,13 +582,13 @@
         if (this.locationError) return "定位失败，使用默认位置";
         return "";
       },
-      // 可见的分类标签（前5个）
+      // 可见的分类标签（前4个，加上热门共5个）
       visibleCategories() {
-        return this.categories.slice(0, 5);
+        return this.categories.slice(0, 4);
       },
       // 下拉菜单中的分类（剩余的）
       dropdownCategories() {
-        return this.categories.slice(5);
+        return this.categories.slice(4);
       }
     },
     created() {
@@ -450,6 +603,50 @@
       document.removeEventListener('click', this.closeDropdown);
     },
     methods: {
+      // 新增：跳转到搜索页面
+      toSearchPage() {
+        location.href = "/search.html";
+      },
+
+      // 图片加载错误处理
+      handleImageError(event, blog) {
+        console.log('图片加载失败:', blog.img);
+        // 标记图片加载失败
+        this.$set(blog, 'imgError', true);
+        // 隐藏图片元素，显示占位符
+        event.target.style.display = 'none';
+      },
+
+      // 图片加载成功处理
+      handleImageLoad(event, blog) {
+        // 标记图片加载成功
+        this.$set(blog, 'imgError', false);
+      },
+
+      // 用户头像加载错误处理
+      handleAvatarError(event) {
+        // 设置默认头像
+        event.target.src = '/imgs/icons/default-icon.png';
+      },
+
+      // 根据店铺类型数据生成分类
+      generateCategoriesFromTypes(types) {
+        // 添加热门博客分类
+        const categories = [];
+
+        // 添加店铺类型分类
+        if (types && types.length > 0) {
+          types.forEach(type => {
+            categories.push({
+              id: type.id.toString(), // 确保ID是字符串
+              name: type.name
+            });
+          });
+        }
+
+        return categories;
+      },
+
       // 切换分类
       switchCategory(categoryId) {
         if (this.activeCategory === categoryId) return;
@@ -485,13 +682,13 @@
       },
 
       // 根据分类查询博客
-      queryBlogsByCategory(category) {
+      queryBlogsByCategory(categoryId) {
         if (this.isLoading || this.isRequesting) return;
 
         this.isLoading = true;
         this.isRequesting = true;
 
-        axios.get(`/app/blog/category/${category}?current=${this.current}`)
+        axios.get(`/app/blog/category/${categoryId}?current=${this.current}`)
                 .then(({ data }) => {
                   if (!data || data.length === 0) {
                     this.noMoreData = true;
@@ -499,7 +696,10 @@
                   }
                   // 处理图片路径
                   data.forEach(b => {
-                    b.img = fileURL+b.images?.split(",")[0] || '';
+                    b.img = fileURL + (b.images?.split(",")[0] || '');
+                    b.icon = fileURL + (b.icon || '');
+                    // 初始化图片错误状态
+                    b.imgError = false;
                   });
                   this.blogs = this.blogs.concat(data);
                   this.current++;
@@ -705,10 +905,14 @@
         axios.get("/app/shop/shop-type/list")
                 .then(({ data }) => {
                   this.types = data || [];
+                  // 根据店铺类型生成分类标签
+                  this.categories = this.generateCategoriesFromTypes(this.types);
                   this.onDataLoaded(); // 数据加载完成回调
                 })
                 .catch(err => {
                   this.$message.error('类型加载失败');
+                  // 即使失败也生成默认分类
+                  this.categories = this.generateCategoriesFromTypes([]);
                   this.onDataLoaded(); // 即使失败也回调
                 });
       },
@@ -731,7 +935,10 @@
                   }
                   // 处理图片路径
                   data.forEach(b => {
-                    b.img = fileURL+b.images?.split(",")[0] || '';
+                    b.img = fileURL + (b.images?.split(",")[0] || '');
+                    b.icon = fileURL + (b.icon || '');
+                    // 初始化图片错误状态
+                    b.imgError = false;
                   });
                   // 追加数据（而非覆盖）
                   this.blogs = this.blogs.concat(data);

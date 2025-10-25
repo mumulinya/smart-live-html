@@ -938,6 +938,7 @@
       shop: {},
       likes: [],
       user: {}, // 登录用户
+      token: sessionStorage.getItem("token") || '',
       followed: false, // 是否关注了
       _width: 0,
       duration: 300,
@@ -1053,9 +1054,12 @@
       },
       addLike(){
         // 判断是否登录
-        let token = sessionStorage.getItem("token");
-        if (!token) {
-          location.href = "login.html"
+        if (!this.token) {
+          this.$message.error("请先登录");
+          setTimeout(() => {
+            location.href = "/login.html";
+          }, 200);
+          return;
         }
         axios.put("/app/blog/like/" +this.blog.id)
                 .then(({data}) => {
@@ -1078,9 +1082,12 @@
       },
       follow(){
         // 判断是否登录
-        let token = sessionStorage.getItem("token");
-        if (!token) {
-          location.href = "login.html"
+        if (!this.token) {
+          this.$message.error("请先登录");
+          setTimeout(() => {
+            location.href = "/login.html";
+          }, 200);
+          return;
         }
         axios.put("/app/follow/followUser/" + this.blog.userId + "/" + !this.followed)
                 .then(() => {
@@ -1111,9 +1118,12 @@
       },
       checkLogin() {
         // 获取token
-        let token = sessionStorage.getItem("token");
-        if (!token) {
-          location.href = "login.html"
+        if (!this.token) {
+          this.$message.error("请先登录");
+          setTimeout(() => {
+            location.href = "/login.html";
+          }, 200);
+          return;
         }else{
           this.showCommentPublish = true
         }

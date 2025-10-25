@@ -766,6 +766,8 @@
       shopId:null,
       sourceId:null,
       sourceType:null,
+      // 登录状态
+      token: sessionStorage.getItem("token") || '',
       comments: [],
       current: 1,// comment的页码
       comment:{
@@ -806,10 +808,16 @@
        this.sourceId=this.shopId
         this.sourceType=2
       }
-      this.queryLoginUser();
       this.loadComments();
+      this.isLogin();
     },
     methods: {
+      isLogin(){
+        if (this.token) {
+          this.queryLoginUser();
+        }
+      },
+
       goBack() {
         history.back();
       },
@@ -937,7 +945,13 @@
           this.$message.error('请输入评价内容');
           return;
         }
-        this.checkLogin();
+        if (!this.token) {
+          this.$message.error("请先登录")
+          setTimeout(() => {
+            location.href = "/login.html"
+          }, 200);
+          return;
+        }
         const formData = new FormData();
         this.comment.content=this.commentText
         this.comment.rating=this.commentRating
@@ -977,13 +991,6 @@
         } catch (error) {
           this.$message.error('发布失败，请重试');
           console.error(error);
-        }
-      },
-      checkLogin() {
-        // 获取token
-        let token = sessionStorage.getItem("token");
-        if (!token) {
-          location.href = "login.html"
         }
       },
       // 图片预览

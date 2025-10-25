@@ -939,7 +939,7 @@
       // 数据加载完成计数器
       dataLoadedCount: 0,
       // 需要加载的数据总数
-      totalDataToLoad: 6, // 用户信息、用户详情、统计数据、笔记、共同关注、收藏
+      totalDataToLoad: 5, // 用户详情、统计数据、笔记、共同关注、收藏
 
       //统计标签
       stats: {
@@ -984,13 +984,10 @@
       debugMode: true
     },
     created() {
-      // 初始化测试数据
-      this.initTestData();
-
+      this.isLogin()
       // 延迟加载实际数据
       setTimeout(() => {
         this.queryUser();
-        this.queryLoginUser();
       }, 1000);
     },
     mounted() {
@@ -1000,6 +997,12 @@
       });
     },
     methods: {
+      isLogin(){
+        if (this.token) {
+          setTimeout(() => {
+            this.queryLoginUser();
+          }, 100);        }
+      },
       // 新增：数据加载完成回调
       onDataLoaded() {
         this.dataLoadedCount++;
@@ -1012,46 +1015,6 @@
             console.log('所有数据加载完成，隐藏遮罩层');
           }, 500); // 延迟500ms隐藏，让用户看到加载完成
         }
-      },
-
-      // 初始化测试数据
-      initTestData() {
-        // 笔记数据
-        this.notes = Array(5).fill().map((_, i) => ({
-          id: i + 1,
-          title: `测试笔记 ${i + 1}：这是一篇用于测试的笔记内容`,
-          images: '/imgs/icons/default-blog.png',
-          liked: i * 10,
-          comments: i * 3,
-          isLike: false
-        }));
-
-        // 共同关注数据
-        this.commonFollows = Array(3).fill().map((_, i) => ({
-          id: i + 100,
-          nickName: `共同关注用户 ${i + 1}`,
-          icon: '/imgs/icons/default-icon.png',
-          isFollow: true
-        }));
-
-        // 店铺收藏数据
-        this.collections = Array(3).fill().map((_, i) => ({
-          id: i + 400,
-          shop: {
-            id: i + 500,
-            name: `收藏店铺 ${i + 1}`,
-            images: '/imgs/icons/default-shop.png',
-            score: 4.5 + (i * 0.1),
-            comments: 50 + (i * 10),
-            area: '拱墅区',
-            distance: 500 + (i * 200),
-            avgPrice: 80 + (i * 20),
-            address: `杭州市拱墅区莫干山路${1000 + i}号`
-          }
-        }));
-
-        // 测试数据加载完成
-        this.onDataLoaded();
       },
 
       // 处理图片加载失败
@@ -1430,7 +1393,6 @@
         axios.get("/app/user/me")
                 .then((response) => {
                   this.loginUser = response.data || {};
-                  this.onDataLoaded(); // 新增：数据加载完成回调
                   // 如果已获取用户信息，加载共同关注
                   if (this.user.id) {
                     this.queryCommonFollows();
@@ -1439,7 +1401,6 @@
                 .catch(err => {
                   console.error("获取登录用户失败:", err);
                   this.loginUser = {};
-                  this.onDataLoaded(); // 新增：即使失败也回调
                 });
       },
 
@@ -1510,7 +1471,13 @@
       // 关注/取消关注用户
       follow() {
         if (!this.user.id) return;
-
+        if (!this.token) {
+          this.$message.error("请先登录");
+          setTimeout(() => {
+            location.href = "/login.html";
+          }, 200);
+          return;
+        }
         axios.put("/app/follow/followUser/" + this.user.id + "/" + !this.followed)
                 .then(() => {
                   this.$message.success(this.followed ? "已取消关注" : "已关注");
@@ -1527,6 +1494,13 @@
       // 发送私信
       sendPrivateMessage() {
         if (!this.user.id) return;
+        if (!this.token) {
+          this.$message.error("请先登录");
+          setTimeout(() => {
+            location.href = "/login.html";
+          }, 200);
+          return;
+        }
 
         if (this.sessionId) {
           location.href = `/chat.html?sessionId=${this.sessionId}`;
@@ -1571,8 +1545,13 @@
 
       // 切换关注状态
       toggleFollow(user) {
-        if (!user.id) return;
-
+        if (!this.token) {
+          this.$message.error("请先登录");
+          setTimeout(() => {
+            location.href = "/login.html";
+          }, 200);
+          return;
+        }
         const isFollow = !user.isFollow;
         axios.put(`/app/user/follow/${user.id}/${isFollow}`)
                 .then(() => {
