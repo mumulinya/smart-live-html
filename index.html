@@ -295,23 +295,28 @@
       100% { transform: rotate(360deg); }
     }
 
-    /* 定位状态显示 */
+    /* 定位状态显示 - 修改为居中弹窗样式 */
     .location-status {
-      padding: 8px 16px;
-      background: #f4f4f5;
-      color: #909399;
-      font-size: 12px;
-      text-align: center;
-      border-bottom: 1px solid #e6e6e6;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      padding: 16px 20px;
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      max-width: 80%;
       transition: all 0.3s ease;
-      max-height: 40px;
-      overflow: hidden;
+      opacity: 0;
+      visibility: hidden;
     }
 
-    .location-status.hidden {
-      max-height: 0;
-      padding: 0;
-      border-bottom: none;
+    .location-status.show {
+      opacity: 1;
+      visibility: visible;
     }
 
     .location-status.success {
@@ -320,6 +325,16 @@
 
     .location-status.error {
       color: #F56C6C;
+    }
+
+    .location-status i {
+      margin-right: 8px;
+      font-size: 18px;
+    }
+
+    .location-status span {
+      font-size: 14px;
+      white-space: nowrap;
     }
 
     /* 修改：底部导航栏样式调整 */
@@ -393,16 +408,16 @@
     <div class="loading-subtext">请稍候...</div>
   </div>
 
-  <!-- 定位状态显示 -->
+  <!-- 定位状态显示 - 修改为居中弹窗 -->
   <div class="location-status" :class="{
-        'success': usingCachedLocation && !locationLoading && !locationError,
+        'success': locationSuccess,
         'error': locationError,
-        'hidden': !showLocationStatus
-      }" v-if="showLocationStatus">
+        'show': showLocationStatus
+      }">
     <i class="el-icon-loading" v-if="locationLoading"></i>
-    <i class="el-icon-location" v-else-if="usingCachedLocation && !locationError"></i>
+    <i class="el-icon-location" v-else-if="locationSuccess"></i>
     <i class="el-icon-warning" v-else-if="locationError"></i>
-    {{ locationStatusText }}
+    <span>{{ locationStatusText }}</span>
   </div>
 
   <div class="search-bar">
@@ -558,6 +573,7 @@
       // 定位相关数据
       locationLoading: false,
       locationError: false,
+      locationSuccess: false,
       usingCachedLocation: false,
       showLocationStatus: false,
       currentCity: '杭州',
@@ -573,12 +589,14 @@
       // 数据加载完成计数器
       dataLoadedCount: 0,
       // 需要加载的数据总数
-      totalDataToLoad: 3 // 类型列表、博客列表、定位信息
+      totalDataToLoad: 3, // 类型列表、博客列表、定位信息
+      // 标记是否为主动定位
+      isActiveLocation: false
     },
     computed: {
       locationStatusText() {
         if (this.locationLoading) return "定位中...";
-        if (this.usingCachedLocation && !this.locationError) return "已使用缓存位置";
+        if (this.locationSuccess) return "定位成功";
         if (this.locationError) return "定位失败，使用默认位置";
         return "";
       },
@@ -756,13 +774,21 @@
 
       // 显示定位状态（3秒后自动隐藏）
       showLocationStatusMessage() {
-        this.showLocationStatus = true;
-        setTimeout(() => this.hideLocationStatus(), 3000);
+        // 只在主动定位时显示提示
+        if (this.isActiveLocation) {
+          this.showLocationStatus = true;
+          setTimeout(() => this.hideLocationStatus(), 3000);
+        }
       },
 
       // 隐藏定位状态
       hideLocationStatus() {
         this.showLocationStatus = false;
+        // 重置定位状态
+        this.locationLoading = false;
+        this.locationError = false;
+        this.locationSuccess = false;
+        this.isActiveLocation = false;
       },
 
       // 初始化位置信息
@@ -772,10 +798,11 @@
           this.userLocation = { ...cachedLocation };
           this.currentCity = cachedLocation.region?.city || cachedLocation.region?.province || '杭州';
           this.usingCachedLocation = true;
-          this.showLocationStatusMessage();
           this.onDataLoaded(); // 数据加载完成回调
+          // 使用缓存位置时不显示提示
         } else {
-          this.getLocation();
+          // 没有缓存位置时自动定位，但不显示提示
+          this.getLocation(false);
         }
       },
 
@@ -821,14 +848,15 @@
       },
 
       // 自动定位
-      getLocation() {
-        this.showLocationStatus = true;
-        this.locationLoading = true;
+      getLocation(showMessage = false) {
+        this.isActiveLocation = showMessage; // 标记是否为主动定位
+        this.locationLoading = showMessage; // 只在主动定位时显示加载状态
         this.locationError = false;
+        this.locationSuccess = false;
         this.usingCachedLocation = false;
 
         if (!navigator.geolocation) {
-          this.locationError = true;
+          this.locationError = showMessage;
           this.locationLoading = false;
           this.showLocationStatusMessage();
           this.onDataLoaded(); // 即使失败也回调
@@ -857,14 +885,20 @@
                       this.userLocation.region = regionInfo;
                       this.currentCity = regionInfo.city || regionInfo.province || '杭州';
                       this.saveLocationToCache(longitude, latitude, regionInfo);
-                      this.$message.success(`定位成功：${regionInfo.district}`);
+                      if (showMessage) {
+                        this.$message.success(`定位成功：${regionInfo.district}`);
+                      }
+                      this.locationSuccess = showMessage;
                     } else {
                       throw new Error('地区信息获取失败');
                     }
                   } catch (error) {
                     console.error('地区信息处理失败:', error);
                     this.saveLocationToCache(longitude, latitude, null);
-                    this.$message.warning('定位成功（地区信息获取失败）');
+                    if (showMessage) {
+                      this.$message.warning('定位成功（地区信息获取失败）');
+                    }
+                    this.locationSuccess = showMessage;
                   }
 
                   this.locationLoading = false;
@@ -873,10 +907,12 @@
                 },
                 (error) => {
                   console.error('定位失败:', error);
-                  this.locationError = true;
+                  this.locationError = showMessage;
                   this.locationLoading = false;
                   this.showLocationStatusMessage();
-                  this.$message.warning('定位失败，使用默认位置');
+                  if (showMessage) {
+                    this.$message.warning('定位失败，使用默认位置');
+                  }
                   this.onDataLoaded(); // 即使失败也回调
                 },
                 options
@@ -888,8 +924,10 @@
         this.clearLocationCache();
         this.locationLoading = true;
         this.locationError = false;
+        this.locationSuccess = false;
         this.usingCachedLocation = false;
-        this.getLocation();
+        // 主动定位时传入true，显示提示
+        this.getLocation(true);
       },
 
       // GPS坐标转高德坐标

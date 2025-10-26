@@ -110,6 +110,16 @@
       background: #fef0f0;
     }
 
+    .refresh-btn {
+      margin-left: 8px;
+      cursor: pointer;
+      color: #409EFF;
+    }
+
+    .refresh-btn:hover {
+      color: #66b1ff;
+    }
+
     /* 搜索分类筛选 */
     .search-filters {
       display: flex;
@@ -1108,15 +1118,20 @@
   </div>
 
   <!-- 定位状态显示 -->
-  <div class="location-status" :class="{
-        'success': usingCachedLocation && !locationLoading && !locationError,
+  <div class="location-status"
+       :class="{
+        'success': !locationLoading && !locationError,
         'error': locationError,
         'hidden': !showLocationStatus
-      }" v-if="showLocationStatus">
+      }"
+       v-if="showLocationStatus">
     <i class="el-icon-loading" v-if="locationLoading"></i>
-    <i class="el-icon-location" v-else-if="usingCachedLocation && !locationError"></i>
+    <i class="el-icon-location" v-else-if="!locationError"></i>
     <i class="el-icon-warning" v-else-if="locationError"></i>
     {{ locationStatusText }}
+    <span class="refresh-btn" @click="refreshLocation" v-if="!locationLoading">
+      <i class="el-icon-refresh"></i>
+    </span>
   </div>
 
   <!-- 搜索分类筛选 -->
@@ -1652,11 +1667,12 @@
       // 商铺类型数据
       shopTypes: [],
 
-      // 定位相关数据
+      // 定位相关数据 - 优化后的逻辑
       locationLoading: false,
       locationError: false,
       usingCachedLocation: false,
       showLocationStatus: false,
+      isFirstLocation: true, // 新增：标记是否是首次定位
 
       // 筛选条件
       locationFilter: {
@@ -1700,7 +1716,7 @@
       },
       locationStatusText() {
         if (this.locationLoading) return "定位中...";
-        if (this.usingCachedLocation && !this.locationError) return "已使用缓存位置";
+        if (!this.locationError) return "定位成功";
         if (this.locationError) return "定位失败，使用默认位置";
         return "";
       },
@@ -1778,9 +1794,9 @@
         this.searchHistory = history;
       },
       // 清空历史记录
-       clearHistory() {
+      clearHistory() {
         try {
-           this.$confirm('确定要清空所有搜索历史吗？', '提示', {
+          this.$confirm('确定要清空所有搜索历史吗？', '提示', {
             confirmButtonText: '确定',
             cancelButtonText: '取消',
             type: 'warning',
@@ -2389,7 +2405,7 @@
         }
       },
 
-      // 定位相关方法
+      // 定位相关方法 - 优化后的逻辑
       initLocation() {
         const cachedLocation = this.getCachedLocation();
         if (cachedLocation) {
@@ -2397,7 +2413,9 @@
           this.locationFilter.lat = cachedLocation.y;
           this.usingCachedLocation = true;
           this.locationError = false;
-          this.showLocationStatusMessage();
+          // 使用缓存地址时不显示提示
+          this.showLocationStatus = false;
+          this.isFirstLocation = false;
         } else {
           this.getLocation();
         }
@@ -2443,7 +2461,10 @@
       },
 
       getLocation() {
-        this.showLocationStatus = true;
+        // 只在首次定位或需要重新定位时显示提示
+        if (this.isFirstLocation) {
+          this.showLocationStatus = true;
+        }
         this.locationLoading = true;
         this.locationError = false;
         this.usingCachedLocation = false;
@@ -2474,39 +2495,57 @@
                     const regionInfo = await this.getRegionInfo(longitude, latitude);
                     if (regionInfo) {
                       this.saveLocationToCache(longitude, latitude, regionInfo);
-                      this.$message({
-                        message: `定位成功：${regionInfo.district}`,
-                        type: 'success',
-                        duration: 2000
-                      });
+                      // 只在首次定位成功时显示成功提示
+                      if (this.isFirstLocation) {
+                        this.$message({
+                          message: `定位成功：${regionInfo.district}`,
+                          type: 'success',
+                          duration: 2000
+                        });
+                      }
                     } else {
                       throw new Error('获取地区信息失败');
                     }
                   } catch (error) {
                     this.saveLocationToCache(longitude, latitude, null);
-                    this.$message({
-                      message: '定位成功（地区信息获取失败）',
-                      type: 'warning',
-                      duration: 2000
-                    });
+                    // 只在首次定位时显示警告
+                    if (this.isFirstLocation) {
+                      this.$message({
+                        message: '定位成功（地区信息获取失败）',
+                        type: 'warning',
+                        duration: 2000
+                      });
+                    }
                   }
 
                   this.locationLoading = false;
                   this.usingCachedLocation = false;
+                  this.isFirstLocation = false;
                   this.showLocationStatusMessage();
                 },
                 (error) => {
                   this.locationError = true;
                   this.locationLoading = false;
+                  this.isFirstLocation = false;
                   this.showLocationStatusMessage();
-                  this.$message({
-                    message: '定位失败，使用默认位置',
-                    type: 'warning',
-                    duration: 2000
-                  });
+                  // 只在首次定位失败时显示提示
+                  if (this.isFirstLocation) {
+                    this.$message({
+                      message: '定位失败，使用默认位置',
+                      type: 'warning',
+                      duration: 2000
+                    });
+                  }
                 },
                 options
         );
+      },
+
+      // 手动刷新定位
+      refreshLocation() {
+        this.clearLocationCache();
+        this.isFirstLocation = true;
+        this.getLocation();
       },
 
       async getRegionInfo(lng, lat) {
@@ -2539,10 +2578,13 @@
       },
 
       showLocationStatusMessage() {
-        this.showLocationStatus = true;
-        setTimeout(() => {
-          this.hideLocationStatus();
-        }, 3000);
+        // 只有在自动定位时才显示状态提示
+        if (!this.usingCachedLocation) {
+          this.showLocationStatus = true;
+          setTimeout(() => {
+            this.hideLocationStatus();
+          }, 3000);
+        }
       },
 
       hideLocationStatus() {

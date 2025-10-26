@@ -279,23 +279,28 @@
       pointer-events: none;
     }
 
-    /* 定位状态显示 */
+    /* 定位状态显示 - 修改为居中弹窗样式 */
     .location-status {
-      padding: 8px 16px;
-      background: #f4f4f5;
-      color: #909399;
-      font-size: 12px;
-      text-align: center;
-      border-bottom: 1px solid #e6e6e6;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      padding: 16px 20px;
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      max-width: 80%;
       transition: all 0.3s ease;
-      max-height: 40px;
-      overflow: hidden;
+      opacity: 0;
+      visibility: hidden;
     }
 
-    .location-status.hidden {
-      max-height: 0;
-      padding: 0;
-      border-bottom: none;
+    .location-status.show {
+      opacity: 1;
+      visibility: visible;
     }
 
     .location-status.success {
@@ -304,6 +309,16 @@
 
     .location-status.error {
       color: #F56C6C;
+    }
+
+    .location-status i {
+      margin-right: 8px;
+      font-size: 18px;
+    }
+
+    .location-status span {
+      font-size: 14px;
+      white-space: nowrap;
     }
 
     /* 自定义标记样式 */
@@ -353,16 +368,16 @@
     </div>
   </div>
 
-  <!-- 定位状态显示 -->
+  <!-- 定位状态显示 - 修改为居中弹窗 -->
   <div class="location-status" :class="{
-        'success': usingCachedLocation && !locationLoading && !locationError,
+        'success': locationSuccess,
         'error': locationError,
-        'hidden': !showLocationStatus
-      }" v-if="showLocationStatus">
+        'show': showLocationStatus
+      }">
     <i class="el-icon-loading" v-if="locationLoading"></i>
-    <i class="el-icon-location" v-else-if="usingCachedLocation && !locationError"></i>
+    <i class="el-icon-location" v-else-if="locationSuccess"></i>
     <i class="el-icon-warning" v-else-if="locationError"></i>
-    {{ locationStatusText }}
+    <span>{{ locationStatusText }}</span>
   </div>
 
   <!-- 🔥 新增：地图加载遮罩 -->
@@ -443,6 +458,7 @@
       // 定位相关数据
       locationLoading: false,
       locationError: false,
+      locationSuccess: false,
       usingCachedLocation: false,
       showLocationStatus: false,
       currentType: null,
@@ -544,12 +560,14 @@
           y: 30.272693
         }
       ],
-      shopList: []
+      shopList: [],
+      // 新增：标记是否为主动定位
+      isActiveLocation: false
     },
     computed: {
       locationStatusText() {
         if (this.locationLoading) return "定位中...";
-        if (this.usingCachedLocation && !this.locationError) return "已使用缓存位置";
+        if (this.locationSuccess) return "定位成功";
         if (this.locationError) return "定位失败，使用默认位置";
         return "";
       }
@@ -597,16 +615,24 @@
 
       // 显示定位状态（3秒后自动隐藏）
       showLocationStatusMessage() {
-        this.showLocationStatus = true;
+        // 只在主动定位时显示提示
+        if (this.isActiveLocation) {
+          this.showLocationStatus = true;
 
-        setTimeout(() => {
-          this.hideLocationStatus();
-        }, 3000);
+          setTimeout(() => {
+            this.hideLocationStatus();
+          }, 3000);
+        }
       },
 
       // 隐藏定位状态
       hideLocationStatus() {
         this.showLocationStatus = false;
+        // 重置定位状态
+        this.locationLoading = false;
+        this.locationError = false;
+        this.locationSuccess = false;
+        this.isActiveLocation = false;
       },
 
       // 初始化位置信息
@@ -622,11 +648,12 @@
           this.usingCachedLocation = true;
           this.locationError = false;
           this.userLocation.region = cachedLocation.region;
-          this.showLocationStatusMessage();
+          // 使用缓存位置时不显示提示
           this.initMapAndData();
         } else {
           console.log("缓存中没有位置，开始定位");
-          this.getLocation();
+          // 没有缓存位置时自动定位，但不显示提示
+          this.getLocation(false);
         }
       },
 
@@ -676,15 +703,16 @@
       },
 
       // 自动定位方法
-      getLocation() {
-        this.showLocationStatus = true;
-        this.locationLoading = true;
+      getLocation(showMessage = false) {
+        this.isActiveLocation = showMessage; // 标记是否为主动定位
+        this.locationLoading = showMessage; // 只在主动定位时显示加载状态
         this.locationError = false;
+        this.locationSuccess = false;
         this.usingCachedLocation = false;
 
         if (!navigator.geolocation) {
           console.log("浏览器不支持地理定位");
-          this.locationError = true;
+          this.locationError = showMessage;
           this.locationLoading = false;
           this.showLocationStatusMessage();
           this.initMapAndData();
@@ -719,12 +747,15 @@
                       // 保存包含地区信息的缓存
                       this.saveLocationToCache(longitude, latitude, regionInfo);
 
-                      // 显示包含地区的成功消息
-                      this.$message({
-                        message: `定位成功：${regionInfo.district}`,
-                        type: 'success',
-                        duration: 2000
-                      });
+                      if (showMessage) {
+                        // 显示包含地区的成功消息
+                        this.$message({
+                          message: `定位成功：${regionInfo.district}`,
+                          type: 'success',
+                          duration: 2000
+                        });
+                      }
+                      this.locationSuccess = showMessage;
                     } else {
                       throw new Error('获取地区信息失败');
                     }
@@ -733,11 +764,14 @@
                     // 即使地区获取失败，也保存坐标
                     this.saveLocationToCache(longitude, latitude, null);
 
-                    this.$message({
-                      message: '定位成功（地区信息获取失败）',
-                      type: 'warning',
-                      duration: 2000
-                    });
+                    if (showMessage) {
+                      this.$message({
+                        message: '定位成功（地区信息获取失败）',
+                        type: 'warning',
+                        duration: 2000
+                      });
+                    }
+                    this.locationSuccess = showMessage;
                   }
                   console.log("当前位置 - 经度:", longitude, "纬度:", latitude, "地区:", this.userLocation.region);
                   this.locationLoading = false;
@@ -748,15 +782,17 @@
                 },
                 (error) => {
                   console.log("定位失败:", error);
-                  this.locationError = true;
+                  this.locationError = showMessage;
                   this.locationLoading = false;
                   this.showLocationStatusMessage();
 
-                  this.$message({
-                    message: '定位失败，使用默认位置',
-                    type: 'warning',
-                    duration: 2000
-                  });
+                  if (showMessage) {
+                    this.$message({
+                      message: '定位失败，使用默认位置',
+                      type: 'warning',
+                      duration: 2000
+                    });
+                  }
 
                   this.initMapAndData();
                 },
@@ -775,11 +811,12 @@
       // 手动重新定位方法
       reGetLocation() {
         this.clearLocationCache();
-        this.showLocationStatus = true;
         this.locationLoading = true;
         this.locationError = false;
+        this.locationSuccess = false;
         this.usingCachedLocation = false;
-        this.getLocation();
+        // 主动定位时传入true，显示提示
+        this.getLocation(true);
       },
 
       async initMapAndData() {

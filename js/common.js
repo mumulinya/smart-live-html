@@ -22,6 +22,13 @@ axios.interceptors.request.use(
   }
 )
 axios.interceptors.response.use(function (response) {
+  console.log(response)
+  if(response.data.code == 401){
+    setTimeout(() => {
+      location.href = "/login.html"
+    }, 200);
+    return Promise.reject("请先登录");
+  }
   // 判断执行结果
   if (!response.data.success) {
     return Promise.reject(response.data.errorMsg)
