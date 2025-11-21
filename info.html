@@ -2040,7 +2040,6 @@
                   this.blogs.forEach(blog => {
                     blog.icon = fileURL + blog.icon;
                   });
-                  this.queryUserStats();
                   this.onDataLoaded(); // 新增：数据加载完成回调
 
                   if (!data || data.length === 0) {
@@ -2051,7 +2050,6 @@
                   console.error('获取笔记失败:', err);
                   this.blogs = [];
                   this.blogLoadError = true;
-                  this.queryUserStats();
                   this.onDataLoaded(); // 新增：即使失败也回调
                 })
       },
@@ -2079,8 +2077,6 @@
                   if (newBlogs.length==0) {
                     this.blogNoMore = true;
                   }
-
-                  this.queryUserStats();
                 })
                 .catch(err => {
                   console.error('加载更多笔记失败:', err);

@@ -150,6 +150,14 @@
     /* AI消息内容格式化样式 */
     .message-content {
       white-space: pre-wrap;
+      line-height: 1.8;
+    }
+
+    /* 让<br>换行有明显间距 */
+    .message-content br {
+      content: '';
+      display: block;
+      margin: 6px 0; /* 上下各留6px间距，区分不同信息项 */
     }
 
     /* 代码块样式 */
@@ -983,26 +991,34 @@
         }
       },
 
-      // 格式化消息内容
+// 格式化消息内容（替换原formatMessage方法）
       formatMessage(text) {
         if (!text) return '';
 
-        let formatted = text.replace(/\n/g, '<br>');
+        let formatted = text;
+        // 场景1：大模型误返回<br>标签 → 保留并增强换行间距
+        // if (text.includes('<br>')) {
+        //   formatted = formatted.replace(/<br>/g, '<br>'); // 每个<br>后再加一个，增加间距
+        // }
+        // // 场景2：大模型返回纯文本（带\n）→ 转为<br>
+        // else {
+        //   formatted = formatted.replace(/\n/g, '<br><br>'); // 把\n转为两个<br>，模拟空行
+        // }
 
+        // 保留原有的代码块和图片处理逻辑
         formatted = formatted.replace(/```([\s\S]*?)```/g, (match, code) => {
           return `<div class="message-code">${code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>`;
         });
 
         formatted = formatted.replace(/(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|bmp|webp))/g, (url) => {
           return `<div class="message-image-container">
-                    <img src="${url}" class="message-image"
-                         onerror="this.parentElement.innerHTML='<div class=\'image-placeholder\'>图片加载失败</div>'">
-                  </div>`;
+              <img src="${url}" class="message-image"
+                   onerror="this.parentElement.innerHTML='<div class=\'image-placeholder\'>图片加载失败</div>'">
+            </div>`;
         });
 
         return formatted;
       },
-
       closeImagePreview() {
         this.isPreviewActive = false;
         this.previewImageUrl = "";
