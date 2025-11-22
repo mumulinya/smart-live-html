@@ -1057,7 +1057,7 @@
       formatPrice(price) {
         if (!price) return '0.00';
         const priceNum = typeof price === 'string' ? parseFloat(price) : price;
-        return (priceNum / 100).toFixed(2);
+        return (priceNum / 1).toFixed(2);
       },
 
       // 获取订单状态类名
