@@ -4,7 +4,6 @@
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
   <title>智评生活</title>
-  <!-- 引入样式 -->
   <link rel="stylesheet" href="./css/element.css">
   <link href="./css/index.css" rel="stylesheet">
   <link href="./css/main.css" rel="stylesheet">
@@ -14,11 +13,11 @@
       border-radius: 20px;
     }
 
-    /* ====================================== 简洁分类标签导航样式 ====================================== */
+    /* ====================================== 简洁分类标签导航样式 (优化后) ====================================== */
     .category-nav {
       display: flex;
       align-items: center;
-      padding: 12px 15px;
+      padding: 12px 0;
       background: white;
       border-bottom: 1px solid #f0f0f0;
       position: relative;
@@ -27,15 +26,17 @@
     .category-tabs {
       display: flex;
       overflow-x: auto;
-      flex: 1;
+      flex: 1; /* 占据剩余空间 */
       white-space: nowrap;
       -webkit-overflow-scrolling: touch;
       scrollbar-width: none; /* Firefox */
-      margin-right: 10px;
+      margin-right: 0;
+      padding: 0 5px 0 15px; /* 调整右侧内边距，为更多按钮留出空间 */
+      scroll-behavior: smooth; /* 平滑滚动 */
     }
 
     .category-tabs::-webkit-scrollbar {
-      display: none; /* Chrome, Safari, Edge */
+      display: none; /* 隐藏滚动条 */
     }
 
     .category-tab {
@@ -51,9 +52,14 @@
       background: none;
     }
 
+    .category-tab:last-child {
+      margin-right: 0;
+    }
+
     .category-tab.active {
       color: #409EFF;
       font-weight: 500;
+      font-size: 15px;
     }
 
     .category-tab.active::after {
@@ -68,79 +74,108 @@
       border-radius: 1px;
     }
 
-    .more-categories {
+    /* 新增：更多按钮样式 */
+    .category-more-btn {
       flex-shrink: 0;
-      padding: 8px 12px;
-      color: #909399;
-      font-size: 14px;
-      cursor: pointer;
-      border: none;
-      background: none;
+      width: 40px;
+      height: 100%;
+      padding: 0 10px;
       display: flex;
       align-items: center;
-    }
-
-    .more-categories i {
-      margin-left: 4px;
-      transition: transform 0.3s ease;
-    }
-
-    .more-categories.active i {
-      transform: rotate(180deg);
-    }
-
-    /* 下拉菜单样式 */
-    .category-dropdown {
-      position: absolute;
-      top: 100%;
-      left: 0;
+      justify-content: center;
+      cursor: pointer;
+      color: #666;
+      font-size: 16px;
+      border-left: 1px solid #f0f0f0;
+      /* 添加渐变阴影，模拟标签在右侧被遮挡的效果 */
+      box-shadow: -5px 0 8px -5px rgba(0, 0, 0, 0.1);
+      position: sticky;
       right: 0;
       background: white;
-      border: 1px solid #e6e8eb;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-      z-index: 1000;
-      max-height: 300px;
-      overflow-y: auto;
-      display: none;
+      z-index: 10; /* 确保在标签之上 */
     }
 
-    .category-dropdown.show {
-      display: block;
+    /* 新增：全部分类弹出层样式 */
+    .all-categories-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.5); /* 遮罩 */
+      z-index: 999;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start; /* 从顶部弹出 */
+      padding-top: 100px;
     }
 
-    .dropdown-category {
-      padding: 12px 15px;
+    .modal-content {
+      width: 90%;
+      max-height: 70%;
+      background: white;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      padding: 15px;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 16px;
+      font-weight: 500;
       color: #333;
-      font-size: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #eee;
+      margin-bottom: 15px;
+    }
+
+    .modal-header i {
       cursor: pointer;
-      border-bottom: 1px solid #f0f0f0;
-      transition: background-color 0.2s ease;
+      font-size: 18px;
+      color: #999;
     }
 
-    .dropdown-category:last-child {
-      border-bottom: none;
+    .category-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr); /* 四列布局 */
+      gap: 10px;
+      overflow-y: auto;
+      max-height: calc(100% - 40px);
     }
 
-    .dropdown-category:hover {
-      background: #f5f7fa;
+    .grid-item {
+      text-align: center;
+      padding: 8px 5px;
+      background: #f5f5f5;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #666;
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
-    .dropdown-category.active {
+    .grid-item.active {
+      background: #ecf5ff;
       color: #409EFF;
-      background: #f0f7ff;
+      font-weight: 500;
+      border: 1px solid #a0cfff;
     }
 
-    /* ====================================== 博客列表样式优化 ====================================== */
+    /* ====================================== 博客列表样式优化（两列布局） ====================================== */
     .blog-list {
       height: calc(100vh - 240px);
       overflow-y: auto;
       overflow-x: hidden;
-      padding: 8px 10px 70px; /* 减少上下内边距 */
+      padding: 8px 10px 70px;
       margin-bottom: 0;
       display: grid;
-      grid-template-columns: 1fr 1fr; /* 两列布局 */
-      gap: 8px; /* 减少卡片间距 */
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
     }
 
     /* 博客卡片 - 调整大小 */
@@ -151,14 +186,14 @@
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
       display: flex;
       flex-direction: column;
-      min-height: 200px; /* 确保最小高度 */
+      min-height: 200px;
     }
 
     .blog-img {
       width: 100%;
-      height: 140px; /* 减小图片高度 */
+      height: 140px;
       overflow: hidden;
-      background: #f8f9fa; /* 图片加载失败时的背景色 */
+      background: #f8f9fa;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -200,7 +235,7 @@
     .blog-foot {
       display: flex;
       align-items: center;
-      margin-top: auto; /* 确保底部信息始终在底部 */
+      margin-top: auto;
     }
 
     .blog-user-icon {
@@ -209,7 +244,7 @@
       border-radius: 50%;
       overflow: hidden;
       margin-right: 5px;
-      background: #f0f0f0; /* 用户头像加载失败时的背景 */
+      background: #f0f0f0;
     }
 
     .blog-user-icon img {
@@ -244,10 +279,10 @@
       padding: 12px 0;
       color: #909399;
       font-size: 12px;
-      grid-column: 1 / -1; /* 跨两列 */
+      grid-column: 1 / -1;
     }
 
-    /* ====================================== 加载遮罩层样式 ====================================== */
+    /* ====================================== 加载/定位样式 ====================================== */
     .loading-mask {
       position: fixed;
       top: 0;
@@ -295,7 +330,6 @@
       100% { transform: rotate(360deg); }
     }
 
-    /* 定位状态显示 - 修改为居中弹窗样式 */
     .location-status {
       position: fixed;
       top: 50%;
@@ -337,7 +371,7 @@
       white-space: nowrap;
     }
 
-    /* 修改：底部导航栏样式调整 */
+    /* ====================================== 整体布局和安全区域 ====================================== */
     .footer-container {
       position: fixed;
       bottom: 0;
@@ -349,15 +383,14 @@
       height: 60px;
     }
 
-    /* 修改：整体布局调整 */
     #app {
       min-height: 100vh;
-      padding-bottom: 60px; /* 为底部导航栏预留空间 */
+      padding-bottom: 60px;
       position: relative;
       background: #f8f9fa;
     }
 
-    /* 修改：安全区域适配 */
+    /* 安全区域适配 */
     @supports (padding-bottom: env(safe-area-inset-bottom)) {
       #app {
         padding-bottom: calc(60px + env(safe-area-inset-bottom));
@@ -378,7 +411,7 @@
       text-align: center;
       padding: 40px 20px;
       color: #909399;
-      grid-column: 1 / -1; /* 跨两列 */
+      grid-column: 1 / -1;
     }
 
     .empty-state img {
@@ -393,22 +426,28 @@
       font-size: 14px;
     }
 
-    /* 新增：搜索输入框点击样式 */
     .search-input-clickable {
       cursor: pointer;
     }
   </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/"
+  }
+}
+</script>
 </head>
 <body>
 <div id="app">
-  <!-- 新增：加载遮罩层 -->
   <div class="loading-mask" :class="{ hidden: !isLoading }">
     <div class="loading-spinner"></div>
     <div class="loading-text">正在加载首页数据</div>
     <div class="loading-subtext">请稍候...</div>
   </div>
 
-  <!-- 定位状态显示 - 修改为居中弹窗 -->
   <div class="location-status" :class="{
         'success': locationSuccess,
         'error': locationError,
@@ -426,7 +465,6 @@
       {{ currentCity || '定位中...' }}
     </div>
     <div class="search-input">
-      <!-- 修改：添加点击事件跳转到搜索页面 -->
       <el-input
               size="mini"
               placeholder="请输入商户名、地点"
@@ -450,62 +488,42 @@
     </div>
   </div>
 
-  <!-- 新增：简洁分类标签导航 -->
   <div class="category-nav">
-    <div class="category-tabs">
-      <!-- 热门博客标签 -->
+    <div class="category-tabs" ref="scrollContainer">
       <div
               class="category-tab"
               :class="{ active: activeCategory === 'hot' }"
               @click="switchCategory('hot')"
+              ref="hotTab"
       >
         热门
       </div>
-      <!-- 动态店铺类型标签 -->
       <div
-              v-for="category in visibleCategories"
+              v-for="(category, index) in visibleCategories"
               :key="category.id"
               class="category-tab"
               :class="{ active: activeCategory === category.id }"
               @click="switchCategory(category.id)"
+              :ref="'dynamicTab-' + index"
       >
         {{ category.name }}
       </div>
     </div>
-    <div
-            class="more-categories"
-            :class="{ active: showDropdown }"
-            @click="toggleDropdown"
-            v-if="dropdownCategories.length > 0"
-    >
-      更多
+    <div class="category-more-btn" @click="showMoreCategories = true">
       <i class="el-icon-arrow-down"></i>
-    </div>
-
-    <!-- 下拉菜单 -->
-    <div class="category-dropdown" :class="{ show: showDropdown }" v-if="dropdownCategories.length > 0">
-      <div
-              v-for="category in dropdownCategories"
-              :key="category.id"
-              class="dropdown-category"
-              :class="{ active: activeCategory === category.id }"
-              @click="switchCategoryFromDropdown(category.id)"
-      >
-        {{ category.name }}
-      </div>
     </div>
   </div>
 
-  <!-- 博客列表（绑定滚动事件） -->
-  <div class="blog-list" @scroll="onScroll">
-    <!-- 空状态提示 -->
+  <div class="blog-list" @scroll="onScroll"
+       @touchstart="handleTouchStart"
+       @touchmove="handleTouchMove"
+       @touchend="handleTouchEnd">
     <div class="empty-state" v-if="blogs.length === 0 && !isLoading">
       <img src="/imgs/empty-blog.png" alt="暂无博客">
       <p>暂无博客内容</p>
       <p style="font-size: 12px; color: #c0c4cc;">快去发布第一篇博客吧</p>
     </div>
 
-    <!-- 博客卡片 - 两列布局 -->
     <div class="blog-box" v-for="b in blogs" :key="b.id">
       <div class="blog-img" @click="toBlogDetail(b)">
         <img
@@ -537,7 +555,6 @@
       </div>
     </div>
 
-    <!-- 加载状态/无更多数据提示 -->
     <div class="scroll-tip" v-if="blogs.length > 0">
       <i class="el-icon-loading" v-if="isLoading"></i>
       <span v-if="isLoading">加载中...</span>
@@ -545,7 +562,27 @@
     </div>
   </div>
 
-  <!-- 底部导航栏容器 -->
+  <div class="all-categories-modal" v-if="showMoreCategories" @click.self="showMoreCategories = false">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span>全部分类</span>
+        <i class="el-icon-close" @click="showMoreCategories = false"></i>
+      </div>
+      <div class="category-grid">
+        <div class="grid-item" :class="{ active: activeCategory === 'hot' }" @click="selectCategoryFromModal('hot')">热门</div>
+        <div
+                class="grid-item"
+                v-for="c in categories"
+                :key="c.id"
+                :class="{ active: activeCategory === c.id }"
+                @click="selectCategoryFromModal(c.id)"
+        >
+          {{ c.name }}
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="footer-container">
     <foot-bar :active-btn="1"></foot-bar>
   </div>
@@ -561,16 +598,13 @@
     el: "#app",
     data: {
       isReachBottom: false,
-      types: [], // 类型列表
-      blogs: [], // 博客列表
-      current: 1, // 当前页码
-      isLoading: false, // 加载状态标记
-      noMoreData: false, // 无更多数据标记
-      // 分类相关数据 - 现在基于店铺类型动态生成
-      categories: [], // 动态分类列表
-      activeCategory: 'hot', // 当前选中的分类
-      showDropdown: false, // 是否显示下拉菜单
-      // 定位相关数据
+      types: [],
+      blogs: [],
+      current: 1,
+      isLoading: false,
+      noMoreData: false,
+      categories: [],
+      activeCategory: 'hot',
       locationLoading: false,
       locationError: false,
       locationSuccess: false,
@@ -582,16 +616,21 @@
         y: 30.334229,
         region: {}
       },
-      // 防抖标记，防止重复请求
       isRequesting: false,
-      // 页面加载状态控制
       pageLoading: true,
-      // 数据加载完成计数器
       dataLoadedCount: 0,
-      // 需要加载的数据总数
-      totalDataToLoad: 3, // 类型列表、博客列表、定位信息
-      // 标记是否为主动定位
-      isActiveLocation: false
+      totalDataToLoad: 3,
+      isActiveLocation: false,
+
+      // **新增：控制“更多”弹窗状态**
+      showMoreCategories: false,
+
+      // 手势滑动状态
+      startX: 0,
+      startY: 0,
+      isSwiping: false,
+      swipeThreshold: 80,
+      maxVerticalTravel: 50,
     },
     computed: {
       locationStatusText() {
@@ -600,103 +639,86 @@
         if (this.locationError) return "定位失败，使用默认位置";
         return "";
       },
-      // 可见的分类标签（前4个，加上热门共5个）
       visibleCategories() {
-        return this.categories.slice(0, 4);
-      },
-      // 下拉菜单中的分类（剩余的）
-      dropdownCategories() {
-        return this.categories.slice(4);
+        return this.categories;
       }
     },
     created() {
       this.queryTypes();
       this.queryHotBlogsScroll();
       this.initLocation();
-
-      // 点击页面其他地方关闭下拉菜单
-      document.addEventListener('click', this.closeDropdown);
-    },
-    beforeDestroy() {
-      document.removeEventListener('click', this.closeDropdown);
     },
     methods: {
-      // 新增：跳转到搜索页面
       toSearchPage() {
         location.href = "/search.html";
       },
-
-      // 图片加载错误处理
       handleImageError(event, blog) {
-        console.log('图片加载失败:', blog.img);
-        // 标记图片加载失败
         this.$set(blog, 'imgError', true);
-        // 隐藏图片元素，显示占位符
         event.target.style.display = 'none';
       },
-
-      // 图片加载成功处理
       handleImageLoad(event, blog) {
-        // 标记图片加载成功
         this.$set(blog, 'imgError', false);
       },
-
-      // 用户头像加载错误处理
       handleAvatarError(event) {
-        // 设置默认头像
         event.target.src = '/imgs/icons/default-icon.png';
       },
-
-      // 根据店铺类型数据生成分类
       generateCategoriesFromTypes(types) {
-        // 添加热门博客分类
         const categories = [];
-
-        // 添加店铺类型分类
         if (types && types.length > 0) {
           types.forEach(type => {
             categories.push({
-              id: type.id.toString(), // 确保ID是字符串
+              id: type.id.toString(),
               name: type.name
             });
           });
         }
-
         return categories;
       },
 
-      // 切换分类
+      // **新增：通过弹窗选择分类**
+      selectCategoryFromModal(categoryId) {
+        this.showMoreCategories = false;
+        this.switchCategory(categoryId);
+      },
+
+      // 分类切换并自动平滑滚动到中心
       switchCategory(categoryId) {
         if (this.activeCategory === categoryId) return;
 
         this.activeCategory = categoryId;
-        this.blogs = []; // 清空当前博客列表
-        this.current = 1; // 重置页码
-        this.noMoreData = false; // 重置无更多数据标记
-        this.closeDropdown(); // 关闭下拉菜单
+        this.blogs = [];
+        this.current = 1;
+        this.noMoreData = false;
 
-        // 根据分类加载数据
+        this.$nextTick(() => {
+          let activeTab;
+          if (categoryId === 'hot') {
+            activeTab = this.$refs.hotTab;
+          } else {
+            const index = this.categories.findIndex(c => c.id === categoryId);
+            const dynamicRef = this.$refs[`dynamicTab-${index}`];
+
+            if (dynamicRef && dynamicRef.length > 0) {
+              activeTab = dynamicRef[0];
+            }
+          }
+
+          if (activeTab && this.$refs.scrollContainer) {
+            const container = this.$refs.scrollContainer;
+            const scrollLeft = activeTab.offsetLeft - (container.offsetWidth / 2) + (activeTab.offsetWidth / 2);
+
+            container.scrollTo({
+              left: scrollLeft,
+              behavior: 'smooth'
+            });
+          }
+        });
+
         if (categoryId === 'hot') {
           this.queryHotBlogsScroll();
         } else {
           this.queryBlogsByCategory(categoryId);
         }
-      },
-
-      // 从下拉菜单切换分类
-      switchCategoryFromDropdown(categoryId) {
-        this.switchCategory(categoryId);
-      },
-
-      // 切换下拉菜单显示状态
-      toggleDropdown(event) {
-        event.stopPropagation(); // 阻止事件冒泡
-        this.showDropdown = !this.showDropdown;
-      },
-
-      // 关闭下拉菜单
-      closeDropdown() {
-        this.showDropdown = false;
       },
 
       // 根据分类查询博客
@@ -712,11 +734,9 @@
                     this.noMoreData = true;
                     return;
                   }
-                  // 处理图片路径
                   data.forEach(b => {
                     b.img = fileURL + (b.images?.split(",")[0] || '');
                     b.icon = fileURL + (b.icon || '');
-                    // 初始化图片错误状态
                     b.imgError = false;
                   });
                   this.blogs = this.blogs.concat(data);
@@ -736,18 +756,15 @@
       // 数据加载完成回调
       onDataLoaded() {
         this.dataLoadedCount++;
-        console.log(`数据加载进度: ${this.dataLoadedCount}/${this.totalDataToLoad}`);
 
-        // 当所有数据加载完成时隐藏遮罩层
         if (this.dataLoadedCount >= this.totalDataToLoad) {
           setTimeout(() => {
             this.pageLoading = false;
-            console.log('所有数据加载完成，隐藏遮罩层');
-          }, 500); // 延迟500ms隐藏，让用户看到加载完成
+          }, 500);
         }
       },
 
-      // 获取地区信息
+      // 获取地区信息 (使用高德API)
       async getRegionInfo(lng, lat) {
         try {
           const response = await fetch(
@@ -767,14 +784,12 @@
             throw new Error(`API返回错误: ${data.info}`);
           }
         } catch (error) {
-          console.error('获取地区信息失败:', error);
           return null;
         }
       },
 
-      // 显示定位状态（3秒后自动隐藏）
+      // 显示定位状态
       showLocationStatusMessage() {
-        // 只在主动定位时显示提示
         if (this.isActiveLocation) {
           this.showLocationStatus = true;
           setTimeout(() => this.hideLocationStatus(), 3000);
@@ -784,7 +799,6 @@
       // 隐藏定位状态
       hideLocationStatus() {
         this.showLocationStatus = false;
-        // 重置定位状态
         this.locationLoading = false;
         this.locationError = false;
         this.locationSuccess = false;
@@ -798,10 +812,8 @@
           this.userLocation = { ...cachedLocation };
           this.currentCity = cachedLocation.region?.city || cachedLocation.region?.province || '杭州';
           this.usingCachedLocation = true;
-          this.onDataLoaded(); // 数据加载完成回调
-          // 使用缓存位置时不显示提示
+          this.onDataLoaded();
         } else {
-          // 没有缓存位置时自动定位，但不显示提示
           this.getLocation(false);
         }
       },
@@ -813,14 +825,12 @@
           const cacheTime = localStorage.getItem('user_location_time');
           if (cached && cacheTime) {
             const now = new Date().getTime();
-            // 缓存有效期24小时
             if (now - parseInt(cacheTime) < 24 * 60 * 60 * 1000) {
               return JSON.parse(cached);
             }
           }
           this.clearLocationCache();
         } catch (error) {
-          console.error('读取位置缓存失败:', error);
           this.clearLocationCache();
         }
         return null;
@@ -833,7 +843,6 @@
           localStorage.setItem('user_location', JSON.stringify(location));
           localStorage.setItem('user_location_time', new Date().getTime().toString());
         } catch (error) {
-          console.error('保存位置缓存失败:', error);
         }
       },
 
@@ -843,14 +852,13 @@
           localStorage.removeItem('user_location');
           localStorage.removeItem('user_location_time');
         } catch (error) {
-          console.error('清除位置缓存失败:', error);
         }
       },
 
       // 自动定位
       getLocation(showMessage = false) {
-        this.isActiveLocation = showMessage; // 标记是否为主动定位
-        this.locationLoading = showMessage; // 只在主动定位时显示加载状态
+        this.isActiveLocation = showMessage;
+        this.locationLoading = showMessage;
         this.locationError = false;
         this.locationSuccess = false;
         this.usingCachedLocation = false;
@@ -859,7 +867,7 @@
           this.locationError = showMessage;
           this.locationLoading = false;
           this.showLocationStatusMessage();
-          this.onDataLoaded(); // 即使失败也回调
+          this.onDataLoaded();
           return;
         }
 
@@ -890,10 +898,13 @@
                       }
                       this.locationSuccess = showMessage;
                     } else {
-                      throw new Error('地区信息获取失败');
+                      this.saveLocationToCache(longitude, latitude, null);
+                      if (showMessage) {
+                        this.$message.warning('定位成功（地区信息获取失败）');
+                      }
+                      this.locationSuccess = showMessage;
                     }
                   } catch (error) {
-                    console.error('地区信息处理失败:', error);
                     this.saveLocationToCache(longitude, latitude, null);
                     if (showMessage) {
                       this.$message.warning('定位成功（地区信息获取失败）');
@@ -903,17 +914,16 @@
 
                   this.locationLoading = false;
                   this.showLocationStatusMessage();
-                  this.onDataLoaded(); // 数据加载完成回调
+                  this.onDataLoaded();
                 },
                 (error) => {
-                  console.error('定位失败:', error);
                   this.locationError = showMessage;
                   this.locationLoading = false;
                   this.showLocationStatusMessage();
                   if (showMessage) {
                     this.$message.warning('定位失败，使用默认位置');
                   }
-                  this.onDataLoaded(); // 即使失败也回调
+                  this.onDataLoaded();
                 },
                 options
         );
@@ -926,13 +936,11 @@
         this.locationError = false;
         this.locationSuccess = false;
         this.usingCachedLocation = false;
-        // 主动定位时传入true，显示提示
         this.getLocation(true);
       },
 
       // GPS坐标转高德坐标
       transformWGS84ToGCJ02(lng, lat) {
-        // 简化的坐标转换算法
         const x = lng - 0.0065;
         const y = lat - 0.0060;
         return { lng: x, lat: y };
@@ -943,56 +951,47 @@
         axios.get("/app/shop/shop-type/list")
                 .then(({ data }) => {
                   this.types = data || [];
-                  // 根据店铺类型生成分类标签
                   this.categories = this.generateCategoriesFromTypes(this.types);
-                  this.onDataLoaded(); // 数据加载完成回调
+                  this.onDataLoaded();
                 })
                 .catch(err => {
                   this.$message.error('类型加载失败');
-                  // 即使失败也生成默认分类
                   this.categories = this.generateCategoriesFromTypes([]);
-                  this.onDataLoaded(); // 即使失败也回调
+                  this.onDataLoaded();
                 });
       },
 
       // 分页查询博客
       queryHotBlogsScroll() {
-        // 如果正在加载或无更多数据，直接返回
         if (this.isLoading || this.noMoreData || this.isRequesting) return;
 
         this.isLoading = true;
-        this.isRequesting = true; // 设置请求标记
+        this.isRequesting = true;
 
         axios.get(`/app/blog/hot?current=${this.current}`)
                 .then(({ data }) => {
                   if (!data || data.length === 0) {
-                    // 无数据时标记为无更多
                     this.noMoreData = true;
-                    this.onDataLoaded(); // 数据加载完成回调
+                    this.onDataLoaded();
                     return;
                   }
-                  // 处理图片路径
                   data.forEach(b => {
                     b.img = fileURL + (b.images?.split(",")[0] || '');
                     b.icon = fileURL + (b.icon || '');
-                    // 初始化图片错误状态
                     b.imgError = false;
                   });
-                  // 追加数据（而非覆盖）
                   this.blogs = this.blogs.concat(data);
-                  this.current++; // 页码自增
-                  this.onDataLoaded(); // 数据加载完成回调
+                  this.current++;
+                  this.onDataLoaded();
                 })
                 .catch(err => {
                   this.$message.error('博客加载失败');
-                  console.error('博客请求错误:', err);
-                  this.onDataLoaded(); // 即使失败也回调
+                  this.onDataLoaded();
                 })
                 .finally(() => {
-                  // 无论成功失败，结束加载状态
                   this.isLoading = false;
                   this.isReachBottom = false;
-                  this.isRequesting = false; // 重置请求标记
+                  this.isRequesting = false;
                 });
       },
 
@@ -1004,7 +1003,6 @@
                 })
                 .catch(err => {
                   this.$message.error('点赞失败');
-                  console.error('点赞错误:', err);
                 });
       },
 
@@ -1016,22 +1014,82 @@
                   b.isLike = data.isLike;
                 })
                 .catch(() => {
-                  // 失败时本地临时更新（乐观更新）
                   b.liked++;
                   b.isLike = true;
                 });
       },
 
+      // **手势滑动切换逻辑**
+      handleTouchStart(e) {
+        if (e.touches.length !== 1) return;
+        this.startX = e.touches[0].clientX;
+        this.startY = e.touches[0].clientY;
+        this.isSwiping = true;
+      },
+
+      handleTouchMove(e) {
+        if (!this.isSwiping || e.touches.length !== 1) return;
+
+        const currentX = e.touches[0].clientX;
+        const currentY = e.touches[0].clientY;
+        const diffX = currentX - this.startX;
+        const diffY = currentY - this.startY;
+
+        if (Math.abs(diffY) > Math.abs(diffX) && Math.abs(diffY) > this.maxVerticalTravel) {
+          this.isSwiping = false;
+          return;
+        }
+
+        if (Math.abs(diffX) > Math.abs(diffY)) {
+          e.preventDefault();
+        }
+      },
+
+      handleTouchEnd(e) {
+        if (!this.isSwiping) return;
+
+        const endX = e.changedTouches[0].clientX;
+        const diffX = endX - this.startX;
+
+        this.isSwiping = false;
+
+        if (Math.abs(diffX) < this.swipeThreshold) {
+          return;
+        }
+
+        const activeIndex = this.categories.findIndex(c => c.id === this.activeCategory);
+        let targetId = null;
+
+        if (diffX < 0) {
+          // 向左滑动 -> 切换到下一个分类
+          if (this.activeCategory === 'hot' && this.categories.length > 0) {
+            targetId = this.categories[0].id;
+          } else if (activeIndex !== -1 && activeIndex < this.categories.length - 1) {
+            targetId = this.categories[activeIndex + 1].id;
+          }
+        } else {
+          // 向右滑动 -> 切换到上一个分类
+          if (activeIndex > 0) {
+            targetId = this.categories[activeIndex - 1].id;
+          } else if (activeIndex === 0) {
+            targetId = 'hot'; // 切换到热门
+          }
+        }
+
+        if (targetId) {
+          this.switchCategory(targetId);
+        }
+      },
+      // **手势滑动逻辑结束**
+
       // 滚动事件处理（触底检测）
       onScroll(e) {
         const { scrollTop, offsetHeight, scrollHeight } = e.target;
-        // 触底判断：滚动高度 + 可视高度 >= 总高度 - 50px（缓冲值，避免精度问题）
         if (scrollTop + offsetHeight >= scrollHeight - 50
                 && !this.isLoading
                 && !this.noMoreData
-                && !this.isRequesting) { // 添加请求标记检查
+                && !this.isRequesting) {
           this.isReachBottom = true;
-          // 根据当前分类加载下一页
           if (this.activeCategory === 'hot') {
             this.queryHotBlogsScroll();
           } else {
@@ -1040,17 +1098,14 @@
         }
       },
 
-      // 跳转店铺列表
       toShopList(id, name) {
         location.href = `/shop-list.html?type=${id}&name=${encodeURIComponent(name)}`;
       },
 
-      // 跳转博客详情
       toBlogDetail(b) {
         location.href = `/blog-detail.html?id=${b.id}`;
       },
 
-      // 跳转其他页面
       toPage(i) {
         if (i === 5) {
           location.href = "/ai-assistant.html";

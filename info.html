@@ -455,30 +455,36 @@
       font-weight: 500;
     }
 
-    /* 修改：重新设计标签页容器 */
+    /* 标签页容器：用于限制内容显示区域 */
     .tabs-container {
       position: relative;
       height: auto;
       min-height: 400px;
-      touch-action: pan-x;
+      /* 允许子元素进行水平手势检测，但不阻止垂直滚动 */
+      touch-action: pan-y;
+      overflow: hidden; /* 隐藏超出容器宽度的内容 */
     }
 
+    /* 标签页内容容器：用于水平平移 */
     .tabs-content {
       display: flex;
+      /* 宽度设为 300% 以容纳 3 个标签页 */
+      width: 300%;
       height: auto;
       min-height: 400px;
       transition: transform 0.3s ease;
       will-change: transform;
     }
 
-    /* 修改：重新设计标签页内容区域 */
+    /* 标签页内容区域：每个标签页占据视口宽度 */
     .tab-pane {
-      flex: 0 0 100%;
+      /* 每个标签页占据父容器宽度的 1/3 (即视口宽度) */
+      flex: 0 0 calc(100% / 3);
       height: auto;
       min-height: 400px;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
-      padding-bottom: 80px; /* 增加底部内边距 */
+      padding-bottom: 80px;
       margin-bottom: 0;
     }
 
@@ -489,7 +495,7 @@
       margin-top: 0;
     }
 
-    /* 博客项样式 - 修改后的结构 */
+    /* 博客项样式 - 保持不变 */
     .blog-item {
       background: white;
       border-bottom: 1px solid #f0f0f0;
@@ -502,6 +508,7 @@
       transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     }
+    /* ... 保持所有您提供的样式 ... */
 
     .blog-user-info {
       display: flex;
@@ -1188,7 +1195,6 @@
 </head>
 <body>
 <div id="app">
-  <!-- 新增：加载遮罩层 -->
   <div class="loading-mask" :class="{ hidden: !isLoading }">
     <div class="loading-spinner"></div>
     <div class="loading-text">正在加载个人主页</div>
@@ -1282,14 +1288,15 @@
     </div>
 
     <div class="custom-tabs-content">
-      <div class="tabs-container">
-        <div class="tabs-content" :style="{ transform: `translateX(-${currentIndex * 100}%)` }">
+      <div class="tabs-container"
+           @touchstart="handleTouchStart"
+           @touchmove="handleTouchMove"
+           @touchend="handleTouchEnd">
+        <div class="tabs-content" :style="{ transform: `translateX(-${currentIndex * 100 / 3}%)` }">
 
-          <!-- 笔记标签页 -->
-          <div class="tab-pane" @scroll="onScroll($event, 'blog')">
+          <div class="tab-pane" ref="tabPaneNote" @scroll="onScroll($event, 'blog')">
             <div v-if="blogs.length > 0">
               <div v-for="b in blogs" :key="b.id" class="blog-item">
-                <!-- 用户信息头部 -->
                 <div class="blog-user-info" @click="toUserDetail(b)">
                   <div class="user-avatar">
                     <img :src="b.icon || '/imgs/icons/default-icon.png'" alt="用户头像">
@@ -1300,7 +1307,6 @@
                   </div>
                 </div>
 
-                <!-- 博客内容 -->
                 <div class="blog-content">
                   <div class="blog-img" @click="toBlogDetail(b)">
                     <img :src="getFirstImage(b.images)" alt="">
@@ -1346,8 +1352,7 @@
             </div>
           </div>
 
-          <!-- 店铺收藏标签页 -->
-          <div class="tab-pane" @scroll="onScroll($event, 'collection')">
+          <div class="tab-pane" ref="tabPaneCollection" @scroll="onScroll($event, 'collection')">
             <div v-if="collections.length > 0">
               <div v-for="shop in collections" :key="shop.id" class="shop-item">
                 <div class="shop-img" @click="toShopDetail(shop)">
@@ -1386,7 +1391,6 @@
                 </div>
               </div>
 
-              <!-- 加载状态指示器 -->
               <div class="loading-indicator" v-if="collectionLoading">
                 <i class="el-icon-loading"></i> 正在加载更多店铺收藏...
               </div>
@@ -1406,11 +1410,9 @@
             </div>
           </div>
 
-          <!-- 动态标签页 -->
-          <div class="tab-pane" @scroll="onScroll($event, 'feed')">
+          <div class="tab-pane" ref="tabPaneFeed" @scroll="onScroll($event, 'feed')">
             <div v-if="feeds.length > 0">
               <div v-for="b in feeds" :key="b.id" class="blog-item">
-                <!-- 用户信息头部 -->
                 <div class="blog-user-info" @click="toUserDetail(b)">
                   <div class="user-avatar">
                     <img :src="b.icon || '/imgs/icons/default-icon.png'" alt="用户头像">
@@ -1421,7 +1423,6 @@
                   </div>
                 </div>
 
-                <!-- 博客内容 -->
                 <div class="blog-content">
                   <div class="blog-img" @click="toBlogDetail(b)">
                     <img :src="getFirstImage(b.images)" alt="">
@@ -1473,7 +1474,6 @@
 
   <foot-bar :active-btn="4" class="foot-bar"></foot-bar>
 
-  <!-- 点赞动画容器 -->
   <div class="like-animation-container" id="likeAnimationContainer"></div>
 </div>
 
@@ -1493,7 +1493,7 @@
         info: {},
         blogs: [],
         feeds: [],
-        collections: [], // 新增：店铺收藏数据
+        collections: [],
         params: {
           minTime: 0,
           offset: 0,
@@ -1528,6 +1528,13 @@
         currentIndex: 0,
         tabOrder: ['note', 'collection', 'feed'],
 
+        // **手势滑动状态**
+        startX: 0,
+        startY: 0,
+        isSwiping: false,
+        swipeThreshold: 80, // 最小滑动距离阈值 (px)
+        maxVerticalTravel: 50, // 最大垂直位移，用于区分垂直滚动和水平切换
+
         // 滚动节流
         scrollThrottle: null,
 
@@ -1537,12 +1544,10 @@
         currentPreviewImage: '',
         currentPreviewIndex: 0,
 
-        // 新增：加载状态控制
+        // 加载状态控制
         isLoading: true,
-        // 数据加载完成计数器
         dataLoadedCount: 0,
-        // 需要加载的数据总数
-        totalDataToLoad: 5 // 用户信息、用户详情、统计数据、笔记、店铺收藏、动态
+        totalDataToLoad: 5
       }
     },
     created() {
@@ -1552,24 +1557,93 @@
     watch: {
       activeName(newVal) {
         this.currentIndex = this.tabOrder.indexOf(newVal);
+        // 切换标签时，将目标页滚动到顶部
+        this.$nextTick(() => {
+          let refName = '';
+          switch(newVal) {
+            case 'note': refName = 'tabPaneNote'; break;
+            case 'collection': refName = 'tabPaneCollection'; break;
+            case 'feed': refName = 'tabPaneFeed'; break;
+          }
+          const pane = this.$refs[refName];
+          if (pane) {
+            pane.scrollTop = 0;
+          }
+        });
       }
     },
     methods: {
-      // 新增：数据加载完成回调
-      onDataLoaded() {
-        this.dataLoadedCount++;
-        console.log(`数据加载进度: ${this.dataLoadedCount}/${this.totalDataToLoad}`);
+      // **手势滑动逻辑**
+      handleTouchStart(e) {
+        if (e.touches.length !== 1) return;
+        this.startX = e.touches[0].clientX;
+        this.startY = e.touches[0].clientY;
+        this.isSwiping = true;
+      },
 
-        // 当所有数据加载完成时隐藏遮罩层
-        if (this.dataLoadedCount >= this.totalDataToLoad) {
-          setTimeout(() => {
-            this.isLoading = false;
-            console.log('所有数据加载完成，隐藏遮罩层');
-          }, 500); // 延迟500ms隐藏，让用户看到加载完成
+      handleTouchMove(e) {
+        if (!this.isSwiping || e.touches.length !== 1) return;
+
+        const currentX = e.touches[0].clientX;
+        const currentY = e.touches[0].clientY;
+        const diffX = currentX - this.startX;
+        const diffY = currentY - this.startY;
+
+        // 如果水平移动距离大于垂直移动距离，阻止垂直滚动
+        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 5) {
+          e.preventDefault();
+        }
+
+        // 如果垂直移动距离大于水平移动距离，取消水平滑动检测，让用户进行垂直滚动
+        if (Math.abs(diffY) > Math.abs(diffX) && Math.abs(diffY) > this.maxVerticalTravel) {
+          this.isSwiping = false;
+          return;
         }
       },
 
-      // 处理图片加载失败
+      handleTouchEnd(e) {
+        if (!this.isSwiping) return;
+
+        const endX = e.changedTouches[0].clientX;
+        const diffX = endX - this.startX;
+
+        this.isSwiping = false;
+
+        // 检查滑动距离是否达到阈值
+        if (Math.abs(diffX) < this.swipeThreshold) {
+          return;
+        }
+
+        let newIndex = this.currentIndex;
+
+        if (diffX < 0) {
+          // 向左滑动 (Swiping Left) -> 切换到下一个标签 (Right)
+          if (this.currentIndex < this.tabOrder.length - 1) {
+            newIndex++;
+          }
+        } else {
+          // 向右滑动 (Swiping Right) -> 切换到上一个标签 (Left)
+          if (this.currentIndex > 0) {
+            newIndex--;
+          }
+        }
+
+        // 执行切换
+        if (newIndex !== this.currentIndex) {
+          this.switchTabWithFeedback(this.tabOrder[newIndex]);
+        }
+      },
+      // **手势滑动逻辑结束**
+
+      onDataLoaded() {
+        this.dataLoadedCount++;
+        if (this.dataLoadedCount >= this.totalDataToLoad) {
+          setTimeout(() => {
+            this.isLoading = false;
+          }, 500);
+        }
+      },
+
       handleImgError(event) {
         event.target.src = '/imgs/icons/default-icon.png';
       },
@@ -1595,13 +1669,12 @@
                   this.collections = data || [];
                   this.collectionNoMore = false;
                   this.collectionLoading = false;
-                  this.onDataLoaded(); // 新增：数据加载完成回调
+                  this.onDataLoaded();
                 })
                 .catch(err => {
-                  console.error("获取店铺收藏失败:", err);
                   this.collectionLoading = false;
                   this.collectionLoadError = true;
-                  this.onDataLoaded(); // 新增：即使失败也回调
+                  this.onDataLoaded();
                 });
       },
 
@@ -1626,7 +1699,7 @@
                   if (newCollections.length > 0) {
                     this.collections = [...this.collections, ...newCollections];
                     this.collectionCurrent = nextPage;
-                    if (newCollections.length < 5) {
+                    if (newCollections.length < this.collectionSize) {
                       this.collectionNoMore = true;
                     }
                   } else {
@@ -1635,7 +1708,6 @@
                   this.collectionLoading = false;
                 })
                 .catch(err => {
-                  console.error("加载更多店铺收藏失败:", err);
                   this.collectionLoading = false;
                   this.collectionLoadError = true;
                 });
@@ -1646,11 +1718,9 @@
         axios.put('/app/follow/followShop/'+ shopId + "/" + false)
                 .then(() => {
                   this.$message.success('取消收藏成功');
-                  // 从列表中移除
                   this.collections = this.collections.filter(item => item.id !== shopId);
                 })
                 .catch(err => {
-                  console.error("取消收藏失败:", err);
                   this.$message.error('取消收藏失败');
                 });
       },
@@ -1671,11 +1741,9 @@
 
       // 显示抖音风格获赞提示
       showLikeCount() {
-        // 创建抖音风格提示
         const toast = document.createElement('div');
         toast.className = 'douyin-toast';
 
-        // 随机选择不同的提示语
         const messages = [
           `🎉 ${this.user.nickName || '你'}超有魅力！获得了${this.stats.likeCount || 0}个赞`,
           `💖 太棒了！${this.user.nickName || '你'}收获了${this.stats.likeCount || 0}颗小心心`,
@@ -1689,7 +1757,6 @@
 
         document.body.appendChild(toast);
 
-        // 2秒后自动移除
         setTimeout(() => {
           if (toast.parentNode) {
             toast.parentNode.removeChild(toast);
@@ -1712,7 +1779,6 @@
         blog.liked = (blog.liked || 0) + 1;
         this.addLike(blog);
 
-        // 创建点赞动画
         this.createLikeAnimation('点赞成功！');
       },
 
@@ -1722,7 +1788,6 @@
         blog.liked = Math.max(0, (blog.liked || 0) - 1);
         this.addLike(blog);
 
-        // 创建取消点赞动画
         this.createUnlikeAnimation('取消点赞');
       },
 
@@ -1730,13 +1795,11 @@
       createLikeAnimation(message) {
         const container = document.getElementById('likeAnimationContainer');
 
-        // 创建中心弹窗
         const popup = document.createElement('div');
         popup.className = 'like-popup';
         popup.innerHTML = `<i class="el-icon-star-on"></i> ${message}`;
         container.appendChild(popup);
 
-        // 创建粒子效果
         for (let i = 0; i < 12; i++) {
           setTimeout(() => {
             const particle = document.createElement('div');
@@ -1746,13 +1809,11 @@
             particle.style.top = '50%';
             particle.style.opacity = '1';
 
-            // 随机角度和距离
             const angle = (i * 30) * Math.PI / 180;
             const distance = 100 + Math.random() * 50;
             const targetX = Math.cos(angle) * distance;
             const targetY = Math.sin(angle) * distance;
 
-            // 动画
             particle.animate([
               {
                 transform: 'translate(-50%, -50%) scale(0)',
@@ -1773,7 +1834,6 @@
 
             container.appendChild(particle);
 
-            // 清理
             setTimeout(() => {
               if (particle.parentNode) {
                 particle.parentNode.removeChild(particle);
@@ -1782,7 +1842,6 @@
           }, i * 80);
         }
 
-        // 清理弹窗
         setTimeout(() => {
           if (popup.parentNode) {
             popup.parentNode.removeChild(popup);
@@ -1794,13 +1853,11 @@
       createUnlikeAnimation(message) {
         const container = document.getElementById('likeAnimationContainer');
 
-        // 创建中心弹窗
         const popup = document.createElement('div');
         popup.className = 'unlike-popup';
         popup.innerHTML = `<i class="el-icon-star-off"></i> ${message}`;
         container.appendChild(popup);
 
-        // 清理弹窗
         setTimeout(() => {
           if (popup.parentNode) {
             popup.parentNode.removeChild(popup);
@@ -1870,8 +1927,6 @@
 
       // 加载更多数据方法
       loadMoreData(type) {
-        console.log(`执行加载更多: ${type}`);
-
         switch(type) {
           case 'blog':
             this.loadMoreBlogs();
@@ -1902,7 +1957,6 @@
           return;
         }
 
-        // 如果是粉丝、关注标签，跳转到独立页面
         if (tabName === 'fans') {
           location.href = 'fans.html';
           return;
@@ -1967,20 +2021,18 @@
 
       // 查询用户信息
       async queryUser() {
-        console.log("queryUser")
         try {
           let response = await axios.get("/app/user/me")
           this.user = response.data;
           this.user.icon=fileURL+this.user.icon;
-          this.onDataLoaded(); // 新增：数据加载完成回调
+          this.onDataLoaded();
           this.queryUserInfo();
           this.queryUserStats();
           this.queryBlogs();
-          this.queryCollections(); // 新增：查询店铺收藏
+          this.queryCollections();
           this.queryFeeds();
         } catch (error) {
-          console.error('查询用户信息失败:', error);
-          this.onDataLoaded(); // 新增：即使失败也回调
+          this.onDataLoaded();
           this.$message({
             type: 'warning',
             message: '请先登录',
@@ -1999,12 +2051,11 @@
                   if (data) {
                     this.info = data;
                     sessionStorage.setItem("userInfo", JSON.stringify(data))
-                    this.onDataLoaded(); // 新增：数据加载完成回调
+                    this.onDataLoaded();
                   }
                 })
                 .catch(err => {
-                  console.error('获取用户详情失败:', err);
-                  this.onDataLoaded(); // 新增：即使失败也回调
+                  this.onDataLoaded();
                 })
       },
 
@@ -2013,15 +2064,14 @@
         try {
           let response = await axios.get("/app/user/stats/" + this.user.id)
           this.stats = response.data;
-          this.onDataLoaded(); // 新增：数据加载完成回调
+          this.onDataLoaded();
         } catch (error) {
-          console.error('获取用户统计信息失败:', error);
           this.stats = {
             likeCount: 0,
             fansCount: 0,
             followCount: 0
           };
-          this.onDataLoaded(); // 新增：即使失败也回调
+          this.onDataLoaded();
         }
       },
 
@@ -2040,17 +2090,16 @@
                   this.blogs.forEach(blog => {
                     blog.icon = fileURL + blog.icon;
                   });
-                  this.onDataLoaded(); // 新增：数据加载完成回调
+                  this.onDataLoaded();
 
                   if (!data || data.length === 0) {
                     this.blogNoMore = true;
                   }
                 })
                 .catch(err => {
-                  console.error('获取笔记失败:', err);
                   this.blogs = [];
                   this.blogLoadError = true;
-                  this.onDataLoaded(); // 新增：即使失败也回调
+                  this.onDataLoaded();
                 })
       },
 
@@ -2079,7 +2128,6 @@
                   }
                 })
                 .catch(err => {
-                  console.error('加载更多笔记失败:', err);
                   this.blogCurrent--;
                   this.blogLoadError = true;
                 })
@@ -2103,17 +2151,16 @@
           })
           this.feeds = list || [];
           this.params = params;
-          this.onDataLoaded(); // 新增：数据加载完成回调
+          this.onDataLoaded();
 
           if (!data || data.length === 0) {
             this.feedNoMore = true;
           }
         })
                 .catch(err => {
-                  console.error('获取动态失败:', err);
                   this.feeds = [];
                   this.feedLoadError = true;
-                  this.onDataLoaded(); // 新增：即使失败也回调
+                  this.onDataLoaded();
                 })
       },
 
@@ -2144,7 +2191,6 @@
                   }
                 })
                 .catch(err => {
-                  console.error('加载更多动态失败:', err);
                   this.feedLoadError = true;
                 })
                 .finally(() => {
@@ -2188,7 +2234,6 @@
                   b.isLike = data.isLike;
                 })
                 .catch(() => {
-                  this.$message.error
                   b.liked++;
                 })
       },
@@ -2216,7 +2261,6 @@
       },
 
       previewImage(images, index) {
-        console.log('预览图片:', images, '类型:', typeof images);
         let imageArray = [];
 
         if (Array.isArray(images)) {
@@ -2229,8 +2273,6 @@
           this.$message.warning('没有可预览的图片');
           return;
         }
-
-        console.log('处理后的图片数组:', imageArray);
 
         this.previewImages = imageArray.map(img => {
           if (img.startsWith('http')) {
@@ -2245,10 +2287,8 @@
       },
       toUserDetail(blog) {
         if (blog.userId === this.user.id) {
-          // 如果是当前用户，刷新页面
           this.queryUser();
         } else {
-          // 如果是其他用户，跳转到对方主页
           location.href = "other-info.html?id=" + blog.userId;
         }
       },
