@@ -542,7 +542,6 @@
     },
     created() {
       this.queryUser();
-      this.queryReviews();
     },
     methods: {
       // 新增：数据加载完成回调
@@ -587,6 +586,7 @@
           this.user = response.data;
           this.user.icon = fileURL + response.data.icon;
           await this.queryUserStats();
+          await this.queryReviews();
           this.onDataLoaded(); // 新增：数据加载完成回调
         } catch (error) {
           console.error('查询用户信息失败:', error);
@@ -607,8 +607,10 @@
         this.reviewCurrent = 1;
         this.reviewNoMore = false;
         this.reviewLoadError = false;
-        axios.get("/app/comment/of/me", {
+        axios.get("/app/interaction/comment/of/me", {
           params: {
+            sourceType: 3,
+            userId: this.user.id,
             current: this.reviewCurrent
           }
         })

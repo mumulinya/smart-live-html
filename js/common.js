@@ -1,5 +1,7 @@
 // let commonURL = "http://192.168.50.115:8081";
 // window.minioURL = "http://24b8590e.r17.cpolar.top"
+//生产地址
+// window.minioURL = "http://192.168.182.88"
 window.minioURL = "http://192.168.182.20"
 window.minioPort = "9000"
 window.filePrefix="/smart-live" ;

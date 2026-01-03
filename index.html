@@ -621,7 +621,8 @@
       dataLoadedCount: 0,
       totalDataToLoad: 3,
       isActiveLocation: false,
-
+      // 登录状态
+      token: sessionStorage.getItem("token") || '',
       // **新增：控制“更多”弹窗状态**
       showMoreCategories: false,
 
@@ -997,7 +998,20 @@
 
       // 点赞功能
       addLike(b) {
-        axios.put(`/app/blog/like/${b.id}`)
+        // 判断是否登录
+        if (!this.token) {
+          this.$message.error("请先登录");
+          setTimeout(() => {
+            location.href = "/login.html";
+          }, 200);
+          return;
+        }
+        console.log(this.token)
+        const likeData = {
+          sourceType: 3,
+          sourceId: b.id
+        };
+        axios.put("/app/interaction/like",likeData)
                 .then(() => {
                   this.queryBlogById(b);
                 })
@@ -1008,9 +1022,16 @@
 
       // 获取单篇博客最新信息
       queryBlogById(b) {
+        let liked = b.liked;
         axios.get(`/app/blog/${b.id}`)
                 .then(({ data }) => {
-                  b.liked = data.liked;
+                  this.blog = data;
+                  if(this.blog.isLike){
+                    liked++;
+                  }else {
+                    liked--;
+                  }
+                  b.liked = liked;
                   b.isLike = data.isLike;
                 })
                 .catch(() => {

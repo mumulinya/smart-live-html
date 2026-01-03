@@ -803,7 +803,7 @@
       this.shopId = util.getUrlParam("shopId");
       if(this.blogId != null&&this.blogId!=""){
         this.sourceId=this.blogId
-        this.sourceType=1
+        this.sourceType=3
       }else if(this.shopId != null&&this.shopId!=""){
        this.sourceId=this.shopId
         this.sourceType=2
@@ -838,7 +838,7 @@
 
         this.loading = true;
         try {
-          const response = await axios.get("/app/comment/listComment", {
+          const response = await axios.get("/app/interaction/comment/listComment", {
             params: {
               sourceId: this.sourceId,
               sourceType: this.sourceType,
@@ -977,7 +977,7 @@
           //   }
           // });
 
-          await axios.post('/app/comment/addComment', this.comment);
+          await axios.post('/app/interaction/comment/addComment', this.comment);
 
           this.$message.success('评价发布成功');
           this.cancelPublish();

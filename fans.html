@@ -338,7 +338,7 @@
             <img :src="user.icon || '/imgs/icons/default-icon.png'" alt="">
           </div>
           <div class="user-info" @click="toUserDetail(user)">
-            <div class="user-name">{{user.nickName || '匿名用户'}}</div>
+            <div class="user-name">{{user.name || '匿名用户'}}</div>
             <div class="user-desc">{{user.introduce || '这个人很懒，什么都没写'}}</div>
           </div>
           <button class="follow-btn" :class="{'following': user.isFollow}"
@@ -402,7 +402,6 @@
     },
     created() {
       this.queryUser();
-      this.queryFans();
     },
     methods: {
       // 新增：数据加载完成回调
@@ -446,6 +445,7 @@
           let response = await axios.get("/app/user/me")
           this.user = response.data;
           await this.queryUserStats()
+          await this.queryFans();
           this.onDataLoaded(); // 新增：数据加载完成回调
         } catch (error) {
           console.error('查询用户信息失败:', error);
@@ -466,8 +466,10 @@
         this.fansCurrent = 1;
         this.fansNoMore = false;
         this.fansLoadError = false;
-        axios.get("/app/follow/followUser/fans", {
+        axios.get("/app/interaction/follow/fans", {
           params: {
+            sourceType: 1,
+            sourceId: this.user.id,
             current: this.fansCurrent,
           }
         })
@@ -497,10 +499,11 @@
         this.fansLoadError = false;
         this.fansCurrent++;
 
-        axios.get("/app/follow/followUser/fans", {
+        axios.get("/app/interaction/follow/fans", {
           params: {
+            sourceType: 1,
+            sourceId: this.user.id,
             current: this.fansCurrent,
-            size: this.fansSize
           }
         })
                 .then(({data}) => {

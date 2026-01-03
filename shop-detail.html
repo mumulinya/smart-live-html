@@ -956,20 +956,20 @@
     <!-- 收藏按钮（原关注按钮，适配main.css样式） -->
     <div
             class="foot-item follow-btn"
-            @click="toggleFollowShop"
-            :class="{active: isShopFollowed, loading: isFollowLoading}"
-            :disabled="isFollowLoading"
+            @click="toggleStarShop"
+            :class="{active: isShopStared, loading: isStarLoading}"
+            :disabled="isStarLoading"
     >
       <div class="foot-icon">
-        <i class="el-icon-star-off" v-if="!isShopFollowed && !isFollowLoading"></i>
-        <i class="el-icon-star-on" v-if="isShopFollowed && !isFollowLoading"></i>
-        <i class="el-icon-loading" v-if="isFollowLoading"></i>
+        <i class="el-icon-star-off" v-if="!isShopStared && !isStarLoading"></i>
+        <i class="el-icon-star-on" v-if="isShopStared && !isStarLoading"></i>
+        <i class="el-icon-loading" v-if="isStarLoading"></i>
       </div>
-      <div class="foot-text" v-if="!isFollowLoading">
-        {{isShopFollowed ? '已收藏' : '收藏'}}
+      <div class="foot-text" v-if="!isStarLoading">
+        {{isShopStared ? '已收藏' : '收藏'}}
       </div>
-      <div class="foot-text" v-if="isFollowLoading">
-        {{isShopFollowed ? '取消中...' : '收藏中...'}}
+      <div class="foot-text" v-if="isStarLoading">
+        {{isShopStared ? '取消中...' : '收藏中...'}}
       </div>
     </div>
 
@@ -1137,8 +1137,8 @@
       currentPreviewIndex: 0,
       currentPreviewImage: '',
       // 收藏按钮相关（原关注按钮，名称适配）
-      isShopFollowed: false,
-      isFollowLoading: false,
+      isShopStared: false,
+      isStarLoading: false,
       // 登录状态
       token: sessionStorage.getItem("token") || '',
       // 分页加载相关（补充缺失变量）
@@ -1167,7 +1167,7 @@
         if (this.token) {
           this.queryLoginUser();
           setTimeout(() => {
-            this.isFollowed();
+            this.isStared();
           }, 100);        }
       },
       // 新增：数据加载完成回调
@@ -1369,6 +1369,8 @@
         this.showCommentPublish = false;
         this.cancelPublish();
       },
+
+      // 发表评论
       publishComment() {
         if (!this.commentText.trim()) {
           this.$message.error('请输入评价内容');
@@ -1383,13 +1385,14 @@
         this.comment.parentId=0
         this.comment.answerId=0
         this.comment.images=this.selectedImages.map(image => image.url.split(filePrefix)[1] || image.url).join(',');
-        axios.post('/app/comment/addComment', this.comment)
+        axios.post('/app/interaction/comment/addComment', this.comment)
                 .then(({data}) => {
                   this.$message.success('评价发布成功');
                   this.commentText = '';
                   this.commentRating = 5;
                   this.selectedImages = [];
-                  this.showCommentPublish = false;
+                  this.showCommentPublish = false; // 发布成功后关闭模态框
+                  // 可以在这里刷新评论列表
                   this.loadComments(this.shop.id);
                   this.queryShopById(this.shop.id);
                 })
@@ -1420,16 +1423,18 @@
                 .catch(this.$message.error);
         return url
       },
+
+      //加载评论
       async loadComments(id) {
         if (this.loading || this.noMore) return;
 
         this.loading = true;
         try {
-          const response = await axios.get("/app/comment/listComment", {
+          const response = await axios.get("/app/interaction/comment/listComment", {
             params: {
               sourceId: id,
               sourceType: 2,
-              current: this.page
+              current: 1
             }
           });
 
@@ -1472,17 +1477,28 @@
         }
         this.showCommentPublish = true
       },
-      isFollowed(){
-        if (!this.shop.id) return; // 确保shop.id已存在
-        axios.get("/app/follow/followShop/isFollow/" + this.shop.id)
-                .then(({data}) => {
-                  this.isShopFollowed = data;
+      isStared() {
+        // 1. 基础校验
+        if (!this.token) {
+          return;
+        }
+        if (!this.shop.id) return;
+        const params = {
+          sourceId: this.shop.id,
+          sourceType: 2  // 店铺类型固定为 2
+        };
+        axios.get("/app/interaction/star/isStar", { params: params })
+                .then(({ data }) => {
+        
+                  this.isShopStared = data;
                 })
                 .catch(error => {
-                })
+                  console.error("查询收藏状态失败:", error);
+                });
       },
       // 收藏按钮逻辑
-      toggleFollowShop() {
+      toggleStarShop() {
+        // 1. 登录校验
         if (!this.token) {
           this.$message.error("请先登录");
           setTimeout(() => {
@@ -1491,27 +1507,38 @@
           return;
         }
 
-        if (this.isFollowLoading) return;
+        // 2. 防止重复点击
+        if (this.isStarLoading) return;
 
-        const shopId = this.shop.id;
-        const followStatus = !this.isShopFollowed;
+        // 3. 准备请求参数 (对应后端的 Star 实体类)
+        const isCollection = !this.isShopStared; // 取反，计算目标状态
+        const starParams = {
+          sourceId: this.shop.id,  // 来源ID (店铺ID)
+          sourceType: 2,           // 来源类型 (店铺固定为2)
+          isCollection: isCollection // 是否收藏
+        };
 
-        this.isFollowLoading = true;
+        this.isStarLoading = true;
 
-        axios.put('/app/follow/followShop/'+ shopId + "/" + followStatus)
+        // 4. 发送 PUT 请求
+        // 注意：axios.put 的第二个参数是请求体(Body)，会自动序列化为 JSON
+        axios.put('/app/interaction/star', starParams)
                 .then(({data}) => {
-                  // 文案改为"收藏"相关，适配按钮功能
-                  const successMsg = followStatus ? '收藏店铺成功，已添加到你的收藏夹～' : '已取消店铺收藏';
+                  // 成功回调
+                  const successMsg = isCollection ? '收藏店铺成功，已添加到你的收藏夹～' : '已取消店铺收藏';
                   this.$message.success(successMsg);
-                  this.isShopFollowed = followStatus;
+                  // 更新前端状态
+                  this.isShopStared = isCollection;
                 })
                 .catch(error => {
-                  const errorMsg = followStatus ? '收藏失败，请重试' : '取消收藏失败，请重试';
+                  // 失败回调
+                  const errorMsg = isCollection ? '收藏失败，请重试' : '取消收藏失败，请重试';
                   this.$message.error(errorMsg);
                   console.error(error);
                 })
                 .finally(() => {
-                  this.isFollowLoading = false;
+                  // 结束加载状态
+                  this.isStarLoading = false;
                 });
       }
     }
