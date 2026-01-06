@@ -1379,7 +1379,7 @@
           <div class="user-name" v-html="user.nickName"></div>
           <div class="user-desc" v-html="user.introduce || '这个人很懒，什么都没写'"></div>
         </div>
-        <button class="follow-btn" :class="{'following': user.isFollow}" @click.stop="toggleFollow(user)">
+        <button class="follow-btn" :class="{'following': user.isFollow}" @click.stop="toggleFollow(user)" v-if="user.id!=loginUser.id">
           {{user.isFollow ? '已关注' : '关注'}}
         </button>
       </div>
@@ -2258,6 +2258,10 @@
 
           const response = await axios.post('/app/es/search/shops',  params );
           if (response.data &&  response.success) {
+            response.data.list = response.data.list.map(shop => {
+              shop.images = fileURL+shop.images.split(",")[0];
+              return shop;
+            });
             const newData = response.data.list || [];
 
             if (isLoadMore) {
@@ -2297,6 +2301,12 @@
           const response = await axios.get('/app/es/search/blogs', { params });
 
           if (response.data &&  response.success) {
+            response.data.list.forEach(blog => {
+              if(blog.images!= null){
+                blog.images = fileURL+blog.images.split(',')[0]
+              }
+              blog.icon = blog.icon ? fileURL + blog.icon : '';
+            });
             const newData = response.data.list || [];
 
             if (isLoadMore) {
@@ -2377,6 +2387,7 @@
 
           const response = await axios.get('/app/es/search/users', { params });
           if (response.data &&  response.success) {
+            response.data.list.forEach(session => session.icon = fileURL + session.icon);
             const newData = response.data.list || [];
 
             if (isLoadMore) {
@@ -2683,16 +2694,21 @@
           }, 200);
           return;
         }
-        const isFollow = !user.isFollow;
-        axios.put(`/app/user/follow/${user.id}/${isFollow}`)
-                .then(() => {
-                  user.isFollow = isFollow;
-                  this.$message.success(isFollow ? "关注成功" : "取消关注成功");
+        const targetStatus = !user.isFollow;
+        const followParams = {
+          sourceId: user.id,
+          sourceType: 1,
+          isFollow: targetStatus
+        };
+        axios.put("/app/interaction/follow", followParams)
+                .then(({ data }) => {
+                  user.isFollow = targetStatus;
+                  this.$message.success(targetStatus ? "关注成功" : "取消关注成功");
                 })
-                .catch(err => {
-                  location.href = "/login.html";
-                  console.error("关注操作失败:", err);
-                  this.$message.error("操作失败，请稍后重试");
+                .catch(error => {
+                  // 6. 失败处理
+                  this.$message.error("操作失败，请重试");
+                  console.error(error);
                 });
       },
 
