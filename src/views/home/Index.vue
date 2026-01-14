@@ -24,10 +24,10 @@
         <i class="el-icon-search"></i>
         <span>请输入商户名、地点</span>
       </div>
-      <div class="header-icon" @click="toPage(5)"><img src="/imgs/ai.png" alt="" style="width: 38px;
+      <div class="header-icon" @click="toPage(5)"><img src="@/assets/ai-avatar.jpg" alt="" style="width: 38px;
       height: 38px;
       box-shadow: 0 0 3px 2px rgba(0, 0, 0, 0.1);
-      border-radius: 18px;"></div>
+      border-radius: 50%;"></div>
     </div>
 
     <div class="type-list">
@@ -238,7 +238,7 @@ export default {
     toPage(i) {
        // Only for AI assistant now (i=5)
        if(i===5) {
-         this.$router.push("/ai-assistant");
+         this.$router.push("/ai");
        }
     },
     toShopList(id, name) {

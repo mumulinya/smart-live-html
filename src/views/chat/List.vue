@@ -17,18 +17,65 @@
           <div>暂无消息</div>
        </div>
 
-       <div class="chat-item" v-for="chat in userSessionList" :key="chat.id" @click="toChat(chat.sessionId)">
-          <div class="avatar-container">
-             <img :src="chat.avatar || '/imgs/icons/default-icon.png'" class="chat-avatar">
-             <div class="unread-badge" v-if="chat.unread > 0">{{chat.unread}}</div>
+       <div 
+          class="chat-item-wrapper" 
+          v-for="chat in sortedSessionList" 
+          :key="chat.id"
+          @touchstart.stop="handleStart($event, chat)"
+          @touchmove.stop.prevent="handleMove($event, chat)"
+          @touchend.stop="handleEnd($event, chat)"
+          @mousedown.stop="handleStart($event, chat)"
+          @mousemove.stop.prevent="handleMove($event, chat)"
+          @mouseup.stop="handleEnd($event, chat)"
+          @mouseleave.stop="handleEnd($event, chat)"
+       >
+          <div 
+             class="chat-item" 
+             :class="{ 'pinned': chat.isPinned }"
+             :style="{ transform: `translateX(${chat.translateX || 0}px)` }"
+             @click="toChat(chat.sessionId, $event)"
+          >
+             <div class="avatar-container">
+                <img :src="chat.avatar || '/imgs/icons/default-icon.png'" class="chat-avatar">
+                <div class="unread-badge" v-if="chat.unread > 0">{{chat.unread}}</div>
+             </div>
+             <div class="chat-info">
+                <div class="chat-name">
+                   {{chat.nickname || '未知用户'}}
+                </div>
+                <div class="chat-msg">{{chat.lastMessage}}</div>
+             </div>
+             <div class="chat-time">{{formatTime(chat.lastTime)}}</div>
           </div>
-          <div class="chat-info">
-             <div class="chat-name">{{chat.nickname || '未知用户'}}</div>
-             <div class="chat-msg">{{chat.lastMessage}}</div>
+          <div class="action-buttons">
+             <div class="action-btn pin-btn" @click.stop="togglePin(chat)">
+                <i :class="chat.isPinned ? 'el-icon-bottom' : 'el-icon-top'"></i>
+                <span>{{chat.isPinned ? '取消置顶' : '置顶'}}</span>
+             </div>
+             <div class="action-btn delete-btn" @click.stop="openDeleteConfirm(chat)">
+                <i class="el-icon-delete"></i>
+                <span>删除</span>
+             </div>
           </div>
-          <div class="chat-time">{{formatTime(chat.lastTime)}}</div>
        </div>
     </div>
+
+    <!-- 自定义删除确认弹窗，微信风格 -->
+    <el-dialog
+      v-model="deleteDialogVisible"
+      width="240px"
+      :show-close="false"
+      align-center
+      custom-class="wechat-confirm-dialog"
+    >
+      <div class="wechat-confirm-content">删除该聊天?</div>
+      <template #footer>
+        <div class="wechat-confirm-footer">
+          <button class="wechat-btn cancel" @click="cancelDelete">取消</button>
+          <button class="wechat-btn confirm" @click="confirmDelete">删除</button>
+        </div>
+      </template>
+    </el-dialog>
 
     <div class="footer-container">
        <foot-bar :active-btn="3"></foot-bar>
@@ -40,7 +87,7 @@
 import FootBar from '@/components/FootBar.vue';
 import { wsManager } from '@/utils/websocket';
 import { getCurrentUser } from '@/api/user';
-import { getUserSessions } from '@/api/chat';
+import { getUserSessions, deleteUserSession, togglePinUserSession } from '@/api/chat';
 
 export default {
   name: 'ChatList',
@@ -52,8 +99,27 @@ export default {
        loading: false,
        wsStatus: 'disconnected',
        showConnectionStatus: false,
-       connectionStatusText: '连接中...'
+       connectionStatusText: '连接中...',
+       touchStartX: 0,
+       touchStartY: 0,
+       currentSwipeId: null,
+       actionButtonWidth: 160,
+       isDragging: false,
+       currentChat: null,
+       deleteDialogVisible: false,
+       deleteTargetChat: null
     }
+  },
+  computed: {
+     sortedSessionList() {
+        return [...this.userSessionList].sort((a, b) => {
+           if (a.isPinned && !b.isPinned) return -1;
+           if (!a.isPinned && b.isPinned) return 1;
+           const timeA = new Date(a.lastTime || 0).getTime();
+           const timeB = new Date(b.lastTime || 0).getTime();
+           return timeB - timeA;
+        });
+     }
   },
   created() {
      this.queryLoginUser();
@@ -65,7 +131,22 @@ export default {
      search() {
         this.$message.info("搜索功能开发中");
      },
-     toChat(sessionId) {
+     toChat(sessionId, e) {
+        if (this.isDragging) {
+           return;
+        }
+        const chat = this.userSessionList.find(c => c.sessionId === sessionId);
+        if (chat && chat.translateX && chat.translateX < 0) {
+           chat.translateX = 0;
+           this.currentSwipeId = null;
+           return;
+        }
+        this.userSessionList.forEach(chat => {
+           if (chat.translateX && chat.translateX < 0) {
+              chat.translateX = 0;
+           }
+        });
+        this.currentSwipeId = null;
         this.$router.push({ path: '/chat/detail', query: { sessionId } });
      },
      queryLoginUser() {
@@ -101,20 +182,16 @@ export default {
         }
      },
      handleNewMessage(data) {
-        // Update list logic, similar to original `chat-list.html`
         const idx = this.userSessionList.findIndex(s => s.sessionId == data.sessionId);
         if(idx !== -1) {
            const session = this.userSessionList[idx];
            session.lastMessage = data.content;
-           session.lastTime = new Date(); // or data.createTime
+           session.lastTime = new Date();
            if(data.fromUid !== this.user.id) {
               session.unread = (session.unread || 0) + 1;
            }
-           // Move to top
-           this.userSessionList.splice(idx, 1);
-           this.userSessionList.unshift(session);
         } else {
-           this.loadUserSessions(); // Reload if new session
+           this.loadUserSessions();
         }
      },
      loadUserSessions() {
@@ -124,7 +201,9 @@ export default {
               const list = res.data || [];
               this.userSessionList = list.map(s => ({
                  ...s,
-                 avatar: s.avatar ? this.$fileURL + s.avatar : ''
+                 avatar: s.avatar ? this.$fileURL + s.avatar : '',
+                 translateX: 0,
+                 isPinned: s.isPinned || false
               }));
            })
            .finally(() => {
@@ -135,6 +214,121 @@ export default {
         if(!time) return '';
         const d = new Date(time);
         return `${d.getMonth()+1}-${d.getDate()} ${d.getHours()}:${d.getMinutes()}`;
+     },
+     handleStart(e, chat) {
+        if (e.target.closest('.action-btn')) {
+           return;
+        }
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        this.touchStartX = clientX;
+        this.touchStartY = clientY;
+        this.isDragging = false;
+        this.currentChat = chat;
+     },
+     handleMove(e, chat) {
+        if (!this.touchStartX || !this.currentChat || this.currentChat.id !== chat.id) return;
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        const diffX = this.touchStartX - clientX;
+        const diffY = Math.abs(this.touchStartY - clientY);
+        if (diffY > Math.abs(diffX) && Math.abs(diffX) < 10) {
+           return;
+        }
+        if (Math.abs(diffX) > 5) {
+           this.isDragging = true;
+        }
+        if (!this.isDragging) return;
+        e.preventDefault();
+        if (diffX > 0) {
+           const translateX = Math.min(diffX, this.actionButtonWidth);
+           if (this.currentSwipeId && this.currentSwipeId !== chat.id) {
+              const otherChat = this.userSessionList.find(c => c.id === this.currentSwipeId);
+              if (otherChat) {
+                 otherChat.translateX = 0;
+              }
+           }
+           chat.translateX = -translateX;
+           this.currentSwipeId = chat.id;
+        } else if (diffX < 0 && chat.translateX < 0) {
+           const moveRight = clientX - this.touchStartX;
+           const newTranslateX = Math.min(Math.max(chat.translateX + moveRight, -this.actionButtonWidth), 0);
+           chat.translateX = newTranslateX;
+        }
+     },
+     handleEnd(e, chat) {
+        const isTouch = e.touches || e.changedTouches;
+        if (!this.touchStartX || !this.currentChat || this.currentChat.id !== chat.id) {
+           this.resetDragState();
+           return;
+        }
+        const clientX = isTouch
+          ? (e.changedTouches ? e.changedTouches[0].clientX : e.touches[0].clientX)
+          : e.clientX;
+        const diffX = this.touchStartX - clientX;
+        if (!this.isDragging) {
+           this.resetDragState();
+           return;
+        }
+        if (Math.abs(diffX) > this.actionButtonWidth / 2 && diffX > 0) {
+           chat.translateX = -this.actionButtonWidth;
+        } else {
+           chat.translateX = 0;
+           if (this.currentSwipeId === chat.id) {
+              this.currentSwipeId = null;
+           }
+        }
+        this.resetDragState();
+     },
+     resetDragState() {
+        this.touchStartX = 0;
+        this.touchStartY = 0;
+        this.isDragging = false;
+        this.currentChat = null;
+     },
+     openDeleteConfirm(chat) {
+        this.deleteTargetChat = chat;
+        this.deleteDialogVisible = true;
+     },
+     cancelDelete() {
+        this.deleteDialogVisible = false;
+        this.deleteTargetChat = null;
+     },
+     async confirmDelete() {
+        const chat = this.deleteTargetChat;
+        if (!chat) {
+           this.deleteDialogVisible = false;
+           return;
+        }
+        try {
+           await deleteUserSession(chat.id);
+           this.$message.success('删除成功');
+           const index = this.userSessionList.findIndex(s => s.id === chat.id);
+           if (index !== -1) {
+              this.userSessionList.splice(index, 1);
+           }
+           chat.translateX = 0;
+           if (this.currentSwipeId === chat.id) {
+              this.currentSwipeId = null;
+           }
+        } catch (error) {
+           this.$message.error('删除失败：' + (error.message || error));
+        } finally {
+           this.deleteDialogVisible = false;
+           this.deleteTargetChat = null;
+        }
+     },
+     async togglePin(chat) {
+        try {
+           const newPinStatus = !chat.isPinned;
+           await togglePinUserSession({ id: chat.id, pin: newPinStatus });
+           chat.isPinned = newPinStatus;
+           this.$message.success(newPinStatus ? '已置顶' : '已取消置顶');
+           chat.translateX = 0;
+           this.currentSwipeId = null;
+        } catch (error) {
+           this.$message.error('操作失败：' + (error.message || error));
+        }
      }
   }
 }
@@ -151,16 +345,139 @@ export default {
 .connection-status.disconnected { background: #E6A23C; }
 
 .chat-list { flex: 1; overflow-y: auto; }
-.chat-item { display: flex; padding: 12px 15px; border-bottom: 1px solid #f5f5f5; align-items: center; cursor: pointer; }
+.chat-item-wrapper { position: relative; overflow: hidden; user-select: none; }
+.chat-item { 
+   display: flex; 
+   padding: 12px 15px; 
+   border-bottom: 1px solid #f5f5f5; 
+   align-items: center; 
+   cursor: pointer;
+   background: white;
+   transition: transform 0.3s ease;
+   position: relative;
+   z-index: 1;
+}
+.chat-item.pinned {
+   background: #f8f8f8;
+   border-left: 3px solid #409EFF;
+}
 .chat-item:hover { background: #fafafa; }
-.avatar-container { position: relative; margin-right: 12px; }
+.chat-item.pinned:hover { background: #f0f0f0; }
+.avatar-container { position: relative; margin-right: 12px; flex-shrink: 0; }
 .chat-avatar { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; }
-.unread-badge { position: absolute; top: -2px; right: -2px; background: #F56C6C; color: white; font-size: 10px; padding: 1px 5px; border-radius: 10px; }
+.unread-badge { position: absolute; top: -2px; right: -2px; background: #F56C6C; color: white; font-size: 10px; padding: 1px 5px; border-radius: 10px; min-width: 16px; text-align: center; }
 .chat-info { flex: 1; min-width: 0; }
-.chat-name { font-weight: bold; margin-bottom: 4px; }
+.chat-name { font-weight: bold; margin-bottom: 4px; display: flex; align-items: center; }
 .chat-msg { color: #999; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.chat-time { font-size: 12px; color: #ccc; margin-left: 10px; }
+.chat-time { font-size: 12px; color: #ccc; margin-left: 10px; flex-shrink: 0; }
 .footer-container { height: 60px; }
 .empty-state { text-align: center; padding: 50px; color: #999; }
 .empty-state i { font-size: 40px; margin-bottom: 10px; display: block; }
+
+.action-buttons {
+   position: absolute;
+   right: 0;
+   top: 0;
+   bottom: 0;
+   display: flex;
+   z-index: 0;
+   transition: transform 0.3s ease;
+}
+
+.action-btn {
+   width: 80px;
+   display: flex;
+   flex-direction: column;
+   align-items: center;
+   justify-content: center;
+   color: white;
+   font-size: 12px;
+   cursor: pointer;
+   user-select: none;
+}
+
+.action-btn i {
+   font-size: 20px;
+   margin-bottom: 4px;
+}
+
+.pin-btn {
+   background: #409EFF;
+}
+
+.pin-btn:active {
+   background: #337ecc;
+}
+
+.delete-btn {
+   background: #F56C6C;
+}
+
+.delete-btn:active {
+   background: #d44a4a;
+}
+
+/* 微信风格确认弹窗 */
+:deep(.el-overlay) {
+   display: flex;
+   align-items: center;
+   justify-content: center;
+}
+
+:deep(.wechat-confirm-dialog) {
+   width: 240px;
+   max-width: 70vw;
+   border-radius: 12px;
+   overflow: hidden;
+   margin: 0 !important;
+   position: relative !important;
+   top: auto !important;
+}
+
+:deep(.wechat-confirm-dialog .el-dialog__header) {
+   display: none;
+}
+
+:deep(.wechat-confirm-dialog .el-dialog__body) {
+   padding: 24px 16px 18px;
+}
+
+:deep(.wechat-confirm-dialog .el-dialog__footer) {
+   padding: 0;
+   border-top: 1px solid #e5e5e5;
+}
+
+.wechat-confirm-content {
+   font-size: 15px;
+   color: #000;
+   text-align: center;
+   line-height: 1.4;
+}
+
+.wechat-confirm-footer {
+   display: flex;
+}
+
+.wechat-btn {
+   flex: 1;
+   height: 44px;
+   border: none;
+   background: #fff;
+   font-size: 15px;
+   cursor: pointer;
+   transition: background 0.2s;
+}
+
+.wechat-btn:active {
+   background: #f5f5f5;
+}
+
+.wechat-btn.cancel {
+   color: #000;
+   border-right: 1px solid #e5e5e5;
+}
+
+.wechat-btn.confirm {
+   color: #576b95;
+}
 </style>
