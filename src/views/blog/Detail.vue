@@ -1,184 +1,252 @@
 <template>
   <div class="blog-detail-page" v-loading="pageLoading">
-    <!-- Header -->
-    <div class="detail-header">
-      <div class="header-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
-      <div class="header-title">笔记详情</div>
-      <div class="header-share">...</div>
+    <!-- 顶部固定用户信息栏 -->
+    <div class="fixed-top-bar">
+      <div class="top-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
+      <div class="top-user-section" @click="toOtherInfo" v-if="blog.id">
+        <img class="top-user-avatar" :src="blog.icon || '/imgs/icons/default-icon.png'">
+        <div class="top-user-info">
+          <span class="top-user-name">{{blog.name}}</span>
+          <span class="top-user-tag" v-if="blog.userTag">{{blog.userTag}}</span>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button class="top-follow-btn" :class="{followed: followed}" @click.stop="toggleFollow" v-if="user && user.id !== blog.userId && blog.id">
+          {{followed ? '已关注' : '关注'}}
+        </button>
+        <i class="el-icon-upload2 top-share-icon"></i>
+        <el-popover
+            v-if="isOwner"
+            placement="bottom-end"
+            trigger="click"
+            v-model:visible="showMenu"
+            popper-class="more-menu-popover"
+            :width="120"
+            :show-arrow="false"
+        >
+            <template #reference>
+                <i class="el-icon-more top-more-icon"></i>
+            </template>
+            <div class="more-menu-list">
+                <div class="menu-item" @click="handleSticky">
+                    <i class="el-icon-top"></i> 置顶
+                </div>
+                <div class="menu-item" @click="handleEdit">
+                    <i class="el-icon-edit-outline"></i> 编辑
+                </div>
+                <div class="menu-item delete" @click="handleDelete">
+                    <i class="el-icon-delete"></i> 删除
+                </div>
+                <div class="menu-item" @click="goHome">
+                    <i class="el-icon-s-home"></i> 回到首页
+                </div>
+            </div>
+        </el-popover>
+      </div>
     </div>
 
+    <!-- 可滚动内容区域 -->
     <div class="scroll-container">
        <div v-if="!blog.id && !pageLoading" class="empty-state">
            <i class="el-icon-warning-outline"></i>
            <p>内容不存在或已被删除</p>
        </div>
 
-       <div v-if="blog.id">
-          <!-- Carousel -->
-          <div class="carousel-container" v-if="blog.images && blog.images.length > 0">
-          <el-carousel trigger="click" height="300px" :autoplay="false" arrow="always" indicator-position="none">
-             <el-carousel-item v-for="(img, i) in blog.images" :key="i">
-                <img :src="img" class="carousel-img" @click="previewImage(blog.images, i)">
-             </el-carousel-item>
-          </el-carousel>
-       </div>
-
-       <!-- User Info -->
-       <div class="basic">
-          <div class="basic-icon" @click="toOtherInfo">
-             <img :src="blog.icon || '/imgs/icons/default-icon.png'">
-          </div>
-          <div class="basic-info">
-             <div class="name">{{blog.name}}</div>
-             <span class="time">{{formatDate(blog.createTime)}}</span>
-          </div>
-          <div style="width: 20%">
-             <div class="follow-btn" @click="toggleFollow" v-if="user && user.id !== blog.userId">
-                {{followed ? '取消关注' : '关注'}}
-             </div>
-          </div>
-       </div>
-
-       <!-- Content -->
-       <div class="blog-text" v-html="blog.content"></div>
-
-       <!-- Shop Info -->
-       <div class="shop-basic" v-if="shop.id" @click="toShopDetail">
-          <div class="shop-icon">
-             <img :src="shop.image || '/imgs/icons/default-icon.png'">
-          </div>
-          <div style="width: 80%">
-             <div class="name">{{shop.name}}</div>
-             <div><el-rate :model-value="shop.score/10" disabled text-color="#F63" show-score></el-rate></div>
-             <div class="shop-avg">￥{{shop.avgPrice}}/人</div>
-          </div>
-       </div>
-
-       <!-- Likes -->
-       <div class="zan-box">
-          <div class="zan-icon" @click="addLike">
-              <svg viewBox="0 0 1024 1024" width="20" height="20">
-                  <path d="M160 944c0 8.8-7.2 16-16 16h-32c-26.5 0-48-21.5-48-48V528c0-26.5 21.5-48 48-48h32c8.8 0 16 7.2 16 16v448zM96 416c-53 0-96 43-96 96v416c0 53 43 96 96 96h96c17.7 0 32-14.3 32-32V448c0-17.7-14.3-32-32-32H96zM505.6 64c16.2 0 26.4 8.7 31 13.9 4.6 5.2 12.1 16.3 10.3 32.4l-23.5 203.4c-4.9 42.2 8.6 84.6 36.8 116.4 28.3 31.7 68.9 49.9 111.4 49.9h271.2c6.6 0 10.8 3.3 13.2 6.1s5 7.5 4 14l-48 303.4c-6.9 43.6-29.1 83.4-62.7 112C815.8 944.2 773 960 728.9 960h-317c-33.1 0-59.9-26.8-59.9-59.9v-455c0-6.1 1.7-12 5-17.1 69.5-109 106.4-234.2 107-364h41.6z m0-64h-44.9C427.2 0 400 27.2 400 60.7c0 127.1-39.1 251.2-112 355.3v484.1c0 68.4 55.5 123.9 123.9 123.9h317c122.7 0 227.2-89.3 246.3-210.5l47.9-303.4c7.8-49.4-30.4-94.1-80.4-94.1H671.6c-50.9 0-90.5-44.4-84.6-95l23.5-203.4C617.7 55 568.7 0 505.6 0z" :fill="blog.isLike ? '#ff6633' : '#82848a'"></path>
-              </svg>
-          </div>
-          <div class="zan-list">
-             <div class="user-icon-mini" v-for="u in likes" :key="u.id" @click="toUserDetail(u.id)">
-                <img :src="u.icon || '/imgs/icons/default-icon.png'">
-             </div>
-             <div class="like-count">{{blog.liked}}人点赞</div>
-          </div>
-       </div>
-
-       <div class="blog-divider"></div>
-
-       <!-- Comments -->
-       <div class="blog-comments">
-          <div class="comments-head">网友评价 ({{blog.comments || 0}})</div>
-          
-          <div class="comment-list" v-if="(comments && comments.length > 0) || (aiComment && aiComment.content)">
-             <!-- AI Comment -->
-             <div class="comment-box ai-generated-comment" v-if="aiComment && aiComment.content">
-                <div class="comment-icon ai-comment-icon"><i class="el-icon-magic-stick"></i></div>
-                <div class="comment-info ai-comment-info">
-                   <div class="comment-user">
-                      智评助手
-                      <span class="ai-verified"><i class="el-icon-check"></i> 官方认证</span>
-                   </div>
-                   <div class="comment-content">{{aiComment.content}}</div>
-                   <div class="comment-stats"><span class="ai-highlight">{{aiComment.createTime}}</span></div>
-                </div>
-                <div class="ai-generated-badge">AI生成</div>
-             </div>
-
-             <!-- User Comments -->
-             <div class="comment-box" v-for="c in comments" :key="c.id">
-                <div class="comment-icon" @click.stop="toUserDetail(c.userId)">
-                   <img :src="c.userIcon || '/imgs/icons/default-icon.png'">
-                </div>
-                <div class="comment-info">
-                   <div class="comment-user" @click.stop="toUserDetail(c.userId)">
-                      {{c.nickName || '匿名用户'}} <span>Lv{{c.userLevel || 1}}</span>
-                   </div>
-                   <div class="comment-content">{{c.content}}</div>
-                   <div class="comment-images" v-if="c.images && c.images.length">
-                      <img v-for="(img, idx) in c.images" :key="idx" :src="img" @click="previewImage(c.images, idx)">
-                   </div>
-                <div class="comment-interactions">
-                   <span class="comment-time">{{formatDate(c.createTime)}}</span>
-                   <div class="comment-actions">
-                      <div class="c-action-btn" @click.stop="handleCommentLike(c)">
-                         <i class="el-icon-thumb" :style="{color: c.isLike ? '#F63' : '#999'}"></i>
-                         {{c.liked || 0}}
-                      </div>
-                      <div class="c-action-btn" @click.stop="handleCommentReply(c)">
-                         <i class="el-icon-chat-dot-square"></i>
-                      </div>
-                      <div class="c-action-btn delete-btn" v-if="user.id === c.userId" @click.stop="handleCommentDelete(c)">
-                         <i class="el-icon-delete"></i>
-                      </div>
-                   </div>
-                </div>
-
-                <!-- Replies -->
-                <div class="comment-replies" v-if="c.replies && c.replies.length > 0">
-                    <div class="reply-item" v-for="r in c.replies" :key="r.id">
-                        <div class="reply-avatar" @click.stop="toUserDetail(r.userId)">
-                           <img :src="r.userIcon || r.icon || '/imgs/icons/default-icon.png'" alt="">
-                        </div>
-                        <div class="reply-main">
-                           <div class="reply-header">
-                              <span class="reply-user" @click.stop="toUserDetail(r.userId)">{{r.nickName || '匿名用户'}}</span>
-                              <span class="reply-time">{{formatDate(r.createTime)}}</span>
-                           </div>
-                           <div class="reply-content">
-                                <span v-if="r.replyToName" class="reply-target">回复 @{{r.replyToName}}</span>
-                                {{r.content}}
-                           </div>
-                           <div class="comment-images" v-if="r.images && r.images.length">
-                              <img v-for="(img, idx) in r.images" :key="idx" :src="img" @click.stop="previewImage(r.images, idx)">
-                           </div>
-                           <div class="reply-actions">
-                                <div class="c-action-btn" @click.stop="handleCommentLike(r)">
-                                   <i class="el-icon-thumb" :style="{color: r.isLike ? '#F63' : '#999'}"></i>
-                                   <span v-if="r.liked > 0">{{r.liked}}</span>
-                                </div>
-                                <div class="c-action-btn" @click.stop="handleCommentReply(r)">
-                                   <i class="el-icon-chat-dot-square"></i>
-                                </div>
-                                 <div class="c-action-btn delete-btn" v-if="user.id === r.userId" @click.stop="handleCommentDelete(r)">
-                                   <i class="el-icon-delete"></i>
-                                </div>
-                           </div>
-                        </div>
-                    </div>
-                </div>
-                     </div>
-                  </div>
-            
-            <div class="view-all" @click="viewAllComments">
-               查看全部{{blog.comments}}条评价 <i class="el-icon-arrow-right"></i>
+       <div v-if="blog.id" class="content-wrapper">
+          <!-- 全图轮播区域 -->
+          <div class="image-carousel-full" 
+               v-if="blog.images && blog.images.length > 0"
+               @touchstart="onTouchStart"
+               @touchmove="onTouchMove"
+               @touchend="onTouchEnd"
+          >
+            <el-carousel 
+              ref="imageCarousel"
+              :height="carouselHeight" 
+              :autoplay="false" 
+              arrow="never" 
+              indicator-position="none"
+              @change="onCarouselChange"
+            >
+               <el-carousel-item v-for="(img, i) in blog.images" :key="i">
+                  <img :src="img" class="full-carousel-img" @click="previewImage(blog.images, i)" @load="onImageLoad">
+               </el-carousel-item>
+            </el-carousel>
+            <!-- 图片序号指示器 (右上角) -->
+            <div class="image-indicator">{{currentImageIndex + 1}}/{{blog.images.length}}</div>
+            <!-- 底部点状指示器 -->
+            <div class="dots-indicator" v-if="blog.images.length > 1">
+              <span 
+                v-for="(img, i) in blog.images" 
+                :key="i" 
+                class="dot" 
+                :class="{active: i === currentImageIndex}"
+                @click="goToImage(i)"
+              ></span>
             </div>
+          </div>
+
+          <!-- 博客文字内容 -->
+          <div class="blog-content-section">
+            <div class="blog-title" v-if="blog.title">{{blog.title}}</div>
+            <div class="blog-text" v-html="blog.content"></div>
+            <div class="blog-time">{{formatDate(blog.createTime)}}</div>
+          </div>
+
+          <!-- 关联店铺信息 -->
+          <div class="shop-card" v-if="shop.id" @click="toShopDetail">
+             <div class="shop-card-icon">
+                <img :src="shop.image || '/imgs/icons/default-icon.png'">
+             </div>
+             <div class="shop-card-info">
+                <div class="shop-card-name">{{shop.name}}</div>
+                <div class="shop-card-rating"><el-rate :model-value="shop.score/10" disabled text-color="#F63" show-score></el-rate></div>
+                <div class="shop-card-price">￥{{shop.avgPrice}}/人</div>
+             </div>
+             <i class="el-icon-arrow-right shop-card-arrow"></i>
+          </div>
+
+          <!-- 点赞用户列表 -->
+          <div class="like-section" v-if="likes && likes.length > 0">
+             <div class="like-icon-btn" @click="addLike">
+                 <svg viewBox="0 0 1024 1024" width="20" height="20">
+                     <path d="M160 944c0 8.8-7.2 16-16 16h-32c-26.5 0-48-21.5-48-48V528c0-26.5 21.5-48 48-48h32c8.8 0 16 7.2 16 16v448zM96 416c-53 0-96 43-96 96v416c0 53 43 96 96 96h96c17.7 0 32-14.3 32-32V448c0-17.7-14.3-32-32-32H96zM505.6 64c16.2 0 26.4 8.7 31 13.9 4.6 5.2 12.1 16.3 10.3 32.4l-23.5 203.4c-4.9 42.2 8.6 84.6 36.8 116.4 28.3 31.7 68.9 49.9 111.4 49.9h271.2c6.6 0 10.8 3.3 13.2 6.1s5 7.5 4 14l-48 303.4c-6.9 43.6-29.1 83.4-62.7 112C815.8 944.2 773 960 728.9 960h-317c-33.1 0-59.9-26.8-59.9-59.9v-455c0-6.1 1.7-12 5-17.1 69.5-109 106.4-234.2 107-364h41.6z m0-64h-44.9C427.2 0 400 27.2 400 60.7c0 127.1-39.1 251.2-112 355.3v484.1c0 68.4 55.5 123.9 123.9 123.9h317c122.7 0 227.2-89.3 246.3-210.5l47.9-303.4c7.8-49.4-30.4-94.1-80.4-94.1H671.6c-50.9 0-90.5-44.4-84.6-95l23.5-203.4C617.7 55 568.7 0 505.6 0z" :fill="blog.isLike ? '#ff6633' : '#82848a'"></path>
+                 </svg>
+             </div>
+             <div class="like-avatars">
+                <div class="like-avatar-item" v-for="u in likes.slice(0, 8)" :key="u.id" @click="toUserDetail(u.id)">
+                   <img :src="u.icon || '/imgs/icons/default-icon.png'">
+                </div>
+                <span class="like-count-text">{{blog.liked}}人点赞</span>
+             </div>
+          </div>
+
+          <div class="section-divider"></div>
+
+          <!-- 评论区域 -->
+          <div class="comments-section">
+             <div class="comments-header">网友评价 ({{blog.comments || 0}})</div>
+             
+             <div class="comment-list" v-if="(comments && comments.length > 0) || (aiComment && aiComment.content)">
+                <!-- AI 评论 -->
+                <div class="comment-box ai-generated-comment" v-if="aiComment && aiComment.content">
+                   <div class="comment-icon ai-comment-icon"><i class="el-icon-magic-stick"></i></div>
+                   <div class="comment-info ai-comment-info">
+                      <div class="comment-user">
+                         智评助手
+                         <span class="ai-verified"><i class="el-icon-check"></i> 官方认证</span>
+                      </div>
+                      <div class="comment-content">{{aiComment.content}}</div>
+                      <div class="comment-stats"><span class="ai-highlight">{{aiComment.createTime}}</span></div>
+                   </div>
+                   <div class="ai-generated-badge">AI生成</div>
+                </div>
+
+                <!-- 用户评论 -->
+                <div class="comment-box" v-for="c in comments" :key="c.id">
+                   <div class="comment-icon" @click.stop="toUserDetail(c.userId)">
+                      <img :src="c.userIcon || '/imgs/icons/default-icon.png'">
+                   </div>
+                   <div class="comment-info">
+                      <div class="comment-user" @click.stop="toUserDetail(c.userId)">
+                         {{c.nickName || '匿名用户'}} <span>Lv{{c.userLevel || 1}}</span>
+                      </div>
+                      <div class="comment-content">{{c.content}}</div>
+                      <div class="comment-images" v-if="c.images && c.images.length">
+                         <img v-for="(img, idx) in c.images" :key="idx" :src="img" @click="previewImage(c.images, idx)">
+                      </div>
+                      <div class="comment-interactions">
+                         <span class="comment-time">{{formatDate(c.createTime)}}</span>
+                         <div class="comment-actions">
+                            <div class="c-action-btn" @click.stop="handleCommentLike(c)">
+                               <svg viewBox="0 0 1024 1024" width="16" height="16">
+                                 <path d="M160 944c0 8.8-7.2 16-16 16h-32c-26.5 0-48-21.5-48-48V528c0-26.5 21.5-48 48-48h32c8.8 0 16 7.2 16 16v448zM96 416c-53 0-96 43-96 96v416c0 53 43 96 96 96h96c17.7 0 32-14.3 32-32V448c0-17.7-14.3-32-32-32H96zM505.6 64c16.2 0 26.4 8.7 31 13.9 4.6 5.2 12.1 16.3 10.3 32.4l-23.5 203.4c-4.9 42.2 8.6 84.6 36.8 116.4 28.3 31.7 68.9 49.9 111.4 49.9h271.2c6.6 0 10.8 3.3 13.2 6.1s5 7.5 4 14l-48 303.4c-6.9 43.6-29.1 83.4-62.7 112C815.8 944.2 773 960 728.9 960h-317c-33.1 0-59.9-26.8-59.9-59.9v-455c0-6.1 1.7-12 5-17.1 69.5-109 106.4-234.2 107-364h41.6z m0-64h-44.9C427.2 0 400 27.2 400 60.7c0 127.1-39.1 251.2-112 355.3v484.1c0 68.4 55.5 123.9 123.9 123.9h317c122.7 0 227.2-89.3 246.3-210.5l47.9-303.4c7.8-49.4-30.4-94.1-80.4-94.1H671.6c-50.9 0-90.5-44.4-84.6-95l23.5-203.4C617.7 55 568.7 0 505.6 0z" :fill="c.isLike ? '#ff2442' : '#999'"></path>
+                               </svg>
+                               {{c.liked || 0}}
+                            </div>
+                            <div class="c-action-btn" @click.stop="handleCommentReply(c)">
+                               <i class="el-icon-chat-dot-square"></i>
+                            </div>
+                            <div class="c-action-btn delete-btn" v-if="user.id === c.userId" @click.stop="handleCommentDelete(c)">
+                               <i class="el-icon-delete"></i>
+                            </div>
+                         </div>
+                      </div>
+
+                      <!-- 回复列表 -->
+                      <div class="comment-replies" v-if="c.replies && c.replies.length > 0">
+                          <div class="reply-item" v-for="r in c.replies" :key="r.id">
+                              <div class="reply-avatar" @click.stop="toUserDetail(r.userId)">
+                                 <img :src="r.userIcon || r.icon || '/imgs/icons/default-icon.png'" alt="">
+                              </div>
+                              <div class="reply-main">
+                                 <div class="reply-header">
+                                    <span class="reply-user" @click.stop="toUserDetail(r.userId)">{{r.nickName || '匿名用户'}}</span>
+                                    <span class="reply-time">{{formatDate(r.createTime)}}</span>
+                                 </div>
+                                 <div class="reply-content">
+                                      <span v-if="r.replyToName" class="reply-target">回复 @{{r.replyToName}}</span>
+                                      {{r.content}}
+                                 </div>
+                                 <div class="comment-images" v-if="r.images && r.images.length">
+                                    <img v-for="(img, idx) in r.images" :key="idx" :src="img" @click.stop="previewImage(r.images, idx)">
+                                 </div>
+                                 <div class="reply-actions">
+                                      <div class="c-action-btn" @click.stop="handleCommentLike(r)">
+                                         <svg viewBox="0 0 1024 1024" width="16" height="16">
+                                           <path d="M160 944c0 8.8-7.2 16-16 16h-32c-26.5 0-48-21.5-48-48V528c0-26.5 21.5-48 48-48h32c8.8 0 16 7.2 16 16v448zM96 416c-53 0-96 43-96 96v416c0 53 43 96 96 96h96c17.7 0 32-14.3 32-32V448c0-17.7-14.3-32-32-32H96zM505.6 64c16.2 0 26.4 8.7 31 13.9 4.6 5.2 12.1 16.3 10.3 32.4l-23.5 203.4c-4.9 42.2 8.6 84.6 36.8 116.4 28.3 31.7 68.9 49.9 111.4 49.9h271.2c6.6 0 10.8 3.3 13.2 6.1s5 7.5 4 14l-48 303.4c-6.9 43.6-29.1 83.4-62.7 112C815.8 944.2 773 960 728.9 960h-317c-33.1 0-59.9-26.8-59.9-59.9v-455c0-6.1 1.7-12 5-17.1 69.5-109 106.4-234.2 107-364h41.6z m0-64h-44.9C427.2 0 400 27.2 400 60.7c0 127.1-39.1 251.2-112 355.3v484.1c0 68.4 55.5 123.9 123.9 123.9h317c122.7 0 227.2-89.3 246.3-210.5l47.9-303.4c7.8-49.4-30.4-94.1-80.4-94.1H671.6c-50.9 0-90.5-44.4-84.6-95l23.5-203.4C617.7 55 568.7 0 505.6 0z" :fill="r.isLike ? '#ff2442' : '#999'"></path>
+                                         </svg>
+                                         <span v-if="r.liked > 0">{{r.liked}}</span>
+                                      </div>
+                                      <div class="c-action-btn" @click.stop="handleCommentReply(r)">
+                                         <i class="el-icon-chat-dot-square"></i>
+                                      </div>
+                                       <div class="c-action-btn delete-btn" v-if="user.id === r.userId" @click.stop="handleCommentDelete(r)">
+                                         <i class="el-icon-delete"></i>
+                                      </div>
+                                 </div>
+                              </div>
+                          </div>
+                      </div>
+                   </div>
+                </div>
+              
+               <div class="view-all-btn" @click="viewAllComments">
+                  查看全部{{blog.comments}}条评价 <i class="el-icon-arrow-right"></i>
+               </div>
+            </div>
+            <div v-else class="no-comments">暂无评论，快来发表第一条评论吧～</div>
          </div>
-         <div v-else class="no-comments">暂无评论，快来发表第一条评论吧～</div>
-      </div>
-      
-   </div> <!-- End of content-wrapper -->
-   </div> <!-- End of scroll-container -->
+         
+      </div> <!-- End of content-wrapper -->
+    </div> <!-- End of scroll-container -->
 
-   <!-- Footer -->
-   <div class="foot-bar">
-      <div class="foot-item" @click="addLike" :class="{active: blog.isLike}">
-         <i :class="blog.isLike ? 'el-icon-thumb' : 'el-icon-thumb'"></i>
-         <span>{{blog.isLike ? '已点赞' : '点赞'}}</span>
+    <!-- 底部固定操作栏 -->
+    <div class="fixed-bottom-bar">
+      <div class="bottom-comment-input" @click="checkLogin">
+        <i class="el-icon-edit"></i>
+        <span>说点什么...</span>
       </div>
-      <div class="foot-item action-big" @click="checkLogin">
-         <i class="el-icon-edit-outline"></i>
-         <span>写评价</span>
+      <div class="bottom-actions">
+        <div class="bottom-action-item" @click="addLike">
+          <svg viewBox="0 0 1024 1024" width="22" height="22">
+            <path d="M160 944c0 8.8-7.2 16-16 16h-32c-26.5 0-48-21.5-48-48V528c0-26.5 21.5-48 48-48h32c8.8 0 16 7.2 16 16v448zM96 416c-53 0-96 43-96 96v416c0 53 43 96 96 96h96c17.7 0 32-14.3 32-32V448c0-17.7-14.3-32-32-32H96zM505.6 64c16.2 0 26.4 8.7 31 13.9 4.6 5.2 12.1 16.3 10.3 32.4l-23.5 203.4c-4.9 42.2 8.6 84.6 36.8 116.4 28.3 31.7 68.9 49.9 111.4 49.9h271.2c6.6 0 10.8 3.3 13.2 6.1s5 7.5 4 14l-48 303.4c-6.9 43.6-29.1 83.4-62.7 112C815.8 944.2 773 960 728.9 960h-317c-33.1 0-59.9-26.8-59.9-59.9v-455c0-6.1 1.7-12 5-17.1 69.5-109 106.4-234.2 107-364h41.6z m0-64h-44.9C427.2 0 400 27.2 400 60.7c0 127.1-39.1 251.2-112 355.3v484.1c0 68.4 55.5 123.9 123.9 123.9h317c122.7 0 227.2-89.3 246.3-210.5l47.9-303.4c7.8-49.4-30.4-94.1-80.4-94.1H671.6c-50.9 0-90.5-44.4-84.6-95l23.5-203.4C617.7 55 568.7 0 505.6 0z" :fill="blog.isLike ? '#ff2442' : '#333'"></path>
+          </svg>
+          <span>{{blog.liked || 0}}</span>
+        </div>
+        <div class="bottom-action-item" @click="toggleStar">
+          <i :class="blog.isStared ? 'el-icon-star-on active' : 'el-icon-star-off'"></i>
+          <span>{{blog.stared || 0}}</span>
+        </div>
+        <div class="bottom-action-item" @click="viewAllComments">
+          <i class="el-icon-chat-dot-round"></i>
+          <span>{{blog.comments || 0}}</span>
+        </div>
       </div>
-   </div>
+    </div>
 
-   <!-- Comment Pop Input -->
-   <div class="comment-pop-overlay" v-if="showCommentPublish" @click="closeCommentModal">
+    <!-- 评论输入弹窗 -->
+    <div class="comment-pop-overlay" v-if="showCommentPublish" @click="closeCommentModal">
       <div class="comment-pop-box" @click.stop>
          <div class="pop-header">
             <span class="pop-title">{{ replyToComment ? ('回复 @' + replyToComment.nickName) : '发表评论' }}</span>
@@ -214,21 +282,21 @@
             <el-button type="primary" size="small" :disabled="!commentText.trim()" @click="publishComment">发送</el-button>
          </div>
       </div>
-   </div>
+    </div>
     
-    <!-- Image Preview -->
+    <!-- 图片预览 -->
     <el-image-viewer v-if="showImagePreview" :url-list="previewImages" :initial-index="currentPreviewIndex" @close="closeImagePreview" hide-on-click-modal />
   </div>
 </template>
 
 <script>
-import { getBlogDetail } from '@/api/blog';
+import { getBlogDetail, deleteBlog } from '@/api/blog';
 import { getShopDetail } from '@/api/shop';
-import { getLikeList, isFollowed, followUser, likeBlog, getComments, addComment, likeComment, replyComment, removeComment } from '@/api/interaction';
+import { getLikeList, isFollowed, followUser, likeBlog, getComments, addComment, likeComment, replyComment, removeComment, toggleStar } from '@/api/interaction';
 import { getCurrentUser } from '@/api/user';
 import { uploadFile } from '@/api/common';
-import '@/assets/css/blog-detail.css'; // Import existing styles
-import { ElImageViewer } from 'element-plus'; // Vue 3 version might need update, checking usage
+import '@/assets/css/blog-detail.css';
+import { ElImageViewer } from 'element-plus';
 
 export default {
   name: 'BlogDetail',
@@ -244,6 +312,12 @@ export default {
        followed: false,
        pageLoading: false,
        
+       // Carousel
+       currentImageIndex: 0,
+       carouselHeight: '400px',
+       touchStartX: 0,
+       touchEndX: 0,
+       
        // Comment UI
        showCommentPublish: false,
        commentText: '',
@@ -254,12 +328,16 @@ export default {
        showImagePreview: false,
        previewImages: [],
        currentPreviewIndex: 0,
-       replyToComment: null // State for reply
+       replyToComment: null,
+       showMenu: false
     }
   },
   computed: {
      fileURL() {
         return this.$fileURL || '';
+     },
+     isOwner() {
+         return this.user && this.blog && this.user.id === this.blog.userId;
      }
   },
   created() {
@@ -268,6 +346,7 @@ export default {
         this.pageLoading = true;
         this.queryBlogById(id).finally(() => this.pageLoading = false);
         this.loadComments(id);
+
         const token = localStorage.getItem("token");
         if(token) {
            this.queryLoginUser();
@@ -654,116 +733,677 @@ export default {
               this.$message.error('删除失败，请重试');
            });
         }).catch(() => {});
-     }
+     },
+     
+     // Star/Collection
+      // Star/Collection
+     toggleStar() {
+        if(!this.user.id) return this.$router.push('/user/login');
+        const newStatus = !this.blog.isStared;
+        
+        // Optimistic update
+        const originalStatus = this.blog.isStared;
+        const originalCount = this.blog.stared;
+        
+        this.blog.isStared = newStatus;
+        this.blog.stared = newStatus ? (this.blog.stared || 0) + 1 : Math.max((this.blog.stared || 0) - 1, 0);
+        
+        toggleStar({
+           sourceId: this.blog.id,
+           sourceType: 3,
+           isStar: newStatus
+        }).then(() => {
+           this.$message.success(newStatus ? '已收藏' : '已取消收藏');
+        }).catch(() => {
+           // Revert
+           this.blog.isStared = originalStatus;
+           this.blog.stared = originalCount;
+           this.$message.error('操作失败');
+        });
+     },
+     
+     // Carousel
+     onCarouselChange(index) {
+        this.currentImageIndex = index;
+     },
+     onImageLoad(e) {
+        // Auto adjust height based on image ratio
+        const img = e.target;
+        const ratio = img.naturalHeight / img.naturalWidth;
+        const width = window.innerWidth;
+        const height = Math.min(width * ratio, window.innerHeight * 0.7);
+        this.carouselHeight = height + 'px';
+     },
+     
+     // Touch swipe handlers
+     onTouchStart(e) {
+        this.touchStartX = e.touches[0].clientX;
+     },
+     onTouchMove(e) {
+        this.touchEndX = e.touches[0].clientX;
+     },
+     onTouchEnd() {
+        const diff = this.touchStartX - this.touchEndX;
+        const threshold = 50; // 最小滑动距离
+        
+        if (Math.abs(diff) > threshold) {
+           if (diff > 0) {
+              // 向左滑动，下一张
+              this.$refs.imageCarousel?.next();
+           } else {
+              // 向右滑动，上一张
+              this.$refs.imageCarousel?.prev();
+           }
+        }
+        
+        // 重置
+        this.touchStartX = 0;
+        this.touchEndX = 0;
+     },
+     goToImage(index) {
+        this.$refs.imageCarousel?.setActiveItem(index);
+     },
+      handleSticky() {
+          this.showMenu = false;
+          this.$message.success('置顶成功'); 
+      },
+      handleEdit() {
+          this.showMenu = false;
+          this.$router.push({ path: '/blog/edit', query: { id: this.blog.id } });
+      },
+      handleDelete() {
+          this.showMenu = false;
+          this.$confirm('确定删除这篇笔记吗？删除后不可恢复', '提示', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }).then(() => {
+             deleteBlog(this.blog.id).then(() => {
+                this.$message.success('删除成功');
+                this.$router.push('/user/info'); 
+             }).catch(() => {
+                this.$message.error('删除失败');
+             });
+          }).catch(() => {});
+      },
+      goHome() {
+          this.showMenu = false;
+          this.$router.push('/');
+      }
   }
 }
 </script>
 
 <style scoped>
-  /* AI Comment Styles */
-  .ai-generated-comment {
-     background: #f7f9fc;
-     border: 1px solid #e0e6ed;
-     border-radius: 12px;
-     margin-bottom: 15px;
-     padding: 16px;
-     box-shadow: 0 4px 12px rgba(24, 144, 255, 0.05);
-  }
-  .ai-comment-icon {
-     background: linear-gradient(135deg, #6366f1, #3b82f6);
-     border-radius: 50%;
-     color: white;
-     display: flex; align-items: center; justify-content: center;
-     width: 36px; height: 36px;
-  }
-  .ai-verified {
-     background: linear-gradient(90deg, #f59e0b, #d97706);
-     color: white;
-     font-size: 10px;
-     padding: 2px 6px;
-     border-radius: 4px;
-     margin-left: 8px;
-     font-weight: 500;
-     display: inline-flex; align-items: center;
-  }
-  .ai-time { color: #94a3b8; font-size: 12px; }
-  .ai-tag {
-     background: #eff6ff;
-     color: #3b82f6;
-     border: 1px solid #bfdbfe;
-     padding: 1px 8px;
-     border-radius: 12px;
-     font-size: 10px;
-     margin-left: 10px;
-     font-weight: 500;
-  }
+/* Page Layout */
+.blog-detail-page { 
+  height: 100vh; 
+  display: flex; 
+  flex-direction: column; 
+  background: white; 
+}
 
-/* Scoped styles supplementing blog-detail.css */
-.blog-detail-page { height: 100vh; display: flex; flex-direction: column; background: white; }
-.detail-header { position: sticky; top: 0; z-index: 100; background: white; height: 50px; display: flex; align-items: center; padding: 0 15px; border-bottom: 1px solid #eee; flex-shrink: 0; }
-.header-back-btn { font-size: 24px; cursor: pointer; }
-.header-title { flex: 1; text-align: center; font-weight: bold; font-size: 16px; }
-.header-share { width: 24px; text-align: center; color: #999; }
-.scroll-container { flex: 1; overflow-y: auto; padding-bottom: 60px; }
+/* Fixed Top Bar */
+.fixed-top-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50px;
+  background: white;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  z-index: 100;
+  border-bottom: 1px solid #f0f0f0;
+}
+.top-back-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: #333;
+  cursor: pointer;
+}
+.top-user-section {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  margin-left: 8px;
+}
+.top-user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.top-user-info {
+  display: flex;
+  flex-direction: column;
+}
+.top-user-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+.top-user-tag {
+  font-size: 10px;
+  color: #999;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.top-follow-btn {
+  padding: 5px 14px;
+  border-radius: 16px;
+  font-size: 12px;
+  border: 1px solid #ff2442;
+  background: #ff2442;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.top-follow-btn.followed {
+  background: white;
+  color: #999;
+  border-color: #ddd;
+}
+.top-share-icon {
+  font-size: 20px;
+  color: #333;
+  cursor: pointer;
+}
 
-.carousel-container { width: 100%; height: auto; }
-.carousel-img { width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
+/* Scroll Container */
+.scroll-container {
+  flex: 1;
+  overflow-y: auto;
+  margin-top: 50px;
+  padding-bottom: 70px;
+}
+.content-wrapper {
+  min-height: 100%;
+}
 
-.follow-btn { border: 1px solid #FC3; color: #FC3; border-radius: 20px; text-align: center; padding: 5px 0; font-size: 12px; cursor: pointer; }
+/* Image Carousel */
+.image-carousel-full {
+  position: relative;
+  width: 100%;
+  background: #f5f5f5;
+}
+.full-carousel-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  cursor: pointer;
+  background: #f5f5f5;
+}
+.image-indicator {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 10px;
+  z-index: 10;
+}
 
-/* AI Comment Styles from inline HTML */
-.ai-generated-comment { background: linear-gradient(135deg, #f8fbff 0%, #f0f7ff 100%); border: 1px solid #e1eeff; border-radius: 12px; margin: 12px 0; padding: 16px; position: relative; }
-.ai-generated-badge { position: absolute; top: 12px; right: 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-size: 10px; padding: 4px 8px; border-radius: 10px; font-weight: 600; }
-.ai-comment-icon { width: 36px; height: 36px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; margin-right: 10px; float: left; }
-.ai-comment-info { overflow: hidden; }
-.ai-verified { color: #667eea; font-size: 12px; background: rgba(102, 126, 234, 0.1); padding: 2px 6px; border-radius: 8px; margin-left: 5px; }
-.ai-highlight { color: #667eea; font-weight: 600; font-size: 12px; }
+/* Dots Indicator */
+.dots-indicator {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  z-index: 10;
+}
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: all 0.3s;
+}
+.dot.active {
+  background: white;
+  width: 18px;
+  border-radius: 3px;
+}
 
-/* Foot Bar */
-.foot-bar { height: 56px; background: white; border-top: 1px solid #eee; display: flex; padding-bottom: env(safe-area-inset-bottom); position: fixed; bottom: 0; left: 0; right: 0; }
-.foot-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; color: #666; transition: all 0.2s; }
-.foot-item i { font-size: 20px; margin-bottom: 2px; }
-.foot-item.active i, .foot-item.active span { color: #FF6B00; }
-.foot-item.action-big { flex: 1.5; background: #FF6B00; color: white; margin: 8px 16px; border-radius: 20px; flex-direction: row; gap: 6px; font-size: 14px; }
-.foot-item.action-big i { font-size: 16px; margin: 0; color: white; }
+/* Blog Content Section */
+.blog-content-section {
+  padding: 15px;
+}
+.blog-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+.blog-text {
+  font-size: 15px;
+  color: #333;
+  line-height: 1.8;
+  word-break: break-word;
+}
+.blog-time {
+  font-size: 12px;
+  color: #999;
+  margin-top: 20px;
+}
+
+/* Shop Card */
+.shop-card {
+  margin: 15px;
+  padding: 12px;
+  background: #f8f8f8;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+.shop-card-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.shop-card-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.shop-card-info {
+  flex: 1;
+  margin-left: 12px;
+}
+.shop-card-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 4px;
+}
+.shop-card-rating {
+  display: flex;
+  align-items: center;
+}
+.shop-card-price {
+  font-size: 12px;
+  color: #999;
+  margin-top: 2px;
+}
+.shop-card-arrow {
+  color: #ccc;
+  font-size: 16px;
+}
+
+/* Like Section */
+.like-section {
+  display: flex;
+  align-items: center;
+  padding: 12px 15px;
+  gap: 12px;
+}
+.like-icon-btn {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.like-avatars {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-wrap: wrap;
+}
+.like-avatar-item {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin-left: -6px;
+  border: 2px solid white;
+  cursor: pointer;
+}
+.like-avatar-item:first-child {
+  margin-left: 0;
+}
+.like-avatar-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.like-count-text {
+  font-size: 13px;
+  color: #666;
+  margin-left: 8px;
+}
+
+/* Section Divider */
+.section-divider {
+  height: 8px;
+  background: #f5f5f5;
+}
+
+/* Comments Section */
+.comments-section {
+  padding: 15px;
+}
+.comments-header {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 15px;
+}
+.view-all-btn {
+  text-align: center;
+  padding: 15px 0;
+  color: #666;
+  font-size: 14px;
+  border-top: 1px solid #f5f5f5;
+  cursor: pointer;
+  margin-top: 10px;
+}
+.no-comments {
+  text-align: center;
+  padding: 30px;
+  color: #999;
+  font-size: 14px;
+}
+
+/* Fixed Bottom Bar */
+.fixed-bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  background: white;
+  border-top: 1px solid #f0f0f0;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 100;
+  gap: 12px;
+}
+.bottom-comment-input {
+  flex: 1;
+  height: 36px;
+  background: #f5f5f5;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  padding: 0 15px;
+  gap: 8px;
+  color: #999;
+  font-size: 14px;
+  cursor: pointer;
+}
+.bottom-comment-input i {
+  font-size: 16px;
+}
+.bottom-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.bottom-action-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+}
+.bottom-action-item i {
+  font-size: 22px;
+  color: #333;
+}
+.bottom-action-item i.active {
+  color: #ff2442;
+}
+.bottom-action-item span {
+  font-size: 10px;
+  color: #666;
+  margin-top: 2px;
+}
+
+/* Like Icon SVG */
+.like-icon {
+  display: block;
+}
+.like-icon-small {
+  display: block;
+  flex-shrink: 0;
+}
+
+/* AI Comment Styles */
+.ai-generated-comment {
+  background: linear-gradient(135deg, #f8fbff 0%, #f0f7ff 100%);
+  border: 1px solid #e1eeff;
+  border-radius: 12px;
+  margin: 12px 0;
+  padding: 16px;
+  position: relative;
+}
+.ai-generated-badge {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 10px;
+  padding: 4px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+.ai-comment-icon {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  margin-right: 10px;
+  float: left;
+}
+.ai-comment-info {
+  overflow: hidden;
+}
+.ai-verified {
+  color: #667eea;
+  font-size: 12px;
+  background: rgba(102, 126, 234, 0.1);
+  padding: 2px 6px;
+  border-radius: 8px;
+  margin-left: 5px;
+}
+.ai-highlight {
+  color: #667eea;
+  font-weight: 600;
+  font-size: 12px;
+}
 
 /* Comment Pop Modal */
-.comment-pop-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: flex-end; }
-.comment-pop-box { background: white; width: 100%; border-radius: 16px 16px 0 0; padding: 20px; max-height: 80vh; overflow-y: auto; box-sizing: border-box; }
-.pop-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.pop-title { font-size: 14px; color: #666; }
-.pop-close { font-size: 20px; color: #999; cursor: pointer; padding: 5px; }
-.pop-close:hover { color: #333; }
-.pop-textarea textarea { width: 100%; border: none; outline: none; resize: none; font-size: 16px; line-height: 1.6; min-height: 80px; padding: 0; }
-.pop-textarea textarea::placeholder { color: #ccc; }
-.pop-images { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
-.pop-image-item { width: 60px; height: 60px; position: relative; }
-.pop-image-item img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; }
-.pop-image-item i { position: absolute; top: -4px; right: -4px; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; font-size: 10px; cursor: pointer; }
-.pop-image-add { width: 60px; height: 60px; border: 1px dashed #ddd; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #ccc; font-size: 18px; cursor: pointer; }
-.pop-toolbar { display: flex; justify-content: space-between; align-items: center; padding: 15px 0 0 0; margin-top: 10px; border-top: 1px solid #f0f0f0; overflow: visible; }
-.pop-toolbar-left { display: flex; align-items: center; gap: 20px; padding-left: 0; margin-left: 0; }
-.pop-toolbar-left i { font-size: 26px; color: #666; cursor: pointer; line-height: 1; }
-.pop-toolbar-left i:hover { color: #ff6633; }
-.pic-icon { cursor: pointer; flex-shrink: 0; display: block; width: 24px; height: 24px; }
-.pic-icon:hover path { fill: #ff6633; }
-.rate-section { display: flex; align-items: center; gap: 10px; font-size: 14px; color: #666; }
+.comment-pop-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+}
+.comment-pop-box {
+  background: white;
+  width: 100%;
+  border-radius: 16px 16px 0 0;
+  padding: 20px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+.pop-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.pop-title {
+  font-size: 14px;
+  color: #666;
+}
+.pop-close {
+  font-size: 20px;
+  color: #999;
+  cursor: pointer;
+  padding: 5px;
+}
+.pop-textarea textarea {
+  width: 100%;
+  border: none;
+  outline: none;
+  resize: none;
+  font-size: 16px;
+  line-height: 1.6;
+  min-height: 80px;
+  padding: 0;
+}
+.pop-textarea textarea::placeholder {
+  color: #ccc;
+}
+.pop-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0;
+}
+.pop-image-item {
+  width: 60px;
+  height: 60px;
+  position: relative;
+}
+.pop-image-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 6px;
+}
+.pop-image-item i {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: rgba(0,0,0,0.6);
+  color: white;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  cursor: pointer;
+}
+.pop-image-add {
+  width: 60px;
+  height: 60px;
+  border: 1px dashed #ddd;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ccc;
+  font-size: 18px;
+  cursor: pointer;
+}
+.pop-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 0 0 0;
+  margin-top: 10px;
+  border-top: 1px solid #f0f0f0;
+}
+.pop-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.pic-icon {
+  cursor: pointer;
+  flex-shrink: 0;
+  display: block;
+  width: 24px;
+  height: 24px;
+}
+.pic-icon:hover path {
+  fill: #ff6633;
+}
 
-.view-all { text-align: center; padding: 15px 0; color: #666; font-size: 14px; border-top: 1px solid #f5f5f5; cursor: pointer; }
-.no-comments { text-align: center; padding: 20px; color: #999; }
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 100px 0;
+  color: #999;
+}
+.empty-state i {
+  font-size: 60px;
+  margin-bottom: 20px;
+  color: #ddd;
+}
 
-/* Like Box Styles */
-.zan-box { display: flex; align-items: center; padding: 12px 15px; gap: 12px; }
-.zan-icon { cursor: pointer; display: flex; align-items: center; justify-content: center; }
-.zan-list { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.user-icon-mini { width: 24px; height: 24px; border-radius: 50%; overflow: hidden; cursor: pointer; transition: transform 0.2s; }
-.user-icon-mini:hover { transform: scale(1.1); }
-.user-icon-mini img { width: 100%; height: 100%; object-fit: cover; }
-.like-count { font-size: 13px; color: #666; margin-left: 4px; }
-
-/* Override legacy CSS */
-.blog-info-box { height: auto !important; }
-.empty-state { text-align: center; padding: 100px 0; color: #999; }
-.empty-state i { font-size: 60px; margin-bottom: 20px; color: #ddd; }
-
+/* More Menu Popover */
+.more-menu-popover {
+    padding: 0 !important;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+}
+.more-menu-list {
+    display: flex;
+    flex-direction: column;
+}
+.menu-item {
+    height: 44px;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    font-size: 14px;
+    color: #333;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.menu-item:hover {
+    background: #f5f5f5;
+}
+.menu-item i {
+    margin-right: 8px;
+    font-size: 16px;
+}
+.menu-item.delete {
+    color: #ff2442;
+}
+.top-more-icon {
+    font-size: 20px;
+    color: #333;
+    cursor: pointer;
+    margin-left: 12px;
+}
 </style>

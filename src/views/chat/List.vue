@@ -203,7 +203,7 @@ export default {
                  ...s,
                  avatar: s.avatar ? this.$fileURL + s.avatar : '',
                  translateX: 0,
-                 isPinned: s.isPinned || false
+                 isPinned: s.pin || s.isPinned || false
               }));
            })
            .finally(() => {
@@ -335,7 +335,7 @@ export default {
 </script>
 
 <style scoped>
-.chat-list-page { height: 100vh; display: flex; flex-direction: column; background: white; }
+.chat-list-page { height: 100vh; display: flex; flex-direction: column; background: white; overflow-x: hidden; }
 .header { height: 50px; border-bottom: 1px solid #eee; display: flex; align-items: center; justify-content: center; position: relative; }
 .header-title { font-weight: bold; font-size: 16px; }
 .header-search { position: absolute; right: 15px; font-size: 20px; cursor: pointer; }

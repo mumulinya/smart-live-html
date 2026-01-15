@@ -26,11 +26,17 @@ export function getHotSearch() {
 }
 
 // Add Search History (POST)
-export function addSearchHistory(data) {
-    return request.post('/app/es/search/history', data);
+export function addSearchHistory(params) {
+    return request.post('/app/es/search/history', null, { params });
 }
 
 // Get Search History (GET)
+// Note: Backend annotation says @PathVariable but mapped to /history. Assuming typo in backend snippet (meant RequestParam) 
+// or path is /history/{userId}. Since others are RequestParam, we try RequestParam first.
+// If backend strictly implies /history/{userId}, we would need: request.get(`/app/es/search/history/${params.userId}`)
+// But let's stick to query params as per existing pattern unless it fails. 
+// Actually, to be safe against the snippet provided: "@GetMapping("/history") ... @PathVariable" is invalid Spring mapping.
+// It most likely is @RequestParam.
 export function getSearchHistory(params) {
     return request.get('/app/es/search/history', { params });
 }
@@ -38,4 +44,9 @@ export function getSearchHistory(params) {
 // Clear Search History (DELETE)
 export function clearSearchHistory(params) {
     return request.delete('/app/es/search/history', { params });
+}
+
+// Record Search (POST) - For Hot Search Stats
+export function recordSearch(keyword) {
+    return request.post('/app/es/search/record', null, { params: { keyword } });
 }

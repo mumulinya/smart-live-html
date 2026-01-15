@@ -358,7 +358,7 @@ export default {
 </script>
 
 <style scoped>
-.chat-detail-page { height: 100vh; display: flex; flex-direction: column; background: #f5f5f5; }
+.chat-detail-page { height: 100vh; display: flex; flex-direction: column; background: #f5f5f5; overflow-x: hidden; }
 .header { height: 50px; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; border-bottom: 1px solid #e1e1e1; background: #f7f7f7; }
 .header-title { font-weight: bold; }
 .connection-status { text-align: center; color: white; padding: 5px; font-size: 12px; }

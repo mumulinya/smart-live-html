@@ -45,6 +45,10 @@ export function getLikeList(params) {
     return request.get('/app/interaction/like/likeUserList', { params });
 }
 
+export function likeRecord(params) {
+    return request.get('/app/interaction/like/likeRecord', { params });
+}
+
 // Comments
 export function getComments(params) {
     return request.get('/app/interaction/comment/listComment', { params });
@@ -82,4 +86,8 @@ export function isStar(params) {
 export function toggleStar(data) {
     // data: { sourceId, sourceType, isCollection }
     return request.put('/app/interaction/star', data);
+}
+
+export function starList(params) {
+    return request.get('/app/interaction/star/starList', { params });
 }

@@ -13,11 +13,36 @@
 
     <div class="shop-info-container" v-if="shop.id">
        <!-- Top Gallery/Cover -->
-       <div class="shop-header-gallery" v-if="gallery.length > 0">
-           <div class="header-gallery-wrapper">
-               <img v-for="(img, idx) in gallery" :key="idx" :src="img" @click="previewImage(gallery, idx)">
+       <div class="shop-header-gallery" 
+            v-if="gallery.length > 0"
+            @touchstart="onTouchStart"
+            @touchmove="onTouchMove"
+            @touchend="onTouchEnd"
+       >
+           <el-carousel 
+             ref="imageCarousel"
+             :height="carouselHeight" 
+             :autoplay="false" 
+             arrow="never" 
+             indicator-position="none"
+             @change="onCarouselChange"
+           >
+              <el-carousel-item v-for="(img, idx) in gallery" :key="idx">
+                 <img :src="img" class="full-carousel-img" @click="previewImage(gallery, idx)" @load="onImageLoad">
+              </el-carousel-item>
+           </el-carousel>
+           <!-- 图片序号指示器 -->
+           <div class="image-indicator">{{currentImageIndex + 1}}/{{gallery.length}}</div>
+           <!-- 底部点状指示器 -->
+           <div class="dots-indicator" v-if="gallery.length > 1">
+             <span 
+               v-for="(img, i) in gallery" 
+               :key="i" 
+               class="dot" 
+               :class="{active: i === currentImageIndex}"
+               @click="goToImage(i)"
+             ></span>
            </div>
-           <div class="gallery-count">{{gallery.length}}张</div>
        </div>
        <div class="top-placeholder" v-else></div>
        
@@ -156,7 +181,9 @@
                    <span class="comment-time">{{formatDate(c.createTime)}}</span>
                    <div class="comment-actions">
                       <div class="c-action-btn" @click.stop="handleCommentLike(c)">
-                         <i class="el-icon-thumb" :style="{color: c.isLike ? '#F63' : '#999'}"></i>
+                         <svg viewBox="0 0 1024 1024" width="16" height="16">
+                           <path d="M160 944c0 8.8-7.2 16-16 16h-32c-26.5 0-48-21.5-48-48V528c0-26.5 21.5-48 48-48h32c8.8 0 16 7.2 16 16v448zM96 416c-53 0-96 43-96 96v416c0 53 43 96 96 96h96c17.7 0 32-14.3 32-32V448c0-17.7-14.3-32-32-32H96zM505.6 64c16.2 0 26.4 8.7 31 13.9 4.6 5.2 12.1 16.3 10.3 32.4l-23.5 203.4c-4.9 42.2 8.6 84.6 36.8 116.4 28.3 31.7 68.9 49.9 111.4 49.9h271.2c6.6 0 10.8 3.3 13.2 6.1s5 7.5 4 14l-48 303.4c-6.9 43.6-29.1 83.4-62.7 112C815.8 944.2 773 960 728.9 960h-317c-33.1 0-59.9-26.8-59.9-59.9v-455c0-6.1 1.7-12 5-17.1 69.5-109 106.4-234.2 107-364h41.6z m0-64h-44.9C427.2 0 400 27.2 400 60.7c0 127.1-39.1 251.2-112 355.3v484.1c0 68.4 55.5 123.9 123.9 123.9h317c122.7 0 227.2-89.3 246.3-210.5l47.9-303.4c7.8-49.4-30.4-94.1-80.4-94.1H671.6c-50.9 0-90.5-44.4-84.6-95l23.5-203.4C617.7 55 568.7 0 505.6 0z" :fill="c.isLike ? '#ff2442' : '#999'"></path>
+                         </svg>
                          {{c.liked || 0}}
                       </div>
                       <div class="c-action-btn" @click.stop="handleCommentReply(c)">
@@ -188,13 +215,15 @@
                            </div>
                            <div class="reply-actions">
                                 <div class="c-action-btn" @click.stop="handleCommentLike(r)">
-                                   <i class="el-icon-thumb" :style="{color: r.isLike ? '#F63' : '#999'}"></i>
+                                   <svg viewBox="0 0 1024 1024" width="16" height="16">
+                                     <path d="M160 944c0 8.8-7.2 16-16 16h-32c-26.5 0-48-21.5-48-48V528c0-26.5 21.5-48 48-48h32c8.8 0 16 7.2 16 16v448zM96 416c-53 0-96 43-96 96v416c0 53 43 96 96 96h96c17.7 0 32-14.3 32-32V448c0-17.7-14.3-32-32-32H96zM505.6 64c16.2 0 26.4 8.7 31 13.9 4.6 5.2 12.1 16.3 10.3 32.4l-23.5 203.4c-4.9 42.2 8.6 84.6 36.8 116.4 28.3 31.7 68.9 49.9 111.4 49.9h271.2c6.6 0 10.8 3.3 13.2 6.1s5 7.5 4 14l-48 303.4c-6.9 43.6-29.1 83.4-62.7 112C815.8 944.2 773 960 728.9 960h-317c-33.1 0-59.9-26.8-59.9-59.9v-455c0-6.1 1.7-12 5-17.1 69.5-109 106.4-234.2 107-364h41.6z m0-64h-44.9C427.2 0 400 27.2 400 60.7c0 127.1-39.1 251.2-112 355.3v484.1c0 68.4 55.5 123.9 123.9 123.9h317c122.7 0 227.2-89.3 246.3-210.5l47.9-303.4c7.8-49.4-30.4-94.1-80.4-94.1H671.6c-50.9 0-90.5-44.4-84.6-95l23.5-203.4C617.7 55 568.7 0 505.6 0z" :fill="r.isLike ? '#ff2442' : '#999'"></path>
+                                   </svg>
                                    <span v-if="r.liked > 0">{{r.liked}}</span>
                                 </div>
                                 <div class="c-action-btn" @click.stop="handleCommentReply(r)">
                                    <i class="el-icon-chat-dot-square"></i>
                                 </div>
-                                 <div class="c-action-btn delete-btn" v-if="user.id === r.userId" @click.stop="handleCommentDelete(r)">
+                                 <div class="c-action-btn delete-btn" v-if="user && user.id === r.userId" @click.stop="handleCommentDelete(r)">
                                    <i class="el-icon-delete"></i>
                                 </div>
                            </div>
@@ -215,9 +244,9 @@
 
     <!-- Foot Bar -->
     <div class="foot-bar">
-       <div class="foot-item" @click="toggleStar" :class="{active: isStared, animate: starAnimating}">
-          <i :class="isStared ? 'el-icon-star-on' : 'el-icon-star-off'"></i>
-          <span>{{isStared ? '已收藏' : '收藏'}}</span>
+       <div class="foot-item" @click="toggleStar" :class="{active: shop.isStared, animate: starAnimating}">
+          <i :class="shop.isStared ? 'el-icon-star-on' : 'el-icon-star-off'"></i>
+          <span>{{shop.isStared ? '已收藏' : '收藏'}} {{shop.stared || 0}}</span>
        </div>
        <div class="foot-item action-big" @click="writeComment">
           <i class="el-icon-edit-outline"></i>
@@ -294,7 +323,7 @@ export default {
        gallery: [],
        vouchers: [],
        comments: [],
-       isStared: false,
+       // isStared now comes from shop.isStared (API response)
        starAnimating: false,
        user: null,
        dataLoadedCount: 0,
@@ -303,6 +332,12 @@ export default {
        previewList: [],
        previewIndex: 0,
        aiComment: null,
+       
+       // Carousel
+       currentImageIndex: 0,
+       carouselHeight: '220px',
+       touchStartX: 0,
+       touchEndX: 0,
 
        // Comment interaction
        showCommentPublish: false,
@@ -343,7 +378,7 @@ export default {
                  this.gallery = rawImgs.map(img => this.fileURL + img);
                  // Main image fallback if needed, but we use gallery now
               }
-              this.checkStarStatus(id);
+              // isStared and stared come from shop data directly
            }
            this.onDataLoaded();
         }).catch(err => {
@@ -504,15 +539,14 @@ export default {
      goBack() {
         this.$router.go(-1);
      },
-      checkLogin() {
+     checkLogin() {
          const token = localStorage.getItem('token');
-         if(token) {
-            getCurrentUser().then(res => {
-                let u = res.data || res;
-                if(u && u.data) u = u.data;
-                this.user = u || {};
-            }).catch(()=>{});
-         }
+         if(!token) return; // 未登录不调用接口
+         getCurrentUser().then(res => {
+             let u = res.data || res;
+             if(u && u.data) u = u.data;
+             this.user = u || {};
+         }).catch(()=>{});
       },
      checkStarStatus(id) {
         if(!localStorage.getItem('token')) return;
@@ -528,20 +562,31 @@ export default {
            return;
         }
         
-        const isCollection = !this.isStared;
+        const newStatus = !this.shop.isStared;
+        
+        // Optimistic update
+        const originalStatus = this.shop.isStared;
+        const originalCount = this.shop.stared;
+        
+        this.shop.isStared = newStatus;
+        this.shop.stared = newStatus ? (this.shop.stared || 0) + 1 : Math.max((this.shop.stared || 0) - 1, 0);
+        
         // Animation
         this.starAnimating = true;
         
         toggleStar({
            sourceId: this.shop.id,
            sourceType: 2,
-           isCollection: isCollection
+           isStar: newStatus
         }).then(() => {
-           this.isStared = isCollection;
-           this.$message.success(isCollection ? "收藏成功" : "已取消收藏");
+           this.$message.success(newStatus ? "收藏成功" : "已取消收藏");
            setTimeout(() => this.starAnimating = false, 300);
         }).catch(() => {
+           // Revert
+           this.shop.isStared = originalStatus;
+           this.shop.stared = originalCount;
            this.starAnimating = false;
+           this.$message.error('操作失败');
         });
      },
      previewImage(list, index) {
@@ -734,13 +779,49 @@ export default {
               this.$message.error('删除失败，请重试');
            });
         }).catch(() => {});
+     },
+     
+     // Carousel methods
+     onCarouselChange(index) {
+        this.currentImageIndex = index;
+     },
+     onImageLoad(e) {
+        const img = e.target;
+        const ratio = img.naturalHeight / img.naturalWidth;
+        const width = window.innerWidth;
+        const height = Math.min(width * ratio, 300);
+        this.carouselHeight = height + 'px';
+     },
+     onTouchStart(e) {
+        this.touchStartX = e.touches[0].clientX;
+     },
+     onTouchMove(e) {
+        this.touchEndX = e.touches[0].clientX;
+     },
+     onTouchEnd() {
+        const diff = this.touchStartX - this.touchEndX;
+        const threshold = 50;
+        
+        if (Math.abs(diff) > threshold) {
+           if (diff > 0) {
+              this.$refs.imageCarousel?.next();
+           } else {
+              this.$refs.imageCarousel?.prev();
+           }
+        }
+        
+        this.touchStartX = 0;
+        this.touchEndX = 0;
+     },
+     goToImage(index) {
+        this.$refs.imageCarousel?.setActiveItem(index);
      }
   }
 }
 </script>
 
 <style scoped>
-.shop-detail-page { height: 100vh; display: flex; flex-direction: column; background: #f0f2f5; }
+.shop-detail-page { height: 100vh; display: flex; flex-direction: column; background: #f0f2f5; overflow-x: hidden; }
 
 /* Loading */
 .loading-mask { position: fixed; inset: 0; background: white; z-index: 999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
@@ -754,10 +835,50 @@ export default {
 
 /* Container */
 .shop-info-container { flex: 1; overflow-y: auto; overflow-x: hidden; position: relative; padding-bottom: 58px; }
-.shop-header-gallery { height: 200px; position: relative; width: 100%; overflow: hidden; }
-.header-gallery-wrapper { display: flex; width: 100%; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; }
-.header-gallery-wrapper img { width: 100%; height: 100%; object-fit: cover; flex-shrink: 0; scroll-snap-align: center; }
-.gallery-count { position: absolute; right: 15px; bottom: 35px; background: rgba(0,0,0,0.6); color: white; padding: 2px 10px; border-radius: 12px; font-size: 11px; z-index: 5; }
+.shop-header-gallery { 
+  position: relative; 
+  width: 100%; 
+  background: #f5f5f5; 
+}
+.full-carousel-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  cursor: pointer;
+}
+.image-indicator {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 10px;
+  z-index: 10;
+}
+.dots-indicator {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  z-index: 10;
+}
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: all 0.3s;
+}
+.dot.active {
+  background: white;
+  width: 18px;
+  border-radius: 3px;
+}
 
 .top-placeholder { height: 100px; background: linear-gradient(135deg, #333, #555); }
 

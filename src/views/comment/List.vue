@@ -38,7 +38,9 @@
                    <span class="comment-time">{{formatTime(c.createTime)}}</span>
                    <div class="comment-actions">
                       <div class="c-action-btn" @click.stop="handleCommentLike(c)">
-                         <i class="el-icon-thumb" :style="{color: c.isLike ? '#F63' : '#999'}"></i>
+                         <svg viewBox="0 0 1024 1024" width="16" height="16">
+                           <path d="M160 944c0 8.8-7.2 16-16 16h-32c-26.5 0-48-21.5-48-48V528c0-26.5 21.5-48 48-48h32c8.8 0 16 7.2 16 16v448zM96 416c-53 0-96 43-96 96v416c0 53 43 96 96 96h96c17.7 0 32-14.3 32-32V448c0-17.7-14.3-32-32-32H96zM505.6 64c16.2 0 26.4 8.7 31 13.9 4.6 5.2 12.1 16.3 10.3 32.4l-23.5 203.4c-4.9 42.2 8.6 84.6 36.8 116.4 28.3 31.7 68.9 49.9 111.4 49.9h271.2c6.6 0 10.8 3.3 13.2 6.1s5 7.5 4 14l-48 303.4c-6.9 43.6-29.1 83.4-62.7 112C815.8 944.2 773 960 728.9 960h-317c-33.1 0-59.9-26.8-59.9-59.9v-455c0-6.1 1.7-12 5-17.1 69.5-109 106.4-234.2 107-364h41.6z m0-64h-44.9C427.2 0 400 27.2 400 60.7c0 127.1-39.1 251.2-112 355.3v484.1c0 68.4 55.5 123.9 123.9 123.9h317c122.7 0 227.2-89.3 246.3-210.5l47.9-303.4c7.8-49.4-30.4-94.1-80.4-94.1H671.6c-50.9 0-90.5-44.4-84.6-95l23.5-203.4C617.7 55 568.7 0 505.6 0z" :fill="c.isLike ? '#ff2442' : '#999'"></path>
+                         </svg>
                          {{c.liked || 0}}
                       </div>
                       <div class="c-action-btn" @click.stop="handleCommentReply(c)">
@@ -70,7 +72,9 @@
                            </div>
                            <div class="reply-actions">
                                 <div class="c-action-btn" @click.stop="handleCommentLike(r)">
-                                   <i class="el-icon-thumb" :style="{color: r.isLike ? '#F63' : '#999'}"></i>
+                                   <svg viewBox="0 0 1024 1024" width="16" height="16">
+                                     <path d="M160 944c0 8.8-7.2 16-16 16h-32c-26.5 0-48-21.5-48-48V528c0-26.5 21.5-48 48-48h32c8.8 0 16 7.2 16 16v448zM96 416c-53 0-96 43-96 96v416c0 53 43 96 96 96h96c17.7 0 32-14.3 32-32V448c0-17.7-14.3-32-32-32H96zM505.6 64c16.2 0 26.4 8.7 31 13.9 4.6 5.2 12.1 16.3 10.3 32.4l-23.5 203.4c-4.9 42.2 8.6 84.6 36.8 116.4 28.3 31.7 68.9 49.9 111.4 49.9h271.2c6.6 0 10.8 3.3 13.2 6.1s5 7.5 4 14l-48 303.4c-6.9 43.6-29.1 83.4-62.7 112C815.8 944.2 773 960 728.9 960h-317c-33.1 0-59.9-26.8-59.9-59.9v-455c0-6.1 1.7-12 5-17.1 69.5-109 106.4-234.2 107-364h41.6z m0-64h-44.9C427.2 0 400 27.2 400 60.7c0 127.1-39.1 251.2-112 355.3v484.1c0 68.4 55.5 123.9 123.9 123.9h317c122.7 0 227.2-89.3 246.3-210.5l47.9-303.4c7.8-49.4-30.4-94.1-80.4-94.1H671.6c-50.9 0-90.5-44.4-84.6-95l23.5-203.4C617.7 55 568.7 0 505.6 0z" :fill="r.isLike ? '#ff2442' : '#999'"></path>
+                                   </svg>
                                    <span v-if="r.liked > 0">{{r.liked}}</span>
                                 </div>
                                 <div class="c-action-btn" @click.stop="handleCommentReply(r)">
@@ -494,7 +498,7 @@ export default {
 </script>
 
 <style scoped>
-.comment-list-page { height: 100vh; display: flex; flex-direction: column; background: #f8f8f8; }
+.comment-list-page { height: 100vh; display: flex; flex-direction: column; background: #f8f8f8; overflow-x: hidden; }
 .header { height: 50px; background: white; display: flex; align-items: center; padding: 0 15px; border-bottom: 1px solid #eee; position: fixed; top: 0; left: 0; right: 0; z-index: 99; }
 .header-title { flex: 1; text-align: center; font-weight: bold; }
 .scroll-container { flex: 1; overflow-y: auto; margin-top: 50px; }

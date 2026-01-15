@@ -30,11 +30,11 @@
 
     <!-- Stats -->
     <div class="stats-card">
-      <div class="stat-item">
+      <div class="stat-item" @click="toFans">
         <div class="stat-value">{{ stats.fansCount||0 }}</div>
         <div class="stat-label">粉丝</div>
       </div>
-      <div class="stat-item">
+      <div class="stat-item" @click="toFollows">
         <div class="stat-value">{{ stats.followCount||0 }}</div>
         <div class="stat-label">关注</div>
       </div>
@@ -53,11 +53,11 @@
           <div class="custom-tab-item" :class="{active: activeTab==='note'}" @click="switchTab('note')">
             <div class="tab-text">笔记 <span v-if="stats.blogCount > 0" class="count-badge">{{formatCount(stats.blogCount)}}</span></div>
           </div>
-          <div class="custom-tab-item" :class="{active: activeTab==='common'}" @click="switchTab('common')">
-            <div class="tab-text">共同关注 <span v-if="stats.commonFollowCount > 0" class="count-badge">{{formatCount(stats.commonFollowCount)}}</span></div>
-          </div>
           <div class="custom-tab-item" :class="{active: activeTab==='collection'}" @click="switchTab('collection')">
-            <div class="tab-text">店铺关注 <span v-if="stats.collectCount > 0" class="count-badge">{{formatCount(stats.collectCount)}}</span></div>
+            <div class="tab-text">收藏 <span v-if="stats.collectCount > 0" class="count-badge">{{formatCount(stats.collectCount)}}</span></div>
+          </div>
+          <div class="custom-tab-item" :class="{active: activeTab==='like'}" @click="switchTab('like')">
+            <div class="tab-text">赞过 <span v-if="stats.likeCount > 0" class="count-badge">{{formatCount(stats.likeCount)}}</span></div>
           </div>
         </div>
       </div>
@@ -65,77 +65,106 @@
       <div class="custom-tabs-content">
           <!-- Notes Tab -->
           <div v-if="activeTab==='note'" class="tab-pane" v-infinite-scroll="loadMoreNotes" :infinite-scroll-disabled="noteLoading || noteNoMore">
-             <div v-if="notes.length > 0">
-                <div v-for="b in notes" :key="b.id" class="blog-item" @click="toNoteDetail(b)">
-                   <!-- Header -->
-                   <div class="blog-header">
-                      <img :src="user.icon || '/imgs/icons/default-icon.png'" class="blog-avatar">
-                      <div class="blog-user-box">
-                         <div class="blog-username">{{user.nickName}}</div>
-                         <div class="blog-date">{{formatTime(b.createTime)}}</div>
-                      </div>
-                   </div>
-                   <!-- Body -->
-                   <div class="blog-body">
-                      <div class="blog-img"><img :src="getImage(b.images)"></div>
-                      <div class="blog-content-col">
-                         <div class="blog-title">{{b.title}}</div>
-                         <div class="blog-actions">
-                            <div class="action-btn" :class="{active: b.isLike}" @click.stop="toggleLike(b)">
-                               <svg class="icon" viewBox="0 0 1024 1024" width="16" height="16" style="margin-right: 2px;">
-                                 <path d="M160 944c0 8.8-7.2 16-16 16h-32c-26.5 0-48-21.5-48-48V528c0-26.5 21.5-48 48-48h32c8.8 0 16 7.2 16 16v448zM96 416c-53 0-96 43-96 96v416c0 53 43 96 96 96h96c17.7 0 32-14.3 32-32V448c0-17.7-14.3-32-32-32H96zM505.6 64c16.2 0 26.4 8.7 31 13.9 4.6 5.2 12.1 16.3 10.3 32.4l-23.5 203.4c-4.9 42.2 8.6 84.6 36.8 116.4 28.3 31.7 68.9 49.9 111.4 49.9h271.2c6.6 0 10.8 3.3 13.2 6.1s5 7.5 4 14l-48 303.4c-6.9 43.6-29.1 83.4-62.7 112C815.8 944.2 773 960 728.9 960h-317c-33.1 0-59.9-26.8-59.9-59.9v-455c0-6.1 1.7-12 5-17.1 69.5-109 106.4-234.2 107-364h41.6z m0-64h-44.9C427.2 0 400 27.2 400 60.7c0 127.1-39.1 251.2-112 355.3v484.1c0 68.4 55.5 123.9 123.9 123.9h317c122.7 0 227.2-89.3 246.3-210.5l47.9-303.4c7.8-49.4-30.4-94.1-80.4-94.1H671.6c-50.9 0-90.5-44.4-84.6-95l23.5-203.4C617.7 55 568.7 0 505.6 0z" :fill="b.isLike ? '#ff6633' : '#82848a'"></path>
-                               </svg>
-                               {{b.liked||0}}
-                            </div>
-                            <div class="action-btn"><i class="el-icon-chat-dot-round"></i> {{b.comments||0}}</div>
-                            <div class="action-btn"><i class="el-icon-share"></i> 分享</div>
-                         </div>
-                      </div>
-                   </div>
-                </div>
+             <div v-if="notes.length > 0" class="waterfall-container">
+                 <div class="waterfall-column" v-for="(col, i) in [0, 1]" :key="i">
+                    <div class="waterfall-item" 
+                         v-for="b in notes.filter((_, index) => index % 2 === i)" 
+                         :key="b.id"
+                         @click="toNoteDetail(b)"
+                    >
+                       <div class="card-img-box">
+                           <img :src="getImage(b.images)" class="work-cover" loading="lazy" @error="handleImgError">
+                       </div>
+                       <div class="card-info">
+                           <div class="card-title">{{ b.title }}</div>
+                           <div class="card-bottom">
+                               <div class="card-user">
+                                   <img :src="user.icon || '/imgs/icons/default-icon.png'" class="card-avatar">
+                                   <span class="card-name">{{ user.nickName }}</span>
+                               </div>
+                               <div class="card-likes">
+                                   <svg t="1646634642977" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2187" width="14" height="14" style="margin-right: 2px;">
+                                     <path d="M160 944c0 8.8-7.2 16-16 16h-32c-26.5 0-48-21.5-48-48V528c0-26.5 21.5-48 48-48h32c8.8 0 16 7.2 16 16v448zM96 416c-53 0-96 43-96 96v416c0 53 43 96 96 96h96c17.7 0 32-14.3 32-32V448c0-17.7-14.3-32-32-32H96zM505.6 64c16.2 0 26.4 8.7 31 13.9 4.6 5.2 12.1 16.3 10.3 32.4l-23.5 203.4c-4.9 42.2 8.6 84.6 36.8 116.4 28.3 31.7 68.9 49.9 111.4 49.9h271.2c6.6 0 10.8 3.3 13.2 6.1s5 7.5 4 14l-48 303.4c-6.9 43.6-29.1 83.4-62.7 112C815.8 944.2 773 960 728.9 960h-317c-33.1 0-59.9-26.8-59.9-59.9v-455c0-6.1 1.7-12 5-17.1 69.5-109 106.4-234.2 107-364h41.6z m0-64h-44.9C427.2 0 400 27.2 400 60.7c0 127.1-39.1 251.2-112 355.3v484.1c0 68.4 55.5 123.9 123.9 123.9h317c122.7 0 227.2-89.3 246.3-210.5l47.9-303.4c7.8-49.4-30.4-94.1-80.4-94.1H671.6c-50.9 0-90.5-44.4-84.6-95l23.5-203.4C617.7 55 568.7 0 505.6 0z" :fill="b.isLike ? '#ff6633' : '#82848a'"></path>
+                                   </svg>
+                                   {{b.liked||0}}
+                               </div>
+                           </div>
+                       </div>
+                    </div>
+                 </div>
              </div>
              <div v-else-if="!noteLoading" class="empty-state">还没有发布任何笔记</div>
              <div v-else class="loading-state"><i class="el-icon-loading"></i> 加载中...</div>
           </div>
 
-          <!-- Common Follows Tab -->
-          <div v-if="activeTab==='common'" class="tab-pane" v-infinite-scroll="loadMoreCommon" :infinite-scroll-disabled="commonLoading || commonNoMore">
-             <div v-if="commonFollows.length > 0">
-                <div v-for="u in commonFollows" :key="u.id" class="user-item" @click="toUserDetail(u)">
-                   <div class="user-avatar"><img :src="u.icon || '/imgs/icons/default-icon.png'"></div>
-                   <div class="user-info">
-                      <div class="user-name">{{u.name || u.nickName}}</div>
-                      <div class="user-desc">{{u.introduce || '这个人很懒，什么都没有留下'}}</div>
-                   </div>
-                   <div class="user-action">
-                      <button class="follow-btn" :class="{followed: u.isFollow}" @click.stop="toggleCommonFollow(u)">
-                        {{u.isFollow ? '已关注' : '关注'}}
-                      </button>
-                   </div>
-                </div>
-             </div>
-             <div v-else-if="!commonLoading" class="empty-state">没有共同关注的用户</div>
+          <!-- Collections Tab -->
+          <div v-if="activeTab==='collection'" class="tab-pane" v-infinite-scroll="loadMoreCollections" :infinite-scroll-disabled="collectionLoading || collectionNoMore">
+             <div v-if="collections.length > 0" class="waterfall-container">
+                 <div class="waterfall-column" v-for="(col, i) in [0, 1]" :key="i">
+                    <div class="waterfall-item" 
+                         v-for="b in collections.filter((_, index) => index % 2 === i)" 
+                         :key="b.id"
+                         @click="toNoteDetail(b)"
+                    >
+                       <div class="card-img-box">
+                           <img :src="getImage(b.images)" class="work-cover" loading="lazy">
+                       </div>
+                       <div class="card-info">
+                           <div class="card-title">{{ b.title }}</div>
+                           <div class="card-bottom">
+                               <div class="card-user">
+                                   <img :src="b.icon || '/imgs/icons/default-icon.png'" class="card-avatar">
+                                   <span class="card-name">{{ b.nickName || b.name }}</span>
+                               </div>
+                               <div class="card-likes">
+                                   <svg class="icon" viewBox="0 0 1024 1024" width="14" height="14" style="margin-right: 2px;">
+                                     <path d="M160 944c0 8.8-7.2 16-16 16h-32c-26.5 0-48-21.5-48-48V528c0-26.5 21.5-48 48-48h32c8.8 0 16 7.2 16 16v448zM96 416c-53 0-96 43-96 96v416c0 53 43 96 96 96h96c17.7 0 32-14.3 32-32V448c0-17.7-14.3-32-32-32H96zM505.6 64c16.2 0 26.4 8.7 31 13.9 4.6 5.2 12.1 16.3 10.3 32.4l-23.5 203.4c-4.9 42.2 8.6 84.6 36.8 116.4 28.3 31.7 68.9 49.9 111.4 49.9h271.2c6.6 0 10.8 3.3 13.2 6.1s5 7.5 4 14l-48 303.4c-6.9 43.6-29.1 83.4-62.7 112C815.8 944.2 773 960 728.9 960h-317c-33.1 0-59.9-26.8-59.9-59.9v-455c0-6.1 1.7-12 5-17.1 69.5-109 106.4-234.2 107-364h41.6z m0-64h-44.9C427.2 0 400 27.2 400 60.7c0 127.1-39.1 251.2-112 355.3v484.1c0 68.4 55.5 123.9 123.9 123.9h317c122.7 0 227.2-89.3 246.3-210.5l47.9-303.4c7.8-49.4-30.4-94.1-80.4-94.1H671.6c-50.9 0-90.5-44.4-84.6-95l23.5-203.4C617.7 55 568.7 0 505.6 0z" :fill="b.isLike ? '#ff6633' : '#82848a'"></path>
+                                   </svg>
+                                   {{b.liked||0}}
+                               </div>
+                           </div>
+                       </div>
+                    </div>
+                 </div>
+              </div>
+              <div v-else-if="!collectionLoading" class="empty-state">还没有收藏任何笔记</div>
              <div v-else class="loading-state"><i class="el-icon-loading"></i> 加载中...</div>
           </div>
 
-          <!-- Collections Tab -->
-          <div v-if="activeTab==='collection'" class="tab-pane" v-infinite-scroll="loadMoreCollections" :infinite-scroll-disabled="collectionLoading || collectionNoMore">
-             <div v-if="collections.length > 0">
-                <div v-for="s in collections" :key="s.id" class="shop-item" @click="toShopDetail(s)">
-                   <div class="shop-img"><img :src="getImage(s.images)"></div>
-                   <div class="shop-info">
-                      <div class="shop-title">{{s.name}}</div>
-                      <div class="shop-rate">
-                         <el-rate disabled :model-value="s.score/10" text-color="#F63" :size="12"></el-rate>
-                         <span>{{s.comments}}条</span>
-                      </div>
-                      <div class="shop-area">{{s.area}} <span v-if="s.distance">{{formatDistance(s.distance)}}</span></div>
-                   </div>
-                </div>
-             </div>
-             <div v-else-if="!collectionLoading" class="empty-state">还没有收藏任何店铺</div>
-             <div v-else class="loading-state"><i class="el-icon-loading"></i> 加载中...</div>
-          </div>
+          <!-- Likes Tab (Stub) -->
+           <div v-if="activeTab==='like'" class="tab-pane" v-infinite-scroll="loadMoreLikes" :infinite-scroll-disabled="likeLoading || likeNoMore">
+              <!-- Reusing waterfall structure for future like list -->
+              <div v-if="likes.length > 0" class="waterfall-container">
+                 <div class="waterfall-column" v-for="(col, i) in [0, 1]" :key="i">
+                    <div class="waterfall-item" 
+                         v-for="b in likes.filter((_, index) => index % 2 === i)" 
+                         :key="b.id"
+                         @click="toNoteDetail(b)"
+                    >
+                       <div class="card-img-box">
+                           <img :src="getImage(b.images)" class="work-cover" loading="lazy">
+                       </div>
+                       <div class="card-info">
+                           <div class="card-title">{{ b.title }}</div>
+                           <div class="card-bottom">
+                               <div class="card-user">
+                                   <img :src="b.icon || '/imgs/icons/default-icon.png'" class="card-avatar">
+                                   <span class="card-name">{{ b.nickName || b.name }}</span>
+                               </div>
+                               <div class="card-likes">
+                                   <!-- Heart Icon -->
+                                   <svg class="icon" viewBox="0 0 1024 1024" width="14" height="14" style="margin-right: 2px;">
+                                     <path d="M160 944c0 8.8-7.2 16-16 16h-32c-26.5 0-48-21.5-48-48V528c0-26.5 21.5-48 48-48h32c8.8 0 16 7.2 16 16v448zM96 416c-53 0-96 43-96 96v416c0 53 43 96 96 96h96c17.7 0 32-14.3 32-32V448c0-17.7-14.3-32-32-32H96zM505.6 64c16.2 0 26.4 8.7 31 13.9 4.6 5.2 12.1 16.3 10.3 32.4l-23.5 203.4c-4.9 42.2 8.6 84.6 36.8 116.4 28.3 31.7 68.9 49.9 111.4 49.9h271.2c6.6 0 10.8 3.3 13.2 6.1s5 7.5 4 14l-48 303.4c-6.9 43.6-29.1 83.4-62.7 112C815.8 944.2 773 960 728.9 960h-317c-33.1 0-59.9-26.8-59.9-59.9v-455c0-6.1 1.7-12 5-17.1 69.5-109 106.4-234.2 107-364h41.6z m0-64h-44.9C427.2 0 400 27.2 400 60.7c0 127.1-39.1 251.2-112 355.3v484.1c0 68.4 55.5 123.9 123.9 123.9h317c122.7 0 227.2-89.3 246.3-210.5l47.9-303.4c7.8-49.4-30.4-94.1-80.4-94.1H671.6c-50.9 0-90.5-44.4-84.6-95l23.5-203.4C617.7 55 568.7 0 505.6 0z" :fill="b.isLike ? '#ff6633' : '#82848a'"></path>
+                                   </svg>
+                                   {{b.liked||0}}
+                               </div>
+                           </div>
+                       </div>
+                    </div>
+                 </div>
+              </div>
+              <div v-else class="empty-state">还没有点赞过任何笔记</div>
+           </div>
       </div>
     </div>
   </div>
@@ -144,7 +173,7 @@
 <script>
 import { getUserInfo, getUserStats, getCurrentUser, getFullUserInfo } from '@/api/user';
 import { getUserBlogs } from '@/api/blog';
-import { getCommonFollows, getShopCollections, followUser, isFollowed, likeBlog } from '@/api/interaction';
+import { getCommonFollows, followUser, isFollowed, likeBlog, likeRecord, starList } from '@/api/interaction';
 import { createChatSession, getSessionId } from '@/api/chat';
 
 export default {
@@ -163,8 +192,17 @@ export default {
       noteNoMore: false,
       noteCurrent: 1,
       noteCurrent: 1,
-      commonFollows: [],
+      
       collections: [],
+      collectionLoading: false,
+      collectionNoMore: false,
+      collectionCurrent: 1,
+      
+      likes: [],
+      likeLoading: false,
+      likeNoMore: false,
+      likeCurrent: 1,
+      
       sessionId: null
     }
   },
@@ -184,7 +222,7 @@ export default {
         return `${y}-${m}-${day}`;
     },
     goBack() {
-      this.$router.go(-1);
+      this.$router.back();
     },
     formatCount(n) {
        return n > 99 ? '99+' : n;
@@ -200,6 +238,7 @@ export default {
        if(!imgs) return '';
        return imgs.split(',')[0];
     },
+
     initData() {
        this.isLoading = true;
        
@@ -239,6 +278,7 @@ export default {
           this.loadNotes();
        }).finally(() => this.isLoading = false);
     },
+
     checkFollow() {
        isFollowed({ sourceId: this.userId, sourceType: 1 }).then(res => {
           this.user.isFollow = res.data;
@@ -247,12 +287,12 @@ export default {
     switchTab(tab) {
        this.activeTab = tab;
        if(tab === 'note' && this.notes.length === 0) this.loadNotes();
-       if(tab === 'common' && this.commonFollows.length === 0) this.loadCommon();
        if(tab === 'collection' && this.collections.length === 0) this.loadCollections();
+       if(tab === 'like' && this.likes.length === 0) this.loadLikes();
     },
     loadNotes() {
        this.noteLoading = true;
-       getUserBlogs({ userId: this.userId, current: this.noteCurrent }).then(res => {
+       getUserBlogs({ userId: this.userId, current: this.noteCurrent, size: 10 }).then(res => {
           const list = res.data || res || [];
           if(list.length < 5) this.noteNoMore = true;
           this.notes = this.noteCurrent === 1 ? list : [...this.notes, ...list];
@@ -266,6 +306,36 @@ export default {
        if(!this.noteLoading && !this.noteNoMore) {
           this.loadNotes();
        }
+    },
+    loadLikes() {
+       this.likeLoading = true;
+       // sourceType=3 for blogs, consistent with other APIs
+       likeRecord({ userId: this.userId, sourceType: 3, current: this.likeCurrent, size: 10 }).then(res => {
+           let list = res.data || res || [];
+           // Handle potential wrapper structure if records exist
+           if(list.records) list = list.records;
+           
+           if(list.length < 10) this.likeNoMore = true;
+           this.likes = this.likeCurrent === 1 ? list : [...this.likes, ...list];
+           
+           this.likes.forEach(b => {
+               if(b.images && !b.images.startsWith('http')) b.images = this.$fileURL + b.images;
+                // Icons for liked blogs user
+               if(b.icon && !b.icon.startsWith('http')) b.icon = this.$fileURL + b.icon;
+               // Liked list items, so by definition I (the user viewing) liked them? 
+               // Wait, 'likeRecord' returns items user liked. 
+               // Do WE (loginUser) like them? 
+               // Usually the list returns the Blog Object. 
+               // Blog Object should have 'isLike' field relative to loginUser if backend supports it.
+               // We will trust backend response.
+           });
+           this.likeCurrent++;
+       }).finally(() => this.likeLoading = false);
+    },
+    loadMoreLikes() {
+        if(!this.likeLoading && !this.likeNoMore) {
+            this.loadLikes();
+        }
     },
     loadCommon() {
        getCommonFollows({ userId: this.userId, sourceType: 1, current: 1 }).then(res => {
@@ -284,12 +354,26 @@ export default {
        });
     },
     loadCollections() {
-       getShopCollections({ userId: this.userId, sourceType: 2, current: 1 }).then(res => {
-          this.collections = res.data || res || [];
+       this.collectionLoading = true;
+       // sourceType=3 for blogs
+       starList({ userId: this.userId, sourceType: 3, current: this.collectionCurrent, size: 10 }).then(res => {
+          let list = res.data || res || [];
+          if(list.records) list = list.records;
+
+          if(list.length < 10) this.collectionNoMore = true;
+          this.collections = this.collectionCurrent === 1 ? list : [...this.collections, ...list];
+          
           this.collections.forEach(s => {
-             if(s.images) s.images = this.$fileURL + s.images;
+              if(s.images && !s.images.startsWith('http')) s.images = this.$fileURL + s.images;
+              if(s.icon && !s.icon.startsWith('http')) s.icon = this.$fileURL + s.icon;
           });
-       });
+          this.collectionCurrent++;
+       }).finally(() => this.collectionLoading = false);
+    },
+    loadMoreCollections() {
+       if(!this.collectionLoading && !this.collectionNoMore) {
+          this.loadCollections();
+       }
     },
     handleFollow() {
        if(!this.loginUser.id) return this.$router.push('/user/login');
@@ -365,6 +449,12 @@ export default {
            this.collections = [];
            this.initData();
        }
+    },
+    toFollows() {
+       this.$router.push({ path: '/user/follows', query: { id: this.userId } });
+    },
+    toFans() {
+       this.$router.push({ path: '/user/fans', query: { id: this.userId } });
     }
   }
 }
@@ -449,4 +539,97 @@ export default {
 .action-btn i { font-size: 16px; margin-right: 4px; }
 .action-btn.active { color: #ff6633; }
 .loading-state { text-align: center; padding: 20px 0; color: #999; font-size: 13px; }
+</style>
+
+<style scoped>
+/* Waterfall Layout Styles (Synced from Info.vue) */
+.waterfall-container {
+    padding: 10px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: #f9f9f9;
+    min-height: 400px;
+}
+
+.waterfall-column {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.waterfall-item {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+    cursor: pointer;
+}
+
+.card-img-box {
+    width: 100%;
+}
+
+.work-cover {
+    width: 100%;
+    display: block;
+}
+
+.card-info {
+    padding: 8px 10px 12px;
+}
+
+.card-title {
+    font-size: 14px;
+    color: #333;
+    line-height: 1.4;
+    margin-bottom: 8px;
+
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.card-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.card-user {
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+}
+
+.card-avatar {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    margin-right: 4px;
+    flex-shrink: 0;
+}
+
+.card-name {
+    font-size: 10px;
+    color: #999;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 80px;
+}
+
+.card-likes {
+    font-size: 10px;
+    color: #999;
+    display: flex;
+    align-items: center;
+}
+
+.card-likes i {
+    margin-right: 2px;
+}
 </style>

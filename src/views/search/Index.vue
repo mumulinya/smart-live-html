@@ -36,7 +36,7 @@
           </div>
        </div>
 
-       <div class="hot-search">
+       <div class="hot-search" v-if="hotSearch.length > 0">
           <div class="hot-title">热门搜索</div>
           <div class="hot-tags">
              <div class="hot-tag" :class="{hot: index < 3}" v-for="(item, index) in hotSearch" :key="item" @click="searchFromHistory(item)">
@@ -312,6 +312,7 @@ import {
   getSearchHistory,
   addSearchHistory,
   clearSearchHistory,
+  recordSearch,
 } from "@/api/search";
 import { buyVoucherAPI, seckillVoucherAPI } from '@/api/shop';
 import { likeBlog } from '@/api/interaction';
@@ -343,7 +344,7 @@ export default {
       // History & Hot
       hasSearched: false,
       searchHistory: [],
-      hotSearch: ["火锅", "奶茶", "咖啡", "日料", "烧烤", "甜品", "自助餐", "川菜", "美食探店"],
+      hotSearch: [],
 
       // Filters
       activeFilterTab: "", // 'type', 'distance', 'score', 'vType', 'status', 'vShopType'
@@ -433,7 +434,9 @@ export default {
       if (token) {
         getCurrentUser()
           .then((res) => {
-            this.user = res || {};
+            let u = res.data || res;
+            if(u && u.data) u = u.data;
+            this.user = u || {};
             this.loadHistory();
           })
           .catch(() => {
@@ -564,7 +567,10 @@ export default {
     // Main Search
     doSearch(isLoadMore = false) {
        // if (!this.keyword && !this.hasSelectedFilters) { ... }
-      if (this.keyword && !isLoadMore) this.saveHistory(this.keyword);
+      if (this.keyword && !isLoadMore) {
+          this.saveHistory(this.keyword);
+          recordSearch(this.keyword);
+      }
       
       if (!isLoadMore) {
           this.hasSearched = true;
