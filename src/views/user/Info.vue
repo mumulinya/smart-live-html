@@ -1,34 +1,66 @@
 ﻿<template>
   <div class="user-info-page" v-loading="pageLoading">
-    <!-- Top Header Background -->
-    <div class="profile-header">
-       <!-- Nav Bar -->
-       <div class="nav-bar">
-          <div class="nav-left">
-             <div class="add-friend-btn">
-                <i class="el-icon-user"></i> 添加朋友
-             </div>
-          </div>
-          <div class="nav-right">
-             <div class="icon-btn search-icon"><i class="el-icon-search"></i></div>
-             <div class="icon-btn menu-icon" @click="logout"><i class="el-icon-s-operation"></i></div>
+    <!-- Immersive Cover -->
+    <div class="profile-cover" :style="{ backgroundImage: `url(${user.cover || 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80'})` }">
+       <div class="cover-gradient"></div>
+    </div>
+
+    <!-- Transparent Nav -->
+    <div class="nav-bar">
+       <div class="nav-left">
+          <div class="add-friend-btn" @click="toAddFriend">
+             <i class="el-icon-user"></i> <span style="margin-left:4px">添加朋友</span>
           </div>
        </div>
-
-       <!-- User Info Top (Avatar + Name) -->
-       <div class="user-intro-top">
-          <div class="avatar-wrapper">
-             <img :src="user.icon || '/imgs/icons/default-icon.png'" class="avatar-img">
-          </div>
-          <div class="name-wrapper">
-             <div class="nick-name">{{user.nickName || '未命名'}} <i class="el-icon-caret-bottom"></i></div>
-             <div class="douyin-id">抖音号：{{user.phoneNumber || user.id || '未知'}} <i class="el-icon-document-copy"></i></div>
-          </div>
+       <div class="nav-right">
+          <div class="icon-btn search-icon"><i class="el-icon-search"></i></div>
+          <div class="icon-btn menu-icon" @click="logout"><i class="el-icon-s-operation"></i></div>
        </div>
     </div>
 
     <!-- White Body Card -->
     <div class="profile-body-card">
+       
+       <!-- Header Row: Avatar & Actions -->
+       <div class="body-header-row">
+           <div class="avatar-container" @click="showAvatarDialog = true">
+               <img :src="user.icon || '/imgs/icons/default-icon.png'" class="avatar-img">
+           </div>
+           <div class="header-actions">
+               <div class="edit-btn" @click="toEdit">编辑主页</div>
+               <div class="settings-btn" @click="logout"><i class="el-icon-setting"></i></div>
+           </div>
+       </div>
+
+       <!-- Basic Info -->
+       <div class="basic-info-section">
+           <div class="user-name">{{user.nickName || '未命名'}}</div>
+           <div class="user-id">
+               抖音号：{{user.phoneNumber || user.id || '未知'}} 
+               <i class="el-icon-document-copy copy-icon"></i>
+           </div>
+           <div class="user-desc">
+               {{info.introduce || '填写简介，让大家更好地认识你'}}
+           </div>
+           
+           <!-- Tags -->
+           <div class="user-tags">
+               <div class="tag-list">
+                   <span class="tag" v-if="info.city">{{info.city}}</span>
+                   <span class="tag" v-if="info.gender || info.birthday">
+                       {{getGenderText(info.gender)}} <span v-if="info.birthday">· {{getAge(info.birthday)}}岁</span>
+                   </span>
+                   <span class="tag" v-if="info.school">{{info.school}}</span>
+                   
+                   <!-- Show Add Info if missing essential info -->
+                   <span class="tag add-tag" v-if="!info.city && !info.school && !info.birthday" @click="toEdit">
+                       + 添加标签信息
+                   </span>
+               </div>
+           </div>
+       </div>
+
+       <!-- Stats Row -->
        <div class="stats-action-row">
           <div class="stats-box">
              <div class="stat-item">
@@ -45,28 +77,32 @@
                 <div class="label">粉丝</div>
              </div>
           </div>
-          <div class="edit-btn" @click="toEdit">编辑主页</div>
        </div>
 
-       <!-- Description -->
-       <div class="user-desc">
-          {{info.introduce || '填写简介，让大家更好地认识你'}}
-       </div>
-
-       <!-- Tags -->
-       <div class="user-tags">
-          <span class="tag" v-if="info.city">{{info.city}}</span>
-          <span class="tag" v-else>未知城市</span>
-          
-          <span class="tag">{{getGenderText(info.gender)}} · {{getAge(info.birthday)}}岁</span>
-          
-          <span class="tag" v-if="info.school">{{info.school}}</span>
-          <span class="tag" v-else>添加学校</span>
+       <!-- Quick Actions -->
+       <div class="quick-actions">
+          <div class="action-item" @click="toOrders">
+             <div class="action-icon"><i class="el-icon-tickets"></i></div>
+             <div class="action-text">我的订单</div>
+          </div>
+          <div class="action-item" @click="toCollections">
+             <div class="action-icon"><i class="el-icon-star-off"></i></div>
+             <div class="action-text">我的收藏</div>
+          </div>
+          <div class="action-item" @click="toReviews">
+             <div class="action-icon"><i class="el-icon-document-checked"></i></div>
+             <div class="action-text">我的评价</div>
+          </div>
        </div>
        
        <!-- Content Tabs (Waterfall) -->
-       <el-tabs v-model="activeTab" @tab-click="handleTabClick" class="profile-tabs" stretch>
-          <el-tab-pane label="笔记" name="note">
+       <el-tabs v-model="activeTab" @tab-click="handleTabClick" class="profile-tabs" stretch
+                @touchstart.native="handleTouchStart" 
+                @touchend.native="handleTouchEnd">
+          <el-tab-pane name="note">
+             <template #label>
+                <span>笔记 {{stats.blogCount || 0}}</span>
+             </template>
              <div class="waterfall-container">
                  <div class="waterfall-column" v-for="(col, i) in [0, 1]" :key="i">
                     <div class="waterfall-item" 
@@ -86,8 +122,8 @@
                                </div>
                                <div class="card-likes">
                                    <!-- Reverted to Heart SVG as per user request -->
-                                   <svg t="1646634642977" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2187" width="14" height="14" style="margin-right: 2px;">
-                                     <path d="M160 944c0 8.8-7.2 16-16 16h-32c-26.5 0-48-21.5-48-48V528c0-26.5 21.5-48 48-48h32c8.8 0 16 7.2 16 16v448zM96 416c-53 0-96 43-96 96v416c0 53 43 96 96 96h96c17.7 0 32-14.3 32-32V448c0-17.7-14.3-32-32-32H96zM505.6 64c16.2 0 26.4 8.7 31 13.9 4.6 5.2 12.1 16.3 10.3 32.4l-23.5 203.4c-4.9 42.2 8.6 84.6 36.8 116.4 28.3 31.7 68.9 49.9 111.4 49.9h271.2c6.6 0 10.8 3.3 13.2 6.1s5 7.5 4 14l-48 303.4c-6.9 43.6-29.1 83.4-62.7 112C815.8 944.2 773 960 728.9 960h-317c-33.1 0-59.9-26.8-59.9-59.9v-455c0-6.1 1.7-12 5-17.1 69.5-109 106.4-234.2 107-364h41.6z m0-64h-44.9C427.2 0 400 27.2 400 60.7c0 127.1-39.1 251.2-112 355.3v484.1c0 68.4 55.5 123.9 123.9 123.9h317c122.7 0 227.2-89.3 246.3-210.5l47.9-303.4c7.8-49.4-30.4-94.1-80.4-94.1H671.6c-50.9 0-90.5-44.4-84.6-95l23.5-203.4C617.7 55 568.7 0 505.6 0z" p-id="2188" :fill="b.isLike ? '#ff6633' : '#82848a'"></path>
+                                   <svg viewBox="0 0 24 24" width="14" height="14" style="margin-right: 2px;">
+                                     <path :fill="b.isLike ? '#ff2442' : '#999'" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                                    </svg>
                                    {{b.liked || 0}}
                                </div>
@@ -104,7 +140,10 @@
              </div>
           </el-tab-pane>
 
-          <el-tab-pane label="收藏" name="collection">
+          <el-tab-pane name="collection">
+             <template #label>
+                <span>收藏 {{stats.blogStarCount || 0}}</span>
+             </template>
              <div class="waterfall-container">
                  <div class="waterfall-column" v-for="(col, i) in [0, 1]" :key="i">
                     <div class="waterfall-item" 
@@ -119,12 +158,12 @@
                            <div class="card-title">{{ b.title }}</div>
                            <div class="card-bottom">
                                <div class="card-user">
-                                   <img :src="b.icon || user.icon || '/imgs/icons/default-icon.png'" class="card-avatar">
-                                   <span class="card-name">{{ b.nickName || b.name || user.nickName }}</span>
+                                   <img :src="b.userAvatar || user.icon || '/imgs/icons/default-icon.png'" class="card-avatar">
+                                   <span class="card-name">{{ b.userName || user.nickName }}</span>
                                </div>
                                <div class="card-likes">
-                                   <svg class="icon" viewBox="0 0 1024 1024" width="14" height="14" style="margin-right: 2px;">
-                                     <path d="M160 944c0 8.8-7.2 16-16 16h-32c-26.5 0-48-21.5-48-48V528c0-26.5 21.5-48 48-48h32c8.8 0 16 7.2 16 16v448zM96 416c-53 0-96 43-96 96v416c0 53 43 96 96 96h96c17.7 0 32-14.3 32-32V448c0-17.7-14.3-32-32-32H96zM505.6 64c16.2 0 26.4 8.7 31 13.9 4.6 5.2 12.1 16.3 10.3 32.4l-23.5 203.4c-4.9 42.2 8.6 84.6 36.8 116.4 28.3 31.7 68.9 49.9 111.4 49.9h271.2c6.6 0 10.8 3.3 13.2 6.1s5 7.5 4 14l-48 303.4c-6.9 43.6-29.1 83.4-62.7 112C815.8 944.2 773 960 728.9 960h-317c-33.1 0-59.9-26.8-59.9-59.9v-455c0-6.1 1.7-12 5-17.1 69.5-109 106.4-234.2 107-364h41.6z m0-64h-44.9C427.2 0 400 27.2 400 60.7c0 127.1-39.1 251.2-112 355.3v484.1c0 68.4 55.5 123.9 123.9 123.9h317c122.7 0 227.2-89.3 246.3-210.5l47.9-303.4c7.8-49.4-30.4-94.1-80.4-94.1H671.6c-50.9 0-90.5-44.4-84.6-95l23.5-203.4C617.7 55 568.7 0 505.6 0z" :fill="b.isLike ? '#ff6633' : '#82848a'"></path>
+                                   <svg viewBox="0 0 24 24" width="14" height="14" style="margin-right: 2px;">
+                                     <path :fill="b.isLike ? '#ff2442' : '#999'" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                                    </svg>
                                    {{b.liked || 0}}
                                </div>
@@ -136,6 +175,45 @@
              <div v-if="collections.length > 0 && collectionNoMore" class="no-more">没有更多了</div>
              <div v-else-if="!collectionLoading && collections.length===0" class="empty-state">
                 <p>暂无收藏</p>
+             </div>
+          </el-tab-pane>
+
+          <el-tab-pane name="likes">
+             <template #label>
+                <span>喜欢 {{stats.blogLikeCount || 0}}</span>
+             </template>
+             <div class="waterfall-container">
+                 <div class="waterfall-column" v-for="(col, i) in [0, 1]" :key="i">
+                    <div class="waterfall-item" 
+                         v-for="b in likes.filter((_, index) => index % 2 === i)" 
+                         :key="b.id"
+                         @click="toBlogDetail(b)"
+                    >
+                       <div class="card-img-box">
+                           <img :src="getFirstImage(b.images)" class="work-cover" loading="lazy" @error="handleImgError">
+                       </div>
+                       <div class="card-info">
+                           <div class="card-title">{{ b.title }}</div>
+                           <div class="card-bottom">
+                               <div class="card-user">
+                                   <img :src="b.userAvatar || user.icon || '/imgs/icons/default-icon.png'" class="card-avatar">
+                                   <span class="card-name">{{ b.userName || user.nickName }}</span>
+                               </div>
+                               <div class="card-likes">
+                                   <!-- Reverted to Heart SVG as per user request -->
+                                   <svg viewBox="0 0 24 24" width="14" height="14" style="margin-right: 2px;">
+                                     <path :fill="b.isLike ? '#ff2442' : '#999'" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                                   </svg>
+                                   {{b.liked || 0}}
+                               </div>
+                           </div>
+                       </div>
+                    </div>
+                 </div>
+             </div>
+             <div v-if="likes.length > 0 && likeNoMore" class="no-more">没有更多了</div>
+             <div v-else-if="!likeLoading && likes.length===0" class="empty-state">
+               <p>暂无喜欢</p>
              </div>
           </el-tab-pane>
 
@@ -154,48 +232,12 @@
                            <div class="card-title">{{ b.title }}</div>
                            <div class="card-bottom">
                                <div class="card-user">
-                                   <img :src="b.icon || user.icon || '/imgs/icons/default-icon.png'" class="card-avatar">
-                                   <span class="card-name">{{ b.nickName || b.name || user.nickName }}</span>
+                                   <img :src="b.userAvatar || user.icon || '/imgs/icons/default-icon.png'" class="card-avatar">
+                                   <span class="card-name">{{ b.userName || user.nickName }}</span>
                                </div>
                                <div class="card-likes">
-                                   <!-- Reverted to Heart SVG as per user request -->
-                                   <svg t="1646634642977" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2187" width="14" height="14" style="margin-right: 2px;">
-                                     <path d="M160 944c0 8.8-7.2 16-16 16h-32c-26.5 0-48-21.5-48-48V528c0-26.5 21.5-48 48-48h32c8.8 0 16 7.2 16 16v448zM96 416c-53 0-96 43-96 96v416c0 53 43 96 96 96h96c17.7 0 32-14.3 32-32V448c0-17.7-14.3-32-32-32H96zM505.6 64c16.2 0 26.4 8.7 31 13.9 4.6 5.2 12.1 16.3 10.3 32.4l-23.5 203.4c-4.9 42.2 8.6 84.6 36.8 116.4 28.3 31.7 68.9 49.9 111.4 49.9h271.2c6.6 0 10.8 3.3 13.2 6.1s5 7.5 4 14l-48 303.4c-6.9 43.6-29.1 83.4-62.7 112C815.8 944.2 773 960 728.9 960h-317c-33.1 0-59.9-26.8-59.9-59.9v-455c0-6.1 1.7-12 5-17.1 69.5-109 106.4-234.2 107-364h41.6z m0-64h-44.9C427.2 0 400 27.2 400 60.7c0 127.1-39.1 251.2-112 355.3v484.1c0 68.4 55.5 123.9 123.9 123.9h317c122.7 0 227.2-89.3 246.3-210.5l47.9-303.4c7.8-49.4-30.4-94.1-80.4-94.1H671.6c-50.9 0-90.5-44.4-84.6-95l23.5-203.4C617.7 55 568.7 0 505.6 0z" p-id="2188" :fill="b.isLike ? '#ff6633' : '#82848a'"></path>
-                                   </svg>
-                                   {{b.liked || 0}}
-                               </div>
-                           </div>
-                       </div>
-                    </div>
-                 </div>
-                 <div v-if="feeds.length > 0 &&feedNoMore" class="no-more">没有更多了</div>
-                 <div v-else-if="!feedLoading && feeds.length===0" class="empty-state">
-                   <p>暂无动态</p>
-                 </div>
-             </div>
-          </el-tab-pane>
-
-          <el-tab-pane label="喜欢" name="likes">
-             <div class="waterfall-container">
-                 <div class="waterfall-column" v-for="(col, i) in [0, 1]" :key="i">
-                    <div class="waterfall-item" 
-                         v-for="b in likes.filter((_, index) => index % 2 === i)" 
-                         :key="b.id"
-                         @click="toBlogDetail(b)"
-                    >
-                       <div class="card-img-box">
-                           <img :src="getFirstImage(b.images)" class="work-cover" loading="lazy" @error="handleImgError">
-                       </div>
-                       <div class="card-info">
-                           <div class="card-title">{{ b.title }}</div>
-                           <div class="card-bottom">
-                               <div class="card-user">
-                                   <img :src="b.icon || user.icon || '/imgs/icons/default-icon.png'" class="card-avatar">
-                                   <span class="card-name">{{ b.nickName || b.name || user.nickName }}</span>
-                               </div>
-                               <div class="card-likes">
-                                   <svg class="icon" viewBox="0 0 1024 1024" width="14" height="14" style="margin-right: 2px;">
-                                     <path d="M160 944c0 8.8-7.2 16-16 16h-32c-26.5 0-48-21.5-48-48V528c0-26.5 21.5-48 48-48h32c8.8 0 16 7.2 16 16v448zM96 416c-53 0-96 43-96 96v416c0 53 43 96 96 96h96c17.7 0 32-14.3 32-32V448c0-17.7-14.3-32-32-32H96zM505.6 64c16.2 0 26.4 8.7 31 13.9 4.6 5.2 12.1 16.3 10.3 32.4l-23.5 203.4c-4.9 42.2 8.6 84.6 36.8 116.4 28.3 31.7 68.9 49.9 111.4 49.9h271.2c6.6 0 10.8 3.3 13.2 6.1s5 7.5 4 14l-48 303.4c-6.9 43.6-29.1 83.4-62.7 112C815.8 944.2 773 960 728.9 960h-317c-33.1 0-59.9-26.8-59.9-59.9v-455c0-6.1 1.7-12 5-17.1 69.5-109 106.4-234.2 107-364h41.6z m0-64h-44.9C427.2 0 400 27.2 400 60.7c0 127.1-39.1 251.2-112 355.3v484.1c0 68.4 55.5 123.9 123.9 123.9h317c122.7 0 227.2-89.3 246.3-210.5l47.9-303.4c7.8-49.4-30.4-94.1-80.4-94.1H671.6c-50.9 0-90.5-44.4-84.6-95l23.5-203.4C617.7 55 568.7 0 505.6 0z" :fill="b.isLike ? '#ff6633' : '#82848a'"></path>
+                                   <svg viewBox="0 0 24 24" width="14" height="14" style="margin-right: 2px;">
+                                     <path :fill="b.isLike ? '#ff2442' : '#999'" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                                    </svg>
                                    {{b.liked || 0}}
                                </div>
@@ -204,9 +246,9 @@
                     </div>
                  </div>
              </div>
-             <div v-if="likes.length > 0 && likeNoMore" class="no-more">没有更多了</div>
-             <div v-else-if="!likeLoading && likes.length===0" class="empty-state">
-                <p>暂无喜欢的笔记</p>
+             <div v-if="feeds.length > 0 && feedNoMore" class="no-more">没有更多了</div>
+             <div v-else-if="!feedLoading && feeds.length===0" class="empty-state">
+                <p>暂无动态</p>
              </div>
           </el-tab-pane>
        </el-tabs>
@@ -215,14 +257,40 @@
     <div class="footer-container">
       <foot-bar :active-btn="4"></foot-bar>
     </div>
+
+    <!-- Avatar Dialog (Bottom Sheet) -->
+    <div class="avatar-dialog-overlay" v-if="showAvatarDialog" @click="showAvatarDialog = false">
+       <div class="avatar-dialog-content" @click.stop>
+          <div class="avatar-dialog-close" @click="showAvatarDialog = false"><i class="el-icon-close"></i></div>
+          <div class="avatar-preview">
+             <img :src="user.icon || '/imgs/icons/default-icon.png'" class="avatar-big">
+          </div>
+          <div class="avatar-dialog-actions">
+             <div class="action-item" @click="handleChangeAvatar">
+                <i class="el-icon-edit"></i>
+                <span>更换头像</span>
+                <i class="el-icon-arrow-right"></i>
+             </div>
+             <div class="action-item" @click="handleSaveAvatar">
+                <i class="el-icon-download"></i>
+                <span>保存头像</span>
+                <i class="el-icon-arrow-right"></i>
+             </div>
+          </div>
+       </div>
+    </div>
+
+    <!-- Hidden file input for avatar upload -->
+    <input type="file" ref="avatarInput" accept="image/*" @change="onAvatarSelected" style="display:none">
   </div>
 </template>
 
 <script>
 import FootBar from '@/components/FootBar.vue';
-import { getCurrentUser, getFullUserInfo, getUserStats } from '@/api/user';
+import { getCurrentUser, getFullUserInfo, getUserStats, uploadFile, updateUser } from '@/api/user';
 import { getMyBlogs, getFollowedFeeds } from '@/api/blog';
 import { getShopCollections, uncollectShop, likeBlog, likeRecord, starList } from '@/api/interaction';
+import { filePrefix } from '@/utils/request';
 
 export default {
   name: 'UserInfo',
@@ -257,7 +325,14 @@ export default {
        feeds: [],
        feedParams: { minTime: 0, offset: 0 },
        feedLoading: false,
-       feedNoMore: false
+       feedNoMore: false,
+       
+       // Avatar Dialog
+       showAvatarDialog: false,
+       
+       // Touch Swipe
+       touchStartX: 0,
+       tabOrder: ['note', 'collection', 'likes', 'feed']
     }
   },
   created() {
@@ -273,6 +348,9 @@ export default {
   methods: {
      goBack() {
         this.$router.go(-1);
+     },
+     toAddFriend() {
+        this.$router.push('/user/add-friend');
      },
      logout() {
         this.$confirm('确定要退出登录吗？', '提示', { 
@@ -297,6 +375,45 @@ export default {
      },
      toFans() {
         this.$router.push('/user/fans');
+     },
+     toCollections() {
+        // 切换到收藏tab
+        this.activeTab = 'collection';
+        this.loadTabData('collection');
+     },
+     toMessages() {
+        this.$router.push('/chat/list');
+     },
+     toService() {
+        this.$message.info('客服功能开发中');
+     },
+     
+     // Touch Swipe handlers
+     handleTouchStart(e) {
+        this.touchStartX = e.touches[0].clientX;
+     },
+     handleTouchEnd(e) {
+        const touchEndX = e.changedTouches[0].clientX;
+        const diff = this.touchStartX - touchEndX;
+        const threshold = 50; // Minimum swipe distance
+        
+        if (Math.abs(diff) < threshold) return;
+        
+        const currentIndex = this.tabOrder.indexOf(this.activeTab);
+        
+        if (diff > 0) {
+           // Swipe left -> next tab
+           if (currentIndex < this.tabOrder.length - 1) {
+              this.activeTab = this.tabOrder[currentIndex + 1];
+              this.loadTabData(this.activeTab);
+           }
+        } else {
+           // Swipe right -> previous tab
+           if (currentIndex > 0) {
+              this.activeTab = this.tabOrder[currentIndex - 1];
+              this.loadTabData(this.activeTab);
+           }
+        }
      },
      
      // Data Query
@@ -345,6 +462,9 @@ export default {
      handleTabClick(tab) {
         this.loadTabData(tab.paneName);
      },
+     formatCount(n) {
+        return n > 99 ? '99+' : n;
+     },
      loadTabData(tabName) {
         if(tabName === 'note' && this.blogs.length === 0) this.queryBlogs();
         if(tabName === 'collection' && this.collections.length === 0) this.queryCollections();
@@ -382,6 +502,7 @@ export default {
         return {
            ...b,
            icon: b.icon ? this.$fileURL + b.icon : '',
+           userAvatar: b.userAvatar ? this.$fileURL + b.userAvatar : '',
            images: b.images,
         };
      },
@@ -559,6 +680,69 @@ export default {
            if(type === 'likes' && !this.likeLoading && !this.likeNoMore) this.loadMoreLikes();
            if(type === 'feed' && !this.feedLoading && !this.feedNoMore) this.loadMoreFeeds();
         }
+     },
+     
+     // Avatar methods
+     handleChangeAvatar() {
+        this.$refs.avatarInput.click();
+     },
+     onAvatarSelected(e) {
+        const file = e.target.files[0];
+        if(!file) return;
+        
+        // Check file size (max 2MB)
+        if(file.size > 2 * 1024 * 1024) {
+           this.$message.error('图片大小不能超过2MB');
+           return;
+        }
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        this.pageLoading = true;
+        
+        // Step 1: Upload file
+        uploadFile(formData).then(res => {
+           const path = res.data || res;
+           
+           // Process path - remove filePrefix if present
+           let savePath = path;
+           if (path.includes(filePrefix)) {
+              savePath = path.split(filePrefix)[1];
+           }
+           
+           // Step 2: Update user icon
+           updateUser({ id: this.user.id, icon: savePath }).then(() => {
+              this.$message.success('头像修改成功');
+              this.showAvatarDialog = false;
+              this.user.icon = this.$fileURL + savePath;
+           }).catch(() => {
+              this.$message.error('更新头像失败');
+           });
+        }).catch(() => {
+           this.$message.error('上传失败');
+        }).finally(() => {
+           this.pageLoading = false;
+        });
+        
+        e.target.value = ''; // Reset input
+     },
+     handleSaveAvatar() {
+        if(!this.user.icon) {
+           this.$message.warning('暂无头像可保存');
+           return;
+        }
+        
+        // Create a temporary link to download the image
+        const link = document.createElement('a');
+        link.href = this.user.icon;
+        link.download = 'avatar.jpg';
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        this.$message.success('头像保存中...');
      }
   }
 }
@@ -571,20 +755,28 @@ export default {
     background: #fff;
     padding-bottom: 60px;
     box-sizing: border-box;
+    position: relative;
+    overflow-x: hidden;
 }
 
 .user-info-page * {
     box-sizing: border-box;
 }
 
-/* Profile Header (Background) */
-.profile-header {
-    height: 280px;
-    background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
-    background: linear-gradient(180deg, #A7BFE8 0%, #6190E8 100%);
+/* Immersive Cover */
+.profile-cover {
+    height: 250px;
+    background-size: cover;
+    background-position: center;
     position: relative;
-    display: flex;
-    flex-direction: column;
+}
+.cover-gradient {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 80px;
+    background: linear-gradient(to top, rgba(0,0,0,0.3), transparent);
 }
 
 /* Nav Bar */
@@ -593,97 +785,242 @@ export default {
     top: 0;
     left: 0;
     right: 0;
-    height: 50px;
+    height: 60px; /* Taller for mobile status bar area */
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 16px;
+    padding: 10px 16px 0 16px;
     z-index: 100;
     color: white;
+    /* Transparent by default */
 }
 
 .nav-left .add-friend-btn {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.2);
     backdrop-filter: blur(4px);
     padding: 6px 12px;
     border-radius: 20px;
     font-size: 14px;
     display: flex;
     align-items: center;
-}
-
-.nav-left .add-friend-btn i {
-    margin-right: 4px;
+    color: white;
+    border: 0.5px solid rgba(255,255,255,0.2);
 }
 
 .nav-right {
     display: flex;
-    gap: 15px;
+    gap: 12px;
 }
 
 .icon-btn {
-    width: 32px;
-    height: 32px;
-    background: rgba(255, 255, 255, 0.2);
+    width: 34px;
+    height: 34px;
+    background: rgba(0, 0, 0, 0.2); 
     backdrop-filter: blur(4px);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 18px;
+    border: 0.5px solid rgba(255,255,255,0.2);
 }
 
-/* User Intro Top (Avatar + Name area) */
-.user-intro-top {
-    margin-top: 80px;
-    /* Space from top */
-    padding: 0 20px;
-    display: flex;
-    align-items: center;
-}
-
-.avatar-wrapper {
+/* Profile Body Card */
+.profile-body-card {
     position: relative;
-    margin-right: 15px;
+    margin-top: -15px; /* Slight overlap */
+    background: white;
+    border-radius: 16px 16px 0 0;
+    padding: 0 16px;
+    min-height: 500px; /* ensure white bg covers bottom */
+    z-index: 10;
+}
+
+/* Header Row: Avatar & Actions */
+.body-header-row {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 12px;
+    height: 50px; /* Placeholder for overlap calculation */
+}
+
+.avatar-container {
+    position: absolute;
+    left: 0;
+    bottom: 0; /* Align with bottom of this row container */
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    padding: 3px;
+    background: white; /* White border effect */
+    top: -40px; /* Move up to overlap cover */
+    z-index: 12;
 }
 
 .avatar-img {
-    width: 84px;
-    height: 84px;
+    width: 100%;
+    height: 100%;
     border-radius: 50%;
-    border: 2px solid white;
     object-fit: cover;
 }
 
-.name-wrapper {
-    color: white;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+.header-actions {
+    margin-left: auto; /* Push to right */
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-top: 10px;
 }
 
-.nick-name {
+.edit-btn {
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    padding: 6px 16px;
+    font-size: 14px;
+    color: #333;
+    font-weight: 500;
+}
+.settings-btn {
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    padding: 6px 12px;
+    font-size: 16px;
+    color: #333;
+    display: flex; 
+    align-items: center;
+}
+
+/* Basic Info Section */
+.basic-info-section {
+    margin-bottom: 15px;
+}
+
+.user-name {
     font-size: 22px;
     font-weight: bold;
-    display: flex;
-    align-items: center;
-    margin-bottom: 6px;
+    color: #000;
+    margin-bottom: 4px;
 }
 
-.nick-name i {
-    margin-left: 6px;
-    font-size: 14px;
-}
-
-.douyin-id {
+.user-id {
     font-size: 12px;
-    opacity: 0.9;
+    color: #666;
+    margin-bottom: 10px;
     display: flex;
     align-items: center;
+    gap: 4px;
+}
+.copy-icon { font-size: 12px; cursor: pointer; }
+
+.user-desc {
+    font-size: 14px;
+    color: #333;
+    line-height: 1.5;
+    margin-bottom: 12px;
+    white-space: pre-wrap;
 }
 
-.douyin-id i {
-    margin-left: 4px;
+/* Tags */
+.user-tags {
+    display: flex;
+    flex-wrap: wrap;
+    margin-bottom: 5px;
+}
+.tag-list { display: flex; gap: 6px; flex-wrap: wrap; }
+.tag {
+    background: #f2f2f2;
+    color: #666;
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+.add-tag {
+    color: #999;
+    border: 1px dashed #ddd;
+    background: transparent;
+}
+
+/* Stats Row */
+.stats-action-row {
+    margin-bottom: 20px;
+}
+.stats-box {
+    display: flex;
+    justify-content: space-around;
+    width: 100%;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     cursor: pointer;
 }
+
+.stat-item .num {
+    font-size: 18px;
+    font-weight: bold;
+    color: #000;
+}
+
+.stat-item .label {
+    font-size: 13px;
+    color: #999;
+}
+
+/* Keeping Tabs & Quick Actions as is */
+.quick-actions {
+    display: flex;
+    justify-content: space-between;
+    background: #fff;
+    padding: 5px 10px 20px 10px; 
+}
+.action-item {
+   display: flex;
+   flex-direction: column;
+   align-items: center;
+   cursor: pointer;
+}
+.action-icon {
+   width: 40px;
+   height: 40px;
+   background: #f8f8f8; /* Softer circle bg */
+   border-radius: 50%;
+   display: flex;
+   align-items: center;
+   justify-content: center;
+   margin-bottom: 6px;
+}
+.action-icon i {
+   font-size: 20px;
+   color: #ff2442;
+}
+.action-text {
+   font-size: 12px;
+   color: #666;
+}
+
+.profile-tabs >>> .el-tabs__nav-wrap::after {
+    height: 0.5px;
+    background-color: #f1f1f1;
+}
+.profile-tabs >>> .el-tabs__active-bar {
+    background-color: #ff2442;
+    height: 3px;
+    border-radius: 3px;
+}
+.profile-tabs >>> .el-tabs__item {
+    font-weight: 500;
+    color: #999;
+}
+.profile-tabs >>> .el-tabs__item.is-active {
+    color: #333;
+    font-weight: bold;
+    font-size: 16px;
+}
+
 
 /* White Body Card */
 .profile-body-card {
@@ -703,13 +1040,10 @@ export default {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 15px 20px;
+    padding: 20px;
 }
 
-.stats-box {
-    display: flex;
-    gap: 24px;
-}
+
 
 .stat-item {
     display: flex;
@@ -719,22 +1053,22 @@ export default {
 }
 
 .stat-item .num {
-    font-size: 16px;
+    font-size: 20px;
     font-weight: 600;
     color: #333;
 }
 
 .stat-item .label {
-    font-size: 12px;
+    font-size: 13px;
     color: #999;
-    margin-top: 2px;
+    margin-top: 4px;
 }
 
 .edit-btn {
     border: 1px solid #ddd;
     border-radius: 20px;
-    padding: 6px 16px;
-    font-size: 13px;
+    padding: 8px 20px;
+    font-size: 14px;
     color: #333;
     cursor: pointer;
 }
@@ -763,6 +1097,47 @@ export default {
     font-size: 12px;
     padding: 4px 8px;
     border-radius: 4px;
+}
+
+/* Quick Actions */
+.quick-actions {
+    display: flex;
+    justify-content: space-around;
+    padding: 15px 20px;
+    margin: 10px 0;
+    background: #fafafa;
+    border-radius: 12px;
+    margin-left: 15px;
+    margin-right: 15px;
+}
+
+.quick-actions .action-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+}
+
+.quick-actions .action-icon {
+    width: 44px;
+    height: 44px;
+    background: white;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.quick-actions .action-icon i {
+    font-size: 20px;
+    color: #ff6633;
+}
+
+.quick-actions .action-text {
+    font-size: 12px;
+    color: #666;
 }
 
 /* Tabs */
@@ -927,6 +1302,110 @@ export default {
 
 .footer-container {
     height: 60px;
+}
+
+/* Avatar Dialog Styles */
+.avatar-dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+.avatar-dialog-content {
+    background: #1a1a1a;
+    border-radius: 16px 16px 0 0;
+    padding-bottom: env(safe-area-inset-bottom, 20px);
+    position: relative;
+}
+
+.count-badge {
+    background: #ff6633;
+    color: white;
+    padding: 0 5px;
+    border-radius: 10px;
+    font-size: 10px;
+    margin-left: 2px;
+    vertical-align: middle;
+}
+
+.avatar-dialog-close {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    z-index: 10000;
+}
+
+.avatar-preview {
+    position: absolute;
+    top: -420px;
+    left: 0;
+    right: 0;
+    height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.avatar-big {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 0;
+}
+
+.avatar-dialog-actions {
+    padding: 15px 0;
+}
+
+.avatar-dialog-actions .action-item {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 16px 20px;
+    color: #fff;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.avatar-dialog-actions .action-item:active {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.avatar-dialog-actions .action-item i:first-child {
+    font-size: 20px;
+    margin-right: 15px;
+    color: #ccc;
+}
+
+.avatar-dialog-actions .action-item span {
+    flex: 1;
+}
+
+.avatar-dialog-actions .action-item i:last-child {
+    color: #666;
+}
+
+.avatar-wrapper {
+    position: relative;
+    margin-right: 15px;
+    cursor: pointer;
 }
 
 </style>

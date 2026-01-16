@@ -1,55 +1,64 @@
 <template>
   <div class="blog-edit-page">
-    <div class="header">
-      <div class="header-cancel-btn" @click="goBack">取消</div>
-      <div class="header-title">{{ editMode ? '编辑笔记' : '发笔记' }}<i class="el-icon-info" @click="showTips"></i></div>
-      <div class="header-commit">
-        <button class="header-commit-btn" @click="submitBlog" :disabled="!canSubmit" :class="{ 'submitting': isSubmitting }">
+    <div class="edit-page-header">
+      <div class="header-left" @click="goBack">取消</div>
+      <div class="header-title">发笔记</div>
+      <div class="header-right">
+        <button class="publish-btn" @click="submitBlog" :disabled="!canSubmit" :class="{ 'submitting': isSubmitting }">
           <span v-if="!isSubmitting">{{ editMode ? '保存' : '发布' }}</span>
           <i v-else class="el-icon-loading"></i>
         </button>
       </div>
     </div>
 
-    <div class="upload-box">
-      <input type="file" @change="fileSelected" ref="fileInput" style="display: none" accept="image/*">
-      <div class="upload-btn" @click="openFileDialog" :class="{ 'disabled': fileList.length >= 9 }">
-        <i class="el-icon-camera"></i>
-        <div style="font-size: 12px;line-height: 12px">上传照片</div>
-      </div>
-      <div class="pic-list">
-        <div class="pic-box" v-for="(f,i) in fileList" :key="i">
-          <img :src="f" alt="" :class="{ 'loading': uploading[i] }">
-          <i class="el-icon-close" @click="deletePic(i)"></i>
+    <div class="edit-content-scroll">
+        <!-- Image Uploader (Top) -->
+        <div class="upload-section">
+            <div class="pic-list">
+                <div class="pic-box" v-for="(f,i) in fileList" :key="i">
+                <img :src="f" alt="" :class="{ 'loading': uploading[i] }">
+                <i class="el-icon-close" @click="deletePic(i)"></i>
+                </div>
+                <!-- Upload Button -->
+                <div class="upload-btn" @click="openFileDialog" v-if="fileList.length < 9">
+                    <i class="el-icon-plus"></i>
+                </div>
+            </div>
+            <input type="file" @change="fileSelected" ref="fileInput" style="display: none" accept="image/*">
         </div>
-      </div>
-      <div v-if="fileList.length > 0" style="font-size: 12px; color: #999; margin-top: 8px;">
-        已选择 {{fileList.length}} 张，最多可上传9张
-      </div>
-    </div>
 
-    <div class="blog-title">
-      <input v-model="params.title" type="text" placeholder="填写标题更容易上首页哦~" @input="checkSubmitStatus">
-    </div>
+        <!-- Inputs -->
+        <div class="input-section">
+            <div class="title-input-box">
+                <input v-model="params.title" type="text" placeholder="填写标题更容易上首页哦~" @input="checkSubmitStatus" class="title-input">
+            </div>
+            <div class="content-input-box">
+                <textarea v-model="params.content" placeholder="最近打卡了什么地方，有什么新奇体验呢？" @input="checkSubmitStatus" class="content-input"></textarea>
+            </div>
+        </div>
 
-    <div class="blog-content">
-      <textarea v-model="params.content" placeholder="最近打卡了什么地方，有什么新奇体验呢？" @input="checkSubmitStatus"></textarea>
-    </div>
-
-    <div class="divider"></div>
-
-    <div class="blog-shop" @click="showDialog=true">
-      <div class="shop-left">关联商户</div>
-      <div v-if="selectedShop.name">{{selectedShop.name}}</div>
-      <div v-else>去选择&nbsp;<i class="el-icon-arrow-right"></i></div>
+        <!-- Options -->
+        <div class="options-section">
+            <div class="option-item" @click="showDialog=true">
+                <div class="option-left">
+                    <i class="el-icon-location-outline"></i>
+                    <span>关联商户</span>
+                </div>
+                <div class="option-right">
+                    <span>{{selectedShop.name || '去选择'}}</span>
+                    <i class="el-icon-arrow-right"></i>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="mask" v-show="showDialog" @click="showDialog=false"></div>
 
     <transition name="el-zoom-in-bottom">
       <div class="shop-dialog" v-show="showDialog">
-        <div class="blog-shop">
-          <div class="shop-left">关联商户</div>
+        <div class="shop-dialog-header">
+           <span>关联商户</span>
+           <i class="el-icon-close" @click="showDialog=false"></i>
         </div>
         <div class="search-bar">
           <div class="city-select">杭州 <i class="el-icon-arrow-down"></i></div>
@@ -75,6 +84,20 @@
         </div>
       </div>
     </transition>
+
+    <!-- iOS Exit Confirmation Dialog -->
+    <div class="ios-mask" v-if="showExitDialog" @click.self="showExitDialog = false">
+        <div class="ios-alert">
+            <div class="ios-alert-content">
+                <div class="ios-alert-title">放弃编辑？</div>
+                <div class="ios-alert-msg">确定要放弃编辑吗？<br>已输入的内容将会丢失</div>
+            </div>
+            <div class="ios-alert-footer">
+                <div class="ios-btn-cancel" @click="showExitDialog = false">继续编辑</div>
+                <div class="ios-btn-confirm" @click="confirmExit">放弃</div>
+            </div>
+        </div>
+    </div>
   </div>
 </template>
 
@@ -102,6 +125,7 @@ export default {
       canSubmit: false,
       isSubmitting: false,
       shopLoading: false,
+      showExitDialog: false,
       
       // Edit mode
       editMode: false,
@@ -308,16 +332,14 @@ export default {
     },
     goBack() {
       if (this.params.title || this.params.content || this.fileList.length > 0) {
-        this.$confirm('确定要放弃编辑吗？已输入的内容将会丢失', '提示', {
-          confirmButtonText: '确定',
-          cancelButtonText: '取消',
-          type: 'warning'
-        }).then(() => {
-          this.$router.go(-1);
-        }).catch(() => {});
+          this.showExitDialog = true;
       } else {
         this.$router.go(-1);
       }
+    },
+    confirmExit() {
+        this.showExitDialog = false;
+        this.$router.go(-1);
     }
   }
 };
@@ -326,230 +348,184 @@ export default {
 <style scoped>
 .blog-edit-page {
   min-height: 100vh;
-  background: linear-gradient(180deg, #fdfbfb 0%, #ebedee 100%);
+  background: white;
   padding-bottom: env(safe-area-inset-bottom);
 }
 
 /* Header */
-.header {
+.edit-page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  background: rgba(255,255,255,0.95);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(0,0,0,0.05);
+  padding: 0 16px;
+  height: 50px;
+  background: white;
   position: sticky;
   top: 0;
   z-index: 100;
+  padding-top: env(safe-area-inset-top);
+  height: calc(50px + env(safe-area-inset-top));
+  box-sizing: content-box; /* Ensure padding doesn't eat height if explicit */
 }
-.header-cancel-btn {
-  font-size: 15px;
+.header-left {
+  font-size: 16px;
   color: #666;
   cursor: pointer;
-  padding: 6px 12px;
-  border-radius: 8px;
-  transition: background 0.2s;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
-.header-cancel-btn:hover { background: rgba(0,0,0,0.05); }
 .header-title {
   font-size: 17px;
-  font-weight: 700;
-  color: #1a1a1a;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  font-weight: bold;
+  color: #333;
+  flex: 1;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.header-title .el-icon-info {
-  color: #f9a825;
-  font-size: 16px;
-  cursor: pointer;
-  transition: transform 0.2s;
+.header-right {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
 }
-.header-title .el-icon-info:hover { transform: scale(1.1); }
-.header-commit-btn {
-  background: linear-gradient(135deg, #ff6f61 0%, #ff8a65 100%);
+.publish-btn {
+  background: #ff2442;
   color: white;
   border: none;
-  padding: 8px 20px;
+  padding: 6px 16px;
   border-radius: 20px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
+  transition: opacity 0.2s;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 60px;
+}
+.publish-btn:disabled {
+  background: #ff2442;
   opacity: 0.5;
-  pointer-events: none;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(255,111,97,0.3);
+  cursor: not-allowed;
 }
-.header-commit-btn:enabled {
-  opacity: 1;
-  pointer-events: auto;
-}
-.header-commit-btn:enabled:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(255,111,97,0.4);
-}
-.header-commit-btn.submitting {
-  opacity: 0.7;
-  pointer-events: none;
+
+.edit-content-scroll {
+    padding: 10px 20px 80px;
 }
 
 /* Upload Section */
-.upload-box {
-  padding: 20px 16px;
-  background: white;
-  margin: 12px;
-  border-radius: 16px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+.upload-section {
+    margin-bottom: 20px;
 }
-.upload-btn {
-  width: 88px;
-  height: 88px;
-  border: 2px dashed #e0e0e0;
-  border-radius: 12px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: #bdbdbd;
-  cursor: pointer;
-  transition: all 0.2s;
-  background: #fafafa;
-}
-.upload-btn:hover { 
-  border-color: #ff6f61; 
-  color: #ff6f61;
-  background: #fff5f4;
-}
-.upload-btn.disabled { 
-  opacity: 0.5; 
-  cursor: not-allowed; 
-}
-.upload-btn i { font-size: 28px; margin-bottom: 6px; }
 .pic-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
 }
 .pic-box {
-  width: 88px;
-  height: 88px;
-  border-radius: 12px;
-  overflow: hidden;
-  position: relative;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    width: 100px;
+    height: 100px;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    background: #f5f5f5;
 }
 .pic-box img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.3s;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
-.pic-box:hover img { transform: scale(1.05); }
-.pic-box img.loading { filter: blur(3px); opacity: 0.7; }
 .pic-box .el-icon-close {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  background: rgba(0,0,0,0.6);
-  color: white;
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  cursor: pointer;
-  transition: background 0.2s;
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: rgba(0,0,0,0.5);
+    color: white;
+    border-radius: 50%;
+    padding: 2px;
+    font-size: 12px;
 }
-.pic-box .el-icon-close:hover { background: rgba(255,0,0,0.7); }
+.upload-btn {
+    width: 100px;
+    height: 100px;
+    border: 1.5px dashed #ddd; /* Dashed border as requested */
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ccc;
+    cursor: pointer;
+}
+.upload-btn i { font-size: 28px; }
 
-/* Input Cards */
-.blog-title, .blog-content {
-  background: white;
-  margin: 0 12px 2px;
-  padding: 16px 18px;
-  border-radius: 16px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+/* Input Section */
+.input-section {
+    margin-bottom: 20px;
 }
-.blog-title { 
-  border-radius: 16px 16px 4px 4px;
-  margin-top: 0;
+.title-input-box {
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
 }
-.blog-content { 
-  border-radius: 4px 4px 16px 16px;
-  min-height: 160px;
+.title-input {
+    width: 100%;
+    border: none;
+    outline: none;
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
 }
-.blog-title input {
-  width: 100%;
-  border: none;
-  outline: none;
-  font-size: 18px;
-  font-weight: 600;
-  color: #1a1a1a;
-  background: transparent;
-}
-.blog-title input::placeholder { color: #bdbdbd; font-weight: 500; }
-.blog-content textarea {
-  width: 100%;
-  border: none;
-  outline: none;
-  min-height: 140px;
-  resize: none;
-  font-size: 15px;
-  font-family: inherit;
-  color: #424242;
-  line-height: 1.7;
-  background: transparent;
-}
-.blog-content textarea::placeholder { color: #bdbdbd; }
+.title-input::placeholder { color: #ccc; font-weight: normal; }
 
-.divider { display: none; }
+.content-input {
+    width: 100%;
+    border: none;
+    outline: none;
+    font-size: 15px;
+    color: #333;
+    min-height: 150px;
+    resize: none;
+    line-height: 1.6;
+}
+.content-input::placeholder { color: #ccc; }
 
-/* Shop Selector */
-.blog-shop {
-  background: white;
-  margin: 12px;
-  padding: 16px 18px;
-  border-radius: 16px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 15px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
-  cursor: pointer;
-  transition: box-shadow 0.2s;
+/* Options Section */
+.options-section {
+    border-top: 1px solid #f5f5f5;
 }
-.blog-shop:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
-.shop-left { 
-  color: #1a1a1a; 
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.option-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px 0;
+    cursor: pointer;
+    font-size: 15px;
+    color: #333;
+    border-bottom: 1px solid #f5f5f5;
 }
-.shop-left::before {
-  content: '🏪';
-  font-size: 18px;
+.option-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
-.blog-shop > div:last-child {
-  color: #ff6f61;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 4px;
+.option-left i { font-size: 18px; color: #333; }
+.option-right {
+    display: flex;
+    align-items: center;
+    color: #999;
+    font-size: 14px;
+    gap: 4px;
 }
-.blog-shop .el-icon-arrow-right { color: #ff6f61; }
 
-/* Dialog Overlay */
+/* Mask & Dialog */
 .mask {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.45);
+  background: rgba(0,0,0,0.5);
   z-index: 199;
-  backdrop-filter: blur(2px);
 }
 .shop-dialog {
   position: fixed;
@@ -558,78 +534,141 @@ export default {
   right: 0;
   background: white;
   z-index: 200;
-  border-radius: 24px 24px 0 0;
+  border-radius: 16px 16px 0 0;
   height: 70vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 -4px 24px rgba(0,0,0,0.15);
 }
-.shop-dialog .blog-shop {
-  margin: 0;
-  border-radius: 24px 24px 0 0;
-  border-bottom: 1px solid #f0f0f0;
-  box-shadow: none;
-  pointer-events: none;
+.shop-dialog-header {
+    padding: 15px 20px;
+    font-weight: bold;
+    text-align: center;
+    position: relative;
+    border-bottom: 1px solid #eee;
+}
+.shop-dialog-header i {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 20px;
+    color: #999;
+    cursor: pointer;
 }
 .search-bar {
-  padding: 12px 16px;
-  border-bottom: 1px solid #f5f5f5;
+  padding: 10px 15px;
   display: flex;
-  gap: 12px;
-  background: #fafafa;
+  gap: 10px;
+  background: white;
 }
 .city-select {
   display: flex;
   align-items: center;
   font-size: 14px;
   color: #333;
-  font-weight: 500;
-  background: white;
-  padding: 8px 12px;
-  border-radius: 20px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  padding: 6px 12px;
+  background: #f5f5f5;
+  border-radius: 16px;
 }
 .search-input {
   flex: 1;
-  background: white;
-  border-radius: 20px;
-  padding: 8px 14px;
+  background: #f5f5f5;
+  border-radius: 16px;
+  padding: 6px 12px;
   display: flex;
   align-items: center;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
 }
-.search-input i { color: #999; }
 .search-input input {
-  background: transparent;
-  border: none;
-  outline: none;
-  margin-left: 8px;
-  font-size: 14px;
-  flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    flex: 1;
+    margin-left: 5px;
+    font-size: 14px;
 }
 .shop-list {
   flex: 1;
   overflow-y: auto;
-  padding: 8px 0;
 }
 .shop-item {
-  padding: 14px 18px;
-  border-bottom: 1px solid #f5f5f5;
-  transition: background 0.2s;
+  padding: 15px 20px;
+  border-bottom: 1px solid #f9f9f9;
 }
-.shop-item:hover { background: #fff8f6; }
-.shop-name { 
-  font-weight: 600; 
-  margin-bottom: 4px; 
-  color: #1a1a1a;
-}
-.shop-item > div:last-child { 
-  font-size: 13px; 
-  color: #999; 
-}
+.shop-name { font-weight: bold; margin-bottom: 4px; font-size: 15px; }
 .empty-shop { 
   padding: 50px; 
   text-align: center; 
   color: #bdbdbd; 
+}
+
+/* iOS Alert Styles */
+.ios-mask {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(2px);
+    animation: fadeIn 0.2s ease;
+}
+.ios-alert {
+    width: 270px;
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 14px;
+    overflow: hidden;
+    text-align: center;
+    animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.ios-alert-content {
+    padding: 20px 16px;
+}
+.ios-alert-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: #000;
+    margin-bottom: 6px;
+}
+.ios-alert-msg {
+    font-size: 13px;
+    line-height: 1.4;
+    color: #000;
+}
+.ios-alert-footer {
+    display: flex;
+    border-top: 0.5px solid rgba(60,60,67,0.29); /* iOS separaor color */
+    height: 44px;
+}
+.ios-alert-footer > div {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.ios-alert-footer > div:active {
+    background: rgba(0,0,0,0.05);
+}
+.ios-btn-cancel {
+    color: #007aff; /* iOS Blue */
+    font-weight: 600;
+    border-right: 0.5px solid rgba(60,60,67,0.29);
+}
+.ios-btn-confirm {
+    color: #ff3b30; /* iOS Red */
+    font-weight: 400;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+@keyframes popIn {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
 }
 </style>

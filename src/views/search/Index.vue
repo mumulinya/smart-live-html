@@ -11,7 +11,7 @@
            <input
              class="native-search-input"
              v-model="keyword"
-             placeholder="输入商户名、地点或菜品"
+             :placeholder="searchPlaceholder"
              @keyup.enter="doSearch(false)"
            />
            <i class="el-icon-circle-close clear-icon" v-if="keyword" @click="keyword=''"></i>
@@ -170,22 +170,22 @@
                       <span class="sub-text">换个关键词试试吧</span>
                   </div>
                   <div class="shop-box" v-for="shop in shopList" :key="shop.id" @click="toShopDetail(shop)">
-                     <div class="shop-img"><img :src="shop.images || '/imgs/default-shop.jpg'" alt=""></div>
+                     <div class="shop-img">
+                        <img :src="shop.images || '/imgs/default-shop.jpg'" @error="e => e.target.src='/imgs/default-shop.jpg'" alt="">
+                     </div>
                      <div class="shop-info">
                         <div class="shop-title" v-html="shop.name"></div>
                         <div class="shop-rate">
                            <el-rate disabled :model-value="shop.score/10" text-color="#F63" :size="12"></el-rate>
-                           <span class="shop-avg">{{shop.score}}分</span>
-                           <span class="shop-comments">{{shop.comments}}条</span>
+                           <span class="shop-score">{{(shop.score/10).toFixed(1)}}分</span>
+                           <span class="shop-price" v-if="shop.avgPrice">￥{{shop.avgPrice}}/人</span>
                         </div>
                         <div class="shop-area">
-                           <span v-html="shop.area || '未知区域'"></span>
-                           <span v-if="shop.distance">{{formatDistance(shop.distance)}}</span>
+                           <span class="area-text">{{shop.area || '未知区域'}} <span v-if="getShopTypeName(shop.typeId)">| {{getShopTypeName(shop.typeId)}}</span></span>
+                           <span class="distance-text" v-if="shop.distance">{{formatDistance(shop.distance)}}</span>
                         </div>
-                        <div class="shop-avg" v-if="shop.avgPrice">￥{{shop.avgPrice}}/人</div>
-                        <div class="shop-address" v-if="shop.address">
-                           <i class="el-icon-map-location"></i>
-                           <span v-html="shop.address"></span>
+                        <div class="shop-comments" v-if="shop.comments">
+                           <span>{{shop.comments}}条评价</span>
                         </div>
                      </div>
                   </div>
@@ -202,25 +202,49 @@
                    <!-- Seckill Vouchers -->
                    <div v-if="seckillVouchers.length > 0" class="seckill-wrapper">
                        <div class="voucher-category-title seckill">限时秒杀券</div>
-                       <div class="voucher-box" v-for="v in seckillVouchers" :key="v.id" @click="toShopDetail(v)">
-                           <div class="seckill-badge">秒杀</div>
-                           <div class="voucher-left">
-                               <div class="voucher-title" v-html="v.title"></div>
-                               <div class="voucher-shop" v-if="v.shopId">
-                                   适用商铺: <span class="voucher-shop-name">{{v.shopName || '家味道家常菜馆'}}</span>
-                               </div>
-                               <div class="voucher-subtitle" v-html="v.subTitle || '周一至周五均可使用'"></div>
-                               <div class="voucher-price">
-                                 <div class="p-symbol">￥</div><div class="p-val">{{v.payValue}}</div>
-                                 <span class="p-disc">{{(v.payValue/v.actualValue*10).toFixed(1)}}折</span>
-                               </div>
-                           </div>
-                           <div class="voucher-right">
-                               <div class="seckill-layout">
-                                   <button class="voucher-btn seckill-btn" @click.stop="doSeckill(v)" :class="{disabled: isNotBegin(v) || v.stock < 1}" >{{ isNotBegin(v) ? '待开始' : (v.stock < 1 ? '已抢光' : '限时抢购') }}</button>
-                                   <div class="seckill-stock">剩余 {{v.stock}} 张</div>
-                                   <div class="seckill-time" v-if="v.beginTime && v.endTime">{{formatDateHeader(v.beginTime)}}~{{formatDateHeader(v.endTime)}}</div>
-                               </div>
+                       <div class="flash-sale-card" v-for="v in seckillVouchers" :key="v.id" @click="toShopDetail(v)">
+                           <!-- Badge -->
+                           <div class="flash-badge">秒杀</div>
+                           
+                           <!-- Main Content -->
+                           <div class="flash-content">
+                              <!-- Top: Title & Shop -->
+                              <div class="flash-header">
+                                 <div class="flash-title" v-html="v.title"></div>
+                                 <div class="flash-shop" v-if="v.shopId">
+                                    <span class="shop-label">适用商铺:</span>
+                                    <span class="shop-name">{{v.shopName || '家味道家常菜馆'}}</span>
+                                 </div>
+                                 <div class="flash-subtitle" v-html="v.subTitle || '周一至周五均可使用'"></div>
+                              </div>
+                              
+                              <!-- Bottom: Price, Progress, Button -->
+                              <div class="flash-footer">
+                                 <!-- Price Section -->
+                                 <div class="flash-price-section">
+                                    <div class="flash-price">
+                                       <span class="price-symbol">￥</span>
+                                       <span class="price-value">{{v.payValue}}</span>
+                                    </div>
+                                    <div class="price-original">
+                                       <span class="original-value">￥{{v.actualValue}}</span>
+                                       <span class="discount-tag">{{(v.payValue/v.actualValue*10).toFixed(1)}}折</span>
+                                    </div>
+                                 </div>
+                                 
+                                 <!-- Progress & Button -->
+                                 <div class="flash-action">
+                                    <div class="progress-wrapper">
+                                       <div class="progress-bar">
+                                          <div class="progress-fill" :style="{width: getStockPercent(v) + '%'}"></div>
+                                       </div>
+                                       <div class="progress-text">已抢{{100 - getStockPercent(v)}}% | 剩{{v.stock}}张</div>
+                                    </div>
+                                    <button class="flash-btn" @click.stop="doSeckill(v)" :class="{disabled: isNotBegin(v) || v.stock < 1}">
+                                       {{ isNotBegin(v) ? '待开始' : (v.stock < 1 ? '已抢光' : '限时抢购') }}
+                                    </button>
+                                 </div>
+                              </div>
                            </div>
                        </div>
                    </div>
@@ -228,17 +252,25 @@
                    <!-- Normal Vouchers -->
                    <div v-if="normalVouchers.length > 0">
                        <div class="voucher-category-title normal">普通代金券</div>
-                       <div class="voucher-box" v-for="v in normalVouchers" :key="v.id" @click="toShopDetail(v)">
-                           <div class="voucher-left">
-                               <div class="voucher-title" v-html="v.title"></div>
-                               <div class="voucher-subtitle" v-html="v.subTitle"></div>
-                               <div class="voucher-price">
-                                 <div class="p-symbol">￥</div><div class="p-val">{{v.payValue}}</div>
-                                 <span class="p-disc">{{(v.payValue/v.actualValue*10).toFixed(1)}}折</span>
-                               </div>
+                       <div class="normal-voucher-card" v-for="v in normalVouchers" :key="v.id" @click="toShopDetail(v)">
+                           <!-- Left: Price -->
+                           <div class="normal-price-section">
+                              <div class="normal-price">
+                                 <span class="price-symbol">￥</span>
+                                 <span class="price-value">{{v.payValue}}</span>
+                              </div>
+                              <div class="normal-discount">{{(v.payValue/v.actualValue*10).toFixed(1)}}折</div>
                            </div>
-                           <div class="voucher-right">
-                               <button class="voucher-btn" @click.stop="doBuy(v)">抢购</button>
+                           
+                           <!-- Middle: Info -->
+                           <div class="normal-info">
+                              <div class="normal-title" v-html="v.title"></div>
+                              <div class="normal-subtitle" v-html="v.subTitle || '周一至周五均可使用'"></div>
+                           </div>
+                           
+                           <!-- Right: Button -->
+                           <div class="normal-action">
+                              <button class="normal-btn" @click.stop="doBuy(v)">抢购</button>
                            </div>
                        </div>
                    </div>
@@ -251,41 +283,46 @@
                       <p>暂无相关笔记</p>
                       <span class="sub-text">换个关键词试试吧</span>
                    </div>
-                   <div v-else class="blog-list-grid">
-                      <div v-for="b in blogList" :key="b.id" class="blog-card" @click="toBlogDetail(b)">
-                         <div class="blog-card-image">
-                            <!-- Fixed height image container -->
-                            <img :src="b.images || '/imgs/default-blog.png'" alt="" v-if="b.images">
-                            <div v-else class="no-img-placeholder"><i class="el-icon-picture"></i></div>
+                   <div v-else class="waterfall-container">
+                      <div v-for="b in blogList" :key="b.id" class="waterfall-item" @click="toBlogDetail(b)">
+                         <!-- Image handling adaptive height -->
+                         <div class="xhs-card-image">
+                            <img :src="b.images" v-show="!b.imageError" @error="b.imageError=true" v-if="b.images">
+                            <div class="img-placeholder" v-if="!b.images || b.imageError">
+                                图片加载失败
+                            </div>
                          </div>
-                         <div class="blog-card-content">
-                             <div class="blog-card-title" v-html="b.title || '无标题'"></div>
-                             <div class="blog-card-footer">
-                                <div class="blog-card-user" @click.stop="toUser(b)">
-                                    <img :src="b.icon || '/imgs/icons/default-icon.png'">
-                                    <span class="name" v-html="b.nickName || b.name"></span>
-                                </div>
-                                <div class="blog-card-like" @click.stop="addLike(b)">
-                                    <svg t="1646634642977" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2187" width="14" height="14">
-                                      <path d="M160 944c0 8.8-7.2 16-16 16h-32c-26.5 0-48-21.5-48-48V528c0-26.5 21.5-48 48-48h32c8.8 0 16 7.2 16 16v448zM96 416c-53 0-96 43-96 96v416c0 53 43 96 96 96h96c17.7 0 32-14.3 32-32V448c0-17.7-14.3-32-32-32H96zM505.6 64c16.2 0 26.4 8.7 31 13.9 4.6 5.2 12.1 16.3 10.3 32.4l-23.5 203.4c-4.9 42.2 8.6 84.6 36.8 116.4 28.3 31.7 68.9 49.9 111.4 49.9h271.2c6.6 0 10.8 3.3 13.2 6.1s5 7.5 4 14l-48 303.4c-6.9 43.6-29.1 83.4-62.7 112C815.8 944.2 773 960 728.9 960h-317c-33.1 0-59.9-26.8-59.9-59.9v-455c0-6.1 1.7-12 5-17.1 69.5-109 106.4-234.2 107-364h41.6z m0-64h-44.9C427.2 0 400 27.2 400 60.7c0 127.1-39.1 251.2-112 355.3v484.1c0 68.4 55.5 123.9 123.9 123.9h317c122.7 0 227.2-89.3 246.3-210.5l47.9-303.4c7.8-49.4-30.4-94.1-80.4-94.1H671.6c-50.9 0-90.5-44.4-84.6-95l23.5-203.4C617.7 55 568.7 0 505.6 0z" p-id="2188" :fill="b.isLike ? '#ff6633' : '#82848a'"></path>
-                                    </svg>
-                                    {{b.liked || 0}}
-                                </div>
-                             </div>
+                         <!-- Content -->
+                         <div class="xhs-card-content">
+                            <div class="xhs-card-title" v-html="b.title || '无标题'"></div>
+                            <div class="xhs-card-footer">
+                               <div class="xhs-card-author" @click.stop="toUser(b)">
+                                  <img :src="b.icon || '/imgs/icons/default-icon.png'" @error="e => e.target.src='/imgs/icons/default-icon.png'">
+                                  <span v-html="b.nickName || b.name || '用户'"></span>
+                               </div>
+                               <div class="xhs-card-like" @click.stop="addLike(b)">
+                                  <svg viewBox="0 0 24 24" width="14" height="14" style="margin-right: 2px;">
+                                    <path :fill="b.isLike ? '#ff2442' : '#999'" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                                  </svg>
+                                  <span>{{b.liked || 0}}</span>
+                               </div>
+                            </div>
                          </div>
                       </div>
                    </div>
                </div>
 
                <!-- User Results -->
-               <div v-if="activeTab === 'user'">
+               <div v-if="activeTab === 'user'" class="user-list-container">
                     <div v-if="userList.length===0" class="empty-result">
                       <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiByeD0iOCIgZmlsbD0iI0Y4RjlGQSIvPgo8cGF0aCBkPSJNNDAgNDJMMzIgMzRMMzQgMzJMNDAgMzhMNDYgMzJMNDggMzRMNDAgNDJaIiBmaWxsPSIjQzBDNEY0Ii8+CjxwYXRoIGQ9Ik00MCA0MkwzMiAzNEwzNCAzMkw0MCAzOEw0NiAzMkw0OCAzNEw0MCA0MloiIGZpbGw9IiNDMEM0RjQiLz4KPC9zdmc+Cg==">
                       <p>暂无相关用户</p>
                        <span class="sub-text">换个关键词试试吧</span>
                     </div>
-                   <div v-for="u in userList" :key="u.id" class="user-box" @click="toUser(u)">
-                       <div class="user-avatar"><img :src="u.icon || '/imgs/icons/default-icon.png'"></div>
+                   <div v-for="u in userList" :key="u.id" class="user-item" @click="toUser(u)">
+                       <div class="user-avatar">
+                          <img :src="u.icon || '/imgs/icons/default-icon.png'" @error="e => e.target.src='/imgs/icons/default-icon.png'">
+                       </div>
                        <div class="user-info">
                             <div class="user-name" v-html="u.nickName || '未命名'"></div>
                             <div class="user-desc">{{u.introduce || '这个人很懒，什么都没写'}}</div>
@@ -413,7 +450,16 @@ export default {
         return this.voucherList.filter(v => v.type == 1);
     },
     normalVouchers() {
-        return this.voucherList.filter(v => v.type != 1); // Show all non-seckill as normal
+        return this.voucherList.filter(v => v.type != 1);
+    },
+    searchPlaceholder() {
+        const placeholders = {
+          shop: '搜索商铺名称...',
+          voucher: '搜索代金券...',
+          blog: '搜索笔记...',
+          user: '搜索用户...'
+        };
+        return placeholders[this.activeTab] || '输入商户名、地点或菜品';
     },
   },
   created() {
@@ -943,6 +989,15 @@ export default {
         this.$message.success(newStatus ? '关注成功' : '已取消关注');
       });
     },
+    isNotBegin(v) {
+      if (!v.beginTime) return false;
+      return new Date() < new Date(v.beginTime);
+    },
+    getStockPercent(v) {
+      if (!v.stock || !v.totalStock) return 20;
+      const percent = Math.round((v.stock / (v.totalStock || 100)) * 100);
+      return Math.max(5, Math.min(95, percent));
+    },
   },
 };
 </script>
@@ -1178,13 +1233,13 @@ export default {
   transform: scale(0.98);
 }
 .shop-img {
-  width: 88px;
-  height: 88px;
+  width: 90px;
+  height: 90px;
   border-radius: 8px;
   overflow: hidden;
   margin-right: 12px;
   flex-shrink: 0;
-  border: 1px solid #f2f2f2;
+  background: #f5f5f5;
 }
 .shop-img img {
   width: 100%;
@@ -1195,51 +1250,57 @@ export default {
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  padding: 2px 0;
+  justify-content: center;
+  min-width: 0;
 }
 .shop-title {
-  font-weight: 700;
-  font-size: 16px;
+  font-weight: 600;
+  font-size: 15px;
   color: #333;
-  line-height: 1.3;
+  line-height: 1.4;
+  margin-bottom: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .shop-rate {
   display: flex;
   align-items: center;
-  font-size: 11px;
+  font-size: 12px;
   color: #666;
-  margin: 6px 0;
+  margin-bottom: 6px;
+  gap: 6px;
 }
-.shop-avg {
-  margin-left: 6px;
-  color: #f63;
+.shop-score {
+  color: #ff6633;
   font-weight: 600;
 }
-.shop-comments {
-  margin-left: auto; /* Push to right */
-  color: #999;
+.shop-price {
+  color: #333;
+  font-weight: 500;
+  margin-left: auto;
 }
 .shop-area {
   font-size: 12px;
   color: #999;
   display: flex;
-  justify-content: space-between; /* Area left, Distance right */
-}
-.shop-avg-price {
-  font-size: 12px;
-  color: #666;
-  margin-top: 2px;
-}
-.shop-address {
-  font-size: 12px;
-  color: #909399;
-  display: flex;
+  justify-content: space-between;
   align-items: center;
-  margin-top: 4px;
+  margin-bottom: 4px;
 }
-.shop-address i {
-  margin-right: 4px;
+.area-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 70%;
+}
+.distance-text {
+  color: #999;
+  flex-shrink: 0;
+}
+.shop-comments {
+  font-size: 11px;
+  color: #bbb;
 }
 
 /* Voucher Box */
@@ -1416,6 +1477,399 @@ export default {
     padding: 6px 20px;
 }
 
+/* Flash Sale Card (Seckill) */
+.flash-sale-card {
+  background: white;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  padding: 15px;
+  position: relative;
+  box-shadow: 0 4px 16px rgba(245, 108, 108, 0.15);
+  border: 1px solid rgba(245, 108, 108, 0.1);
+}
+.flash-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: linear-gradient(135deg, #f56c6c 0%, #e25555 100%);
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 0 12px 0 12px;
+}
+.flash-content {
+  display: flex;
+  flex-direction: column;
+}
+.flash-header {
+  margin-bottom: 12px;
+}
+.flash-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 6px;
+  padding-right: 50px;
+}
+.flash-shop {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  color: #999;
+  margin-bottom: 4px;
+}
+.flash-shop .shop-label {
+  color: #999;
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+.flash-shop .shop-name {
+  color: #409EFF;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 180px;
+}
+.flash-subtitle {
+  font-size: 12px;
+  color: #999;
+}
+.flash-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1px dashed #f0f0f0;
+}
+.flash-price-section {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.flash-price {
+  display: flex;
+  align-items: baseline;
+}
+.flash-price .price-symbol {
+  font-size: 16px;
+  font-weight: 600;
+  color: #f56c6c;
+}
+.flash-price .price-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: #f56c6c;
+  line-height: 1;
+}
+.price-original {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.price-original .original-value {
+  font-size: 12px;
+  color: #bbb;
+  text-decoration: line-through;
+}
+.price-original .discount-tag {
+  font-size: 10px;
+  color: #f56c6c;
+  background: rgba(245, 108, 108, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.flash-action {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+.progress-wrapper {
+  text-align: right;
+}
+.progress-bar {
+  width: 80px;
+  height: 6px;
+  background: #f5f5f5;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #f56c6c, #e25555);
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+.progress-text {
+  font-size: 10px;
+  color: #f56c6c;
+  margin-top: 2px;
+}
+.flash-btn {
+  padding: 8px 20px;
+  background: linear-gradient(135deg, #f56c6c 0%, #e25555 100%);
+  color: white;
+  border: none;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(245, 108, 108, 0.4);
+}
+.flash-btn:active {
+  transform: scale(0.98);
+}
+.flash-btn.disabled {
+  background: #ccc;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* Normal Voucher Card - Clean White Style */
+.normal-voucher-card {
+  display: flex;
+  align-items: center;
+  background: white;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  padding: 15px;
+  border: 1px solid #f0f0f0;
+}
+.normal-price-section {
+  flex-shrink: 0;
+  text-align: center;
+  padding-right: 15px;
+  border-right: 1px dashed #eee;
+}
+.normal-price {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+}
+.normal-price .price-symbol {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ff9500;
+}
+.normal-price .price-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #ff9500;
+  line-height: 1;
+}
+.normal-discount {
+  font-size: 11px;
+  color: #ff9500;
+  background: rgba(255, 149, 0, 0.1);
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-top: 4px;
+  display: inline-block;
+}
+.normal-info {
+  flex: 1;
+  padding: 0 15px;
+  min-width: 0;
+}
+.normal-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.normal-subtitle {
+  font-size: 12px;
+  color: #999;
+}
+.normal-action {
+  flex-shrink: 0;
+}
+.normal-btn {
+  padding: 8px 20px;
+  background: white;
+  color: #ff9500;
+  border: 1px solid #ff9500;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.normal-btn:active {
+  background: #ff9500;
+  color: white;
+}
+
+/* Ticket Style Voucher Cards */
+.voucher-ticket {
+  display: flex;
+  align-items: stretch;
+  background: white;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  position: relative;
+  overflow: visible;
+  border: 1px solid #f0f0f0;
+}
+.voucher-ticket.normal .ticket-left {
+  background: linear-gradient(135deg, #ff9500 0%, #f63 100%);
+}
+.seckill-wrapper .voucher-ticket .ticket-left {
+  background: linear-gradient(135deg, #e6a23c 0%, #f56c6c 100%);
+}
+
+/* Left Value Section */
+.ticket-left {
+  width: 90px;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #ff9500 0%, #f63 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 15px 10px;
+  border-radius: 10px 0 0 10px;
+  position: relative;
+}
+.ticket-price {
+  display: flex;
+  align-items: baseline;
+  color: white;
+}
+.price-symbol {
+  font-size: 14px;
+  font-weight: 500;
+}
+.price-value {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1;
+}
+.ticket-discount {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+/* Punch Hole Divider */
+.ticket-divider {
+  width: 16px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  background: white;
+  margin-left: -8px;
+  margin-right: -8px;
+  z-index: 1;
+}
+.punch-hole {
+  width: 16px;
+  height: 16px;
+  background: #f5f5f5;
+  border-radius: 50%;
+}
+.punch-hole.top { margin-top: -8px; }
+.punch-hole.bottom { margin-bottom: -8px; }
+.dashed-line {
+  flex: 1;
+  width: 1px;
+  background: repeating-linear-gradient(
+    to bottom,
+    #ddd 0,
+    #ddd 4px,
+    transparent 4px,
+    transparent 8px
+  );
+}
+
+/* Right Info Section */
+.ticket-right {
+  flex: 1;
+  padding: 12px 15px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+.ticket-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ticket-shop {
+  font-size: 12px;
+  color: #999;
+  display: flex;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.ticket-shop i {
+  font-size: 12px;
+  margin-right: 4px;
+  color: #bbb;
+}
+.ticket-shop .shop-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 150px;
+}
+.ticket-subtitle {
+  font-size: 12px;
+  color: #999;
+  margin-bottom: 8px;
+}
+.ticket-action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ticket-btn {
+  padding: 6px 18px;
+  background: linear-gradient(135deg, #ff9500 0%, #f63 100%);
+  color: white;
+  border: none;
+  border-radius: 18px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.ticket-btn.seckill {
+  background: linear-gradient(135deg, #e6a23c 0%, #f56c6c 100%);
+}
+.ticket-btn.disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+.ticket-stock {
+  font-size: 11px;
+  color: #F56C6C;
+}
+
+/* Ticket Badge */
+.ticket-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: #F56C6C;
+  color: white;
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 0 10px 0 8px;
+  font-weight: 500;
+}
+
 /* History */
 .initial-area {
   background: white;
@@ -1563,12 +2017,101 @@ export default {
     gap: 4px;
 }
 
-/* Blog Grid Layout - Optimized Spacing */
+/* Xiaohongshu Style Waterfall */
+.waterfall-container {
+  column-count: 2;
+  column-gap: 10px;
+  padding: 10px 12px;
+}
+.waterfall-item {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  break-inside: avoid;
+  margin-bottom: 10px;
+}
+.waterfall-item:active {
+  transform: scale(0.98);
+}
+.xhs-card-image {
+  width: 100%;
+  position: relative;
+  /* Removed fixed aspect ratio for adaptive height */
+}
+.xhs-card-image img {
+  width: 100%;
+  height: auto; /* Allow auto height */
+  display: block;
+}
+.xhs-card-image .img-placeholder {
+  width: 100%;
+  height: 150px; /* Fixed height for error placeholder */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+  color: #c0c4cc;
+  font-size: 14px;
+}
+.xhs-card-content {
+  padding: 10px;
+}
+.xhs-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.xhs-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.xhs-card-author {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+.xhs-card-author img {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.xhs-card-author span {
+  font-size: 12px;
+  color: #999;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.xhs-card-like {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.xhs-card-like span {
+  font-size: 12px;
+  color: #999;
+}
+
+/* Old Blog Grid (kept for compatibility) */
 .blog-list-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 6px;
-  padding: 0; /* Remove padding here, rely on parent search-results padding (8px) or set small */
+  padding: 0;
 }
 .blog-card {
   background: white;
@@ -1672,5 +2215,72 @@ export default {
 .empty-result .sub-text {
   font-size: 12px;
   color: #ccc;
+}
+
+/* User List - Social App Style */
+.user-list-container {
+  background: white;
+}
+.user-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 15px;
+  background: white;
+  border-bottom: 1px solid #f5f5f5;
+}
+.user-item:active {
+  background: #fafafa;
+}
+.user-item .user-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  margin-right: 12px;
+  background: #f5f5f5;
+}
+.user-item .user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.user-item .user-info {
+  flex: 1;
+  min-width: 0;
+}
+.user-item .user-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.user-item .user-desc {
+  font-size: 13px;
+  color: #999;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.follow-btn {
+  padding: 6px 16px;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  flex-shrink: 0;
+  border: none;
+  background: linear-gradient(135deg, #ff9500 0%, #f63 100%);
+  color: white;
+}
+.follow-btn:active {
+  transform: scale(0.98);
+}
+.follow-btn.following {
+  background: #f5f5f5;
+  color: #999;
 }
 </style>

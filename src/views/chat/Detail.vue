@@ -37,12 +37,13 @@
              <div class="message-content">
                 <div v-if="!msg.isSystem" class="message" :class="{'message-left': !msg.isSelf, 'message-right': msg.isSelf}">
                    {{msg.content}}
-                   <!-- Status -->
-                   <div v-if="msg.isSelf" class="message-status-container">
-                      <div class="message-status" :class="msg.status" v-if="msg.status==='sending' || msg.status==='failed'">{{getStatusText(msg.status)}}</div>
-                      <div v-else-if="msg.dbStatus===1" class="message-read-status">已读</div>
-                      <div v-else-if="msg.dbStatus===2" class="message-delivered-status">已送达</div>
-                   </div>
+                </div>
+                <!-- Status outside bubble -->
+                <div v-if="msg.isSelf && !msg.isSystem" class="message-status-outer">
+                   <span v-if="msg.status==='sending'" class="status-sending">发送中</span>
+                   <span v-else-if="msg.status==='failed'" class="status-failed">失败</span>
+                   <span v-else-if="msg.dbStatus===1" class="status-read">已读</span>
+                   <span v-else-if="msg.dbStatus===2" class="status-delivered">已送达</span>
                 </div>
                 <div v-if="msg.isSystem" class="system-message">{{msg.content}}</div>
              </div>
@@ -51,20 +52,42 @@
     </div>
 
     <!-- Input Area -->
-    <div class="chat-input" :class="{ 'show-panel': showMorePanel }">
+    <div class="chat-input" :class="{ 'show-panel': showMorePanel || showEmojiPanel }">
        <div class="input-container">
-          <!-- Voice Icon (Optional) -->
-          <!-- <i class="el-icon-microphone input-icon"></i> -->
+          <!-- Voice Icon -->
+          <div class="input-icon" @click="toggleVoice">
+             <i class="el-icon-microphone"></i>
+          </div>
           
-          <input type="text" v-model="messageInput" @keyup.enter="sendMessage" placeholder="输入消息..." @focus="showMorePanel = false">
+          <!-- Text Input -->
+          <input type="text" v-model="messageInput" @keyup.enter="sendMessage" placeholder="输入消息..." @focus="hideAllPanels">
           
-          <button v-if="messageInput.trim()" @click="sendMessage" class="send-btn">发送</button>
-          <i v-else class="el-icon-circle-plus-outline input-icon-btn" @click="toggleMorePanel"></i>
+          <!-- Emoji Icon -->
+          <div class="input-icon emoji-icon" @click="toggleEmojiPanel">
+             <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-3.5-9c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm7 0c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/>
+             </svg>
+          </div>
+          
+          <!-- Plus/Send Icon -->
+          <div v-if="messageInput.trim()" class="send-btn" @click="sendMessage">发送</div>
+          <div v-else class="input-icon" @click="toggleMorePanel">
+             <i class="el-icon-circle-plus-outline" :class="{ 'active': showMorePanel }"></i>
+          </div>
        </div>
        
-       <!-- More Panel -->
+       <!-- Emoji Panel -->
+       <div class="emoji-panel" v-if="showEmojiPanel">
+          <div class="emoji-grid">
+             <div class="emoji-item" v-for="(emoji, idx) in emojiList" :key="idx" @click="insertEmoji(emoji)">
+                {{emoji}}
+             </div>
+          </div>
+       </div>
+       
+       <!-- More Panel (Image Upload) -->
        <div class="more-panel" v-if="showMorePanel">
-          <div class="panel-item">
+          <div class="panel-item" @click="selectImage">
              <div class="panel-icon"><i class="el-icon-picture-outline"></i></div>
              <div class="panel-text">相册</div>
           </div>
@@ -76,12 +99,17 @@
              <div class="panel-icon"><i class="el-icon-location-outline"></i></div>
              <div class="panel-text">位置</div>
           </div>
+          <div class="panel-item">
+             <div class="panel-icon"><i class="el-icon-folder-opened"></i></div>
+             <div class="panel-text">文件</div>
+          </div>
        </div>
     </div>
     
-    <div class="footer-container">
-       <foot-bar :active-btn="3"></foot-bar>
-    </div>
+    <!-- Hidden file input for image upload -->
+    <input type="file" ref="imageInput" accept="image/*" @change="onImageSelected" style="display:none">
+    
+
   </div>
 </template>
 
@@ -110,7 +138,19 @@ export default {
        isSending: false,
        current: 1,
        noMore: false,
-       showMorePanel: false
+       showMorePanel: false,
+       showEmojiPanel: false,
+       emojiList: [
+          '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣',
+          '☺️', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗',
+          '😙', '😚', '😋', '😛', '😜', '🤪', '😝', '🤑',
+          '🤗', '🤭', '🫢', '🫣', '🤫', '🤔', '🫡', '🤐',
+          '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '😮',
+          '😯', '😲', '😳', '🥺', '☹️', '🙁', '😦', '😧',
+          '😨', '😰', '😥', '😢', '😭', '😱', '😖', '😣',
+          '👍', '👎', '👊', '✌️', '🙏', '👋', '❤️', '💔',
+          '🔥', '✨', '🎉', '🎁', '💯', '👀', '🚀', '🌟'
+       ]
     }
   },
   computed: {
@@ -240,12 +280,41 @@ export default {
            })
            .finally(() => this.loading = false);
      },
-     toggleMorePanel() {
-        this.showMorePanel = !this.showMorePanel;
-        if(this.showMorePanel) {
-           this.$nextTick(() => this.scrollToBottom());
-        }
-     },
+      toggleMorePanel() {
+         this.showEmojiPanel = false;
+         this.showMorePanel = !this.showMorePanel;
+         if(this.showMorePanel) {
+            this.$nextTick(() => this.scrollToBottom());
+         }
+      },
+      toggleEmojiPanel() {
+         this.showMorePanel = false;
+         this.showEmojiPanel = !this.showEmojiPanel;
+         if(this.showEmojiPanel) {
+            this.$nextTick(() => this.scrollToBottom());
+         }
+      },
+      toggleVoice() {
+         this.$message.info('语音功能开发中');
+      },
+      hideAllPanels() {
+         this.showMorePanel = false;
+         this.showEmojiPanel = false;
+      },
+      selectImage() {
+         this.$refs.imageInput.click();
+      },
+      onImageSelected(e) {
+         const file = e.target.files[0];
+         if (file) {
+            this.$message.info('图片上传功能开发中: ' + file.name);
+            // TODO: Upload image and send as message
+         }
+         e.target.value = '';
+      },
+      insertEmoji(emoji) {
+         this.messageInput += emoji;
+      },
      getChatSession() {
         getChatSession({ sessionId: this.sessionId }).then(res => {
            const session = res.data || res;
@@ -358,48 +427,58 @@ export default {
 </script>
 
 <style scoped>
-.chat-detail-page { height: 100vh; display: flex; flex-direction: column; background: #f5f5f5; overflow-x: hidden; }
-.header { height: 50px; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; border-bottom: 1px solid #e1e1e1; background: #f7f7f7; }
-.header-title { font-weight: bold; }
+.chat-detail-page { height: 100vh; display: flex; flex-direction: column; background: #ededed; overflow-x: hidden; }
+.header { height: 50px; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; border-bottom: 1px solid #d9d9d9; background: #ededed; }
+.header-title { font-weight: bold; font-size: 17px; }
+.header-back-btn { font-size: 20px; cursor: pointer; }
 .connection-status { text-align: center; color: white; padding: 5px; font-size: 12px; }
 .connection-status.connected { background: #67C23A; }
 .connection-status.disconnected { background: #E6A23C; }
 
 .chat-messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; }
 .time-separator { text-align: center; margin: 15px 0; position: relative; }
-.time-label { background: #d8d8d8; padding: 3px 10px; border-radius: 10px; font-size: 12px; color: #666; }
+.time-label { background: #c9c9c9; padding: 3px 10px; border-radius: 4px; font-size: 12px; color: #fff; }
 
-.message-container { display: flex; margin-bottom: 15px; width: 100%; }
+.message-container { display: flex; margin-bottom: 15px; width: 100%; align-items: flex-start; }
 .message-container-left { flex-direction: row; }
 .message-container-right { flex-direction: row-reverse; }
 
-.avatar { width: 40px; height: 40px; border-radius: 50%; margin: 0 10px; flex-shrink: 0; overflow: hidden; }
+.avatar { width: 40px; height: 40px; border-radius: 6px; margin: 0 10px; flex-shrink: 0; overflow: hidden; }
 .avatar-image { width: 100%; height: 100%; object-fit: cover; }
-.avatar-fallback { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
+.avatar-fallback { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; border-radius: 6px; }
 .avatar-left .avatar-fallback { background: #07c160; }
 .avatar-right .avatar-fallback { background: #ff6633; }
 
 .message-content { max-width: 70%; display: flex; flex-direction: column; }
-.message { padding: 10px 15px; border-radius: 5px; font-size: 16px; word-wrap: break-word; position: relative; }
-.message-left { background: white; border-top-left-radius: 0; }
-.message-right { background: #95ec69; border-top-right-radius: 0; }
+.message { padding: 10px 14px; border-radius: 12px; font-size: 16px; word-wrap: break-word; position: relative; color: #000; line-height: 1.5; }
+.message-left { background: white; border-top-left-radius: 4px; }
+.message-right { background: #95EC69; border-top-right-radius: 4px; }
 
-.message-status-container { font-size: 10px; text-align: right; margin-top: 2px; }
-.message-read-status { color: #07c160; }
-.message-delivered-status { color: #999; }
+/* Status outside bubble */
+.message-status-outer { font-size: 11px; color: #999; margin-top: 4px; text-align: right; }
+.message-status-outer .status-sending { color: #999; }
+.message-status-outer .status-failed { color: #F56C6C; }
+.message-status-outer .status-read { color: #07c160; }
+.message-status-outer .status-delivered { color: #999; }
 
-.chat-input { background: #f7f7f7; border-top: 1px solid #e1e1e1; display: flex; flex-direction: column; padding-bottom: 25px; }
-.input-container { padding: 10px; display: flex; align-items: center; }
-.chat-input input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 4px; outline: none; margin-right: 10px; height: 36px; box-sizing: border-box; }
-.send-btn { padding: 0 15px; height: 36px; background: #07c160; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; white-space: nowrap; }
-.input-icon-btn { font-size: 28px; color: #7f7f7f; cursor: pointer; margin-left: 5px; }
+.chat-input { background: #f7f7f7; border-top: 1px solid #d9d9d9; display: flex; flex-direction: column; padding-bottom: env(safe-area-inset-bottom, 10px); }
+.input-container { padding: 8px 12px; display: flex; align-items: center; gap: 8px; }
+.input-icon { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #333; cursor: pointer; flex-shrink: 0; }
+.input-icon i.active { color: #07c160; }
+.chat-input input { flex: 1; padding: 8px 15px; border: none; border-radius: 20px; outline: none; height: 38px; box-sizing: border-box; background: #f0f0f0; font-size: 16px; min-width: 0; }
+.send-btn { padding: 0 16px; height: 36px; background: #07c160; color: white; border: none; border-radius: 6px; font-weight: 500; cursor: pointer; white-space: nowrap; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+/* Emoji Panel */
+.emoji-panel { background: #f7f7f7; border-top: 1px solid #e1e1e1; padding: 10px; height: 220px; overflow-y: auto; }
+.emoji-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; }
+.emoji-item { font-size: 28px; text-align: center; padding: 8px 0; cursor: pointer; border-radius: 8px; transition: background 0.15s; }
+.emoji-item:active { background: rgba(0, 0, 0, 0.1); }
 
 .more-panel { height: 200px; background: #f7f7f7; border-top: 1px solid #e1e1e1; display: flex; padding: 20px; box-sizing: border-box; flex-wrap: wrap; }
-.panel-item { width: 25%; display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; }
-.panel-icon { width: 50px; height: 50px; background: white; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #666; margin-bottom: 5px; border: 1px solid #ddd; }
-.panel-text { font-size: 12px; color: #888; }
-
-.footer-container { height: 60px; flex-shrink: 0; }
+.panel-item { width: 25%; display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; cursor: pointer; }
+.panel-icon { width: 56px; height: 56px; background: white; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 26px; color: #333; margin-bottom: 8px; }
+.panel-text { font-size: 12px; color: #666; }
 
 .empty-messages { text-align: center; padding: 50px; color: #999; }
+.system-message { text-align: center; font-size: 12px; color: #999; padding: 5px 10px; background: rgba(0,0,0,0.05); border-radius: 4px; margin: 5px auto; }
 </style>

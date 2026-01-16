@@ -11,7 +11,7 @@
         <el-tabs v-model="activeTab" @tab-click="handleTabClick" stretch>
             <el-tab-pane :label="'关注 ' + (stats.followCount || 0)" name="follow"></el-tab-pane>
             <el-tab-pane :label="'粉丝 ' + (stats.fansCount || 0)" name="fans"></el-tab-pane>
-            <el-tab-pane v-if="!isMe" label="共同关注" name="common"></el-tab-pane>
+            <el-tab-pane v-if="!isMe" :label="'共同关注 ' + (stats.commonFollowCount || 0)" name="common"></el-tab-pane>
         </el-tabs>
     </div>
 

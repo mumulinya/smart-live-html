@@ -92,32 +92,35 @@
         <p style="font-size: 12px; color: #c0c4cc;">快去发布第一篇博客吧</p>
       </div>
 
-      <div class="blog-box" v-for="b in blogs" :key="b.id">
-        <div class="blog-img" @click="toBlogDetail(b)">
-          <img
-                  :src="b.img"
-                  :alt="b.title"
-                  @error="handleImageError($event, b)"
-                  @load="handleImageLoad($event, b)"
-          >
-          <div class="img-placeholder" v-if="b.imgError">图片加载失败</div>
-        </div>
-        <div class="blog-content">
-          <div class="blog-title">{{b.title || '无标题'}}</div>
-          <div class="blog-foot">
-            <div class="blog-user-icon">
-              <img
-                      :src="b.icon || '/imgs/icons/default-icon.png'"
-                      alt="用户头像"
-                      @error="handleAvatarError($event)"
-              >
-            </div>
-            <div class="blog-user-name">{{b.name || '匿名用户'}}</div>
-            <div class="blog-liked" @click.stop="addLike(b)">
-              <svg t="1646634642977" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2187" width="14" height="14">
-                <path d="M160 944c0 8.8-7.2 16-16 16h-32c-26.5 0-48-21.5-48-48V528c0-26.5 21.5-48 48-48h32c8.8 0 16 7.2 16 16v448zM96 416c-53 0-96 43-96 96v416c0 53 43 96 96 96h96c17.7 0 32-14.3 32-32V448c0-17.7-14.3-32-32-32H96zM505.6 64c16.2 0 26.4 8.7 31 13.9 4.6 5.2 12.1 16.3 10.3 32.4l-23.5 203.4c-4.9 42.2 8.6 84.6 36.8 116.4 28.3 31.7 68.9 49.9 111.4 49.9h271.2c6.6 0 10.8 3.3 13.2 6.1s5 7.5 4 14l-48 303.4c-6.9 43.6-29.1 83.4-62.7 112C815.8 944.2 773 960 728.9 960h-317c-33.1 0-59.9-26.8-59.9-59.9v-455c0-6.1 1.7-12 5-17.1 69.5-109 106.4-234.2 107-364h41.6z m0-64h-44.9C427.2 0 400 27.2 400 60.7c0 127.1-39.1 251.2-112 355.3v484.1c0 68.4 55.5 123.9 123.9 123.9h317c122.7 0 227.2-89.3 246.3-210.5l47.9-303.4c7.8-49.4-30.4-94.1-80.4-94.1H671.6c-50.9 0-90.5-44.4-84.6-95l23.5-203.4C617.7 55 568.7 0 505.6 0z" p-id="2188" :fill="b.isLike ? '#ff6633' : '#82848a'"></path>
-              </svg>
-              {{b.liked || 0}}
+      <div class="waterfall-container">
+        <div class="blog-box" v-for="(b, index) in blogs" :key="index">
+          <div class="blog-img" @click="toBlogDetail(b)">
+            <img
+                    v-show="!b.imgError"
+                    :src="b.img"
+                    :alt="b.title"
+                    @error="handleImageError($event, b)"
+                    @load="handleImageLoad($event, b)"
+            >
+            <div class="img-placeholder" v-if="b.imgError">图片加载失败</div>
+          </div>
+          <div class="blog-content">
+            <div class="blog-title">{{b.title || '无标题'}}</div>
+            <div class="blog-foot">
+              <div class="blog-user-icon">
+                <img
+                        :src="b.icon || '/imgs/icons/default-icon.png'"
+                        alt="用户头像"
+                        @error="handleAvatarError($event)"
+                >
+              </div>
+              <div class="blog-user-name">{{b.name || '匿名用户'}}</div>
+              <div class="blog-liked" @click.stop="addLike(b)">
+                <svg viewBox="0 0 24 24" width="14" height="14">
+                  <path :fill="b.isLike ? '#ff2442' : '#999'" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
+                {{b.liked || 0}}
+              </div>
             </div>
           </div>
         </div>
@@ -322,7 +325,9 @@ export default {
                list.forEach(b => {
                 b.img = b.images ? (this.$fileURL + b.images.split(",")[0]) : '';
                 b.icon = b.icon ? (this.$fileURL + b.icon) : '';
-                b.imgError = false;
+                // If no image URL, set error true immediately so placeholder shows
+                b.imgError = !b.img;
+                
                if (!b.liked) b.liked = 0; // Ensure liked count exists
               });
               this.blogs = this.blogs.concat(list);
@@ -687,24 +692,28 @@ export default {
   overflow-x: hidden;
   padding: 8px 10px 70px;
   margin-bottom: 0;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
+}
+
+.waterfall-container {
+  column-count: 2;
+  column-gap: 10px;
 }
 
 .blog-box {
   background: white;
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); /* Revert to user preferred shadow or keep consistent */
   display: flex;
   flex-direction: column;
-  min-height: 200px;
+  height: auto;
+  break-inside: avoid; /* Prevent column break */
+  margin-bottom: 10px; /* Space between items in column */
 }
 
 .blog-img {
   width: 100%;
-  height: 140px;
+  height: auto; /* Variable height */
   overflow: hidden;
   background: #f8f9fa;
   display: flex;
@@ -716,6 +725,17 @@ export default {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.img-placeholder {
+  width: 100%;
+  height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #c0c4cc;
+  font-size: 14px;
+  background: #f5f5f5;
 }
 
 .blog-content {

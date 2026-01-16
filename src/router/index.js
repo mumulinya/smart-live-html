@@ -98,6 +98,11 @@ const routes = [
         path: '/ai',
         name: 'AI',
         component: () => import('@/views/ai/index.vue')
+    },
+    {
+        path: '/user/add-friend',
+        name: 'AddFriend',
+        component: () => import('@/views/user/AddFriend.vue')
     }
 ]
 

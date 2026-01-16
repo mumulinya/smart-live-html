@@ -335,21 +335,22 @@ export default {
 </script>
 
 <style scoped>
-.chat-list-page { height: 100vh; display: flex; flex-direction: column; background: white; overflow-x: hidden; }
-.header { height: 50px; border-bottom: 1px solid #eee; display: flex; align-items: center; justify-content: center; position: relative; }
-.header-title { font-weight: bold; font-size: 16px; }
-.header-search { position: absolute; right: 15px; font-size: 20px; cursor: pointer; }
+.chat-list-page { height: 100vh; display: flex; flex-direction: column; background: #fff; overflow-x: hidden; }
+.header { height: 50px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; justify-content: center; position: relative; background: #fff; }
+.header-title { font-weight: 600; font-size: 17px; color: #000; }
+.header-search { position: absolute; right: 15px; font-size: 20px; cursor: pointer; color: #333; }
 .connection-status { padding: 5px; text-align: center; color: white; font-size: 12px; }
 .connection-status.connected { background: #67C23A; }
 .connection-status.error { background: #F56C6C; }
 .connection-status.disconnected { background: #E6A23C; }
 
-.chat-list { flex: 1; overflow-y: auto; }
+.chat-list { flex: 1; overflow-y: auto; background: #fff; }
 .chat-item-wrapper { position: relative; overflow: hidden; user-select: none; }
 .chat-item { 
    display: flex; 
    padding: 12px 15px; 
-   border-bottom: 1px solid #f5f5f5; 
+   min-height: 72px;
+   box-sizing: border-box;
    align-items: center; 
    cursor: pointer;
    background: white;
@@ -357,22 +358,71 @@ export default {
    position: relative;
    z-index: 1;
 }
-.chat-item.pinned {
-   background: #f8f8f8;
-   border-left: 3px solid #409EFF;
+/* Indented divider using pseudo-element */
+.chat-item::after {
+   content: '';
+   position: absolute;
+   bottom: 0;
+   left: 75px; /* Start after avatar */
+   right: 0;
+   height: 1px;
+   background: #f0f0f0;
 }
-.chat-item:hover { background: #fafafa; }
-.chat-item.pinned:hover { background: #f0f0f0; }
+.chat-item.pinned {
+   background: #f7f7f7;
+}
+.chat-item:active { background: #f5f5f5; }
+.chat-item.pinned:active { background: #efefef; }
+
 .avatar-container { position: relative; margin-right: 12px; flex-shrink: 0; }
-.chat-avatar { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; }
-.unread-badge { position: absolute; top: -2px; right: -2px; background: #F56C6C; color: white; font-size: 10px; padding: 1px 5px; border-radius: 10px; min-width: 16px; text-align: center; }
-.chat-info { flex: 1; min-width: 0; }
-.chat-name { font-weight: bold; margin-bottom: 4px; display: flex; align-items: center; }
-.chat-msg { color: #999; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.chat-time { font-size: 12px; color: #ccc; margin-left: 10px; flex-shrink: 0; }
+.chat-avatar { width: 48px; height: 48px; border-radius: 8px; object-fit: cover; }
+.unread-badge { 
+   position: absolute; 
+   top: -4px; 
+   right: -4px; 
+   background: #F56C6C; 
+   color: white; 
+   font-size: 11px; 
+   padding: 0 5px; 
+   border-radius: 10px; 
+   min-width: 18px; 
+   height: 18px;
+   line-height: 18px;
+   text-align: center; 
+   font-weight: 500;
+}
+
+.chat-info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+.chat-name { 
+   font-size: 16px;
+   font-weight: 500; 
+   color: #333;
+   margin-bottom: 4px; 
+   overflow: hidden;
+   text-overflow: ellipsis;
+   white-space: nowrap;
+}
+.chat-msg { 
+   color: #999; 
+   font-size: 13px; 
+   overflow: hidden; 
+   text-overflow: ellipsis; 
+   white-space: nowrap; 
+   line-height: 1.4;
+}
+
+.chat-time { 
+   font-size: 12px; 
+   color: #bbb; 
+   margin-left: 10px; 
+   flex-shrink: 0; 
+   align-self: flex-start;
+   margin-top: 2px;
+}
+
 .footer-container { height: 60px; }
-.empty-state { text-align: center; padding: 50px; color: #999; }
-.empty-state i { font-size: 40px; margin-bottom: 10px; display: block; }
+.empty-state { text-align: center; padding: 80px 20px; color: #999; }
+.empty-state i { font-size: 48px; margin-bottom: 15px; display: block; color: #ccc; }
 
 .action-buttons {
    position: absolute;

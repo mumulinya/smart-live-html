@@ -2,30 +2,65 @@
   <div class="other-info-page" v-loading="isLoading">
     <div class="page-header">
       <div class="header-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
-      <div class="header-title">用户详情</div>
+      <div class="header-title"></div>
     </div>
 
-    <!-- Basic Info -->
-    <div class="user-basic">
-      <div class="user-avatar-box">
-        <img :src="user.icon || '/imgs/icons/default-icon.png'" @error="handleImgError" alt="用户头像">
-      </div>
-      <div class="user-info-box">
-        <div class="name">{{ user.nickName || '未知用户' }}</div>
-        <span>{{info.city||'未知城市'}}</span>
-      </div>
-      <div class="action-buttons" v-if="user.id && String(user.id) !== String(loginUser.id)">
-         <button class="action-btn logout-btn" @click="handleFollow">
-           {{ user.isFollow ? '取消关注' : '关注' }}
-         </button>
-         <button class="action-btn message-btn" @click="handleMessage">
-           私信
-         </button>
-      </div>
+    <!-- Profile Cover -->
+    <div class="profile-cover" :style="user.cover ? { backgroundImage: 'url(' + user.cover + ')' } : {}"></div>
+
+    <!-- User Header Layout -->
+    <div class="user-header-content">
+       <div class="user-avatar-wrapper" @click.stop="showAvatarDialog = true">
+         <img :src="user.icon || '/imgs/icons/default-icon.png'" @error="handleImgError">
+       </div>
+       <div class="user-details-right">
+          <div class="name-line">
+             <div class="name">{{ user.nickName || '未知用户' }}</div>
+          </div>
+          <div class="id-line">
+             ID: {{ user.id || '8832' }} <i class="el-icon-document-copy" style="margin-left: 4px;"></i>
+          </div>
+          <div class="user-tags-row">
+             <!-- Gender & Age -->
+             <div class="tag gender-tag" 
+                  :style="{background: info.gender === 0 ? '#54b4ef' : '#ff88a7'}"
+                  v-if="info.gender !== undefined && info.gender !== null">
+                 <i :class="info.gender === 0 ? 'el-icon-male' : 'el-icon-female'"></i>
+                 <span v-if="info.birthday" style="margin-left: 2px; font-size: 10px;">{{getAge(info.birthday)}}岁</span>
+             </div>
+             
+             <!-- Level -->
+             <div class="tag level-tag">Lv.{{user.level || 5}}</div>
+             
+             <!-- City -->
+             <div class="tag city-tag" v-if="info.city">
+                <i class="el-icon-location-outline" style="margin-right:2px"></i>{{info.city}}
+             </div>
+          </div>
+       </div>
+
+       <!-- Top Right Extras -->
+       <div class="header-extras">
+          <i class="el-icon-more settings-icon"></i>
+       </div>
     </div>
 
     <div class="user-introduce">
       <span>{{ info.introduce || '这个人很懒，什么都没有留下' }}</span>
+    </div>
+
+    <!-- Action Buttons Row -->
+    <div class="action-buttons" v-if="user.id && String(user.id) !== String(loginUser.id)">
+         <button class="action-btn" :class="user.isFollow ? 'followed-btn' : 'follow-btn'" @click="handleFollow">
+           <i v-if="!user.isFollow" class="el-icon-plus" style="font-weight: bold; margin-right: 2px;"></i>
+           {{ user.isFollow ? '已关注' : '关注' }}
+         </button>
+         <button class="action-btn message-btn" @click="handleMessage">
+           <i class="el-icon-chat-dot-round" style="margin-right: 4px;"></i> 发私信
+         </button>
+         <button class="action-btn more-btn">
+            <i class="el-icon-more"></i>
+         </button>
     </div>
 
     <!-- Stats -->
@@ -51,18 +86,20 @@
       <div class="custom-tabs-header">
         <div class="custom-tabs-nav">
           <div class="custom-tab-item" :class="{active: activeTab==='note'}" @click="switchTab('note')">
-            <div class="tab-text">笔记 <span v-if="stats.blogCount > 0" class="count-badge">{{formatCount(stats.blogCount)}}</span></div>
+            <div class="tab-text">笔记 {{stats.blogCount || 0}}</div>
           </div>
           <div class="custom-tab-item" :class="{active: activeTab==='collection'}" @click="switchTab('collection')">
-            <div class="tab-text">收藏 <span v-if="stats.collectCount > 0" class="count-badge">{{formatCount(stats.collectCount)}}</span></div>
+            <div class="tab-text">收藏 {{stats.blogStarCount || 0}}</div>
           </div>
           <div class="custom-tab-item" :class="{active: activeTab==='like'}" @click="switchTab('like')">
-            <div class="tab-text">赞过 <span v-if="stats.likeCount > 0" class="count-badge">{{formatCount(stats.likeCount)}}</span></div>
+            <div class="tab-text">喜欢 {{stats.blogLikeCount || 0}}</div>
           </div>
         </div>
       </div>
 
-      <div class="custom-tabs-content">
+      <div class="custom-tabs-content" 
+           @touchstart="handleTouchStart" 
+           @touchend="handleTouchEnd">
           <!-- Notes Tab -->
           <div v-if="activeTab==='note'" class="tab-pane" v-infinite-scroll="loadMoreNotes" :infinite-scroll-disabled="noteLoading || noteNoMore">
              <div v-if="notes.length > 0" class="waterfall-container">
@@ -83,8 +120,8 @@
                                    <span class="card-name">{{ user.nickName }}</span>
                                </div>
                                <div class="card-likes">
-                                   <svg t="1646634642977" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2187" width="14" height="14" style="margin-right: 2px;">
-                                     <path d="M160 944c0 8.8-7.2 16-16 16h-32c-26.5 0-48-21.5-48-48V528c0-26.5 21.5-48 48-48h32c8.8 0 16 7.2 16 16v448zM96 416c-53 0-96 43-96 96v416c0 53 43 96 96 96h96c17.7 0 32-14.3 32-32V448c0-17.7-14.3-32-32-32H96zM505.6 64c16.2 0 26.4 8.7 31 13.9 4.6 5.2 12.1 16.3 10.3 32.4l-23.5 203.4c-4.9 42.2 8.6 84.6 36.8 116.4 28.3 31.7 68.9 49.9 111.4 49.9h271.2c6.6 0 10.8 3.3 13.2 6.1s5 7.5 4 14l-48 303.4c-6.9 43.6-29.1 83.4-62.7 112C815.8 944.2 773 960 728.9 960h-317c-33.1 0-59.9-26.8-59.9-59.9v-455c0-6.1 1.7-12 5-17.1 69.5-109 106.4-234.2 107-364h41.6z m0-64h-44.9C427.2 0 400 27.2 400 60.7c0 127.1-39.1 251.2-112 355.3v484.1c0 68.4 55.5 123.9 123.9 123.9h317c122.7 0 227.2-89.3 246.3-210.5l47.9-303.4c7.8-49.4-30.4-94.1-80.4-94.1H671.6c-50.9 0-90.5-44.4-84.6-95l23.5-203.4C617.7 55 568.7 0 505.6 0z" :fill="b.isLike ? '#ff6633' : '#82848a'"></path>
+                                   <svg viewBox="0 0 24 24" width="14" height="14" style="margin-right: 2px;">
+                                     <path :fill="b.isLike ? '#ff2442' : '#999'" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                                    </svg>
                                    {{b.liked||0}}
                                </div>
@@ -113,12 +150,12 @@
                            <div class="card-title">{{ b.title }}</div>
                            <div class="card-bottom">
                                <div class="card-user">
-                                   <img :src="b.icon || '/imgs/icons/default-icon.png'" class="card-avatar">
-                                   <span class="card-name">{{ b.nickName || b.name }}</span>
+                                   <img :src="b.userAvatar || '/imgs/icons/default-icon.png'" class="card-avatar">
+                                   <span class="card-name">{{ b.userName }}</span>
                                </div>
                                <div class="card-likes">
-                                   <svg class="icon" viewBox="0 0 1024 1024" width="14" height="14" style="margin-right: 2px;">
-                                     <path d="M160 944c0 8.8-7.2 16-16 16h-32c-26.5 0-48-21.5-48-48V528c0-26.5 21.5-48 48-48h32c8.8 0 16 7.2 16 16v448zM96 416c-53 0-96 43-96 96v416c0 53 43 96 96 96h96c17.7 0 32-14.3 32-32V448c0-17.7-14.3-32-32-32H96zM505.6 64c16.2 0 26.4 8.7 31 13.9 4.6 5.2 12.1 16.3 10.3 32.4l-23.5 203.4c-4.9 42.2 8.6 84.6 36.8 116.4 28.3 31.7 68.9 49.9 111.4 49.9h271.2c6.6 0 10.8 3.3 13.2 6.1s5 7.5 4 14l-48 303.4c-6.9 43.6-29.1 83.4-62.7 112C815.8 944.2 773 960 728.9 960h-317c-33.1 0-59.9-26.8-59.9-59.9v-455c0-6.1 1.7-12 5-17.1 69.5-109 106.4-234.2 107-364h41.6z m0-64h-44.9C427.2 0 400 27.2 400 60.7c0 127.1-39.1 251.2-112 355.3v484.1c0 68.4 55.5 123.9 123.9 123.9h317c122.7 0 227.2-89.3 246.3-210.5l47.9-303.4c7.8-49.4-30.4-94.1-80.4-94.1H671.6c-50.9 0-90.5-44.4-84.6-95l23.5-203.4C617.7 55 568.7 0 505.6 0z" :fill="b.isLike ? '#ff6633' : '#82848a'"></path>
+                                   <svg viewBox="0 0 24 24" width="14" height="14" style="margin-right: 2px;">
+                                     <path :fill="b.isLike ? '#ff2442' : '#999'" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                                    </svg>
                                    {{b.liked||0}}
                                </div>
@@ -148,13 +185,13 @@
                            <div class="card-title">{{ b.title }}</div>
                            <div class="card-bottom">
                                <div class="card-user">
-                                   <img :src="b.icon || '/imgs/icons/default-icon.png'" class="card-avatar">
-                                   <span class="card-name">{{ b.nickName || b.name }}</span>
+                                   <img :src="b.userAvatar || '/imgs/icons/default-icon.png'" class="card-avatar">
+                                   <span class="card-name">{{ b.userName }}</span>
                                </div>
                                <div class="card-likes">
                                    <!-- Heart Icon -->
-                                   <svg class="icon" viewBox="0 0 1024 1024" width="14" height="14" style="margin-right: 2px;">
-                                     <path d="M160 944c0 8.8-7.2 16-16 16h-32c-26.5 0-48-21.5-48-48V528c0-26.5 21.5-48 48-48h32c8.8 0 16 7.2 16 16v448zM96 416c-53 0-96 43-96 96v416c0 53 43 96 96 96h96c17.7 0 32-14.3 32-32V448c0-17.7-14.3-32-32-32H96zM505.6 64c16.2 0 26.4 8.7 31 13.9 4.6 5.2 12.1 16.3 10.3 32.4l-23.5 203.4c-4.9 42.2 8.6 84.6 36.8 116.4 28.3 31.7 68.9 49.9 111.4 49.9h271.2c6.6 0 10.8 3.3 13.2 6.1s5 7.5 4 14l-48 303.4c-6.9 43.6-29.1 83.4-62.7 112C815.8 944.2 773 960 728.9 960h-317c-33.1 0-59.9-26.8-59.9-59.9v-455c0-6.1 1.7-12 5-17.1 69.5-109 106.4-234.2 107-364h41.6z m0-64h-44.9C427.2 0 400 27.2 400 60.7c0 127.1-39.1 251.2-112 355.3v484.1c0 68.4 55.5 123.9 123.9 123.9h317c122.7 0 227.2-89.3 246.3-210.5l47.9-303.4c7.8-49.4-30.4-94.1-80.4-94.1H671.6c-50.9 0-90.5-44.4-84.6-95l23.5-203.4C617.7 55 568.7 0 505.6 0z" :fill="b.isLike ? '#ff6633' : '#82848a'"></path>
+                                   <svg viewBox="0 0 24 24" width="14" height="14" style="margin-right: 2px;">
+                                     <path :fill="b.isLike ? '#ff2442' : '#999'" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                                    </svg>
                                    {{b.liked||0}}
                                </div>
@@ -166,6 +203,14 @@
               <div v-else class="empty-state">还没有点赞过任何笔记</div>
            </div>
       </div>
+    </div>
+    <!-- Avatar Dialog -->
+    <!-- Avatar Dialog -->
+    <div class="avatar-dialog-overlay" v-if="showAvatarDialog" @click="showAvatarDialog = false">
+       <div class="avatar-dialog-close" @click="showAvatarDialog = false"><i class="el-icon-close"></i></div>
+       <div class="avatar-preview-container" @click.stop>
+          <img :src="user.icon || '/imgs/icons/default-icon.png'" class="avatar-big">
+       </div>
     </div>
   </div>
 </template>
@@ -203,7 +248,12 @@ export default {
       likeNoMore: false,
       likeCurrent: 1,
       
-      sessionId: null
+      sessionId: null,
+      
+      // Touch Swipe
+      touchStartX: 0,
+      tabOrder: ['note', 'collection', 'like'],
+      showAvatarDialog: false
     }
   },
   created() {
@@ -230,6 +280,20 @@ export default {
     formatDistance(d) {
       if(!d) return '';
       return d < 1000 ? d + 'm' : (d/1000).toFixed(1) + 'km';
+    },
+    formatDistance(d) {
+      if(!d) return '';
+      return d < 1000 ? d + 'm' : (d/1000).toFixed(1) + 'km';
+    },
+    getAge(birthday) {
+       if(!birthday) return '';
+       const b = new Date(birthday);
+       const now = new Date();
+       let age = now.getFullYear() - b.getFullYear();
+       if(now.getMonth() < b.getMonth() || (now.getMonth() === b.getMonth() && now.getDate() < b.getDate())) {
+         age--;
+       }
+       return age;
     },
     handleImgError(e) {
        e.target.src = '/imgs/icons/default-icon.png';
@@ -290,6 +354,32 @@ export default {
        if(tab === 'collection' && this.collections.length === 0) this.loadCollections();
        if(tab === 'like' && this.likes.length === 0) this.loadLikes();
     },
+    
+    // Touch Swipe handlers
+    handleTouchStart(e) {
+       this.touchStartX = e.touches[0].clientX;
+    },
+    handleTouchEnd(e) {
+       const touchEndX = e.changedTouches[0].clientX;
+       const diff = this.touchStartX - touchEndX;
+       const threshold = 50; // Minimum swipe distance
+       
+       if (Math.abs(diff) < threshold) return;
+       
+       const currentIndex = this.tabOrder.indexOf(this.activeTab);
+       
+       if (diff > 0) {
+          // Swipe left -> next tab
+          if (currentIndex < this.tabOrder.length - 1) {
+             this.switchTab(this.tabOrder[currentIndex + 1]);
+          }
+       } else {
+          // Swipe right -> previous tab
+          if (currentIndex > 0) {
+             this.switchTab(this.tabOrder[currentIndex - 1]);
+          }
+       }
+    },
     loadNotes() {
        this.noteLoading = true;
        getUserBlogs({ userId: this.userId, current: this.noteCurrent, size: 10 }).then(res => {
@@ -322,12 +412,7 @@ export default {
                if(b.images && !b.images.startsWith('http')) b.images = this.$fileURL + b.images;
                 // Icons for liked blogs user
                if(b.icon && !b.icon.startsWith('http')) b.icon = this.$fileURL + b.icon;
-               // Liked list items, so by definition I (the user viewing) liked them? 
-               // Wait, 'likeRecord' returns items user liked. 
-               // Do WE (loginUser) like them? 
-               // Usually the list returns the Blog Object. 
-               // Blog Object should have 'isLike' field relative to loginUser if backend supports it.
-               // We will trust backend response.
+               if(b.userAvatar && !b.userAvatar.startsWith('http')) b.userAvatar = this.$fileURL + b.userAvatar;
            });
            this.likeCurrent++;
        }).finally(() => this.likeLoading = false);
@@ -366,6 +451,7 @@ export default {
           this.collections.forEach(s => {
               if(s.images && !s.images.startsWith('http')) s.images = this.$fileURL + s.images;
               if(s.icon && !s.icon.startsWith('http')) s.icon = this.$fileURL + s.icon;
+              if(s.userAvatar && !s.userAvatar.startsWith('http')) s.userAvatar = this.$fileURL + s.userAvatar;
           });
           this.collectionCurrent++;
        }).finally(() => this.collectionLoading = false);
@@ -466,31 +552,157 @@ export default {
 .header-back-btn i { font-size: 20px; }
 .header-title { flex: 1; text-align: center; font-size: 16px; font-weight: bold; }
 
-.user-basic { padding: 15px; background: white; display: flex; align-items: center; }
-.user-avatar-box { width: 60px; height: 60px; border-radius: 50%; overflow: hidden; margin-right: 12px; border: 2px solid #f0f0f0; }
-.user-avatar-box img { width: 100%; height: 100%; object-fit: cover; }
-.user-info-box { flex: 1; }
-.name { font-size: 18px; font-weight: 600; color: #1a1a1a; }
-.action-buttons { display: flex; gap: 8px; align-items: center; }
+.user-introduce { padding: 8px 15px; background: white; font-size: 13px; color: #555; }
+
+/* Update action-buttons spacing if needed */
+.action-buttons { display: flex; gap: 10px; padding: 10px 15px; background: white; }
 .action-btn { 
-  padding: 0 16px; 
-  height: 32px; 
-  line-height: 32px; 
-  border-radius: 16px; 
+  flex: 1; 
+  height: 36px; 
+  line-height: normal; 
+  border-radius: 4px; 
   border: none; 
-  font-size: 13px; 
-  color: #fff; 
+  font-size: 14px; 
   cursor: pointer; 
   display: flex; 
   align-items: center; 
   justify-content: center;
   font-weight: 500;
-  min-width: 72px;
+  min-width: 0;
 }
-.logout-btn { background: #ff6633; box-shadow: 0 2px 6px rgba(255, 102, 51, 0.3); }
-.message-btn { background: #07c160; box-shadow: 0 2px 6px rgba(7, 193, 96, 0.3); }
+.logout-btn { background: #ff6633; color: white; } 
+.follow-btn { background: #ff2442; color: white; }
+.followed-btn { background: #f2f2f2; color: #333; border: 1px solid rgba(0,0,0,0.05); }
+.message-btn { background: #f2f2f2; color: #333; border: 1px solid rgba(0,0,0,0.05); }
+.more-btn { flex: none; width: 36px; background: #f2f2f2; color: #333; border: 1px solid rgba(0,0,0,0.05); }
 
-.user-introduce { padding: 12px 15px; background: white; font-size: 14px; color: #555; border-top: 1px solid #f5f5f5; }
+/* New Header Styles */
+.profile-cover {
+    height: 120px;
+    width: 100%;
+    background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+    background-size: cover;
+    background-position: center;
+}
+.user-header-content {
+    position: relative;
+    padding: 0 15px;
+    display: flex;
+    align-items: flex-start;
+    background: white;
+}
+.user-avatar-wrapper {
+    width: 76px;
+    height: 76px;
+    border-radius: 50%;
+    border: 3px solid white;
+    overflow: hidden;
+    margin-top: -20px; /* Overlap cover */
+    flex-shrink: 0;
+    margin-right: 12px;
+    z-index: 2;
+    background: white;
+}
+.user-avatar-wrapper img { width: 100%; height: 100%; object-fit: cover; }
+
+.user-details-right {
+    padding-top: 10px;
+    flex: 1;
+}
+.name-line {
+    display: flex;
+    align-items: center;
+    margin-bottom: 2px;
+}
+.name { font-size: 18px; font-weight: 600; color: #1a1a1a; }
+
+.id-line {
+    font-size: 11px;
+    color: #999;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+}
+
+.user-tags-row { 
+    display: flex; 
+    align-items: center; 
+    gap: 6px; 
+    flex-wrap: wrap; 
+}
+
+.tag { 
+    height: 18px; 
+    line-height: normal; 
+    padding: 0 6px; 
+    border-radius: 9px; 
+    font-size: 10px; 
+    display: flex; 
+    align-items: center; 
+    color: white;
+}
+.gender-tag { /* Background handled inline */ }
+.level-tag { background: #FFD700; font-weight: bold; font-style: italic; } 
+.city-tag { background: rgba(0,0,0,0.05); color: #666; }
+
+.header-extras {
+    position: absolute;
+    right: 15px;
+    top: 10px; 
+    display: flex;
+    align-items: center;
+}
+/* user-id-text removed */
+.settings-icon {
+    font-size: 20px;
+    color: #333;
+    background: #f5f5f5;
+    padding: 4px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* Avatar Dialog Styles */
+.avatar-dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: black; /* Pure black background for full screen */
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.avatar-dialog-close {
+    position: absolute;
+    top: 40px;
+    right: 20px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 28px;
+    cursor: pointer;
+    z-index: 10001;
+}
+.avatar-preview-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.avatar-big {
+    width: 100%;
+    max-height: 80%; /* Don't fill entire height, leave space */
+    object-fit: contain;
+}
+
+.user-introduce { padding: 8px 15px; background: white; font-size: 13px; color: #555; }
 
 .stats-card { display: flex; background: white; padding: 15px 0; margin-top: 10px; }
 .stat-item { flex: 1; text-align: center; }
