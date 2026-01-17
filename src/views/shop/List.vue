@@ -67,29 +67,41 @@
     <!-- Shop List -->
     <div class="shop-list-content" @scroll="onScroll" v-loading="isLoading">
        <div v-if="shops.length > 0">
-          <div class="shop-box" v-for="s in shops" :key="s.id" @click="toDetail(s.id)">
-             <div class="shop-img"><img :src="s.images || '/imgs/default-shop.jpg'" alt=""></div>
-             <div class="shop-info">
-                <div class="shop-title shop-item" v-html="s.name"></div>
-                <div class="shop-rate shop-item">
-                   <el-rate disabled :model-value="s.score/10" text-color="#F63" show-score></el-rate>
-                   <span>{{s.comments}}条</span>
-                </div>
-                <div class="shop-area shop-item">
-                   <span>{{s.area}}</span>
-                   <span v-if="s.distance">{{s.distance < 1000 ? s.distance.toFixed(1) + 'm' : (s.distance/1000).toFixed(1) + 'km'}}</span>
-                </div>
-                <div class="shop-avg shop-item">￥{{s.avgPrice}}/人</div>
-                <div class="shop-address shop-item">
-                   <i class="el-icon-map-location"></i>
-                   <span>{{s.address || '暂无详细地址'}}</span>
-                </div>
-             </div>
-          </div>
+          <div class="shop-card" v-for="s in shops" :key="s.id" @click="toDetail(s.id)">
+              <!-- Image with Fallback -->
+              <div class="shop-card-img">
+                  <img :src="s.images" v-if="s.images && !s.imageError" @error="s.imageError = true" alt="">
+                  <div class="img-placeholder" v-else>
+                      <i class="el-icon-goods"></i>
+                  </div>
+              </div>
+              <!-- Info -->
+              <div class="shop-card-info">
+                 <!-- Row 1: Title -->
+                 <div class="shop-card-title" v-html="s.name"></div>
+                 <!-- Row 2: Rating + Price -->
+                 <div class="shop-card-stats">
+                    <el-rate disabled :model-value="s.score/10" text-color="#F63" :size="12"></el-rate>
+                    <span class="stats-score">{{(s.score/10).toFixed(1)}}</span>
+                    <span class="stats-comments">{{s.comments || 0}}条</span>
+                    <span class="stats-price" v-if="s.avgPrice">￥{{s.avgPrice}}/人</span>
+                 </div>
+                 <!-- Row 3: Location + Distance -->
+                 <div class="shop-card-location">
+                    <span class="location-text">{{s.area || '未知区域'}} <span v-if="getShopTypeName(s.typeId)">| {{getShopTypeName(s.typeId)}}</span></span>
+                    <span class="location-distance" v-if="s.distance">{{s.distance < 1000 ? s.distance.toFixed(0) + 'm' : (s.distance/1000).toFixed(1) + 'km'}}</span>
+                 </div>
+                 <!-- Row 4: Tags -->
+                 <div class="shop-card-tags">
+                    <span class="tag">可预约</span>
+                    <span class="tag">有停车位</span>
+                 </div>
+              </div>
+           </div>
           <div class="no-more" v-if="noMore && !isSearchMode">没有更多了</div>
        </div>
        <div v-else-if="!isLoading && isSearchMode && hasSearched" class="custom-empty-state">
-           <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiByeD0iOCIgZmlsbD0iI0Y4RjlGQSIvPgo8cGF0aCBkPSJNNDAgNDJMMzIgMzRMMzQgMzJMNDAgMzhMNDYgMzJMNDggMzRMNDAgNDJaIiBmaWxsPSIjQzBDNEY0Ii8+CjxwYXRoIGQ9Ik00MCA0MkwzMiAzNEwzNCAzMkw0MCAzOEw0NiAzMkw0OCAzNEw0MCA0MloiIGZpbGw9IiNDMEM0RjQiLz4KPC9zdmc+Cg==">
+           <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXw9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiByeD0iOCIgZmlsbD0iI0Y4RjlGQSIvPgo8cGF0aCBkPSJNNDAgNDJMMzIgMzRMMzQgMzJMNDAgMzhMNDYgMzJMNDggMzRMNDAgNDJaIiBmaWxsPSIjQzBDNEY0Ii8+CjxwYXRoIGQ9Ik00MCA0MkwzMiAzNEwzNCAzMkw0MCAzOEw0NiAzMkw0OCAzNEw0MCA0MloiIGZpbGw9IiNDMEM0RjQiLz4KPC9zdmc+Cg==">
            <p>未找到相关店铺</p>
            <span class="sub-text">换个关键词试试吧</span>
        </div>
@@ -430,19 +442,124 @@ export default {
 
 /* Shop List Layout */
 .shop-list-page { display: flex; flex-direction: column; height: 100vh; background-color: #fff; }
-.shop-list-content { flex: 1; overflow-y: auto; padding: 8px 10px; }
-.shop-box { display: flex; padding: 10px 12px; background-color: #fff; border-radius: 8px; margin-bottom: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
-.shop-img { width: 88px; height: 88px; border-radius: 6px; overflow: hidden; margin-right: 12px; flex-shrink: 0; border: 1px solid #f2f2f2; }
-.shop-img img { width: 100%; height: 100%; object-fit: cover; }
-.shop-info { flex: 1; display: flex; flex-direction: column; justify-content: space-between; padding: 2px 0; }
-.shop-item { margin-bottom: 3px; } /* Tighter items */
-.shop-title { font-size: 16px; font-weight: bold; color: #333; }
-.shop-rate { display: flex; align-items: center; font-size: 12px; color: #666; }
-.shop-rate span { margin-left: 5px; }
-.shop-area { display: flex; justify-content: space-between; font-size: 12px; color: #999; }
-.shop-avg { font-size: 12px; color: #333; }
-.shop-address { font-size: 12px; color: #999; display: flex; align-items: center; }
-.shop-address i { margin-right: 2px; }
+.shop-list-content { flex: 1; overflow-y: auto; padding: 0; background: #f5f5f5; }
+
+/* Shop Card - Meituan/Yelp Style */
+.shop-card {
+    display: flex;
+    padding: 14px 12px;
+    background: white;
+    border-bottom: 1px solid #f0f0f0;
+}
+.shop-card:active {
+    background: #fafafa;
+}
+
+/* Image Container */
+.shop-card-img {
+    width: 88px;
+    height: 88px;
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+    margin-right: 12px;
+    background: #f5f5f5;
+}
+.shop-card-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.shop-card-img .img-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #e9e9e9;
+    color: #bbb;
+    font-size: 28px;
+}
+
+/* Info Column */
+.shop-card-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-width: 0;
+}
+
+/* Title Row */
+.shop-card-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Stats Row (Rating + Price) */
+.shop-card-stats {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+}
+.stats-score {
+    font-size: 13px;
+    font-weight: 600;
+    color: #ff6633;
+}
+.stats-comments {
+    font-size: 12px;
+    color: #999;
+    margin-left: 2px;
+}
+.stats-price {
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+    margin-left: auto; /* Push to right */
+}
+
+/* Location Row */
+.shop-card-location {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 4px;
+}
+.location-text {
+    font-size: 12px;
+    color: #999;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.location-distance {
+    font-size: 12px;
+    color: #999;
+    flex-shrink: 0;
+    margin-left: 8px;
+}
+
+/* Tags Row */
+.shop-card-tags {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+}
+.shop-card-tags .tag {
+    font-size: 10px;
+    color: #ff9500;
+    background: #fff8f0;
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid #ffe0c0;
+}
 
 .no-more { text-align: center; color: #999; padding: 10px; font-size: 12px; }
 .custom-empty-state {

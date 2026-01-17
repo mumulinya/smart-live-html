@@ -1,287 +1,246 @@
 ﻿<template>
-  <div class="user-info-page" v-loading="pageLoading">
-    <!-- Immersive Cover -->
-    <div class="profile-cover" :style="{ backgroundImage: `url(${user.cover || 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80'})` }">
-       <div class="cover-gradient"></div>
-    </div>
+  <div class="user-info-page">
+    <!-- Cover Image -->
+    <div class="profile-cover" :style="{ backgroundImage: `url(${user.cover || 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80'})` }"></div>
 
-    <!-- Transparent Nav -->
-    <div class="nav-bar">
+    <!-- Navbar (Fixed, Transparent->White) -->
+    <div class="nav-bar" :class="{ 'nav-scrolled': scrollTop > 50 }">
        <div class="nav-left">
-          <div class="add-friend-btn" @click="toAddFriend">
-             <i class="el-icon-user"></i> <span style="margin-left:4px">添加朋友</span>
+          <i class="el-icon-back" @click="goBack" v-if="!isSelf" :style="{ color: scrollTop > 50 ? '#333' : '#fff' }"></i>
+          <div class="add-friend-btn" @click="toAddFriend" v-else :style="{ background: scrollTop > 50 ? '#f5f5f5' : 'rgba(0,0,0,0.2)', color: scrollTop > 50 ? '#333' : '#fff' }">
+             <i class="el-icon-user-solid"></i>
+             <span style="font-size: 14px; font-weight: bold;">+</span>
           </div>
        </div>
+       <div class="nav-title" v-if="scrollTop > 50">{{ user.nickName }}</div>
        <div class="nav-right">
-          <div class="icon-btn search-icon"><i class="el-icon-search"></i></div>
-          <div class="icon-btn menu-icon" @click="logout"><i class="el-icon-s-operation"></i></div>
+          <div class="icon-btn" :style="{ color: scrollTop > 50 ? '#333' : '#fff', background: scrollTop > 50 ? 'transparent' : 'rgba(0,0,0,0.2)',  border: scrollTop > 50 ? 'none' : '0.5px solid rgba(255,255,255,0.2)' }"><i class="el-icon-share"></i></div>
+          <div class="icon-btn" @click="logout" v-if="isSelf" :style="{ color: scrollTop > 50 ? '#333' : '#fff', background: scrollTop > 50 ? 'transparent' : 'rgba(0,0,0,0.2)', border: scrollTop > 50 ? 'none' : '0.5px solid rgba(255,255,255,0.2)' }"><i class="el-icon-setting"></i></div>
        </div>
     </div>
 
-    <!-- White Body Card -->
-    <div class="profile-body-card">
-       
-       <!-- Header Row: Avatar & Actions -->
-       <div class="body-header-row">
-           <div class="avatar-container" @click="showAvatarDialog = true">
-               <img :src="user.icon || '/imgs/icons/default-icon.png'" class="avatar-img">
-           </div>
-           <div class="header-actions">
-               <div class="edit-btn" @click="toEdit">编辑主页</div>
-               <div class="settings-btn" @click="logout"><i class="el-icon-setting"></i></div>
-           </div>
-       </div>
-
-       <!-- Basic Info -->
-       <div class="basic-info-section">
-           <div class="user-name">{{user.nickName || '未命名'}}</div>
-           <div class="user-id">
-               抖音号：{{user.phoneNumber || user.id || '未知'}} 
-               <i class="el-icon-document-copy copy-icon"></i>
-           </div>
-           <div class="user-desc">
-               {{info.introduce || '填写简介，让大家更好地认识你'}}
-           </div>
-           
-           <!-- Tags -->
-           <div class="user-tags">
-               <div class="tag-list">
-                   <span class="tag" v-if="info.city">{{info.city}}</span>
-                   <span class="tag" v-if="info.gender || info.birthday">
-                       {{getGenderText(info.gender)}} <span v-if="info.birthday">· {{getAge(info.birthday)}}岁</span>
-                   </span>
-                   <span class="tag" v-if="info.school">{{info.school}}</span>
-                   
-                   <!-- Show Add Info if missing essential info -->
-                   <span class="tag add-tag" v-if="!info.city && !info.school && !info.birthday" @click="toEdit">
-                       + 添加标签信息
-                   </span>
-               </div>
-           </div>
-       </div>
-
-       <!-- Stats Row -->
-       <div class="stats-action-row">
+    <!-- Header Section -->
+    <div class="profile-header">
+       <div class="header-top">
+          <!-- Avatar -->
+          <div class="avatar-box" @click="showAvatarDialog = true">
+             <img :src="user.icon || '/imgs/icons/default-icon.png'" class="avatar-img">
+             <div class="add-status" v-if="isSelf">+</div>
+          </div>
+          <!-- Stats -->
           <div class="stats-box">
              <div class="stat-item">
-                <div class="num">{{stats.likeCount || 0}}</div>
-                <div class="label">获赞</div>
+                <div class="stat-num">{{ stats.likeCount || 0 }}</div>
+                <div class="stat-label">获赞与收藏</div>
              </div>
-
              <div class="stat-item" @click="toFollows">
-                <div class="num">{{stats.followCount || 0}}</div>
-                <div class="label">关注</div>
+                <div class="stat-num">{{ stats.followCount || 0 }}</div>
+                <div class="stat-label">关注</div>
              </div>
              <div class="stat-item" @click="toFans">
-                <div class="num">{{stats.fansCount || 0}}</div>
-                <div class="label">粉丝</div>
+                <div class="stat-num">{{ stats.fansCount || 0 }}</div>
+                <div class="stat-label">粉丝</div>
              </div>
           </div>
        </div>
 
-       <!-- Quick Actions -->
-       <div class="quick-actions">
-          <div class="action-item" @click="toOrders">
-             <div class="action-icon"><i class="el-icon-tickets"></i></div>
-             <div class="action-text">我的订单</div>
+       <!-- Info Text -->
+       <div class="info-text-section">
+          <div class="user-name-row">
+             <div class="cancel-bold-name">{{ user.nickName || '未命名' }}</div>
           </div>
-          <div class="action-item" @click="toCollections">
-             <div class="action-icon"><i class="el-icon-star-off"></i></div>
-             <div class="action-text">我的收藏</div>
+          <div class="user-id-row">
+             <span>小红书号：{{ user.id || '未知' }}</span>
+             <i class="el-icon-document-copy" @click="copyId"></i>
           </div>
-          <div class="action-item" @click="toReviews">
-             <div class="action-icon"><i class="el-icon-document-checked"></i></div>
-             <div class="action-text">我的评价</div>
+          <!-- Bio -->
+          <div class="user-bio">
+             {{ info.introduce || '填写简介，让大家更好地认识你' }}
+          </div>
+          <!-- Tags -->
+          <div class="user-tags-row">
+             <div class="gender-tag" v-if="info.gender">
+                <i :class="info.gender === 1 ? 'el-icon-male' : 'el-icon-female'"></i>
+                {{ info.birthday ? getAge(info.birthday) + '岁' : '' }}
+             </div>
+             <div class="info-tag" v-if="info.city">{{ info.city }}</div>
+             <div class="info-tag" v-if="info.school">{{ info.school }}</div>
+             <div class="info-tag add-tag" v-if="isSelf" @click="toEdit">+ 添加信息</div>
           </div>
        </div>
-       
-       <!-- Content Tabs (Waterfall) -->
-       <el-tabs v-model="activeTab" @tab-click="handleTabClick" class="profile-tabs" stretch
-                @touchstart.native="handleTouchStart" 
-                @touchend.native="handleTouchEnd">
-          <el-tab-pane name="note">
-             <template #label>
-                <span>笔记 {{stats.blogCount || 0}}</span>
-             </template>
-             <div class="waterfall-container">
-                 <div class="waterfall-column" v-for="(col, i) in [0, 1]" :key="i">
-                    <div class="waterfall-item" 
-                         v-for="b in blogs.filter((_, index) => index % 2 === i)" 
-                         :key="b.id"
-                         @click="toBlogDetail(b)"
-                    >
-                       <div class="card-img-box">
-                           <img :src="getFirstImage(b.images)" class="work-cover" loading="lazy" @error="handleImgError">
-                       </div>
-                       <div class="card-info">
-                           <div class="card-title">{{ b.title }}</div>
-                           <div class="card-bottom">
-                               <div class="card-user">
-                                   <img :src="user.icon || '/imgs/icons/default-icon.png'" class="card-avatar">
-                                   <span class="card-name">{{ user.nickName }}</span>
-                               </div>
-                               <div class="card-likes">
-                                   <!-- Reverted to Heart SVG as per user request -->
-                                   <svg viewBox="0 0 24 24" width="14" height="14" style="margin-right: 2px;">
-                                     <path :fill="b.isLike ? '#ff2442' : '#999'" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                                   </svg>
-                                   {{b.liked || 0}}
-                               </div>
-                           </div>
-                       </div>
-                    </div>
-                 </div>
-             </div>
-             
-             <div v-if="blogs.length > 0 && blogNoMore" class="no-more">没有更多了</div>
-             <div v-else-if="!blogLoading && blogs.length===0" class="empty-state">
-                <div class="empty-icon"><i class="el-icon-edit-outline"></i></div>
-                <div class="empty-text">快来发布第一篇笔记吧</div>
-             </div>
-          </el-tab-pane>
 
-          <el-tab-pane name="collection">
-             <template #label>
-                <span>收藏 {{stats.blogStarCount || 0}}</span>
-             </template>
-             <div class="waterfall-container">
-                 <div class="waterfall-column" v-for="(col, i) in [0, 1]" :key="i">
-                    <div class="waterfall-item" 
-                         v-for="b in collections.filter((_, index) => index % 2 === i)" 
-                         :key="b.id"
-                         @click="toBlogDetail(b)"
-                    >
-                       <div class="card-img-box">
-                           <img :src="getFirstImage(b.images)" class="work-cover" loading="lazy" @error="handleImgError">
-                       </div>
-                       <div class="card-info">
-                           <div class="card-title">{{ b.title }}</div>
-                           <div class="card-bottom">
-                               <div class="card-user">
-                                   <img :src="b.userAvatar || user.icon || '/imgs/icons/default-icon.png'" class="card-avatar">
-                                   <span class="card-name">{{ b.userName || user.nickName }}</span>
-                               </div>
-                               <div class="card-likes">
-                                   <svg viewBox="0 0 24 24" width="14" height="14" style="margin-right: 2px;">
-                                     <path :fill="b.isLike ? '#ff2442' : '#999'" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                                   </svg>
-                                   {{b.liked || 0}}
-                               </div>
-                           </div>
-                       </div>
-                    </div>
-                 </div>
-             </div>
-             <div v-if="collections.length > 0 && collectionNoMore" class="no-more">没有更多了</div>
-             <div v-else-if="!collectionLoading && collections.length===0" class="empty-state">
-                <p>暂无收藏</p>
-             </div>
-          </el-tab-pane>
-
-          <el-tab-pane name="likes">
-             <template #label>
-                <span>喜欢 {{stats.blogLikeCount || 0}}</span>
-             </template>
-             <div class="waterfall-container">
-                 <div class="waterfall-column" v-for="(col, i) in [0, 1]" :key="i">
-                    <div class="waterfall-item" 
-                         v-for="b in likes.filter((_, index) => index % 2 === i)" 
-                         :key="b.id"
-                         @click="toBlogDetail(b)"
-                    >
-                       <div class="card-img-box">
-                           <img :src="getFirstImage(b.images)" class="work-cover" loading="lazy" @error="handleImgError">
-                       </div>
-                       <div class="card-info">
-                           <div class="card-title">{{ b.title }}</div>
-                           <div class="card-bottom">
-                               <div class="card-user">
-                                   <img :src="b.userAvatar || user.icon || '/imgs/icons/default-icon.png'" class="card-avatar">
-                                   <span class="card-name">{{ b.userName || user.nickName }}</span>
-                               </div>
-                               <div class="card-likes">
-                                   <!-- Reverted to Heart SVG as per user request -->
-                                   <svg viewBox="0 0 24 24" width="14" height="14" style="margin-right: 2px;">
-                                     <path :fill="b.isLike ? '#ff2442' : '#999'" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                                   </svg>
-                                   {{b.liked || 0}}
-                               </div>
-                           </div>
-                       </div>
-                    </div>
-                 </div>
-             </div>
-             <div v-if="likes.length > 0 && likeNoMore" class="no-more">没有更多了</div>
-             <div v-else-if="!likeLoading && likes.length===0" class="empty-state">
-               <p>暂无喜欢</p>
-             </div>
-          </el-tab-pane>
-
-          <el-tab-pane label="动态" name="feed">
-             <div class="waterfall-container">
-                 <div class="waterfall-column" v-for="(col, i) in [0, 1]" :key="i">
-                    <div class="waterfall-item" 
-                         v-for="b in feeds.filter((_, index) => index % 2 === i)" 
-                         :key="b.id"
-                         @click="toBlogDetail(b)"
-                    >
-                       <div class="card-img-box">
-                           <img :src="getFirstImage(b.images)" class="work-cover" loading="lazy" @error="handleImgError">
-                       </div>
-                       <div class="card-info">
-                           <div class="card-title">{{ b.title }}</div>
-                           <div class="card-bottom">
-                               <div class="card-user">
-                                   <img :src="b.userAvatar || user.icon || '/imgs/icons/default-icon.png'" class="card-avatar">
-                                   <span class="card-name">{{ b.userName || user.nickName }}</span>
-                               </div>
-                               <div class="card-likes">
-                                   <svg viewBox="0 0 24 24" width="14" height="14" style="margin-right: 2px;">
-                                     <path :fill="b.isLike ? '#ff2442' : '#999'" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                                   </svg>
-                                   {{b.liked || 0}}
-                               </div>
-                           </div>
-                       </div>
-                    </div>
-                 </div>
-             </div>
-             <div v-if="feeds.length > 0 && feedNoMore" class="no-more">没有更多了</div>
-             <div v-else-if="!feedLoading && feeds.length===0" class="empty-state">
-                <p>暂无动态</p>
-             </div>
-          </el-tab-pane>
-       </el-tabs>
+       <!-- Action Buttons -->
+       <div class="action-buttons-row">
+          <div class="edit-btn" @click="toEdit" v-if="isSelf">编辑资料</div>
+          <div class="setting-btn" @click="logout" v-if="isSelf"><i class="el-icon-s-tools"></i></div>
+          <div class="follow-btn" v-if="!isSelf" @click="handleFollow">关注</div>
+          <div class="chat-btn" v-if="!isSelf" @click="toChat">私信</div>
+       </div>
     </div>
 
+    <!-- Service Bar (Horizontal Scroll if needed, or fixed 4) -->
+    <div class="service-bar">
+        <div class="service-item" @click="toOrders">
+            <i class="el-icon-s-order"></i>
+            <span>订单</span>
+        </div>
+        <div class="service-item" @click="toCollections">
+            <i class="el-icon-star-on"></i>
+            <span>收藏</span>
+        </div>
+        <div class="service-item" @click="toReviews">
+            <i class="el-icon-s-comment"></i>
+            <span>评价</span>
+        </div>
+        <div class="service-item" @click="toHistory">
+            <i class="el-icon-time"></i>
+            <span>历史</span>
+        </div>
+    </div>
+
+    <!-- Sticky Tabs -->
+    <div class="sticky-tabs-container">
+        <van-tabs v-model:active="activeTab" sticky offset-top="50" swipeable animated @change="handleTabChange">
+            <van-tab title="笔记" name="note">
+                <template #title>
+                    <div class="tab-label">
+                        <span>笔记</span> 
+                        <span class="tab-num" v-if="stats.blogCount">{{ stats.blogCount }}</span>
+                    </div>
+                </template>
+                <div class="tab-content">
+                    <div class="waterfall-container">
+                        <div class="waterfall-column" v-for="(col, i) in [0, 1]" :key="i">
+                            <div class="waterfall-item" v-for="b in blogs.filter((_, index) => index % 2 === i)" :key="b.id" @click="toBlogDetail(b)">
+                                <div class="card-img-box">
+                                    <img :src="getFirstImage(b.images)" class="work-cover" loading="lazy" @error="handleImgError">
+                                </div>
+                                <div class="card-info">
+                                    <div class="card-title">{{ b.title }}</div>
+                                    <div class="card-bottom">
+                                        <div class="card-user">
+                                            <img :src="user.icon || '/imgs/icons/default-icon.png'" class="card-avatar">
+                                            <span class="card-name">{{ user.nickName }}</span>
+                                        </div>
+                                        <div class="card-likes">
+                                            <van-icon name="like-o" v-if="!b.isLike" color="#999" />
+                                            <van-icon name="like" v-else color="#ff2442" />
+                                            {{ b.liked || 0 }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div v-if="blogs.length === 0 && !blogLoading" class="empty-state">
+                        <img src="https://img01.yzcdn.cn/vant/empty-image-default.png" class="empty-img">
+                        <div class="empty-text">发布你的第一篇笔记此</div>
+                    </div>
+                </div>
+            </van-tab>
+
+            <van-tab title="收藏" name="collection">
+                <template #title>
+                    <div class="tab-label">
+                        <span>收藏</span> 
+                        <span class="tab-num" v-if="stats.blogStarCount">{{ stats.blogStarCount }}</span>
+                    </div>
+                </template>
+                <div class="tab-content">
+                    <div class="waterfall-container">
+                         <div class="waterfall-column" v-for="(col, i) in [0, 1]" :key="i">
+                            <div class="waterfall-item" v-for="b in collections.filter((_, index) => index % 2 === i)" :key="b.id" @click="toBlogDetail(b)">
+                                <div class="card-img-box">
+                                    <img :src="getFirstImage(b.images)" class="work-cover" loading="lazy" @error="handleImgError">
+                                </div>
+                                <div class="card-info">
+                                    <div class="card-title">{{ b.title }}</div>
+                                    <div class="card-bottom">
+                                        <div class="card-user">
+                                            <img :src="b.userAvatar || user.icon || '/imgs/icons/default-icon.png'" class="card-avatar">
+                                            <span class="card-name">{{ b.userName || user.nickName }}</span>
+                                        </div>
+                                        <div class="card-likes">
+                                            <van-icon name="like-o" v-if="!b.isLike" color="#999" />
+                                            <van-icon name="like" v-else color="#ff2442" />
+                                            {{ b.liked || 0 }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                         </div>
+                    </div>
+                     <div v-if="collections.length === 0 && !collectionLoading" class="empty-state">
+                        <div class="empty-text">这里空空如也</div>
+                    </div>
+                </div>
+            </van-tab>
+
+            <van-tab title="赞过" name="likes">
+                <template #title>
+                    <div class="tab-label">
+                        <span>赞过</span> 
+                        <span class="tab-num" v-if="stats.blogLikeCount">{{ stats.blogLikeCount }}</span>
+                    </div>
+                </template>
+                <div class="tab-content">
+                    <div class="waterfall-container">
+                         <div class="waterfall-column" v-for="(col, i) in [0, 1]" :key="i">
+                            <div class="waterfall-item" v-for="b in likes.filter((_, index) => index % 2 === i)" :key="b.id" @click="toBlogDetail(b)">
+                                <div class="card-img-box">
+                                    <img :src="getFirstImage(b.images)" class="work-cover" loading="lazy" @error="handleImgError">
+                                </div>
+                                <div class="card-info">
+                                    <div class="card-title">{{ b.title }}</div>
+                                    <div class="card-bottom">
+                                        <div class="card-user">
+                                            <img :src="b.userAvatar || user.icon || '/imgs/icons/default-icon.png'" class="card-avatar">
+                                            <span class="card-name">{{ b.userName || user.nickName }}</span>
+                                        </div>
+                                        <div class="card-likes">
+                                            <van-icon name="like-o" v-if="!b.isLike" color="#999" />
+                                            <van-icon name="like" v-else color="#ff2442" />
+                                            {{ b.liked || 0 }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                         </div>
+                    </div>
+                     <div v-if="likes.length === 0 && !likeLoading" class="empty-state">
+                        <div class="empty-text">去点个赞吧</div>
+                    </div>
+                </div>
+            </van-tab>
+        </van-tabs>
+    </div>
+
+    <!-- FootBar -->
     <div class="footer-container">
       <foot-bar :active-btn="4"></foot-bar>
     </div>
 
-    <!-- Avatar Dialog (Bottom Sheet) -->
+    <!-- Avatar Dialog -->
     <div class="avatar-dialog-overlay" v-if="showAvatarDialog" @click="showAvatarDialog = false">
        <div class="avatar-dialog-content" @click.stop>
           <div class="avatar-dialog-close" @click="showAvatarDialog = false"><i class="el-icon-close"></i></div>
-          <div class="avatar-preview">
-             <img :src="user.icon || '/imgs/icons/default-icon.png'" class="avatar-big">
-          </div>
-          <div class="avatar-dialog-actions">
-             <div class="action-item" @click="handleChangeAvatar">
-                <i class="el-icon-edit"></i>
-                <span>更换头像</span>
-                <i class="el-icon-arrow-right"></i>
-             </div>
-             <div class="action-item" @click="handleSaveAvatar">
-                <i class="el-icon-download"></i>
-                <span>保存头像</span>
-                <i class="el-icon-arrow-right"></i>
-             </div>
+          <img :src="user.icon || '/imgs/icons/default-icon.png'" class="avatar-big">
+          <div class="avatar-actions">
+             <div class="action-btn" @click="handleChangeAvatar">更换头像</div>
+             <div class="action-btn secondary" @click="handleSaveAvatar">保存图片</div>
           </div>
        </div>
     </div>
-
-    <!-- Hidden file input for avatar upload -->
     <input type="file" ref="avatarInput" accept="image/*" @change="onAvatarSelected" style="display:none">
+
+    <!-- Logout Action Sheet -->
+    <van-action-sheet
+      v-model:show="showLogoutAction"
+      :actions="logoutActions"
+      cancel-text="取消"
+      close-on-click-action
+      @select="onLogoutSelect"
+    />
   </div>
 </template>
 
@@ -289,8 +248,9 @@
 import FootBar from '@/components/FootBar.vue';
 import { getCurrentUser, getFullUserInfo, getUserStats, uploadFile, updateUser } from '@/api/user';
 import { getMyBlogs, getFollowedFeeds } from '@/api/blog';
-import { getShopCollections, uncollectShop, likeBlog, likeRecord, starList } from '@/api/interaction';
+import { likeBlog, likeRecord, starList } from '@/api/interaction';
 import { filePrefix } from '@/utils/request';
+import { locationUtil } from '@/utils/location';
 
 export default {
   name: 'UserInfo',
@@ -302,6 +262,15 @@ export default {
        stats: { likeCount: 0, fansCount: 0, followCount: 0 },
        activeTab: 'note',
        pageLoading: false,
+       
+       // UI State
+       scrollTop: 0,
+       isSelf: true, // Info.vue is always current user
+       showAvatarDialog: false,
+       showLogoutAction: false,
+       logoutActions: [
+           { name: '退出登录', color: '#ee0a24' }
+       ],
        
        // Blog Data
        blogs: [],
@@ -327,16 +296,12 @@ export default {
        feedLoading: false,
        feedNoMore: false,
        
-       // Avatar Dialog
-       showAvatarDialog: false,
-       
        // Touch Swipe
        touchStartX: 0,
        tabOrder: ['note', 'collection', 'likes', 'feed']
     }
   },
   created() {
-     // Check token first
      const token = localStorage.getItem('token');
      if (!token) {
         this.$router.push('/user/login');
@@ -344,6 +309,12 @@ export default {
      }
      this.queryUser();
      this.loadTabData('note');
+  },
+  mounted() {
+      window.addEventListener('scroll', this.handleWindowScroll);
+  },
+  beforeUnmount() {
+      window.removeEventListener('scroll', this.handleWindowScroll);
   },
   methods: {
      goBack() {
@@ -353,16 +324,14 @@ export default {
         this.$router.push('/user/add-friend');
      },
      logout() {
-        this.$confirm('确定要退出登录吗？', '提示', { 
-            type: 'warning',
-            confirmButtonText: '确定',
-            cancelButtonText: '取消',
-            center: true
-        }).then(() => {
+        this.showLogoutAction = true;
+     },
+     onLogoutSelect(item) {
+        if (item.name === '退出登录') {
             localStorage.removeItem("token");
             localStorage.removeItem("userInfo");
             this.$router.push('/user/login');
-        }).catch(() => {});
+        }
      },
      toEdit() {
         this.$router.push('/user/edit');
@@ -377,44 +346,50 @@ export default {
         this.$router.push('/user/fans');
      },
      toCollections() {
-        // 切换到收藏tab
         this.activeTab = 'collection';
         this.loadTabData('collection');
      },
-     toMessages() {
-        this.$router.push('/chat/list');
+     toReviews() {
+        this.$router.push('/comment/list'); // Assuming comment list serves as reviews
      },
-     toService() {
-        this.$message.info('客服功能开发中');
+     toHistory() {
+         this.$message.info('浏览历史功能开发中');
+     },
+     toChat() {
+         // Logic for other user chat
+     },
+     handleFollow() {
+         // Logic for follow
+     },
+     copyId() {
+         const id = this.user.phoneNumber || this.user.id;
+         if(!id) return;
+         navigator.clipboard.writeText(id).then(() => {
+             this.$message.success('复制成功');
+         }).catch(() => {
+             this.$message.error('复制失败');
+         });
+     },
+     handleWindowScroll() {
+         const scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop;
+         this.scrollTop = scrollTop;
+         
+         // Infinite load logic
+         const scrollHeight = document.documentElement.scrollHeight || document.body.scrollHeight;
+         const clientHeight = document.documentElement.clientHeight || document.body.clientHeight;
+         
+         if(scrollTop + clientHeight >= scrollHeight - 100) {
+             const type = this.activeTab;
+             if(type === 'note' && !this.blogLoading && !this.blogNoMore) this.loadMoreBlogs();
+             if(type === 'collection' && !this.collectionLoading && !this.collectionNoMore) this.loadMoreCollections();
+             if(type === 'likes' && !this.likeLoading && !this.likeNoMore) this.loadMoreLikes();
+             if(type === 'feed' && !this.feedLoading && !this.feedNoMore) this.loadMoreFeeds();
+         }
      },
      
-     // Touch Swipe handlers
-     handleTouchStart(e) {
-        this.touchStartX = e.touches[0].clientX;
-     },
-     handleTouchEnd(e) {
-        const touchEndX = e.changedTouches[0].clientX;
-        const diff = this.touchStartX - touchEndX;
-        const threshold = 50; // Minimum swipe distance
-        
-        if (Math.abs(diff) < threshold) return;
-        
-        const currentIndex = this.tabOrder.indexOf(this.activeTab);
-        
-        if (diff > 0) {
-           // Swipe left -> next tab
-           if (currentIndex < this.tabOrder.length - 1) {
-              this.activeTab = this.tabOrder[currentIndex + 1];
-              this.loadTabData(this.activeTab);
-           }
-        } else {
-           // Swipe right -> previous tab
-           if (currentIndex > 0) {
-              this.activeTab = this.tabOrder[currentIndex - 1];
-              this.loadTabData(this.activeTab);
-           }
-        }
-     },
+     // Touch Swipe handlers (Optional with Vant Swipeable)
+     handleTouchStart(e) { /* Managed by Vant now */ },
+     handleTouchEnd(e) { /* Managed by Vant now */ },
      
      // Data Query
      queryUser() {
@@ -423,7 +398,6 @@ export default {
            let userData = res.data || res;
            if (userData && userData.data) userData = userData.data;
            
-           // Check if user data is valid
            if (!userData || !userData.id) {
               this.$message.error("登录已失效，请重新登录");
               localStorage.removeItem("token");
@@ -437,7 +411,6 @@ export default {
             this.queryUserStats();
          }).catch(err => {
             console.error(err);
-            // Redirect to login on any auth error
             this.$message.error("登录失效，请重新登录");
             localStorage.removeItem("token");
             this.$router.push("/user/login");
@@ -459,11 +432,12 @@ export default {
      },
 
      // Tabs
-     handleTabClick(tab) {
-        this.loadTabData(tab.paneName);
+     handleTabChange(name) {
+        this.loadTabData(name);
      },
-     formatCount(n) {
-        return n > 99 ? '99+' : n;
+     handleTabClick(tab) {
+         // Keep for compatibility if mixed usage
+        this.loadTabData(tab.paneName || tab);
      },
      loadTabData(tabName) {
         if(tabName === 'note' && this.blogs.length === 0) this.queryBlogs();
@@ -474,7 +448,7 @@ export default {
 
      // Blog Logic
      queryBlogs() {
-        if(this.blogLoading) return; // Prevent duplicate requests
+        if(this.blogLoading) return;
         this.blogCurrent = 1;
         this.blogLoading = true;
         this.blogNoMore = false;
@@ -484,6 +458,7 @@ export default {
            if(list.length < 10) this.blogNoMore = true;
         }).finally(() => this.blogLoading = false);
      },
+     // ... (Keep existing loadMoreBlogs, processBlog, etc.)
      loadMoreBlogs() {
          if(this.blogLoading || this.blogNoMore) return;
          this.blogLoading = true;
@@ -504,21 +479,22 @@ export default {
            icon: b.icon ? this.$fileURL + b.icon : '',
            userAvatar: b.userAvatar ? this.$fileURL + b.userAvatar : '',
            images: b.images,
+           // Image error flag
+           imgError: false
         };
      },
      
-     // Collection Logic (Using starList for notes)
+     // Collection Logic
      queryCollections() {
         if(this.collectionLoading) return;
         this.collectionCurrent = 1;
         this.collectionLoading = true;
         this.collectionNoMore = false;
-        // sourceType=3 for blogs
         starList({ userId: this.user.id, sourceType: 3, current: this.collectionCurrent, size: 10 }).then(res => {
            let list = res.data || res || [];
            if(list.records) list = list.records;
            
-           this.collections = list.map(this.processBlog); // Reuse processBlog as they are blogs
+           this.collections = list.map(this.processBlog);
            if(list.length < 10) this.collectionNoMore = true;
         }).finally(() => this.collectionLoading = false);
      },
@@ -529,7 +505,6 @@ export default {
          starList({ userId: this.user.id, sourceType: 3, current: this.collectionCurrent, size: 10 }).then(res => {
              let list = res.data || res || [];
              if(list.records) list = list.records;
-             
              if(list.length > 0) {
                  this.collections = [...this.collections, ...list.map(this.processBlog)];
              }
@@ -548,7 +523,6 @@ export default {
         likeRecord({ userId: this.user.id, sourceType: 3, current: this.likeCurrent, size: 10 }).then(res => {
             let list = res.data || res || [];
             if(list.records) list = list.records;
-            
             this.likes = list.map(this.processBlog);
             if(list.length < 10) this.likeNoMore = true;
         }).finally(() => this.likeLoading = false);
@@ -560,7 +534,6 @@ export default {
         likeRecord({ userId: this.user.id, sourceType: 3, current: this.likeCurrent, size: 10 }).then(res => {
             let list = res.data || res || [];
             if(list.records) list = list.records;
-            
             if(list.length > 0) {
                 this.likes = [...this.likes, ...list.map(this.processBlog)];
             }
@@ -568,14 +541,6 @@ export default {
         }).catch(() => {
             this.likeCurrent--;
         }).finally(() => this.likeLoading = false);
-     },
-
-     processShop(s) {
-         // kept for reference or if implementation changes back
-         return s;
-     },
-     uncollectShop(shopId) {
-        // ... (unused for now if replacing with blogs)
      },
 
      // Feed Logic
@@ -592,7 +557,7 @@ export default {
            this.feeds = list.map(this.processBlog);
            this.feedParams.minTime = data.minTime;
            this.feedParams.offset = data.offset;
-           if(list.length < 10) this.feedNoMore = true; // Assuming page size roughly 10
+           if(list.length < 10) this.feedNoMore = true;
         }).finally(() => this.feedLoading = false);
      },
      loadMoreFeeds() {
@@ -611,25 +576,10 @@ export default {
             }
          }).finally(() => this.feedLoading = false);
      },
-     toggleLike(b) {
-        if(!this.user.id) return this.$router.push('/user/login');
-        
-        const originalLike = b.isLike;
-        const originalCount = b.liked;
-        
-        b.isLike = !b.isLike;
-        b.liked = b.isLike ? (b.liked + 1) : (b.liked - 1);
-        
-        likeBlog({ sourceType: 3, sourceId: b.id }).catch(() => {
-           b.isLike = originalLike;
-           b.liked = originalCount;
-           this.$message.error('操作失败');
-        });
-     },
 
      // Helpers
      getFirstImage(images) {
-        if(!images) return 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="150" viewBox="0 0 200 150"><rect fill="%23f0f0f0" width="200" height="150"/><text x="100" y="75" font-size="14" fill="%23999" text-anchor="middle" dominant-baseline="middle">暂无图片</text></svg>';
+        if(!images) return 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="150" viewBox="0 0 200 150"><rect fill="%23f5f5f5" width="200" height="150"/><text x="100" y="75" font-size="14" fill="%23ccc" text-anchor="middle" dominant-baseline="middle">暂无图片</text></svg>';
         let img = '';
         if(Array.isArray(images)) {
             img = images[0];
@@ -637,81 +587,54 @@ export default {
             img = images.split(',')[0];
         }
         
-        if(!img) return 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="150" viewBox="0 0 200 150"><rect fill="%23f0f0f0" width="200" height="150"/><text x="100" y="75" font-size="14" fill="%23999" text-anchor="middle" dominant-baseline="middle">暂无图片</text></svg>';
+        if(!img) return 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="150" viewBox="0 0 200 150"><rect fill="%23f5f5f5" width="200" height="150"/><text x="100" y="75" font-size="14" fill="%23ccc" text-anchor="middle" dominant-baseline="middle">暂无图片</text></svg>';
         if(img.startsWith('http')) return img;
         return this.$fileURL + img;
      },
      handleImgError(e) {
-        e.target.onerror = null; // Prevent infinite loop
-        e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="150" viewBox="0 0 200 150"><rect fill="%23f0f0f0" width="200" height="150"/><text x="100" y="75" font-size="14" fill="%23999" text-anchor="middle" dominant-baseline="middle">图片加载失败</text></svg>';
-     },
-     formatDistance(d) {
-        return d < 1000 ? d.toFixed(1) + 'm' : (d/1000).toFixed(1) + 'km';
+        e.target.onerror = null;
+        e.target.style.objectFit = 'contain';
+        e.target.style.padding = '20px';
+        e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="150" viewBox="0 0 200 150"><rect fill="%23f5f5f5" width="200" height="150"/><text x="100" y="75" font-size="14" fill="%23ccc" text-anchor="middle" dominant-baseline="middle">加载失败</text></svg>';
      },
      getGenderText(g) {
-        return g === 1 ? '男' : (g === 2 ? '女' : '未知');
+        return g === 1 ? '男' : (g === 2 ? '女' : '');
      },
      getAge(birthday) {
-        if(!birthday) return 18; // Default or calculate
+        if(!birthday) return 18;
         const ageDifMs = Date.now() - new Date(birthday).getTime();
         const ageDate = new Date(ageDifMs);
         return Math.abs(ageDate.getUTCFullYear() - 1970);
      },
-     formatTime(time) {
-        if(!time) return '';
-        const d = new Date(time);
-        const y = d.getFullYear();
-        const m = (d.getMonth()+1).toString().padStart(2, '0');
-        const day = d.getDate().toString().padStart(2, '0');
-        return `${y}-${m}-${day}`;
-     },
      toBlogDetail(b) {
         this.$router.push({ path: '/blog/detail', query: { id: b.id } });
      },
-     toShopDetail(s) {
-        this.$router.push({ path: '/shop/detail', query: { id: s.id } });
+     onScroll(e) {
+        // Not used with Vant Tabs scroll? 
+        // Vant Tabs handles content scrolling if sticky.
+        // But for infinite list load, we usually rely on window scroll if not in container.
+        // UserInfo page is window scroll.
      },
-
-     onScroll(e, type) {
-        const { scrollTop, clientHeight, scrollHeight } = e.target;
-        if(scrollTop + clientHeight >= scrollHeight - 50) {
-           if(type === 'note' && !this.blogLoading && !this.blogNoMore) this.loadMoreBlogs();
-           if(type === 'collection' && !this.collectionLoading && !this.collectionNoMore) this.loadMoreCollections();
-           if(type === 'likes' && !this.likeLoading && !this.likeNoMore) this.loadMoreLikes();
-           if(type === 'feed' && !this.feedLoading && !this.feedNoMore) this.loadMoreFeeds();
-        }
-     },
-     
-     // Avatar methods
+     // Avatar methods (Keep existing)
      handleChangeAvatar() {
         this.$refs.avatarInput.click();
      },
      onAvatarSelected(e) {
         const file = e.target.files[0];
         if(!file) return;
-        
-        // Check file size (max 2MB)
         if(file.size > 2 * 1024 * 1024) {
            this.$message.error('图片大小不能超过2MB');
            return;
         }
-        
         const formData = new FormData();
         formData.append('file', file);
-        
         this.pageLoading = true;
-        
-        // Step 1: Upload file
         uploadFile(formData).then(res => {
            const path = res.data || res;
-           
-           // Process path - remove filePrefix if present
            let savePath = path;
            if (path.includes(filePrefix)) {
               savePath = path.split(filePrefix)[1];
            }
-           
-           // Step 2: Update user icon
            updateUser({ id: this.user.id, icon: savePath }).then(() => {
               this.$message.success('头像修改成功');
               this.showAvatarDialog = false;
@@ -724,16 +647,10 @@ export default {
         }).finally(() => {
            this.pageLoading = false;
         });
-        
-        e.target.value = ''; // Reset input
+        e.target.value = '';
      },
      handleSaveAvatar() {
-        if(!this.user.icon) {
-           this.$message.warning('暂无头像可保存');
-           return;
-        }
-        
-        // Create a temporary link to download the image
+        if(!this.user.icon) return;
         const link = document.createElement('a');
         link.href = this.user.icon;
         link.download = 'avatar.jpg';
@@ -741,42 +658,17 @@ export default {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        
-        this.$message.success('头像保存中...');
      }
   }
 }
 </script>
 <style scoped>
-
-/* Page Layout */
 .user-info-page {
     min-height: 100vh;
     background: #fff;
     padding-bottom: 60px;
-    box-sizing: border-box;
     position: relative;
-    overflow-x: hidden;
-}
-
-.user-info-page * {
-    box-sizing: border-box;
-}
-
-/* Immersive Cover */
-.profile-cover {
-    height: 250px;
-    background-size: cover;
-    background-position: center;
-    position: relative;
-}
-.cover-gradient {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 80px;
-    background: linear-gradient(to top, rgba(0,0,0,0.3), transparent);
+    /* overflow-x: hidden; */ /* Allow sticky to work better */
 }
 
 /* Nav Bar */
@@ -785,627 +677,415 @@ export default {
     top: 0;
     left: 0;
     right: 0;
-    height: 60px; /* Taller for mobile status bar area */
+    height: 50px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 16px 0 16px;
-    z-index: 100;
-    color: white;
-    /* Transparent by default */
-}
-
-.nav-left .add-friend-btn {
-    background: rgba(0, 0, 0, 0.2);
-    backdrop-filter: blur(4px);
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    color: white;
-    border: 0.5px solid rgba(255,255,255,0.2);
-}
-
-.nav-right {
-    display: flex;
-    gap: 12px;
-}
-
-.icon-btn {
-    width: 34px;
-    height: 34px;
-    background: rgba(0, 0, 0, 0.2); 
-    backdrop-filter: blur(4px);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-    border: 0.5px solid rgba(255,255,255,0.2);
-}
-
-/* Profile Body Card */
-.profile-body-card {
-    position: relative;
-    margin-top: -15px; /* Slight overlap */
-    background: white;
-    border-radius: 16px 16px 0 0;
     padding: 0 16px;
-    min-height: 500px; /* ensure white bg covers bottom */
+    z-index: 1000;
+    transition: background-color 0.3s, box-shadow 0.3s;
+}
+.nav-scrolled {
+    background: #fff;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.05);
+}
+.nav-left, .nav-right {
+    display: flex;
+    align-items: center;
+}
+.nav-left i {
+    font-size: 24px;
+    color: #333;
+}
+.nav-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+.nav-scrolled .nav-title {
+    opacity: 1;
+}
+.add-friend-btn {
+    background: #f5f5f5;
+    padding: 4px 12px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+    color: #333;
+}
+.icon-btn {
+    margin-left: 16px;
+    font-size: 20px;
+    color: #333;
+}
+
+/* Profile Cover */
+.profile-cover {
+    height: 240px;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+}
+.profile-cover::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 60px;
+    background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.1));
+}
+
+/* Header */
+.profile-header {
+    margin-top: -20px; /* Overlap cover */
+    border-radius: 20px 20px 0 0;
+    padding-top: 20px;
+    padding-left: 16px;
+    padding-right: 16px;
+    background: #fff;
+    position: relative;
     z-index: 10;
 }
-
-/* Header Row: Avatar & Actions */
-.body-header-row {
-    position: relative;
+.header-top {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    margin-bottom: 12px;
-    height: 50px; /* Placeholder for overlap calculation */
+    align-items: center;
+    margin-bottom: 16px;
 }
-
-.avatar-container {
-    position: absolute;
-    left: 0;
-    bottom: 0; /* Align with bottom of this row container */
-    width: 90px;
-    height: 90px;
-    border-radius: 50%;
-    padding: 3px;
-    background: white; /* White border effect */
-    top: -40px; /* Move up to overlap cover */
-    z-index: 12;
+.avatar-box {
+    position: relative;
+    margin-right: 24px;
 }
-
 .avatar-img {
-    width: 100%;
-    height: 100%;
+    width: 80px;
+    height: 80px;
     border-radius: 50%;
     object-fit: cover;
+    border: 1px solid #f0f0f0;
 }
-
-.header-actions {
-    margin-left: auto; /* Push to right */
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding-top: 10px;
-}
-
-.edit-btn {
-    border: 1px solid #ddd;
-    border-radius: 20px;
-    padding: 6px 16px;
+.add-status {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 20px;
+    height: 20px;
+    background: #ff2442;
+    color: white;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 20px;
     font-size: 14px;
-    color: #333;
-    font-weight: 500;
-}
-.settings-btn {
-    border: 1px solid #ddd;
-    border-radius: 20px;
-    padding: 6px 12px;
-    font-size: 16px;
-    color: #333;
-    display: flex; 
-    align-items: center;
-}
-
-/* Basic Info Section */
-.basic-info-section {
-    margin-bottom: 15px;
-}
-
-.user-name {
-    font-size: 22px;
-    font-weight: bold;
-    color: #000;
-    margin-bottom: 4px;
-}
-
-.user-id {
-    font-size: 12px;
-    color: #666;
-    margin-bottom: 10px;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-.copy-icon { font-size: 12px; cursor: pointer; }
-
-.user-desc {
-    font-size: 14px;
-    color: #333;
-    line-height: 1.5;
-    margin-bottom: 12px;
-    white-space: pre-wrap;
-}
-
-/* Tags */
-.user-tags {
-    display: flex;
-    flex-wrap: wrap;
-    margin-bottom: 5px;
-}
-.tag-list { display: flex; gap: 6px; flex-wrap: wrap; }
-.tag {
-    background: #f2f2f2;
-    color: #666;
-    font-size: 11px;
-    padding: 4px 8px;
-    border-radius: 4px;
-}
-.add-tag {
-    color: #999;
-    border: 1px dashed #ddd;
-    background: transparent;
-}
-
-/* Stats Row */
-.stats-action-row {
-    margin-bottom: 20px;
+    border: 2px solid #fff;
 }
 .stats-box {
-    display: flex;
-    justify-content: space-around;
-    width: 100%;
-}
-
-.stat-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    cursor: pointer;
-}
-
-.stat-item .num {
-    font-size: 18px;
-    font-weight: bold;
-    color: #000;
-}
-
-.stat-item .label {
-    font-size: 13px;
-    color: #999;
-}
-
-/* Keeping Tabs & Quick Actions as is */
-.quick-actions {
-    display: flex;
-    justify-content: space-between;
-    background: #fff;
-    padding: 5px 10px 20px 10px; 
-}
-.action-item {
-   display: flex;
-   flex-direction: column;
-   align-items: center;
-   cursor: pointer;
-}
-.action-icon {
-   width: 40px;
-   height: 40px;
-   background: #f8f8f8; /* Softer circle bg */
-   border-radius: 50%;
-   display: flex;
-   align-items: center;
-   justify-content: center;
-   margin-bottom: 6px;
-}
-.action-icon i {
-   font-size: 20px;
-   color: #ff2442;
-}
-.action-text {
-   font-size: 12px;
-   color: #666;
-}
-
-.profile-tabs >>> .el-tabs__nav-wrap::after {
-    height: 0.5px;
-    background-color: #f1f1f1;
-}
-.profile-tabs >>> .el-tabs__active-bar {
-    background-color: #ff2442;
-    height: 3px;
-    border-radius: 3px;
-}
-.profile-tabs >>> .el-tabs__item {
-    font-weight: 500;
-    color: #999;
-}
-.profile-tabs >>> .el-tabs__item.is-active {
-    color: #333;
-    font-weight: bold;
-    font-size: 16px;
-}
-
-
-/* White Body Card */
-.profile-body-card {
-    background: #fff;
-    border-radius: 16px 16px 0 0;
-    margin-top: 20px;
-    /* Overlap header slightly or push down */
-    position: relative;
     flex: 1;
     display: flex;
-    flex-direction: column;
-    padding-bottom: 20px;
+    justify-content: space-around;
 }
-
-/* Stats Row */
-.stats-action-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 20px;
-}
-
-
-
 .stat-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    cursor: pointer;
+    text-align: center;
 }
-
-.stat-item .num {
-    font-size: 20px;
+.stat-num {
+    font-size: 18px;
     font-weight: 600;
     color: #333;
 }
-
-.stat-item .label {
-    font-size: 13px;
+.stat-label {
+    font-size: 12px;
     color: #999;
     margin-top: 4px;
 }
 
-.edit-btn {
-    border: 1px solid #ddd;
-    border-radius: 20px;
-    padding: 8px 20px;
-    font-size: 14px;
+/* Info Text */
+.info-text-section {
+    margin-bottom: 16px;
+}
+.user-name-row {
+    margin-bottom: 6px;
+}
+.cancel-bold-name {
+    font-size: 20px;
+    font-weight: 600;
     color: #333;
+}
+.user-id-row {
+    font-size: 12px;
+    color: #999;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+}
+.user-id-row i {
+    margin-left: 4px;
     cursor: pointer;
 }
-
-/* Description */
-.user-desc {
-    padding: 0 20px;
+.user-bio {
     font-size: 14px;
     color: #333;
-    line-height: 1.5;
-    margin-bottom: 15px;
+    line-height: 1.4;
+    margin-bottom: 12px;
+    white-space: pre-wrap;
 }
-
-/* Tags */
-.user-tags {
-    padding: 0 20px;
+.user-tags-row {
     display: flex;
-    gap: 8px;
     flex-wrap: wrap;
-    margin-bottom: 10px;
+    gap: 6px;
 }
-
-.tag {
+.gender-tag, .info-tag {
     background: #f5f5f5;
     color: #666;
-    font-size: 12px;
-    padding: 4px 8px;
+    padding: 2px 8px;
     border-radius: 4px;
-}
-
-/* Quick Actions */
-.quick-actions {
+    font-size: 10px;
     display: flex;
-    justify-content: space-around;
-    padding: 15px 20px;
-    margin: 10px 0;
-    background: #fafafa;
-    border-radius: 12px;
-    margin-left: 15px;
-    margin-right: 15px;
-}
-
-.quick-actions .action-item {
-    display: flex;
-    flex-direction: column;
     align-items: center;
-    cursor: pointer;
+}
+.gender-tag i {
+    margin-right: 2px;
+    font-size: 10px;
+}
+.gender-tag .el-icon-female { color: #ff4d94; }
+.gender-tag .el-icon-male { color: #409eff; }
+.add-tag {
+    color: #555;
+    border: 1px dashed #ccc;
+    background: #fff;
 }
 
-.quick-actions .action-icon {
-    width: 44px;
-    height: 44px;
-    background: white;
-    border-radius: 12px;
+/* Action Buttons */
+.action-buttons-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+.edit-btn, .setting-btn {
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 6px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    font-size: 13px;
+    color: #333;
+}
+.edit-btn {
+    flex: 1;
+}
+.setting-btn {
+    width: 40px;
+}
+.follow-btn, .chat-btn {
+    flex: 1;
+    height: 32px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+}
+.follow-btn {
+    background: #ff2442;
+    color: white;
+}
+.chat-btn {
+    border: 1px solid #ddd;
+    color: #333;
 }
 
-.quick-actions .action-icon i {
-    font-size: 20px;
-    color: #ff6633;
+/* Service Bar */
+.service-bar {
+    display: flex;
+    justify-content: space-around;
+    /* padding: 0 10px; */
+    margin-bottom: 10px;
+    border-bottom: 1px solid #fafafa;
+    padding-bottom: 10px;
 }
-
-.quick-actions .action-text {
+.service-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.service-item i {
+    font-size: 24px;
+    color: #333;
+    margin-bottom: 4px;
+}
+.service-item span {
     font-size: 12px;
     color: #666;
 }
 
 /* Tabs */
-.profile-tabs>>>.el-tabs__nav-wrap::after {
-    height: 0;
-    /* Remove divider */
+.sticky-tabs-container {
+    background: #fff;
+    min-height: 500px;
 }
-
-.profile-tabs>>>.el-tabs__active-bar {
-    background-color: #333;
-    height: 3px;
-    border-radius: 1.5px;
-}
-
-.profile-tabs>>>.el-tabs__item {
-    font-size: 16px;
-    color: #999;
-    font-weight: 500;
-}
-
-.profile-tabs>>>.el-tabs__item.is-active {
-    color: #333;
-    font-weight: 600;
-}
-
-/* Waterfall Layout */
-.waterfall-container {
-    padding: 10px;
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    background: #f9f9f9;
-    min-height: 400px;
-}
-
-.waterfall-column {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.waterfall-item {
-    background: white;
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-    cursor: pointer;
-}
-
-.card-img-box {
-    width: 100%;
-}
-
-.work-cover {
-    width: 100%;
-    display: block;
-}
-
-.card-info {
-    padding: 8px 10px 12px;
-}
-
-
-.card-title {
-    font-size: 14px;
-    color: #333;
-    line-height: 1.4;
-    margin-bottom: 8px;
-
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    min-height: 38px; /* Enforce min-height to align cards with short titles */
-}
-
-.card-bottom {
+.tab-label {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
+}
+.tab-num {
+    margin-left: 2px; /* Fixed spacing */
+    font-size: 12px;
+    color: #999;
+}
+/* Deep selector for active tab color */
+:deep(.van-tab--active .tab-label span:first-child) {
+    font-weight: 600;
+    font-size: 16px;
+    color: #333;
+}
+:deep(.van-tabs__nav) {
+    background: #fff;
 }
 
+/* Content Waterfall */
+.tab-content {
+    background: #f9f9f9;
+    padding: 10px 4px;
+    min-height: 400px;
+}
+.waterfall-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+.waterfall-column {
+    width: 49%;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.waterfall-item {
+    background: #fff;
+    border-radius: 4px;
+    overflow: hidden;
+    break-inside: avoid;
+}
+.card-img-box {
+    width: 100%;
+    min-height: 100px;
+    background: #f0f0f0;
+}
+.work-cover {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+.card-info {
+    padding: 8px;
+}
+.card-title {
+    font-size: 13px;
+    color: #333;
+    margin-bottom: 8px;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2; /* Required for line-clamp */
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.card-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10px;
+    color: #999;
+}
 .card-user {
     display: flex;
     align-items: center;
-    overflow: hidden;
-    height: 16px; /* Fix height */
+    max-width: 65%;
 }
-
 .card-avatar {
     width: 16px;
     height: 16px;
     border-radius: 50%;
     margin-right: 4px;
-    flex-shrink: 0;
-    object-fit: cover; /* Ensure no distortion */
 }
-
 .card-name {
-    font-size: 10px;
-    color: #999;
-    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 80px;
+    white-space: nowrap;
 }
-
 .card-likes {
-    font-size: 10px;
-    color: #999;
     display: flex;
     align-items: center;
-    height: 16px; /* Align with user info */
 }
-
-.card-likes i {
+.card-likes i, .card-likes svg {
     margin-right: 2px;
 }
 
-/* Shop Card specific tweak */
-.card-rating {
-    transform: scale(0.8);
-    transform-origin: left center;
-}
-
-.card-price {
-    font-size: 11px;
-    color: #666;
-}
-
+/* Empty State */
 .empty-state {
+    padding: 40px 0;
     text-align: center;
-    padding: 60px 0;
     color: #999;
-}
-
-.empty-icon {
-    width: 80px;
-    height: 80px;
-    background: #f5f5f5;
-    border-radius: 50%;
-    margin: 0 auto 15px;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    font-size: 32px;
-    color: #ccc;
+}
+.empty-img {
+    width: 120px;
+    margin-bottom: 10px;
 }
 
-.empty-text {
-    font-size: 14px;
-}
-
-.no-more {
-    text-align: center;
-    padding: 15px;
-    color: #ccc;
-    font-size: 12px;
-}
-
-.footer-container {
-    height: 60px;
-}
-
-/* Avatar Dialog Styles */
+/* Avatar Dialog */
 .avatar-dialog-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.85);
-    z-index: 9999;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 2000;
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
 }
-
 .avatar-dialog-content {
-    background: #1a1a1a;
+    background: #fff;
     border-radius: 16px 16px 0 0;
-    padding-bottom: env(safe-area-inset-bottom, 20px);
+    padding: 20px;
     position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
-
-.count-badge {
-    background: #ff6633;
-    color: white;
-    padding: 0 5px;
-    border-radius: 10px;
-    font-size: 10px;
-    margin-left: 2px;
-    vertical-align: middle;
-}
-
 .avatar-dialog-close {
-    position: fixed;
-    top: 20px;
-    left: 20px;
-    width: 36px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 24px;
-    cursor: pointer;
-    z-index: 10000;
-}
-
-.avatar-preview {
     position: absolute;
-    top: -420px;
-    left: 0;
-    right: 0;
-    height: 400px;
+    top: 16px;
+    right: 16px;
+    font-size: 20px;
+    color: #999;
+}
+.avatar-big {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    margin-bottom: 30px;
+    margin-top: 20px;
+}
+.avatar-actions {
+    width: 100%;
+}
+.action-btn {
+    width: 100%;
+    height: 44px;
+    background: #f5f5f5;
+    border-radius: 22px;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0;
-}
-
-.avatar-big {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 0;
-}
-
-.avatar-dialog-actions {
-    padding: 15px 0;
-}
-
-.avatar-dialog-actions .action-item {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    padding: 16px 20px;
-    color: #fff;
     font-size: 16px;
-    cursor: pointer;
-    transition: background 0.2s;
+    color: #333;
+    margin-bottom: 12px;
 }
-
-.avatar-dialog-actions .action-item:active {
-    background: rgba(255, 255, 255, 0.1);
+.action-btn.secondary {
+    background: transparent;
+    border: 1px solid #eee;
 }
-
-.avatar-dialog-actions .action-item i:first-child {
-    font-size: 20px;
-    margin-right: 15px;
-    color: #ccc;
-}
-
-.avatar-dialog-actions .action-item span {
-    flex: 1;
-}
-
-.avatar-dialog-actions .action-item i:last-child {
-    color: #666;
-}
-
-.avatar-wrapper {
-    position: relative;
-    margin-right: 15px;
-    cursor: pointer;
-}
-
 </style>
+

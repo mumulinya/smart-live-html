@@ -15,6 +15,10 @@ const app = createApp(App)
 app.use(router)
 app.use(ElementPlus)
 
+import Vant from 'vant';
+import 'vant/lib/index.css';
+app.use(Vant);
+
 // Make global utilities available if needed, or import them in components
 import { fileURL } from './utils/request'
 app.config.globalProperties.$fileURL = fileURL

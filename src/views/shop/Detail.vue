@@ -5,6 +5,7 @@
        <div class="loading-text">加载中...</div>
     </div>
 
+    <!-- Fixed Top Header -->
     <div class="header">
       <div class="header-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
       <div class="header-title">{{shop.name}}</div>
@@ -12,71 +13,87 @@
     </div>
 
     <div class="shop-info-container" v-if="shop.id">
-       <!-- Top Gallery/Cover -->
-       <div class="shop-header-gallery" 
-            v-if="gallery.length > 0"
+       <!-- Immersive Hero Section -->
+       <div class="hero-section"
             @touchstart="onTouchStart"
             @touchmove="onTouchMove"
             @touchend="onTouchEnd"
        >
            <el-carousel 
              ref="imageCarousel"
-             :height="carouselHeight" 
+             height="240px" 
              :autoplay="false" 
              arrow="never" 
              indicator-position="none"
              @change="onCarouselChange"
+             v-if="gallery.length > 0"
            >
               <el-carousel-item v-for="(img, idx) in gallery" :key="idx">
-                 <img :src="img" class="full-carousel-img" @click="previewImage(gallery, idx)" @load="onImageLoad">
+                 <img :src="img" class="hero-img" @click="previewImage(gallery, idx)">
               </el-carousel-item>
            </el-carousel>
-           <!-- 图片序号指示器 -->
-           <div class="image-indicator">{{currentImageIndex + 1}}/{{gallery.length}}</div>
-           <!-- 底部点状指示器 -->
-           <div class="dots-indicator" v-if="gallery.length > 1">
-             <span 
-               v-for="(img, i) in gallery" 
-               :key="i" 
-               class="dot" 
-               :class="{active: i === currentImageIndex}"
-               @click="goToImage(i)"
-             ></span>
+           <div class="hero-placeholder" v-else>
+              <img src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800" class="hero-img">
+           </div>
+           
+           <!-- Gradient Overlay -->
+           <div class="hero-gradient"></div>
+           
+           <!-- Image Indicator -->
+           <div class="image-indicator" v-if="gallery.length > 1">{{currentImageIndex + 1}}/{{gallery.length}}</div>
+           
+           <!-- Shop Info Overlay (inside hero) -->
+           <div class="hero-content">
+              <div class="hero-info-left">
+                 <div class="hero-shop-name">{{shop.name}}</div>
+                 <div class="hero-shop-rating">
+                    <el-rate disabled :model-value="shop.score/10" :max="5" :colors="['#fff', '#fff', '#fff']"></el-rate>
+                    <span class="hero-score">{{(shop.score/10).toFixed(1)}}</span>
+                    <span class="hero-count">{{shop.comments}}条评价</span>
+                 </div>
+              </div>
+              <div class="hero-follow-btn" @click="toggleFollow">
+                 <button :class="shop.isFollowed ? 'followed' : 'not-followed'">
+                    <span v-if="!shop.isFollowed">+ 关注</span>
+                    <span v-else>已关注</span>
+                 </button>
+              </div>
            </div>
        </div>
-       <div class="top-placeholder" v-else></div>
        
-       <div class="info-box">
-          <div class="shop-title">{{shop.name}}</div>
-          <div class="shop-rate">
-             <el-rate disabled :model-value="shop.score/10" text-color="#F63" show-score :max="5" score-template="{value}"></el-rate>
-             <span>{{shop.comments}}条</span>
-             <span>￥{{shop.avgPrice}}/人</span>
-          </div>
-          <div class="shop-rate-detail">
-             <span class="detail-tag">口味 {{(shop.score/10).toFixed(1)}}</span>
-             <span class="detail-tag">环境 {{(shop.score/10).toFixed(1)}}</span>
-             <span class="detail-tag">服务 {{(shop.score/10).toFixed(1)}}</span>
+       <!-- Floating Info Card -->
+       <div class="floating-info-card">
+          <div class="info-card-row">
+             <div class="info-card-tags">
+                <span class="detail-tag">口味 {{(shop.score/10).toFixed(1)}}</span>
+                <span class="detail-tag">环境 {{(shop.score/10).toFixed(1)}}</span>
+                <span class="detail-tag">服务 {{(shop.score/10).toFixed(1)}}</span>
+             </div>
+             <div class="info-card-price">￥{{shop.avgPrice}}/人</div>
           </div>
           
-          <div class="shop-address-row">
-             <div class="address-icon"><i class="el-icon-map-location"></i></div>
-             <div class="address-text">{{shop.address || '暂无详细地址'}}</div>
-             <div class="address-action" @click="openMap"><i class="el-icon-location"></i></div>
+          <div class="info-card-divider"></div>
+          
+          <div class="info-card-address" @click="openMap">
+             <i class="el-icon-location-outline"></i>
+             <span class="address-text">{{shop.address || '暂无详细地址'}}</span>
+             <i class="el-icon-arrow-right"></i>
+          </div>
+          
+          <div class="info-card-time">
+             <i class="el-icon-time"></i>
+             <span class="time-label">营业时间</span>
+             <span class="time-value">{{shop.openHours || '10:00-22:00'}}</span>
+          </div>
+          
+          <div class="info-card-phone" v-if="shop.phone">
+             <i class="el-icon-phone-outline"></i>
+             <span>{{shop.phone}}</span>
+             <a :href="'tel:' + shop.phone" class="call-btn">拨打</a>
           </div>
        </div>
 
-       <!-- Removed duplicate gallery from here -->
-       <div class="shop-divider"></div>
-       
-       <div class="shop-time">
-          <i class="el-icon-watch"></i>
-          <span class="time-label">营业时间</span>
-          <span class="time-value">{{shop.openHours || '10:00-22:00'}}</span>
-          <a class="time-more">详情 <i class="el-icon-arrow-right"></i></a>
-       </div>
-
-       <div class="shop-divider"></div>
+       <div class="section-gap"></div>
 
        <!-- Vouchers -->
        <div class="voucher-list" v-if="vouchers.length>0">
@@ -242,15 +259,20 @@
 
     </div>
 
-    <!-- Foot Bar -->
+    <!-- Foot Bar - Local Service Style -->
     <div class="foot-bar">
-       <div class="foot-item" @click="toggleStar" :class="{active: shop.isStared, animate: starAnimating}">
-          <i :class="shop.isStared ? 'el-icon-star-on' : 'el-icon-star-off'"></i>
-          <span>{{shop.isStared ? '已收藏' : '收藏'}} {{shop.stared || 0}}</span>
+       <div class="foot-left">
+          <div class="foot-icon-btn" @click="toggleStar" :class="{active: shop.isStared, animate: starAnimating}">
+             <i :class="shop.isStared ? 'el-icon-star-on' : 'el-icon-star-off'"></i>
+             <span>收藏</span>
+          </div>
+          <div class="foot-icon-btn" @click="callShop">
+             <i class="el-icon-phone-outline"></i>
+             <span>电话</span>
+          </div>
        </div>
-       <div class="foot-item action-big" @click="writeComment">
-          <i class="el-icon-edit-outline"></i>
-          <span>写评价</span>
+       <div class="foot-right">
+          <div class="foot-main-btn" @click="writeComment">写评价</div>
        </div>
     </div>
     
@@ -304,12 +326,91 @@
       </div>
    </div>
 
+   <!-- All Reviews Bottom Sheet Popup -->
+   <div class="review-popup-overlay" v-if="showReviewPopup" @click="showReviewPopup = false">
+      <div class="review-popup-sheet" @click.stop>
+         <div class="review-popup-header">
+            <span class="review-popup-title">全部评论 ({{shop.comments || 0}})</span>
+            <i class="el-icon-close review-popup-close" @click="showReviewPopup = false"></i>
+         </div>
+         <div class="review-popup-body" @scroll="onPopupScroll">
+            <div v-if="allComments.length === 0 && !allCommentsLoading" class="empty-reviews">
+               <i class="el-icon-chat-round"></i>
+               <p>暂无评论</p>
+            </div>
+            
+            <div class="comment-box" v-for="c in allComments" :key="c.id">
+               <div class="comment-icon" @click.stop="toUserDetail(c.userId)">
+                  <img :src="c.userIcon || '/imgs/icons/default-icon.png'">
+               </div>
+               <div class="comment-info">
+                  <div class="comment-user" @click.stop="toUserDetail(c.userId)">
+                     {{c.nickName || '匿名用户'}} <span>Lv{{c.userLevel || 1}}</span>
+                  </div>
+                  <div class="comment-rating">
+                     <el-rate :model-value="c.rating" disabled size="small"></el-rate>
+                     <span class="score">{{c.rating}}分</span>
+                  </div>
+                  <div class="comment-content">{{c.content}}</div>
+                  <div class="comment-images" v-if="c.images && c.images.length">
+                     <img v-for="(img, idx) in c.images" :key="idx" :src="img" @click="previewImage(c.images, idx)">
+                  </div>
+                  <div class="comment-interactions">
+                     <span class="comment-time">{{formatDate(c.createTime)}}</span>
+                     <div class="comment-actions">
+                        <div class="c-action-btn" @click.stop="handleCommentLike(c)">
+                           <svg viewBox="0 0 24 24" width="16" height="16">
+                             <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" :fill="c.isLike ? '#ff2442' : '#999'"></path>
+                           </svg>
+                           {{c.liked || 0}}
+                        </div>
+                        <div class="c-action-btn" @click.stop="handleCommentReply(c)">
+                           <i class="el-icon-chat-dot-square"></i>
+                        </div>
+                        <div class="c-action-btn delete-btn" v-if="user && user.id === c.userId" @click.stop="handleCommentDelete(c)">
+                           <i class="el-icon-delete"></i>
+                        </div>
+                     </div>
+                  </div>
+                  
+                  <!-- Replies -->
+                  <div class="comment-replies" v-if="c.replies && c.replies.length > 0">
+                     <div class="reply-item" v-for="r in c.replies" :key="r.id">
+                        <div class="reply-avatar" @click.stop="toUserDetail(r.userId)">
+                           <img :src="r.userIcon || '/imgs/icons/default-icon.png'">
+                        </div>
+                        <div class="reply-main">
+                           <div class="reply-header">
+                              <span class="reply-user" @click.stop="toUserDetail(r.userId)">{{r.nickName || '匿名用户'}}</span>
+                              <span class="reply-time">{{formatDate(r.createTime)}}</span>
+                           </div>
+                           <div class="reply-content">
+                              <span v-if="r.replyToName" class="reply-target">回复 @{{r.replyToName}}</span>
+                              {{r.content}}
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+            </div>
+            
+            <div v-if="allCommentsLoading" class="loading-more">加载中...</div>
+            <div v-if="allCommentsNoMore && allComments.length > 0" class="no-more-reviews">没有更多评论了</div>
+         </div>
+         <!-- Bottom Input Bar in Popup -->
+         <div class="popup-bottom-bar" @click="writeCommentFromPopup">
+            <div class="popup-input-placeholder">发条评论，和大家一起讨论</div>
+            <el-button type="primary" size="small" round>发布</el-button>
+         </div>
+      </div>
+   </div>
+
   </div>
 </template>
 
 <script>
 import { getShopDetail, getShopVouchers, buyVoucherAPI, seckillVoucherAPI } from '@/api/shop';
-import { isStar, toggleStar, getComments, likeComment, addComment, removeComment } from '@/api/interaction';
+import { isStar, toggleStar, getComments, likeComment, addComment, removeComment, isFollowed, followUser } from '@/api/interaction';
 import { uploadFile } from '@/api/common';
 import { getCurrentUser } from '@/api/user';
 import '@/assets/css/blog-detail.css'; // Import blog styles to reuse reply CSS
@@ -339,12 +440,22 @@ export default {
        touchStartX: 0,
        touchEndX: 0,
 
+       // Follow state
+       isFollowed: false,
+
        // Comment interaction
        showCommentPublish: false,
        commentText: '',
        commentRating: 5,
        replyToComment: null,
-       selectedImages: []
+       selectedImages: [],
+       
+       // Review popup
+       showReviewPopup: false,
+       allComments: [],
+       allCommentsPage: 1,
+       allCommentsNoMore: false,
+       allCommentsLoading: false
     }
   },
   computed: {
@@ -378,8 +489,8 @@ export default {
                  this.gallery = rawImgs.map(img => this.fileURL + img);
                  // Main image fallback if needed, but we use gallery now
               }
-              // isStared and stared come from shop data directly
-           }
+               // isStared and isFollowed come from shop data directly
+            }
            this.onDataLoaded();
         }).catch(err => {
            console.error(err);
@@ -387,11 +498,16 @@ export default {
         });
         
         // 2. Vouchers
-        getShopVouchers(id).then(res => {
-           let data = res;
-           if(res && res.data) data = res.data;
-           this.vouchers = data || [];
-           this.onDataLoaded();
+         getShopVouchers(id).then(res => {
+            let data = res;
+            if(res && res.data) data = res.data;
+            // Sort: Seckill vouchers (type === 1) first
+            this.vouchers = (data || []).sort((a, b) => {
+               if(a.type === 1 && b.type !== 1) return -1;
+               if(a.type !== 1 && b.type === 1) return 1;
+               return 0;
+            });
+            this.onDataLoaded();
         }).catch(err => {
            console.error("Voucher fetch error", err);
            this.onDataLoaded();
@@ -554,8 +670,35 @@ export default {
            const val = (typeof res === 'object' && res !== null && res.data !== undefined) ? res.data : res;
            this.isStared = !!val;
         });
-     },
-     toggleStar() {
+      },
+      checkFollowStatus(id) {
+         if(!localStorage.getItem('token')) return;
+         isFollowed({ sourceId: id, sourceType: 2 }).then(res => {
+            const val = (typeof res === 'object' && res !== null && res.data !== undefined) ? res.data : res;
+            this.isFollowed = !!val;
+         });
+      },
+      toggleFollow() {
+         if(!localStorage.getItem('token')) {
+            this.$message.warning("请先登录");
+            this.$router.push('/user/login');
+            return;
+         }
+         
+         const newStatus = !this.shop.isFollowed;
+         
+         followUser({
+            sourceId: this.shop.id,
+            sourceType: 2,
+            isFollow: newStatus
+         }).then(() => {
+            this.shop.isFollowed = newStatus;
+            this.$message.success(newStatus ? "关注成功" : "已取消关注");
+         }).catch(() => {
+            this.$message.error('操作失败');
+         });
+      },
+      toggleStar() {
         if(!localStorage.getItem('token')) {
            this.$message.warning("请先登录");
            this.$router.push('/user/login');
@@ -689,12 +832,51 @@ export default {
         this.commentText = '';
         this.showCommentPublish = true;
      },
+     writeComment() {
+        if(!this.user || !this.user.id) {
+           this.$message.warning("请先登录");
+           return this.$router.push('/user/login');
+        }
+        this.replyToComment = null;
+        this.commentText = '';
+        this.commentRating = 5;
+        this.selectedImages = [];
+        this.showCommentPublish = true;
+        this.$nextTick(() => {
+           if(this.$refs.commentTextarea) {
+              this.$refs.commentTextarea.focus();
+           }
+        });
+     },
      closeCommentModal() {
         this.showCommentPublish = false;
         this.commentText = '';
         this.selectedImages = [];
         this.replyToComment = null;
         this.commentRating = 5;
+     },
+     callShop() {
+        if(this.shop.phone) {
+           window.location.href = 'tel:' + this.shop.phone;
+        } else {
+           this.$message.warning("暂无联系方式");
+        }
+     },
+     writeCommentFromPopup() {
+        if(!this.user || !this.user.id) {
+           this.$message.warning("请先登录");
+           return this.$router.push('/user/login');
+        }
+        this.replyToComment = null;
+        this.commentText = '';
+        this.commentRating = 5;
+        this.selectedImages = [];
+        this.showCommentPublish = true;
+        this.$nextTick(() => {
+           if(this.$refs.commentTextarea) {
+              this.$refs.commentTextarea.focus();
+           }
+        });
      },
      // Image Upload
      async handleImageUpload(e) {
@@ -757,6 +939,13 @@ export default {
             this.$message.success("发布成功");
             this.closeCommentModal();
             this.loadComments();
+            // Also refresh popup comments if open
+            if(this.showReviewPopup) {
+               this.allComments = [];
+               this.allCommentsPage = 1;
+               this.allCommentsNoMore = false;
+               this.loadAllComments();
+            }
          });
      },
      handleCommentDelete(c) {
@@ -779,6 +968,77 @@ export default {
               this.$message.error('删除失败，请重试');
            });
         }).catch(() => {});
+     },
+     
+     // Review Popup Methods
+     viewAllComments() {
+        this.showReviewPopup = true;
+        this.allComments = [];
+        this.allCommentsPage = 1;
+        this.allCommentsNoMore = false;
+        this.loadAllComments();
+     },
+     loadAllComments() {
+        if(this.allCommentsLoading || this.allCommentsNoMore) return;
+        this.allCommentsLoading = true;
+        
+        getComments({ sourceId: this.shop.id, sourceType: 2, current: this.allCommentsPage }).then(res => {
+           let list = [];
+           if(Array.isArray(res)) list = res;
+           else if(res && Array.isArray(res.list)) list = res.list;
+           else if(res && Array.isArray(res.data)) list = res.data;
+           else if(res && res.data && Array.isArray(res.data.records)) list = res.data.records;
+           
+           if(list.length === 0) {
+              this.allCommentsNoMore = true;
+           } else {
+              const processed = list.filter(c => !c.isAIGenerated).map(c => ({
+                 ...c,
+                 userIcon: c.userIcon ? (c.userIcon.startsWith('http') ? c.userIcon : this.fileURL + c.userIcon) : '',
+                 images: c.images ? c.images.split(',').filter(x=>x).map(i => i.startsWith('http') ? i : this.fileURL + i) : [],
+                 replies: []
+              }));
+              
+              // Build reply tree
+              const map = {};
+              processed.forEach(c => map[c.id] = c);
+              
+              const roots = [];
+              processed.forEach(c => {
+                 if(!c.answerId) {
+                    roots.push(c);
+                 } else {
+                    const parent = map[c.answerId];
+                    if(parent) {
+                       c.replyToName = parent.nickName;
+                       let curr = parent;
+                       while(curr && curr.answerId && map[curr.answerId]) {
+                          curr = map[curr.answerId];
+                       }
+                       if(curr && !curr.answerId) {
+                          if(!curr.replies) curr.replies = [];
+                          curr.replies.push(c);
+                       } else {
+                          roots.push(c);
+                       }
+                    } else {
+                       roots.push(c);
+                    }
+                 }
+              });
+              
+              this.allComments = [...this.allComments, ...roots];
+              this.allCommentsPage++;
+           }
+        }).finally(() => {
+           this.allCommentsLoading = false;
+        });
+     },
+     onPopupScroll(e) {
+        const { scrollTop, clientHeight, scrollHeight } = e.target;
+        if(scrollTop + clientHeight >= scrollHeight - 50) {
+           this.loadAllComments();
+        }
      },
      
      // Carousel methods
@@ -834,7 +1094,48 @@ export default {
 .header-title { font-weight: 600; font-size: 17px; max-width: 70%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 
 /* Container */
-.shop-info-container { flex: 1; overflow-y: auto; overflow-x: hidden; position: relative; padding-bottom: 58px; }
+.shop-info-container { flex: 1; overflow-y: auto; overflow-x: hidden; position: relative; padding-bottom: 70px; }
+
+/* Hero Section - Immersive Header */
+.hero-section { position: relative; width: 100%; height: 240px; background: #333; overflow: hidden; }
+.hero-img { width: 100%; height: 100%; object-fit: cover; }
+.hero-placeholder { width: 100%; height: 240px; background: linear-gradient(135deg, #667eea, #764ba2); }
+.hero-gradient { position: absolute; left: 0; right: 0; bottom: 0; height: 120px; background: linear-gradient(to top, rgba(0,0,0,0.7), transparent); z-index: 5; pointer-events: none; }
+.hero-content { position: absolute; left: 0; right: 0; bottom: 0; padding: 16px; display: flex; justify-content: space-between; align-items: flex-end; z-index: 10; }
+.hero-info-left { flex: 1; }
+.hero-shop-name { color: white; font-size: 22px; font-weight: 700; margin-bottom: 6px; text-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+.hero-shop-rating { display: flex; align-items: center; gap: 6px; }
+.hero-shop-rating :deep(.el-rate__icon) { color: white !important; }
+.hero-score { color: white; font-weight: 600; font-size: 14px; }
+.hero-count { color: rgba(255,255,255,0.8); font-size: 12px; }
+
+/* Follow Button in Header */
+.hero-follow-btn { flex-shrink: 0; margin-left: 12px; }
+.hero-follow-btn button { border: none; border-radius: 16px; padding: 6px 14px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.3s; }
+.hero-follow-btn button.not-followed { background: #FF6B00; color: white; }
+.hero-follow-btn button.followed { background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.5); }
+
+/* Floating Info Card */
+.floating-info-card { background: white; border-radius: 16px 16px 0 0; margin-top: -20px; position: relative; z-index: 15; padding: 16px; box-shadow: 0 -4px 16px rgba(0,0,0,0.08); }
+.info-card-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.info-card-tags { display: flex; gap: 8px; }
+.info-card-price { color: #FF6B00; font-weight: 600; font-size: 15px; }
+.info-card-divider { height: 1px; background: #f0f0f0; margin: 12px 0; }
+.info-card-address { display: flex; align-items: center; padding: 10px 0; cursor: pointer; }
+.info-card-address i { color: #FF6B00; font-size: 16px; }
+.info-card-address .address-text { flex: 1; margin: 0 10px; font-size: 14px; color: #333; line-height: 1.4; }
+.info-card-address .el-icon-arrow-right { color: #ccc; }
+.info-card-time { display: flex; align-items: center; padding: 8px 0; font-size: 14px; color: #666; }
+.info-card-time i { color: #999; margin-right: 8px; }
+.info-card-time .time-label { font-weight: 500; margin-right: 8px; }
+.info-card-time .time-value { color: #333; }
+.info-card-phone { display: flex; align-items: center; padding: 8px 0; font-size: 14px; color: #666; }
+.info-card-phone i { color: #999; margin-right: 8px; }
+.info-card-phone .call-btn { margin-left: auto; color: #FF6B00; background: #FFF5F0; padding: 4px 12px; border-radius: 12px; font-size: 12px; text-decoration: none; }
+
+/* Section Gap */
+.section-gap { height: 12px; background: #f0f2f5; }
+
 .shop-header-gallery { 
   position: relative; 
   width: 100%; 
@@ -973,13 +1274,19 @@ export default {
 
 .view-all { text-align: center; padding: 12px 0; color: #666; font-size: 14px; border-top: 1px solid #f5f5f5; cursor: pointer; }
 
-/* Foot Bar */
-.foot-bar { height: 56px; background: white; border-top: 1px solid #eee; display: flex; padding-bottom: env(safe-area-inset-bottom); }
-.foot-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; color: #666; transition: all 0.2s; }
-.foot-item i { font-size: 20px; margin-bottom: 2px; }
-.foot-item.active i, .foot-item.active span { color: #FF6B00; }
-.foot-item.action-big { flex: 1.5; background: #FF6B00; color: white; margin: 8px 16px; border-radius: 20px; flex-direction: row; gap: 6px; font-size: 14px; }
-.foot-item.action-big i { font-size: 16px; margin: 0; color: white; }
+/* Foot Bar - Local Service Style */
+.foot-bar { height: 60px; background: white; border-top: 1px solid #f5f5f5; display: flex; align-items: center; padding: 0 16px; padding-bottom: env(safe-area-inset-bottom); box-shadow: 0 -2px 10px rgba(0,0,0,0.02); z-index: 100; position: fixed; bottom: 0; left: 0; right: 0; }
+
+.foot-left { display: flex; align-items: center; gap: 24px; margin-right: 20px; flex-shrink: 0; }
+.foot-icon-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; color: #333; gap: 3px; cursor: pointer; min-width: 32px; }
+.foot-icon-btn i { font-size: 22px; color: #333; transition: all 0.2s; }
+.foot-icon-btn.active i { color: #FF9900; }
+.foot-icon-btn.active span { color: #FF9900; }
+.foot-icon-btn:active i { transform: scale(0.9); }
+
+.foot-right { flex: 1; display: flex; align-items: center; }
+.foot-main-btn { width: 100%; height: 40px; background: linear-gradient(135deg, #FF9900, #FF5500); border-radius: 20px; color: white; font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 10px rgba(255, 107, 0, 0.3); transition: all 0.2s; }
+.foot-main-btn:active { transform: scale(0.98); box-shadow: 0 2px 5px rgba(255, 107, 0, 0.2); }
 
 /* Preview Overlay */
 .image-preview { position: fixed; inset: 0; background: black; z-index: 1000; display: flex; flex-direction: column; justify-content: center; }
@@ -988,27 +1295,49 @@ export default {
 .preview-close { position: absolute; top: 20px; right: 20px; color: white; font-size: 30px; z-index: 1001; }
 .preview-indicator { position: absolute; bottom: 40px; width: 100%; text-align: center; color: white; font-size: 16px; }
 
-/* Comment Pop Modal */
-.comment-pop-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: flex-end; }
-.comment-pop-box { background: white; width: 100%; border-radius: 16px 16px 0 0; padding: 20px; max-height: 80vh; overflow-y: auto; box-sizing: border-box; }
-.pop-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.pop-title { font-size: 14px; color: #666; }
-.pop-close { font-size: 20px; color: #999; cursor: pointer; padding: 5px; }
+/* Comment Pop Modal - Modern Social App Style */
+.comment-pop-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 2000; display: flex; flex-direction: column; justify-content: flex-end; }
+.comment-pop-box { background: #fff; border-radius: 16px 16px 0 0; padding: 20px; animation: slideUp 0.3s ease-out; max-height: 80vh; overflow-y: auto; }
+
+/* Header */
+.pop-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.pop-title { flex: 1; font-size: 16px; font-weight: 600; color: #333; text-align: center; }
+.pop-close { font-size: 22px; color: #999; cursor: pointer; padding: 4px; }
 .pop-close:hover { color: #333; }
-.pop-textarea textarea { width: 100%; border: none; outline: none; resize: none; font-size: 16px; line-height: 1.6; min-height: 80px; padding: 0; }
-.pop-textarea textarea::placeholder { color: #ccc; }
-.pop-images { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
-.pop-image-item { width: 60px; height: 60px; position: relative; }
-.pop-image-item img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; }
-.pop-image-item i { position: absolute; top: -4px; right: -4px; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; font-size: 10px; cursor: pointer; }
-.pop-image-add { width: 60px; height: 60px; border: 1px dashed #ddd; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #ccc; font-size: 18px; cursor: pointer; }
-.pop-toolbar { display: flex; justify-content: space-between; align-items: top; padding: 15px 0 0 0; margin-top: 10px; border-top: 1px solid #f0f0f0; overflow: visible; }
-.pop-toolbar-left { display: flex; align-items: center; gap: 20px; padding-left: 0; margin-left: 0; flex-wrap: wrap; }
-.pop-toolbar-left i { font-size: 26px; color: #666; cursor: pointer; line-height: 1; }
-.pop-toolbar-left i:hover { color: #ff6633; }
-.pic-icon { cursor: pointer; flex-shrink: 0; display: block; width: 24px; height: 24px; }
-.pic-icon:hover path { fill: #ff6633; }
-.pop-rating-inline { margin-left: 10px; display: flex; align-items: center; }
+
+/* Textarea Container */
+.pop-textarea { background: #F7F8FA; border-radius: 12px; padding: 12px; margin-bottom: 16px; }
+.pop-textarea textarea { width: 100%; min-height: 100px; border: none; outline: none; resize: none; font-size: 15px; line-height: 1.6; background: transparent; color: #333; padding: 0; }
+.pop-textarea textarea::placeholder { color: #bbb; }
+
+/* Image Preview */
+.pop-images { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.pop-image-item { width: 70px; height: 70px; position: relative; border-radius: 8px; overflow: hidden; }
+.pop-image-item img { width: 100%; height: 100%; object-fit: cover; }
+.pop-image-item i { position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; }
+.pop-image-add { width: 70px; height: 70px; border: 1px dashed #ddd; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #ccc; font-size: 24px; cursor: pointer; transition: all 0.2s; }
+.pop-image-add:hover { border-color: #FF6B00; color: #FF6B00; }
+
+/* Bottom Toolbar */
+.pop-toolbar { display: flex; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 1px solid #f0f0f0; }
+.pop-toolbar-left { display: flex; align-items: center; gap: 16px; }
+.pic-icon { cursor: pointer; transition: opacity 0.2s; width: 24px; height: 24px; }
+.pic-icon:hover path { fill: #FF6B00; }
+.pop-rating-inline { display: flex; align-items: center; margin-left: 0; }
+
+/* Pill-Shaped Send Button */
+.pop-toolbar .el-button--primary {
+    background: linear-gradient(135deg, #FF7B00, #FF5500) !important;
+    border: none !important;
+    border-radius: 20px !important;
+    padding: 8px 24px !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    box-shadow: 0 4px 12px rgba(255, 107, 0, 0.3) !important;
+    transition: all 0.3s !important;
+}
+.pop-toolbar .el-button--primary:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(255, 107, 0, 0.4) !important; }
+.pop-toolbar .el-button--primary:disabled { background: #ccc !important; box-shadow: none !important; }
 
 @keyframes pop { 50% { transform: scale(1.2); } }
 .animate i { animation: pop 0.3s ease; }
@@ -1029,4 +1358,27 @@ export default {
      margin-left: 10px;
      font-weight: 500;
   }
+
+/* Review Popup Bottom Sheet */
+.review-popup-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: flex-end; }
+.review-popup-sheet { width: 100%; height: 75vh; background: white; border-radius: 16px 16px 0 0; display: flex; flex-direction: column; animation: slideUp 0.3s ease; }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.review-popup-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid #f0f0f0; flex-shrink: 0; }
+.review-popup-title { font-size: 16px; font-weight: 600; }
+.review-popup-close { font-size: 22px; color: #999; cursor: pointer; padding: 4px; }
+.review-popup-close:hover { color: #333; }
+.review-popup-body { flex: 1; overflow-y: auto; padding: 0 16px 20px; }
+.review-popup-body .comment-box { padding: 16px 0; border-bottom: 1px solid #f5f5f5; }
+.review-popup-body .comment-box:last-child { border-bottom: none; }
+.empty-reviews { text-align: center; padding: 60px 20px; color: #999; }
+.empty-reviews i { font-size: 48px; margin-bottom: 12px; color: #ddd; }
+.loading-more { text-align: center; padding: 15px; color: #999; font-size: 13px; }
+.no-more-reviews { text-align: center; padding: 15px; color: #ccc; font-size: 12px; }
+
+/* Popup Bottom Input Bar */
+.popup-bottom-bar { display: flex; align-items: center; padding: 12px 16px; border-top: 1px solid #f0f0f0; background: white; flex-shrink: 0; gap: 12px; }
+.popup-input-placeholder { flex: 1; background: #f5f5f5; padding: 10px 16px; border-radius: 20px; color: #999; font-size: 14px; }
+
+/* Ensure comment modal is above review popup */
+.comment-pop-overlay { z-index: 1100 !important; }
 </style>

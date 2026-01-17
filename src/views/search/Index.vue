@@ -47,293 +47,289 @@
     </div>
 
     <!-- Main Content (Show WHEN searched) -->
-    <div v-else>
-        <!-- Filter Tabs -->
-        <div class="search-filters">
-            <div class="filter-tab" :class="{active: activeTab==='shop'}" @click="changeTab('shop')">商铺</div>
-            <div class="filter-tab" :class="{active: activeTab==='voucher'}" @click="changeTab('voucher')">代金券</div>
-            <div class="filter-tab" :class="{active: activeTab==='blog'}" @click="changeTab('blog')">笔记</div>
-            <div class="filter-tab" :class="{active: activeTab==='user'}" @click="changeTab('user')">用户</div>
-        </div>
-
-        <!-- Detail Filter Bars (Shop & Voucher) -->
-        <div class="category-filter-area">
-             <!-- Shop Filters -->
-             <div v-if="activeTab === 'shop'" class="meituan-filter-bar">
-                  <div class="filter-item" :class="{active: activeFilterTab==='type'}" @click="toggleFilterTab('type')">
-                     <div class="filter-text">{{selectedShopType ? getShopTypeName(selectedShopType) : '分类'}} <i class="el-icon-arrow-down"></i></div>
-                  </div>
-                  <div class="filter-item" :class="{active: activeFilterTab==='distance'}" @click="toggleFilterTab('distance')">
-                     <div class="filter-text">{{selectedDistance || '距离'}} <i class="el-icon-arrow-down"></i></div>
-                  </div>
-                  <div class="filter-item" :class="{active: activeFilterTab==='score'}" @click="toggleFilterTab('score')">
-                     <div class="filter-text">{{selectedScore || '评分'}} <i class="el-icon-arrow-down"></i></div>
-                  </div>
-             </div>
-             
-             <!-- Voucher Filters -->
-             <div v-if="activeTab === 'voucher'" class="meituan-filter-bar">
-                 <div class="filter-item" :class="{active: activeFilterTab==='vType'}" @click="toggleFilterTab('vType')">
-                     <div class="filter-text">{{selectedVoucherType !== null ? getVoucherTypeName(selectedVoucherType) : '类型'}} <i class="el-icon-arrow-down"></i></div>
-                  </div>
-                  <div class="filter-item" :class="{active: activeFilterTab==='status'}" @click="toggleFilterTab('status')">
-                     <div class="filter-text">{{selectedStatus ? getStatusName(selectedStatus) : '状态'}} <i class="el-icon-arrow-down"></i></div>
-                  </div>
-                  <div class="filter-item" :class="{active: activeFilterTab==='vShopType'}" @click="toggleFilterTab('vShopType')">
-                     <div class="filter-text">{{selectedVoucherShopType ? getShopTypeName(selectedVoucherShopType) : '分类'}} <i class="el-icon-arrow-down"></i></div>
-                  </div>
-             </div>
-             
-             <!-- Blog Filters -->
-             <div v-if="activeTab === 'blog'" class="meituan-filter-bar">
-                  <div class="filter-item" :class="{active: activeFilterTab==='blogType'}" @click="toggleFilterTab('blogType')">
-                     <div class="filter-text">{{selectedBlogType ? getShopTypeName(selectedBlogType) : '全部类型'}} <i class="el-icon-arrow-down"></i></div>
-                  </div>
-             </div>
-
-              <!-- Filter Dropdowns -->
-              <div class="filter-content" :class="{show: !!activeFilterTab}">
-                  <!-- Shop Type -->
-                  <div v-if="activeFilterTab==='type'" class="shop-type-panel">
-                     <div class="shop-type-grid">
-                        <div class="shop-type-item" :class="{active: selectedShopType===type.id}" v-for="type in shopTypes" :key="type.id" @click="selectShopType(type.id)">{{type.name}}</div>
-                     </div>
-                  </div>
-                  <!-- Distance -->
-                  <div v-if="activeFilterTab==='distance'" class="distance-panel">
-                     <div class="distance-options">
-                        <div class="distance-option" :class="{active: selectedDistance===d.label}" v-for="d in distanceOptions" :key="d.value" @click="selectDistance(d)">{{d.label}}</div>
-                     </div>
-                  </div>
-                  <!-- Score -->
-                   <div v-if="activeFilterTab==='score'" class="score-panel">
-                     <div class="score-options">
-                        <div class="score-option" :class="{active: selectedScore===s.label}" v-for="s in scoreOptions" :key="s.value" @click="selectScore(s)">{{s.label}}</div>
-                     </div>
-                  </div>
-                  <!-- Voucher Type -->
-                  <div v-if="activeFilterTab==='vType'" class="score-panel">
-                     <div class="score-options">
-                         <div class="score-option" :class="{active: selectedVoucherType===t.value}" v-for="t in voucherTypeOptions" :key="t.value" @click="selectVoucherType(t)">{{t.label}}</div>
-                     </div>
-                  </div>
-                  <!-- Voucher Status -->
-                  <div v-if="activeFilterTab==='status'" class="score-panel">
-                     <div class="score-options">
-                         <div class="score-option" :class="{active: selectedStatus===s.value}" v-for="s in statusOptions" :key="s.value" @click="selectStatus(s)">{{s.label}}</div>
-                     </div>
-                  </div>
-                  <!-- Voucher Shop Type -->
-                  <div v-if="activeFilterTab==='vShopType'" class="shop-type-panel">
-                     <div class="shop-type-grid">
-                        <div class="shop-type-item" :class="{active: selectedVoucherShopType===type.id}" v-for="type in shopTypes" :key="type.id" @click="selectVoucherShopType(type.id)">{{type.name}}</div>
-                     </div>
-                  </div>
-                  <!-- Blog Type -->
-                  <div v-if="activeFilterTab==='blogType'" class="shop-type-panel">
-                     <div class="shop-type-grid">
-                        <div class="shop-type-item" :class="{active: selectedBlogType===type.id}" v-for="type in shopTypes" :key="type.id" @click="selectBlogType(type.id)">{{type.name}}</div>
-                     </div>
-                  </div>
-
+    <div v-else class="search-main-content">
+        <!-- Filter Dropdowns (Global Overlay) -->
+        <div class="filter-content" :class="{show: !!activeFilterTab}">
+              <!-- Shop Type -->
+              <div v-if="activeFilterTab==='type'" class="shop-type-panel">
+                 <div class="shop-type-grid">
+                    <div class="shop-type-item" :class="{active: selectedShopType===type.id}" v-for="type in shopTypes" :key="type.id" @click="selectShopType(type.id)">{{type.name}}</div>
+                 </div>
               </div>
-
-              <!-- Selected Tags -->
-              <div class="selected-filters" v-if="hasSelectedFilters">
-                  <!-- Shop Tags -->
-                  <template v-if="activeTab==='shop'">
-                      <div class="selected-filter-tag" v-if="selectedShopType">{{getShopTypeName(selectedShopType)}} <span class="close" @click="selectShopType(selectedShopType)">×</span></div>
-                      <div class="selected-filter-tag" v-if="selectedDistance">{{selectedDistance}} <span class="close" @click="selectedDistance=null;doSearch()">×</span></div>
-                      <div class="selected-filter-tag" v-if="selectedScore">{{selectedScore}} <span class="close" @click="selectedScore=null;doSearch()">×</span></div>
-                  </template>
-                  <!-- Voucher Tags -->
-                  <template v-if="activeTab==='voucher'">
-                      <div class="selected-filter-tag" v-if="selectedVoucherType">{{getVoucherTypeName(selectedVoucherType)}} <span class="close" @click="selectedVoucherType=null;doSearch()">×</span></div>
-                  </template>
-                  
-                  <div class="clear-all" @click="clearAllFilters">清除全部</div>
+              <!-- Distance -->
+              <div v-if="activeFilterTab==='distance'" class="distance-panel">
+                 <div class="distance-options">
+                    <div class="distance-option" :class="{active: selectedDistance===d.label}" v-for="d in distanceOptions" :key="d.value" @click="selectDistance(d)">{{d.label}}</div>
+                 </div>
+              </div>
+              <!-- Score -->
+               <div v-if="activeFilterTab==='score'" class="score-panel">
+                 <div class="score-options">
+                    <div class="score-option" :class="{active: selectedScore===s.label}" v-for="s in scoreOptions" :key="s.value" @click="selectScore(s)">{{s.label}}</div>
+                 </div>
+              </div>
+              <!-- Voucher Type -->
+              <div v-if="activeFilterTab==='vType'" class="score-panel">
+                 <div class="score-options">
+                     <div class="score-option" :class="{active: selectedVoucherType===t.value}" v-for="t in voucherTypeOptions" :key="t.value" @click="selectVoucherType(t)">{{t.label}}</div>
+                 </div>
+              </div>
+              <!-- Voucher Status -->
+              <div v-if="activeFilterTab==='status'" class="score-panel">
+                 <div class="score-options">
+                     <div class="score-option" :class="{active: selectedStatus===s.value}" v-for="s in statusOptions" :key="s.value" @click="selectStatus(s)">{{s.label}}</div>
+                 </div>
+              </div>
+              <!-- Voucher Shop Type -->
+              <div v-if="activeFilterTab==='vShopType'" class="shop-type-panel">
+                 <div class="shop-type-grid">
+                    <div class="shop-type-item" :class="{active: selectedVoucherShopType===type.id}" v-for="type in shopTypes" :key="type.id" @click="selectVoucherShopType(type.id)">{{type.name}}</div>
+                 </div>
+              </div>
+              <!-- Blog Type -->
+              <div v-if="activeFilterTab==='blogType'" class="shop-type-panel">
+                 <div class="shop-type-grid">
+                    <div class="shop-type-item" :class="{active: selectedBlogType===type.id}" v-for="type in shopTypes" :key="type.id" @click="selectBlogType(type.id)">{{type.name}}</div>
+                 </div>
               </div>
         </div>
 
-        <!-- Results -->
-        <div class="search-results">
-            <div v-if="isLoading" class="loading-box">
-               <i class="el-icon-loading"></i> 加载中...
-            </div>
+        <van-tabs v-model:active="activeTab" swipeable type="line" animated sticky offset-top="54px" color="#ff6633" title-active-color="#ff6633" :ellipsis="false" @click-tab="onTabChange">
             
-            <div v-else>
-               <!-- Shop Results -->
-               <div v-if="activeTab === 'shop'">
-                  <div v-if="shopList.length===0" class="empty-result">
-                      <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiByeD0iOCIgZmlsbD0iI0Y4RjlGQSIvPgo8cGF0aCBkPSJNNDAgNDJMMzIgMzRMMzQgMzJMNDAgMzhMNDYgMzJMNDggMzRMNDAgNDJaIiBmaWxsPSIjQzBDNEY0Ii8+CjxwYXRoIGQ9Ik00MCA0MkwzMiAzNEwzNCAzMkw0MCAzOEw0NiAzMkw0OCAzNEw0MCA0MloiIGZpbGw9IiNDMEM0RjQiLz4KPC9zdmc+Cg==">
-                      <p>暂无相关商铺</p>
-                      <span class="sub-text">换个关键词试试吧</span>
-                  </div>
-                  <div class="shop-box" v-for="shop in shopList" :key="shop.id" @click="toShopDetail(shop)">
-                     <div class="shop-img">
-                        <img :src="shop.images || '/imgs/default-shop.jpg'" @error="e => e.target.src='/imgs/default-shop.jpg'" alt="">
-                     </div>
-                     <div class="shop-info">
-                        <div class="shop-title" v-html="shop.name"></div>
-                        <div class="shop-rate">
-                           <el-rate disabled :model-value="shop.score/10" text-color="#F63" :size="12"></el-rate>
-                           <span class="shop-score">{{(shop.score/10).toFixed(1)}}分</span>
-                           <span class="shop-price" v-if="shop.avgPrice">￥{{shop.avgPrice}}/人</span>
+            <!-- SHOP TAB -->
+            <van-tab title="商铺" name="shop">
+                <div class="tab-content">
+                    <!-- Shop Filter Bar -->
+                    <div class="meituan-filter-bar">
+                        <div class="filter-item" :class="{active: activeFilterTab==='type'}" @click="toggleFilterTab('type')">
+                            <div class="filter-text">{{selectedShopType ? getShopTypeName(selectedShopType) : '分类'}} <i class="el-icon-arrow-down"></i></div>
                         </div>
-                        <div class="shop-area">
-                           <span class="area-text">{{shop.area || '未知区域'}} <span v-if="getShopTypeName(shop.typeId)">| {{getShopTypeName(shop.typeId)}}</span></span>
-                           <span class="distance-text" v-if="shop.distance">{{formatDistance(shop.distance)}}</span>
+                        <div class="filter-item" :class="{active: activeFilterTab==='distance'}" @click="toggleFilterTab('distance')">
+                            <div class="filter-text">{{selectedDistance || '距离'}} <i class="el-icon-arrow-down"></i></div>
                         </div>
-                        <div class="shop-comments" v-if="shop.comments">
-                           <span>{{shop.comments}}条评价</span>
+                        <div class="filter-item" :class="{active: activeFilterTab==='score'}" @click="toggleFilterTab('score')">
+                            <div class="filter-text">{{selectedScore || '评分'}} <i class="el-icon-arrow-down"></i></div>
                         </div>
-                     </div>
-                  </div>
-               </div>
+                    </div>
+                    
+                    <!-- Selected Tags -->
+                    <div class="selected-filters" v-if="selectedShopType || selectedDistance || selectedScore">
+                          <div class="selected-filter-tag" v-if="selectedShopType">{{getShopTypeName(selectedShopType)}} <span class="close" @click="selectShopType(selectedShopType)">×</span></div>
+                          <div class="selected-filter-tag" v-if="selectedDistance">{{selectedDistance}} <span class="close" @click="selectedDistance=null;doSearch()">×</span></div>
+                          <div class="selected-filter-tag" v-if="selectedScore">{{selectedScore}} <span class="close" @click="selectedScore=null;doSearch()">×</span></div>
+                          <div class="clear-all" @click="clearAllFilters">清除全部</div>
+                    </div>
 
-               <!-- Voucher Results -->
-               <div v-if="activeTab === 'voucher'">
-                   <div v-if="voucherList.length===0" class="empty-result">
-                      <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiByeD0iOCIgZmlsbD0iI0Y4RjlGQSIvPgo8cGF0aCBkPSJNNDAgNDJMMzIgMzRMMzQgMzJMNDAgMzhMNDYgMzJMNDggMzRMNDAgNDJaIiBmaWxsPSIjQzBDNEY0Ii8+CjxwYXRoIGQ9Ik00MCA0MkwzMiAzNEwzNCAzMkw0MCAzOEw0NiAzMkw0OCAzNEw0MCA0MloiIGZpbGw9IiNDMEM0RjQiLz4KPC9zdmc+Cg==">
-                      <p>暂无相关代金券</p>
-                      <span class="sub-text">换个关键词试试吧</span>
-                   </div>
-                   
-                   <!-- Seckill Vouchers -->
-                   <div v-if="seckillVouchers.length > 0" class="seckill-wrapper">
-                       <div class="voucher-category-title seckill">限时秒杀券</div>
-                       <div class="flash-sale-card" v-for="v in seckillVouchers" :key="v.id" @click="toShopDetail(v)">
-                           <!-- Badge -->
-                           <div class="flash-badge">秒杀</div>
-                           
-                           <!-- Main Content -->
-                           <div class="flash-content">
-                              <!-- Top: Title & Shop -->
-                              <div class="flash-header">
-                                 <div class="flash-title" v-html="v.title"></div>
-                                 <div class="flash-shop" v-if="v.shopId">
-                                    <span class="shop-label">适用商铺:</span>
-                                    <span class="shop-name">{{v.shopName || '家味道家常菜馆'}}</span>
+                    <!-- Shop Results -->
+                    <div v-if="isLoading" class="loading-box"><i class="el-icon-loading"></i> 加载中...</div>
+                    <div v-else>
+                        <div v-if="shopList.length===0" class="empty-result">
+                            <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiByeD0iOCIgZmlsbD0iI0Y4RjlGQSIvPgo8cGF0aCBkPSJNNDAgNDJMMzIgMzRMMzQgMzJMNDAgMzhMNDYgMzJMNDggMzRMNDAgNDJaIiBmaWxsPSIjQzBDNEY0Ii8+CjxwYXRoIGQ9Ik00MCA0MkwzMiAzNEwzNCAzMkw0MCAzOEw0NiAzMkw0OCAzNEw0MCA0MloiIGZpbGw9IiNDMEM0RjQiLz4KPC9zdmc+Cg==">
+                            <p>暂无相关商铺</p>
+                            <span class="sub-text">换个关键词试试吧</span>
+                        </div>
+                        <div class="shop-box" v-for="shop in shopList" :key="shop.id" @click="toShopDetail(shop)">
+                            <div class="shop-img">
+                                <img :src="shop.images || '/imgs/default-shop.jpg'" @error="e => e.target.src='/imgs/default-shop.jpg'" alt="">
+                            </div>
+                            <div class="shop-info">
+                                <div class="shop-title" v-html="shop.name"></div>
+                                <div class="shop-rate">
+                                    <el-rate disabled :model-value="shop.score/10" text-color="#F63" :size="12"></el-rate>
+                                    <span class="shop-score">{{(shop.score/10).toFixed(1)}}分</span>
+                                    <span class="shop-price" v-if="shop.avgPrice">￥{{shop.avgPrice}}/人</span>
+                                </div>
+                                <div class="shop-area">
+                                    <span class="area-text">{{shop.area || '未知区域'}} <span v-if="getShopTypeName(shop.typeId)">| {{getShopTypeName(shop.typeId)}}</span></span>
+                                    <span class="distance-text" v-if="shop.distance">{{formatDistance(shop.distance)}}</span>
+                                </div>
+                                <div class="shop-comments" v-if="shop.comments">
+                                    <span>{{shop.comments}}条评价</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </van-tab>
+
+            <!-- VOUCHER TAB -->
+            <van-tab title="代金券" name="voucher">
+                 <div class="tab-content">
+                     <!-- Voucher Filter Bar -->
+                     <div class="meituan-filter-bar">
+                         <div class="filter-item" :class="{active: activeFilterTab==='vType'}" @click="toggleFilterTab('vType')">
+                             <div class="filter-text">{{selectedVoucherType !== null ? getVoucherTypeName(selectedVoucherType) : '类型'}} <i class="el-icon-arrow-down"></i></div>
+                          </div>
+                          <div class="filter-item" :class="{active: activeFilterTab==='status'}" @click="toggleFilterTab('status')">
+                             <div class="filter-text">{{selectedStatus ? getStatusName(selectedStatus) : '状态'}} <i class="el-icon-arrow-down"></i></div>
+                          </div>
+                          <div class="filter-item" :class="{active: activeFilterTab==='vShopType'}" @click="toggleFilterTab('vShopType')">
+                             <div class="filter-text">{{selectedVoucherShopType ? getShopTypeName(selectedVoucherShopType) : '分类'}} <i class="el-icon-arrow-down"></i></div>
+                          </div>
+                     </div>
+                     
+                     <!-- Selected Tags -->
+                    <div class="selected-filters" v-if="selectedVoucherType !== null || selectedStatus || selectedVoucherShopType">
+                          <div class="selected-filter-tag" v-if="selectedVoucherType !== null">{{getVoucherTypeName(selectedVoucherType)}} <span class="close" @click="selectedVoucherType=null;doSearch()">×</span></div>
+                          <div class="selected-filter-tag" v-if="selectedStatus">{{getStatusName(selectedStatus)}} <span class="close" @click="selectedStatus=null;doSearch()">×</span></div>
+                          <div class="selected-filter-tag" v-if="selectedVoucherShopType">{{getShopTypeName(selectedVoucherShopType)}} <span class="close" @click="selectedVoucherShopType=null;doSearch()">×</span></div>
+                          <div class="clear-all" @click="clearAllFilters">清除全部</div>
+                    </div>
+                     
+                     <!-- Voucher Results -->
+                     <div v-if="isLoading" class="loading-box"><i class="el-icon-loading"></i> 加载中...</div>
+                     <div v-else>
+                         <div v-if="voucherList.length===0" class="empty-result">
+                            <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiByeD0iOCIgZmlsbD0iI0Y4RjlGQSIvPgo8cGF0aCBkPSJNNDAgNDJMMzIgMzRMMzQgMzJMNDAgMzhMNDYgMzJMNDggMzRMNDAgNDJaIiBmaWxsPSIjQzBDNEY0Ii8+CjxwYXRoIGQ9Ik00MCA0MkwzMiAzNEwzNCAzMkw0MCAzOEw0NiAzMkw0OCAzNEw0MCA0MloiIGZpbGw9IiNDMEM0RjQiLz4KPC9zdmc+Cg==">
+                            <p>暂无相关代金券</p>
+                            <span class="sub-text">换个关键词试试吧</span>
+                         </div>
+                         
+                         <!-- Seckill Vouchers -->
+                         <div v-if="seckillVouchers.length > 0" class="seckill-wrapper">
+                             <div class="voucher-category-title seckill">限时秒杀券</div>
+                             <div class="flash-sale-card" v-for="v in seckillVouchers" :key="v.id" @click="toShopDetail(v)">
+                                 <div class="flash-badge">秒杀</div>
+                                 <div class="flash-content">
+                                    <div class="flash-header">
+                                       <div class="flash-title" v-html="v.title"></div>
+                                       <div class="flash-shop" v-if="v.shopId">
+                                          <span class="shop-label">适用商铺:</span>
+                                          <span class="shop-name">{{v.shopName || '家味道家常菜馆'}}</span>
+                                       </div>
+                                       <div class="flash-subtitle" v-html="v.subTitle || '周一至周五均可使用'"></div>
+                                    </div>
+                                    <div class="flash-footer">
+                                       <div class="flash-price-section">
+                                          <div class="flash-price">
+                                             <span class="price-symbol">￥</span>
+                                             <span class="price-value">{{v.payValue}}</span>
+                                          </div>
+                                          <div class="price-original">
+                                             <span class="original-value">￥{{v.actualValue}}</span>
+                                             <span class="discount-tag">{{(v.payValue/v.actualValue*10).toFixed(1)}}折</span>
+                                          </div>
+                                       </div>
+                                       <div class="flash-action">
+                                          <div class="progress-wrapper">
+                                             <div class="progress-bar">
+                                                <div class="progress-fill" :style="{width: getStockPercent(v) + '%'}"></div>
+                                             </div>
+                                             <div class="progress-text">已抢{{100 - getStockPercent(v)}}% | 剩{{v.stock}}张</div>
+                                          </div>
+                                          <button class="flash-btn" @click.stop="doSeckill(v)" :class="{disabled: isNotBegin(v) || v.stock < 1}">
+                                             {{ isNotBegin(v) ? '待开始' : (v.stock < 1 ? '已抢光' : '限时抢购') }}
+                                          </button>
+                                       </div>
+                                    </div>
                                  </div>
-                                 <div class="flash-subtitle" v-html="v.subTitle || '周一至周五均可使用'"></div>
-                              </div>
-                              
-                              <!-- Bottom: Price, Progress, Button -->
-                              <div class="flash-footer">
-                                 <!-- Price Section -->
-                                 <div class="flash-price-section">
-                                    <div class="flash-price">
+                             </div>
+                         </div>
+                    
+                         <!-- Normal Vouchers -->
+                         <div v-if="normalVouchers.length > 0">
+                             <div class="voucher-category-title normal">普通代金券</div>
+                             <div class="normal-voucher-card" v-for="v in normalVouchers" :key="v.id" @click="toShopDetail(v)">
+                                 <div class="normal-price-section">
+                                    <div class="normal-price">
                                        <span class="price-symbol">￥</span>
                                        <span class="price-value">{{v.payValue}}</span>
                                     </div>
-                                    <div class="price-original">
-                                       <span class="original-value">￥{{v.actualValue}}</span>
-                                       <span class="discount-tag">{{(v.payValue/v.actualValue*10).toFixed(1)}}折</span>
-                                    </div>
+                                    <div class="normal-discount">{{(v.payValue/v.actualValue*10).toFixed(1)}}折</div>
                                  </div>
-                                 
-                                 <!-- Progress & Button -->
-                                 <div class="flash-action">
-                                    <div class="progress-wrapper">
-                                       <div class="progress-bar">
-                                          <div class="progress-fill" :style="{width: getStockPercent(v) + '%'}"></div>
-                                       </div>
-                                       <div class="progress-text">已抢{{100 - getStockPercent(v)}}% | 剩{{v.stock}}张</div>
-                                    </div>
-                                    <button class="flash-btn" @click.stop="doSeckill(v)" :class="{disabled: isNotBegin(v) || v.stock < 1}">
-                                       {{ isNotBegin(v) ? '待开始' : (v.stock < 1 ? '已抢光' : '限时抢购') }}
-                                    </button>
+                                 <div class="normal-info">
+                                    <div class="normal-title" v-html="v.title"></div>
+                                    <div class="normal-subtitle" v-html="v.subTitle || '周一至周五均可使用'"></div>
                                  </div>
-                              </div>
-                           </div>
-                       </div>
-                   </div>
-
-                   <!-- Normal Vouchers -->
-                   <div v-if="normalVouchers.length > 0">
-                       <div class="voucher-category-title normal">普通代金券</div>
-                       <div class="normal-voucher-card" v-for="v in normalVouchers" :key="v.id" @click="toShopDetail(v)">
-                           <!-- Left: Price -->
-                           <div class="normal-price-section">
-                              <div class="normal-price">
-                                 <span class="price-symbol">￥</span>
-                                 <span class="price-value">{{v.payValue}}</span>
-                              </div>
-                              <div class="normal-discount">{{(v.payValue/v.actualValue*10).toFixed(1)}}折</div>
-                           </div>
-                           
-                           <!-- Middle: Info -->
-                           <div class="normal-info">
-                              <div class="normal-title" v-html="v.title"></div>
-                              <div class="normal-subtitle" v-html="v.subTitle || '周一至周五均可使用'"></div>
-                           </div>
-                           
-                           <!-- Right: Button -->
-                           <div class="normal-action">
-                              <button class="normal-btn" @click.stop="doBuy(v)">抢购</button>
-                           </div>
-                       </div>
-                   </div>
-               </div>
-
-               <!-- Blog Results -->
-               <div v-if="activeTab === 'blog'">
-                   <div v-if="blogList.length===0" class="empty-result">
-                      <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiByeD0iOCIgZmlsbD0iI0Y4RjlGQSIvPgo8cGF0aCBkPSJNNDAgNDJMMzIgMzRMMzQgMzJMNDAgMzhMNDYgMzJMNDggMzRMNDAgNDJaIiBmaWxsPSIjQzBDNEY0Ii8+CjxwYXRoIGQ9Ik00MCA0MkwzMiAzNEwzNCAzMkw0MCAzOEw0NiAzMkw0OCAzNEw0MCA0MloiIGZpbGw9IiNDMEM0RjQiLz4KPC9zdmc+Cg==">
-                      <p>暂无相关笔记</p>
-                      <span class="sub-text">换个关键词试试吧</span>
-                   </div>
-                   <div v-else class="waterfall-container">
-                      <div v-for="b in blogList" :key="b.id" class="waterfall-item" @click="toBlogDetail(b)">
-                         <!-- Image handling adaptive height -->
-                         <div class="xhs-card-image">
-                            <img :src="b.images" v-show="!b.imageError" @error="b.imageError=true" v-if="b.images">
-                            <div class="img-placeholder" v-if="!b.images || b.imageError">
-                                图片加载失败
-                            </div>
+                                 <div class="normal-action">
+                                    <button class="normal-btn" @click.stop="doBuy(v)">抢购</button>
+                                 </div>
+                             </div>
                          </div>
-                         <!-- Content -->
-                         <div class="xhs-card-content">
-                            <div class="xhs-card-title" v-html="b.title || '无标题'"></div>
-                            <div class="xhs-card-footer">
-                               <div class="xhs-card-author" @click.stop="toUser(b)">
-                                  <img :src="b.icon || '/imgs/icons/default-icon.png'" @error="e => e.target.src='/imgs/icons/default-icon.png'">
-                                  <span v-html="b.nickName || b.name || '用户'"></span>
-                               </div>
-                               <div class="xhs-card-like" @click.stop="addLike(b)">
-                                  <svg viewBox="0 0 24 24" width="14" height="14" style="margin-right: 2px;">
-                                    <path :fill="b.isLike ? '#ff2442' : '#999'" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                                  </svg>
-                                  <span>{{b.liked || 0}}</span>
-                               </div>
-                            </div>
-                         </div>
-                      </div>
-                   </div>
-               </div>
+                     </div>
+                 </div>
+            </van-tab>
 
-               <!-- User Results -->
-               <div v-if="activeTab === 'user'" class="user-list-container">
-                    <div v-if="userList.length===0" class="empty-result">
-                      <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiByeD0iOCIgZmlsbD0iI0Y4RjlGQSIvPgo8cGF0aCBkPSJNNDAgNDJMMzIgMzRMMzQgMzJMNDAgMzhMNDYgMzJMNDggMzRMNDAgNDJaIiBmaWxsPSIjQzBDNEY0Ii8+CjxwYXRoIGQ9Ik00MCA0MkwzMiAzNEwzNCAzMkw0MCAzOEw0NiAzMkw0OCAzNEw0MCA0MloiIGZpbGw9IiNDMEM0RjQiLz4KPC9zdmc+Cg==">
-                      <p>暂无相关用户</p>
-                       <span class="sub-text">换个关键词试试吧</span>
+            <!-- BLOG TAB -->
+            <van-tab title="笔记" name="blog">
+                <div class="tab-content">
+                    <!-- Blog Filters -->
+                     <div class="meituan-filter-bar">
+                          <div class="filter-item" :class="{active: activeFilterTab==='blogType'}" @click="toggleFilterTab('blogType')">
+                             <div class="filter-text">{{selectedBlogType ? getShopTypeName(selectedBlogType) : '全部类型'}} <i class="el-icon-arrow-down"></i></div>
+                          </div>
+                     </div>
+                     
+                      <!-- Selected Tags -->
+                    <div class="selected-filters" v-if="selectedBlogType">
+                          <div class="selected-filter-tag">{{getShopTypeName(selectedBlogType)}} <span class="close" @click="selectBlogType(selectedBlogType)">×</span></div>
+                          <div class="clear-all" @click="clearAllFilters">清除全部</div>
                     </div>
-                   <div v-for="u in userList" :key="u.id" class="user-item" @click="toUser(u)">
-                       <div class="user-avatar">
-                          <img :src="u.icon || '/imgs/icons/default-icon.png'" @error="e => e.target.src='/imgs/icons/default-icon.png'">
-                       </div>
-                       <div class="user-info">
-                            <div class="user-name" v-html="u.nickName || '未命名'"></div>
-                            <div class="user-desc">{{u.introduce || '这个人很懒，什么都没写'}}</div>
-                       </div>
-                       <button class="follow-btn" :class="{'following': u.isFollow}" @click.stop="toggleFollow(u)" v-if="user && u.id !== user.id">
-                           {{u.isFollow ? '已关注' : '关注'}}
-                       </button>
-                   </div>
-               </div>
-            </div>
-        </div>
+
+                    <!-- Blog Results -->
+                    <div v-if="isLoading" class="loading-box"><i class="el-icon-loading"></i> 加载中...</div>
+                     <div v-else>
+                        <div v-if="blogList.length===0" class="empty-result">
+                           <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiByeD0iOCIgZmlsbD0iI0Y4RjlGQSIvPgo8cGF0aCBkPSJNNDAgNDJMMzIgMzRMMzQgMzJMNDAgMzhMNDYgMzJMNDggMzRMNDAgNDJaIiBmaWxsPSIjQzBDNEY0Ii8+CjxwYXRoIGQ9Ik00MCA0MkwzMiAzNEwzNCAzMkw0MCAzOEw0NiAzMkw0OCAzNEw0MCA0MloiIGZpbGw9IiNDMEM0RjQiLz4KPC9zdmc+Cg==">
+                           <p>暂无相关笔记</p>
+                           <span class="sub-text">换个关键词试试吧</span>
+                        </div>
+                        <div v-else class="waterfall-container">
+                           <div v-for="b in blogList" :key="b.id" class="waterfall-item" @click="toBlogDetail(b)">
+                              <div class="xhs-card-image">
+                                 <img :src="b.images" v-show="!b.imageError" @error="b.imageError=true" v-if="b.images">
+                                 <div class="img-placeholder" v-if="!b.images || b.imageError">
+                                     图片加载失败
+                                 </div>
+                              </div>
+                              <div class="xhs-card-content">
+                                 <div class="xhs-card-title" v-html="b.title || '无标题'"></div>
+                                 <div class="xhs-card-footer">
+                                    <div class="xhs-card-author" @click.stop="toUser(b)">
+                                       <img :src="b.icon || '/imgs/icons/default-icon.png'" @error="e => e.target.src='/imgs/icons/default-icon.png'">
+                                       <span v-html="b.nickName || b.name || '用户'"></span>
+                                    </div>
+                                    <div class="xhs-card-like" @click.stop="addLike(b)">
+                                       <svg viewBox="0 0 24 24" width="14" height="14" style="margin-right: 2px;">
+                                         <path :fill="b.isLike ? '#ff2442' : '#999'" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                                       </svg>
+                                       <span>{{b.liked || 0}}</span>
+                                    </div>
+                                 </div>
+                              </div>
+                           </div>
+                        </div>
+                    </div>
+                </div>
+            </van-tab>
+
+            <!-- USER TAB -->
+            <van-tab title="用户" name="user">
+                <div class="tab-content">
+                    <div v-if="isLoading" class="loading-box"><i class="el-icon-loading"></i> 加载中...</div>
+                    <div v-else class="user-list-container">
+                         <div v-if="userList.length===0" class="empty-result">
+                           <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiByeD0iOCIgZmlsbD0iI0Y4RjlGQSIvPgo8cGF0aCBkPSJNNDAgNDJMMzIgMzRMMzQgMzJMNDAgMzhMNDYgMzJMNDggMzRMNDAgNDJaIiBmaWxsPSIjQzBDNEY0Ii8+CjxwYXRoIGQ9Ik00MCA0MkwzMiAzNEwzNCAzMkw0MCAzOEw0NiAzMkw0OCAzNEw0MCA0MloiIGZpbGw9IiNDMEM0RjQiLz4KPC9zdmc+Cg==">
+                           <p>暂无相关用户</p>
+                            <span class="sub-text">换个关键词试试吧</span>
+                         </div>
+                        <div v-for="u in userList" :key="u.id" class="user-item" @click="toUser(u)">
+                            <div class="user-avatar">
+                               <img :src="u.icon || '/imgs/icons/default-icon.png'" @error="e => e.target.src='/imgs/icons/default-icon.png'">
+                            </div>
+                            <div class="user-info">
+                                 <div class="user-name" v-html="u.nickName || '未命名'"></div>
+                                 <div class="user-desc">{{u.introduce || '这个人很懒，什么都没写'}}</div>
+                            </div>
+                            <button class="follow-btn" :class="{'following': u.isFollow}" @click.stop="toggleFollow(u)" v-if="user && u.id !== user.id">
+                                {{u.isFollow ? '已关注' : '关注'}}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </van-tab>
+
+        </van-tabs>
     </div>
   </div>
 </template>
@@ -589,6 +585,11 @@ export default {
     },
     changeTab(tab) {
         this.activeTab = tab;
+        this.doSearch();
+    },
+    onTabChange(name) {
+        // activeTab is already updated by v-model
+        this.activeFilterTab = ""; // Close filters
         this.doSearch();
     },
     getStatusName(val) {
@@ -2282,5 +2283,18 @@ export default {
 .follow-btn.following {
   background: #f5f5f5;
   color: #999;
+}
+
+/* Fixed Filter Dropdown Overlay */
+.filter-content {
+    position: fixed;
+    top: 98px; /* 54px Header + 44px Tabs */
+    left: 0;
+    right: 0;
+    z-index: 200 !important;
+    background: white;
+}
+.filter-content.show {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 </style>

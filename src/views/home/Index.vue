@@ -37,101 +37,157 @@
       </div>
     </div>
 
-    <div class="category-nav" :style="{ zIndex: showMoreCategories ? 2001 : 10 }">
-      <div class="category-tabs" ref="scrollContainer">
-        <div
-                class="category-tab"
-                :class="{ active: activeCategory === 'hot' }"
-                @click="switchCategory('hot')"
-                ref="hotTab"
-        >
-          热门
-        </div>
-        <div
-                v-for="(category, index) in visibleCategories"
-                :key="category.id"
-                class="category-tab"
-                :class="{ active: activeCategory === category.id }"
-                @click="switchCategory(category.id)"
-                :ref="'dynamicTab-' + index"
-        >
-          {{ category.name }}
-        </div>
-      </div>
-      <div class="category-more-btn" @click="showMoreCategories = !showMoreCategories">
-        <i class="el-icon-arrow-down" :class="{ rotate: showMoreCategories }"></i>
-      </div>
+    <!-- Van Tabs with Swipeable -->
+    <van-tabs v-model:active="activeCategory" swipeable animated sticky offset-top="50px" color="#ff6633" title-active-color="#ff6633" :ellipsis="false" @change="onTabChange">
+        <!-- Follow Tab (First) -->
+        <van-tab title="关注" name="follow">
+            <div class="blog-list-content" @scroll="onScroll">
+               <div class="empty-state" v-if="followBlogs.length === 0 && !isLoading">
+                 <div class="empty-icon"><i class="el-icon-user"></i></div>
+                 <p>暂无关注动态</p>
+                 <p style="font-size: 12px; color: #c0c4cc;">关注更多用户，查看他们的最新动态</p>
+               </div>
 
-      <!-- Dropdown Content -->
-      <div class="home-dropdown-content" v-if="showMoreCategories">
-          <div class="category-grid">
-            <div class="grid-item" :class="{ active: activeCategory === 'hot' }" @click="selectCategoryFromModal('hot')">热门</div>
-            <div
-                    class="grid-item"
-                    v-for="c in categories"
-                    :key="c.id"
-                    :class="{ active: activeCategory === c.id }"
-                    @click="selectCategoryFromModal(c.id)"
-            >
-              {{ c.name }}
+               <div class="waterfall-container">
+                 <div class="blog-box" v-for="(b, index) in followBlogs" :key="'follow-'+index">
+                   <div class="blog-img" @click="toBlogDetail(b)">
+                     <img v-show="!b.imgError" :src="b.img" :alt="b.title" @error="handleImageError($event, b)" @load="handleImageLoad($event, b)">
+                     <div class="img-placeholder" v-if="b.imgError">图片加载失败</div>
+                   </div>
+                   <div class="blog-content">
+                     <div class="blog-title">{{b.title || '无标题'}}</div>
+                     <div class="blog-foot">
+                       <div class="blog-user-icon">
+                         <img :src="b.icon || '/imgs/icons/default-icon.png'" alt="用户头像" @error="handleAvatarError($event)">
+                       </div>
+                       <div class="blog-user-name">{{b.name || '匿名用户'}}</div>
+                       <div class="blog-liked" @click.stop="addLike(b)">
+                         <svg viewBox="0 0 24 24" width="14" height="14">
+                           <path :fill="b.isLike ? '#ff2442' : '#999'" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                         </svg>
+                         {{b.liked || 0}}
+                       </div>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+
+               <div class="scroll-tip" v-if="followBlogs.length > 0">
+                 <i class="el-icon-loading" v-if="isLoading"></i>
+                 <span v-if="isLoading">加载中...</span>
+                 <span v-else-if="noMoreFollowData">已加载全部动态</span>
+               </div>
             </div>
+        </van-tab>
+        
+        <!-- Hot Tab -->
+        <van-tab title="热门" name="hot">
+            <div class="blog-list-content" @scroll="onScroll">
+               <div class="empty-state" v-if="blogs.length === 0 && !isLoading">
+                 <div class="empty-icon"><i class="el-icon-document-remove"></i></div>
+                 <p>暂无博客内容</p>
+                 <p style="font-size: 12px; color: #c0c4cc;">快去发布第一篇博客吧</p>
+               </div>
+
+               <div class="waterfall-container">
+                 <div class="blog-box" v-for="(b, index) in blogs" :key="index">
+                   <div class="blog-img" @click="toBlogDetail(b)">
+                     <img v-show="!b.imgError" :src="b.img" :alt="b.title" @error="handleImageError($event, b)" @load="handleImageLoad($event, b)">
+                     <div class="img-placeholder" v-if="b.imgError">图片加载失败</div>
+                   </div>
+                   <div class="blog-content">
+                     <div class="blog-title">{{b.title || '无标题'}}</div>
+                     <div class="blog-foot">
+                       <div class="blog-user-icon">
+                         <img :src="b.icon || '/imgs/icons/default-icon.png'" alt="用户头像" @error="handleAvatarError($event)">
+                       </div>
+                       <div class="blog-user-name">{{b.name || '匿名用户'}}</div>
+                       <div class="blog-liked" @click.stop="addLike(b)">
+                         <svg viewBox="0 0 24 24" width="14" height="14">
+                           <path :fill="b.isLike ? '#ff2442' : '#999'" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                         </svg>
+                         {{b.liked || 0}}
+                       </div>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+
+               <div class="scroll-tip" v-if="blogs.length > 0">
+                 <i class="el-icon-loading" v-if="isLoading"></i>
+                 <span v-if="isLoading">加载中...</span>
+                 <span v-else-if="noMoreData">已加载全部数据</span>
+               </div>
+            </div>
+        </van-tab>
+        
+        <!-- Dynamic Category Tabs -->
+        <van-tab v-for="cat in categories" :key="cat.id" :title="cat.name" :name="cat.id">
+            <div class="blog-list-content" @scroll="onScroll">
+               <div class="empty-state" v-if="blogs.length === 0 && !isLoading">
+                 <div class="empty-icon"><i class="el-icon-document-remove"></i></div>
+                 <p>暂无博客内容</p>
+               </div>
+
+               <div class="waterfall-container">
+                 <div class="blog-box" v-for="(b, index) in blogs" :key="index">
+                   <div class="blog-img" @click="toBlogDetail(b)">
+                     <img v-show="!b.imgError" :src="b.img" :alt="b.title" @error="handleImageError($event, b)" @load="handleImageLoad($event, b)">
+                     <div class="img-placeholder" v-if="b.imgError">图片加载失败</div>
+                   </div>
+                   <div class="blog-content">
+                     <div class="blog-title">{{b.title || '无标题'}}</div>
+                     <div class="blog-foot">
+                       <div class="blog-user-icon">
+                         <img :src="b.icon || '/imgs/icons/default-icon.png'" alt="用户头像" @error="handleAvatarError($event)">
+                       </div>
+                       <div class="blog-user-name">{{b.name || '匿名用户'}}</div>
+                       <div class="blog-liked" @click.stop="addLike(b)">
+                         <svg viewBox="0 0 24 24" width="14" height="14">
+                           <path :fill="b.isLike ? '#ff2442' : '#999'" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                         </svg>
+                         {{b.liked || 0}}
+                       </div>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+
+               <div class="scroll-tip" v-if="blogs.length > 0">
+                 <i class="el-icon-loading" v-if="isLoading"></i>
+                 <span v-if="isLoading">加载中...</span>
+                 <span v-else-if="noMoreData">已加载全部数据</span>
+               </div>
+            </div>
+        </van-tab>
+        
+        <!-- Dropdown Button in nav-left slot -->
+        <template #nav-left>
+            <div class="nav-drop-btn nav-left" @click="showMoreCategories = !showMoreCategories">
+                <i class="el-icon-arrow-down" :class="{ rotate: showMoreCategories }"></i>
+            </div>
+        </template>
+    </van-tabs>
+    
+    <!-- Dropdown Content (outside tabs, but overlays) -->
+    <div class="home-dropdown-content" v-if="showMoreCategories" :style="{ zIndex: 2002 }">
+        <div class="category-grid">
+          <div class="grid-item" :class="{ active: activeCategory === 'follow' }" @click="selectCategoryFromModal('follow')">关注</div>
+          <div class="grid-item" :class="{ active: activeCategory === 'hot' }" @click="selectCategoryFromModal('hot')">热门</div>
+          <div
+                  class="grid-item"
+                  v-for="c in categories"
+                  :key="c.id"
+                  :class="{ active: activeCategory === c.id }"
+                  @click="selectCategoryFromModal(c.id)"
+          >
+            {{ c.name }}
           </div>
-      </div>
+        </div>
     </div>
     
     <!-- Mask -->
     <div class="home-dropdown-mask" v-if="showMoreCategories" @click="showMoreCategories = false"></div>
-
-    <div class="blog-list" @scroll="onScroll"
-         @touchstart="handleTouchStart"
-         @touchmove="handleTouchMove"
-         @touchend="handleTouchEnd">
-      <div class="empty-state" v-if="blogs.length === 0 && !isLoading">
-        <div class="empty-icon"><i class="el-icon-document-remove"></i></div>
-        <p>暂无博客内容</p>
-        <p style="font-size: 12px; color: #c0c4cc;">快去发布第一篇博客吧</p>
-      </div>
-
-      <div class="waterfall-container">
-        <div class="blog-box" v-for="(b, index) in blogs" :key="index">
-          <div class="blog-img" @click="toBlogDetail(b)">
-            <img
-                    v-show="!b.imgError"
-                    :src="b.img"
-                    :alt="b.title"
-                    @error="handleImageError($event, b)"
-                    @load="handleImageLoad($event, b)"
-            >
-            <div class="img-placeholder" v-if="b.imgError">图片加载失败</div>
-          </div>
-          <div class="blog-content">
-            <div class="blog-title">{{b.title || '无标题'}}</div>
-            <div class="blog-foot">
-              <div class="blog-user-icon">
-                <img
-                        :src="b.icon || '/imgs/icons/default-icon.png'"
-                        alt="用户头像"
-                        @error="handleAvatarError($event)"
-                >
-              </div>
-              <div class="blog-user-name">{{b.name || '匿名用户'}}</div>
-              <div class="blog-liked" @click.stop="addLike(b)">
-                <svg viewBox="0 0 24 24" width="14" height="14">
-                  <path :fill="b.isLike ? '#ff2442' : '#999'" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                </svg>
-                {{b.liked || 0}}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="scroll-tip" v-if="blogs.length > 0">
-        <i class="el-icon-loading" v-if="isLoading"></i>
-        <span v-if="isLoading">加载中...</span>
-        <span v-else-if="noMoreData">已加载全部数据</span>
-      </div>
-    </div>
 
     <!-- Category Modal Removed (Replaced by Dropdown) -->
 
@@ -164,7 +220,7 @@
 import { locationUtil } from '@/utils/location';
 // import request, { fileURL, util } from '@/utils/request';
 import { getShopTypes } from '@/api/shop';
-import { getHotBlogs, getBlogsByCategory } from '@/api/blog';
+import { getHotBlogs, getBlogsByCategory, getFollowedFeeds } from '@/api/blog';
 import { likeBlog } from '@/api/interaction';
 import FootBar from '@/components/FootBar.vue';
 
@@ -181,8 +237,14 @@ export default {
       current: 1,
       isLoading: false,
       noMoreData: false,
+      followBlogs: [],
+      followParams: {
+        offset: 0,
+        minTime: 0
+      },
+      noMoreFollowData: false,
       categories: [],
-      activeCategory: 'hot',
+      activeCategory: 'follow',
       locationLoading: false,
       locationError: false,
       locationSuccess: false,
@@ -231,9 +293,27 @@ export default {
   },
   created() {
     this.queryTypes();
-    this.queryHotBlogsScroll();
     this.initLocation();
+    
+    // Restore active tab from session storage
+    const savedCategory = sessionStorage.getItem('home_active_category');
+    if (savedCategory) {
+      // Small delay to ensure tabs are mounted if needed, though activeCategory binding should handle it
+      this.activeCategory = savedCategory;
+      if (savedCategory === 'follow') {
+        this.queryFollowedFeeds();
+      } else if (savedCategory === 'hot') {
+        this.queryHotBlogsScroll();
+      } else {
+        this.queryBlogsByCategory(savedCategory);
+      }
+    } else {
+      // Default to follow
+      this.activeCategory = 'follow';
+      this.queryFollowedFeeds(); 
+    }
   },
+
   methods: {
     toSearchPage() {
       this.$router.push("/search");
@@ -344,45 +424,142 @@ export default {
             this.onDataLoaded();
           });
     },
-     onDataLoaded() {
-        this.dataLoadedCount++;
-        if (this.dataLoadedCount >= this.totalDataToLoad) {
-          setTimeout(() => {
-            this.pageLoading = false;
-          }, 500);
-        }
-      },
-      initLocation() {
-        // Initial silent location
-        locationUtil.getLocation().then(loc => {
-           this.updateLocationState(loc);
-        }).catch(err => {
-           console.error(err);
-           this.currentCity = '杭州';
-        });
-      },
-      updateLocationState(loc) {
-           this.userLocation = loc;
-           if(loc.region && loc.region.city) {
-              this.currentCity = typeof loc.region.city === 'string' ? loc.region.city : loc.region.province;
-              // Clean up city name (remove '市')
-              this.currentCity = this.currentCity.replace('市','');
-           } else if (loc.region && loc.region.province) {
-              this.currentCity = loc.region.province.replace('省','').replace('市','');
-           }
-      },
-      switchCategory(categoryId) {
-        if (this.activeCategory === categoryId) return;
+    queryFollowedFeeds() {
+        if (this.isLoading && this.followParams.offset > 0) return;
+        if (this.isRequesting) return;
 
-        this.activeCategory = categoryId;
-        this.blogs = [];
-        this.current = 1;
-        this.noMoreData = false;
+        this.isLoading = true;
+        this.isRequesting = true;
         
-        if (categoryId === 'hot') {
+        // Use time/offset based pagination for feeds
+        const lastId = this.followParams.minTime || new Date().getTime();
+        getFollowedFeeds({ offset: this.followParams.offset, lastId })
+          .then((res) => {
+             // Handle response structure (data vs records vs direct list)
+             const data = res.data || res || {};
+             let list = [];
+             
+             if (Array.isArray(data)) {
+                 list = data;
+             } else if (Array.isArray(data.list)) {
+                 list = data.list;
+             } else if (Array.isArray(data.records)) {
+                 list = data.records;
+             }
+             
+            if (!list || list.length === 0) {
+              this.noMoreFollowData = true;
+            } else {
+               list.forEach(b => {
+                // Handle images (string or array)
+                let firstImg = '';
+                if (b.images) {
+                    if (Array.isArray(b.images)) {
+                        firstImg = b.images[0];
+                    } else if (typeof b.images === 'string') {
+                        firstImg = b.images.split(",")[0];
+                    }
+                }
+                
+                // Process image URL (add prefix if not full url)
+                if (firstImg && !firstImg.startsWith('http')) {
+                    b.img = this.$fileURL + firstImg;
+                } else {
+                    b.img = firstImg || '';
+                }
+
+                // Handle icon
+                if (b.icon && !b.icon.startsWith('http')) {
+                    b.icon = this.$fileURL + b.icon;
+                }
+
+                b.imgError = !b.img;
+                if (!b.liked) b.liked = 0;
+              });
+              this.followBlogs = this.followBlogs.concat(list);
+              
+              // precise updating for next scroll
+              this.followParams.minTime = data.minTime || new Date().getTime();
+              this.followParams.offset = data.offset || 0;
+            }
+          })
+          .catch(err => {
+            console.error('关注动态请求错误:', err);
+          })
+          .finally(() => {
+            this.isLoading = false;
+            this.isRequesting = false;
+            this.onDataLoaded();
+          });
+    },
+      onDataLoaded() {
+         this.dataLoadedCount++;
+         if (this.dataLoadedCount >= this.totalDataToLoad) {
+           setTimeout(() => {
+             this.pageLoading = false;
+           }, 500);
+         }
+       },
+       initLocation() {
+         // Initial silent location
+         locationUtil.getLocation().then(loc => {
+            this.updateLocationState(loc);
+         }).catch(err => {
+            console.error(err);
+            this.currentCity = '杭州';
+         });
+       },
+       updateLocationState(loc) {
+            this.userLocation = loc;
+            if(loc.region && loc.region.city) {
+               this.currentCity = typeof loc.region.city === 'string' ? loc.region.city : loc.region.province;
+               // Clean up city name (remove '市')
+               this.currentCity = this.currentCity.replace('市','');
+            } else if (loc.region && loc.region.province) {
+               this.currentCity = loc.region.province.replace('省','').replace('市','');
+            }
+       },
+       switchCategory(categoryId) {
+         if (this.activeCategory === categoryId) return;
+ 
+         this.activeCategory = categoryId;
+         sessionStorage.setItem('home_active_category', categoryId);
+         
+         if (categoryId === 'follow') {
+           this.followBlogs = [];
+           this.followParams = { offset: 0, minTime: 0 };
+           this.noMoreFollowData = false;
+           this.queryFollowedFeeds();
+         } else if (categoryId === 'hot') {
+           this.blogs = [];
+           this.current = 1;
+           this.noMoreData = false;
+           this.queryHotBlogsScroll();
+         } else {
+           this.blogs = [];
+           this.current = 1;
+           this.noMoreData = false;
+           this.queryBlogsByCategory(categoryId);
+         }
+       },
+       onTabChange(name) {
+         sessionStorage.setItem('home_active_category', name);
+         // Force reload data for new category (van-tabs already updated v-model)
+         if (name === 'follow') {
+           this.followBlogs = [];
+           this.followParams = { offset: 0, minTime: 0 };
+           this.noMoreFollowData = false;
+           this.queryFollowedFeeds();
+        } else if (name === 'hot') {
+          this.blogs = [];
+          this.current = 1;
+          this.noMoreData = false;
           this.queryHotBlogsScroll();
         } else {
-          this.queryBlogsByCategory(categoryId);
+          this.blogs = [];
+          this.current = 1;
+          this.noMoreData = false;
+          this.queryBlogsByCategory(name);
         }
       },
       selectCategoryFromModal(categoryId) {
@@ -392,11 +569,13 @@ export default {
       onScroll(e) {
          // Infinite scroll logic
          const { scrollTop, scrollHeight, clientHeight } = e.target;
-         if (scrollHeight - scrollTop - clientHeight < 50 && !this.noMoreData && !this.isLoading) {
-             if (this.activeCategory === 'hot') {
-               this.queryHotBlogsScroll();
+         if (scrollHeight - scrollTop - clientHeight < 50 && !this.isLoading) {
+             if (this.activeCategory === 'follow') {
+               if (!this.noMoreFollowData) this.queryFollowedFeeds();
+             } else if (this.activeCategory === 'hot') {
+               if (!this.noMoreData) this.queryHotBlogsScroll();
              } else {
-               this.queryBlogsByCategory(this.activeCategory);
+               if (!this.noMoreData) this.queryBlogsByCategory(this.activeCategory);
              }
          }
       },
@@ -684,6 +863,51 @@ export default {
 .grid-item.active {
   background: #fff0eb;
   color: #F63;
+}
+
+/* Blog List Content (Inside van-tab) */
+.blog-list-content {
+  height: calc(100vh - 200px); /* Adjust based on header + type-list + tabs */
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px 10px 70px;
+  background: #f5f5f5;
+}
+
+/* Category More Button in nav-left slot */
+.nav-drop-btn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  cursor: pointer;
+  color: #666;
+  font-size: 14px;
+  position: relative;
+  z-index: 10;
+}
+.nav-drop-btn.nav-left {
+  box-shadow: 6px 0 10px 2px rgba(255,255,255,1);
+}
+.nav-drop-btn i {
+  transition: transform 0.3s;
+}
+.nav-drop-btn i.rotate {
+  transform: rotate(180deg);
+}
+
+/* Dropdown Content (Positioned below tabs) */
+.home-dropdown-content {
+  position: fixed;
+  top: 156px; /* Below tabs */
+  left: 0;
+  right: 0;
+  background: white;
+  padding: 10px;
+  z-index: 2002;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
 .blog-list {

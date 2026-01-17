@@ -109,8 +109,8 @@
           <!-- 点赞用户列表 -->
           <div class="like-section" v-if="likes && likes.length > 0">
              <div class="like-icon-btn" @click="addLike">
-                 <svg viewBox="0 0 1024 1024" width="20" height="20">
-                     <path d="M160 944c0 8.8-7.2 16-16 16h-32c-26.5 0-48-21.5-48-48V528c0-26.5 21.5-48 48-48h32c8.8 0 16 7.2 16 16v448zM96 416c-53 0-96 43-96 96v416c0 53 43 96 96 96h96c17.7 0 32-14.3 32-32V448c0-17.7-14.3-32-32-32H96zM505.6 64c16.2 0 26.4 8.7 31 13.9 4.6 5.2 12.1 16.3 10.3 32.4l-23.5 203.4c-4.9 42.2 8.6 84.6 36.8 116.4 28.3 31.7 68.9 49.9 111.4 49.9h271.2c6.6 0 10.8 3.3 13.2 6.1s5 7.5 4 14l-48 303.4c-6.9 43.6-29.1 83.4-62.7 112C815.8 944.2 773 960 728.9 960h-317c-33.1 0-59.9-26.8-59.9-59.9v-455c0-6.1 1.7-12 5-17.1 69.5-109 106.4-234.2 107-364h41.6z m0-64h-44.9C427.2 0 400 27.2 400 60.7c0 127.1-39.1 251.2-112 355.3v484.1c0 68.4 55.5 123.9 123.9 123.9h317c122.7 0 227.2-89.3 246.3-210.5l47.9-303.4c7.8-49.4-30.4-94.1-80.4-94.1H671.6c-50.9 0-90.5-44.4-84.6-95l23.5-203.4C617.7 55 568.7 0 505.6 0z" :fill="blog.isLike ? '#ff6633' : '#82848a'"></path>
+                 <svg viewBox="0 0 24 24" width="24" height="24">
+                     <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" :fill="blog.isLike ? '#ff2442' : '#82848a'"></path>
                  </svg>
              </div>
              <div class="like-avatars">
@@ -159,8 +159,8 @@
                          <span class="comment-time">{{formatDate(c.createTime)}}</span>
                          <div class="comment-actions">
                             <div class="c-action-btn" @click.stop="handleCommentLike(c)">
-                               <svg viewBox="0 0 1024 1024" width="16" height="16">
-                                 <path d="M160 944c0 8.8-7.2 16-16 16h-32c-26.5 0-48-21.5-48-48V528c0-26.5 21.5-48 48-48h32c8.8 0 16 7.2 16 16v448zM96 416c-53 0-96 43-96 96v416c0 53 43 96 96 96h96c17.7 0 32-14.3 32-32V448c0-17.7-14.3-32-32-32H96zM505.6 64c16.2 0 26.4 8.7 31 13.9 4.6 5.2 12.1 16.3 10.3 32.4l-23.5 203.4c-4.9 42.2 8.6 84.6 36.8 116.4 28.3 31.7 68.9 49.9 111.4 49.9h271.2c6.6 0 10.8 3.3 13.2 6.1s5 7.5 4 14l-48 303.4c-6.9 43.6-29.1 83.4-62.7 112C815.8 944.2 773 960 728.9 960h-317c-33.1 0-59.9-26.8-59.9-59.9v-455c0-6.1 1.7-12 5-17.1 69.5-109 106.4-234.2 107-364h41.6z m0-64h-44.9C427.2 0 400 27.2 400 60.7c0 127.1-39.1 251.2-112 355.3v484.1c0 68.4 55.5 123.9 123.9 123.9h317c122.7 0 227.2-89.3 246.3-210.5l47.9-303.4c7.8-49.4-30.4-94.1-80.4-94.1H671.6c-50.9 0-90.5-44.4-84.6-95l23.5-203.4C617.7 55 568.7 0 505.6 0z" :fill="c.isLike ? '#ff2442' : '#999'"></path>
+                               <svg viewBox="0 0 24 24" width="16" height="16">
+                                 <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" :fill="c.isLike ? '#ff2442' : '#999'"></path>
                                </svg>
                                {{c.liked || 0}}
                             </div>
@@ -193,8 +193,8 @@
                                  </div>
                                  <div class="reply-actions">
                                       <div class="c-action-btn" @click.stop="handleCommentLike(r)">
-                                         <svg viewBox="0 0 1024 1024" width="16" height="16">
-                                           <path d="M160 944c0 8.8-7.2 16-16 16h-32c-26.5 0-48-21.5-48-48V528c0-26.5 21.5-48 48-48h32c8.8 0 16 7.2 16 16v448zM96 416c-53 0-96 43-96 96v416c0 53 43 96 96 96h96c17.7 0 32-14.3 32-32V448c0-17.7-14.3-32-32-32H96zM505.6 64c16.2 0 26.4 8.7 31 13.9 4.6 5.2 12.1 16.3 10.3 32.4l-23.5 203.4c-4.9 42.2 8.6 84.6 36.8 116.4 28.3 31.7 68.9 49.9 111.4 49.9h271.2c6.6 0 10.8 3.3 13.2 6.1s5 7.5 4 14l-48 303.4c-6.9 43.6-29.1 83.4-62.7 112C815.8 944.2 773 960 728.9 960h-317c-33.1 0-59.9-26.8-59.9-59.9v-455c0-6.1 1.7-12 5-17.1 69.5-109 106.4-234.2 107-364h41.6z m0-64h-44.9C427.2 0 400 27.2 400 60.7c0 127.1-39.1 251.2-112 355.3v484.1c0 68.4 55.5 123.9 123.9 123.9h317c122.7 0 227.2-89.3 246.3-210.5l47.9-303.4c7.8-49.4-30.4-94.1-80.4-94.1H671.6c-50.9 0-90.5-44.4-84.6-95l23.5-203.4C617.7 55 568.7 0 505.6 0z" :fill="r.isLike ? '#ff2442' : '#999'"></path>
+                                         <svg viewBox="0 0 24 24" width="16" height="16">
+                                           <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" :fill="r.isLike ? '#ff2442' : '#999'"></path>
                                          </svg>
                                          <span v-if="r.liked > 0">{{r.liked}}</span>
                                       </div>
@@ -229,8 +229,8 @@
       </div>
       <div class="bottom-actions">
         <div class="bottom-action-item" @click="addLike">
-          <svg viewBox="0 0 1024 1024" width="22" height="22">
-            <path d="M160 944c0 8.8-7.2 16-16 16h-32c-26.5 0-48-21.5-48-48V528c0-26.5 21.5-48 48-48h32c8.8 0 16 7.2 16 16v448zM96 416c-53 0-96 43-96 96v416c0 53 43 96 96 96h96c17.7 0 32-14.3 32-32V448c0-17.7-14.3-32-32-32H96zM505.6 64c16.2 0 26.4 8.7 31 13.9 4.6 5.2 12.1 16.3 10.3 32.4l-23.5 203.4c-4.9 42.2 8.6 84.6 36.8 116.4 28.3 31.7 68.9 49.9 111.4 49.9h271.2c6.6 0 10.8 3.3 13.2 6.1s5 7.5 4 14l-48 303.4c-6.9 43.6-29.1 83.4-62.7 112C815.8 944.2 773 960 728.9 960h-317c-33.1 0-59.9-26.8-59.9-59.9v-455c0-6.1 1.7-12 5-17.1 69.5-109 106.4-234.2 107-364h41.6z m0-64h-44.9C427.2 0 400 27.2 400 60.7c0 127.1-39.1 251.2-112 355.3v484.1c0 68.4 55.5 123.9 123.9 123.9h317c122.7 0 227.2-89.3 246.3-210.5l47.9-303.4c7.8-49.4-30.4-94.1-80.4-94.1H671.6c-50.9 0-90.5-44.4-84.6-95l23.5-203.4C617.7 55 568.7 0 505.6 0z" :fill="blog.isLike ? '#ff2442' : '#333'"></path>
+          <svg viewBox="0 0 24 24" width="22" height="22">
+            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" :fill="blog.isLike ? '#ff2442' : '#333'"></path>
           </svg>
           <span>{{blog.liked || 0}}</span>
         </div>
@@ -284,6 +284,81 @@
       </div>
     </div>
     
+    <!-- All Reviews Bottom Sheet Popup -->
+    <div class="review-popup-overlay" v-if="showReviewPopup" @click="showReviewPopup = false">
+       <div class="review-popup-sheet" @click.stop>
+          <div class="review-popup-header">
+             <span class="review-popup-title">全部评论 ({{blog.comments || 0}})</span>
+             <i class="el-icon-close review-popup-close" @click="showReviewPopup = false"></i>
+          </div>
+          <div class="review-popup-body" @scroll="onPopupScroll">
+             <div v-if="allComments.length === 0 && !allCommentsLoading" class="empty-reviews">
+                <i class="el-icon-chat-round"></i>
+                <p>暂无评论</p>
+             </div>
+             
+             <div class="comment-box" v-for="c in allComments" :key="c.id">
+                <div class="comment-icon" @click.stop="toUserDetail(c.userId)">
+                   <img :src="c.userIcon || '/imgs/icons/default-icon.png'">
+                </div>
+                <div class="comment-info">
+                   <div class="comment-user" @click.stop="toUserDetail(c.userId)">
+                      {{c.nickName || '匿名用户'}} <span>Lv{{c.userLevel || 1}}</span>
+                   </div>
+                   <div class="comment-content">{{c.content}}</div>
+                   <div class="comment-images" v-if="c.images && c.images.length">
+                      <img v-for="(img, idx) in c.images" :key="idx" :src="img" @click="previewImage(c.images, idx)">
+                   </div>
+                   <div class="comment-interactions">
+                      <span class="comment-time">{{formatDate(c.createTime)}}</span>
+                      <div class="comment-actions">
+                         <div class="c-action-btn" @click.stop="handleCommentLike(c)">
+                            <svg viewBox="0 0 24 24" width="16" height="16">
+                              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" :fill="c.isLike ? '#ff2442' : '#999'"></path>
+                            </svg>
+                            {{c.liked || 0}}
+                         </div>
+                         <div class="c-action-btn" @click.stop="handleCommentReply(c)">
+                            <i class="el-icon-chat-dot-square"></i>
+                         </div>
+                         <div class="c-action-btn delete-btn" v-if="user && user.id === c.userId" @click.stop="handleCommentDelete(c)">
+                            <i class="el-icon-delete"></i>
+                         </div>
+                      </div>
+                   </div>
+                   
+                   <!-- Replies -->
+                   <div class="comment-replies" v-if="c.replies && c.replies.length > 0">
+                      <div class="reply-item" v-for="r in c.replies" :key="r.id">
+                         <div class="reply-avatar" @click.stop="toUserDetail(r.userId)">
+                            <img :src="r.userIcon || '/imgs/icons/default-icon.png'">
+                         </div>
+                         <div class="reply-main">
+                            <div class="reply-header">
+                               <span class="reply-user" @click.stop="toUserDetail(r.userId)">{{r.nickName || '匿名用户'}}</span>
+                               <span class="reply-time">{{formatDate(r.createTime)}}</span>
+                            </div>
+                            <div class="reply-content">
+                               <span v-if="r.replyToName" class="reply-target">回复 @{{r.replyToName}}</span>
+                               {{r.content}}
+                            </div>
+                         </div>
+                      </div>
+                   </div>
+                </div>
+             </div>
+             
+             <div v-if="allCommentsLoading" class="loading-more">加载中...</div>
+             <div v-if="allCommentsNoMore && allComments.length > 0" class="no-more-reviews">没有更多评论了</div>
+          </div>
+          <!-- Bottom Input Bar in Popup -->
+          <div class="popup-bottom-bar" @click="writeCommentFromPopup">
+             <div class="popup-input-placeholder">发条评论，和大家一起讨论</div>
+             <el-button type="primary" size="small" round>发布</el-button>
+          </div>
+       </div>
+    </div>
+    
     <!-- 图片预览 -->
     <el-image-viewer v-if="showImagePreview" :url-list="previewImages" :initial-index="currentPreviewIndex" @close="closeImagePreview" hide-on-click-modal />
   </div>
@@ -329,7 +404,14 @@ export default {
        previewImages: [],
        currentPreviewIndex: 0,
        replyToComment: null,
-       showMenu: false
+       showMenu: false,
+       
+       // Review popup
+       showReviewPopup: false,
+       allComments: [],
+       allCommentsPage: 1,
+       allCommentsNoMore: false,
+       allCommentsLoading: false
     }
   },
   computed: {
@@ -583,10 +665,83 @@ export default {
          });
       },
       viewAllComments() {
-         this.$router.push({
-            path: '/comment/list',
-            query: { id: this.blog.id, type: 3 }
+         this.showReviewPopup = true;
+         this.allComments = [];
+         this.allCommentsPage = 1;
+         this.allCommentsNoMore = false;
+         this.loadAllComments();
+      },
+      loadAllComments() {
+         if(this.allCommentsLoading || this.allCommentsNoMore) return;
+         this.allCommentsLoading = true;
+         
+         getComments({ sourceId: this.blog.id, sourceType: 3, current: this.allCommentsPage }).then(res => {
+            let list = [];
+            if(Array.isArray(res)) list = res;
+            else if(res && Array.isArray(res.list)) list = res.list;
+            else if(res && Array.isArray(res.data)) list = res.data;
+            else if(res && res.data && Array.isArray(res.data.records)) list = res.data.records;
+            
+            if(list.length === 0) {
+               this.allCommentsNoMore = true;
+            } else {
+               const processed = list.filter(c => !c.isAIGenerated).map(c => ({
+                  ...c,
+                  userIcon: c.userIcon ? (c.userIcon.startsWith('http') ? c.userIcon : this.fileURL + c.userIcon) : '',
+                  images: c.images ? c.images.split(',').filter(x=>x).map(i => i.startsWith('http') ? i : this.fileURL + i) : [],
+                  replies: []
+               }));
+               
+               // Build reply tree
+               const map = {};
+               processed.forEach(c => map[c.id] = c);
+               
+               const roots = [];
+               processed.forEach(c => {
+                  if(!c.answerId) {
+                     roots.push(c);
+                  } else {
+                     const parent = map[c.answerId];
+                     if(parent) {
+                        c.replyToName = parent.nickName;
+                        let curr = parent;
+                        while(curr && curr.answerId && map[curr.answerId]) {
+                           curr = map[curr.answerId];
+                        }
+                        if(curr && !curr.answerId) {
+                           if(!curr.replies) curr.replies = [];
+                           curr.replies.push(c);
+                        } else {
+                           roots.push(c);
+                        }
+                     } else {
+                        roots.push(c);
+                     }
+                  }
+               });
+               
+               this.allComments = [...this.allComments, ...roots];
+               this.allCommentsPage++;
+            }
+         }).finally(() => {
+            this.allCommentsLoading = false;
          });
+      },
+      onPopupScroll(e) {
+         const { scrollTop, clientHeight, scrollHeight } = e.target;
+         if(scrollTop + clientHeight >= scrollHeight - 50) {
+            this.loadAllComments();
+         }
+      },
+      writeCommentFromPopup() {
+         if(!this.user || !this.user.id) {
+            this.$message.warning("请先登录");
+            return this.$router.push('/user/login');
+         }
+         this.replyToComment = null;
+         this.commentText = '';
+         this.selectedImages = [];
+         this.showCommentPublish = true;
       },
      checkLogin() {
         if(!this.user.id) this.$router.push('/user/login');
@@ -674,10 +829,15 @@ export default {
            // Reload
            this.comments = []; 
            this.aiComment = null; // Reset AI comment
-           // this.current = 1; // Assuming 'current' is a data property for pagination
-           // this.noMore = false; // Assuming 'noMore' is a data property for pagination
            this.loadComments(this.blog.id); // Reload comments for the current blog
            this.queryBlogById(this.blog.id); // Refresh blog details to update comment count
+           // Also refresh popup comments if open
+           if(this.showReviewPopup) {
+              this.allComments = [];
+              this.allCommentsPage = 1;
+              this.allCommentsNoMore = false;
+              this.loadAllComments();
+           }
         }).catch(err => {
            this.$message.error('发布失败，请重试');
            console.error(err);
@@ -1406,4 +1566,27 @@ export default {
     cursor: pointer;
     margin-left: 12px;
 }
+
+/* Review Popup Bottom Sheet */
+.review-popup-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: flex-end; }
+.review-popup-sheet { width: 100%; height: 75vh; background: white; border-radius: 16px 16px 0 0; display: flex; flex-direction: column; animation: slideUp 0.3s ease; }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.review-popup-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid #f0f0f0; flex-shrink: 0; }
+.review-popup-title { font-size: 16px; font-weight: 600; }
+.review-popup-close { font-size: 22px; color: #999; cursor: pointer; padding: 4px; }
+.review-popup-close:hover { color: #333; }
+.review-popup-body { flex: 1; overflow-y: auto; padding: 0 16px 20px; }
+.review-popup-body .comment-box { padding: 16px 0; border-bottom: 1px solid #f5f5f5; }
+.review-popup-body .comment-box:last-child { border-bottom: none; }
+.empty-reviews { text-align: center; padding: 60px 20px; color: #999; }
+.empty-reviews i { font-size: 48px; margin-bottom: 12px; color: #ddd; }
+.loading-more { text-align: center; padding: 15px; color: #999; font-size: 13px; }
+.no-more-reviews { text-align: center; padding: 15px; color: #ccc; font-size: 12px; }
+
+/* Popup Bottom Input Bar */
+.popup-bottom-bar { display: flex; align-items: center; padding: 12px 16px; border-top: 1px solid #f0f0f0; background: white; flex-shrink: 0; gap: 12px; }
+.popup-input-placeholder { flex: 1; background: #f5f5f5; padding: 10px 16px; border-radius: 20px; color: #999; font-size: 14px; }
+
+/* Ensure comment modal is above review popup */
+.comment-pop-overlay { z-index: 1100 !important; }
 </style>

@@ -4,7 +4,8 @@ const routes = [
     {
         path: '/',
         name: 'Home',
-        component: () => import('@/views/home/Index.vue')
+        component: () => import('@/views/home/Index.vue'),
+        meta: { keepAlive: true }
     },
     {
         path: '/user/login',

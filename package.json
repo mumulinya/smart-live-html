@@ -12,6 +12,8 @@
     "@element-plus/icons-vue": "^2.3.2",
     "axios": "^1.13.2",
     "element-plus": "^2.13.1",
+    "markdown-it": "^14.1.0",
+    "vant": "^4.9.22",
     "vue": "^3.3.4",
     "vue-router": "^4.6.4"
   },
