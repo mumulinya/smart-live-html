@@ -441,11 +441,6 @@ export default {
              if(type === 'feed' && !this.feedLoading && !this.feedNoMore) this.loadMoreFeeds();
          }
      },
-     
-     // Touch Swipe handlers (Optional with Vant Swipeable)
-     handleTouchStart(e) { /* Managed by Vant now */ },
-     handleTouchEnd(e) { /* Managed by Vant now */ },
-     
      // Data Query
      queryUser() {
         this.pageLoading = true;
