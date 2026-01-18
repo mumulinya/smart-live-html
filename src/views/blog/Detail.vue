@@ -29,7 +29,7 @@
             </template>
             <div class="more-menu-list">
                 <div class="menu-item" @click="handleSticky">
-                    <i class="el-icon-top"></i> 置顶
+                    <i class="el-icon-top"></i> {{ blog.pin ? '取消置顶' : '置顶' }}
                 </div>
                 <div class="menu-item" @click="handleEdit">
                     <i class="el-icon-edit-outline"></i> 编辑
@@ -365,7 +365,7 @@
 </template>
 
 <script>
-import { getBlogDetail, deleteBlog } from '@/api/blog';
+import { getBlogDetail, deleteBlog, pinBlog } from '@/api/blog';
 import { getShopDetail } from '@/api/shop';
 import { getLikeList, isFollowed, followUser, likeBlog, getComments, addComment, likeComment, replyComment, removeComment, toggleStar } from '@/api/interaction';
 import { getCurrentUser } from '@/api/user';
@@ -965,7 +965,13 @@ export default {
      },
       handleSticky() {
           this.showMenu = false;
-          this.$message.success('置顶成功'); 
+          if (this.blog.id) {
+             const newStatus = !this.blog.pin;
+             pinBlog({ id: this.blog.id, pin: newStatus }).then(() => {
+                this.blog.pin = newStatus;
+                this.$message.success(newStatus ? '置顶成功' : '取消置顶成功');
+             });
+          }
       },
       handleEdit() {
           this.showMenu = false;

@@ -1,7 +1,20 @@
 ﻿<template>
-  <div class="user-info-page">
+  <div class="user-info-page"
+       @touchstart="handleTouchStart"
+       @touchmove="handleTouchMove"
+       @touchend="handleTouchEnd">
     <!-- Cover Image -->
-    <div class="profile-cover" :style="{ backgroundImage: `url(${user.cover || 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80'})` }"></div>
+    <!-- Cover Image -->
+    <!-- Cover Image -->
+    <div class="profile-cover-container" :style="containerStyle" @click="triggerBgUpload">
+      <img v-if="coverUrl" :src="coverUrl" :style="imgStyle" class="cover-img">
+      <div v-else class="default-cover" :style="defaultCoverStyle"></div>
+      <div class="change-bg-btn" @click.stop="triggerBgUpload" v-if="isExpanded">
+         <i class="el-icon-camera"></i>
+         <span>更换封面</span>
+      </div>
+      <input type="file" ref="bgInput" accept="image/*" style="display:none" @change="handleBgUpload">
+    </div>
 
     <!-- Navbar (Fixed, Transparent->White) -->
     <div class="nav-bar" :class="{ 'nav-scrolled': scrollTop > 50 }">
@@ -20,7 +33,7 @@
     </div>
 
     <!-- Header Section -->
-    <div class="profile-header">
+    <div class="profile-header" @click="isExpanded = false">
        <div class="header-top">
           <!-- Avatar -->
           <div class="avatar-box" @click="showAvatarDialog = true">
@@ -112,8 +125,9 @@
                     <div class="waterfall-container">
                         <div class="waterfall-column" v-for="(col, i) in [0, 1]" :key="i">
                             <div class="waterfall-item" v-for="b in blogs.filter((_, index) => index % 2 === i)" :key="b.id" @click="toBlogDetail(b)">
-                                <div class="card-img-box">
+                                <div class="card-img-box" style="position: relative;">
                                     <img :src="getFirstImage(b.images)" class="work-cover" loading="lazy" @error="handleImgError">
+                                    <div class="pinned-tag" v-if="b.pin || b.isTop">置顶</div>
                                 </div>
                                 <div class="card-info">
                                     <div class="card-title">{{ b.title }}</div>
@@ -251,6 +265,7 @@ import { getMyBlogs, getFollowedFeeds } from '@/api/blog';
 import { likeBlog, likeRecord, starList } from '@/api/interaction';
 import { filePrefix } from '@/utils/request';
 import { locationUtil } from '@/utils/location';
+import { updateBackgroundImage } from '@/api/user'; // Import new API
 
 export default {
   name: 'UserInfo',
@@ -298,7 +313,48 @@ export default {
        
        // Touch Swipe
        touchStartX: 0,
+       touchStartY: 0,
+       coverHeight: 120, 
+       isPulling: false,
+       isExpanded: false,
+       
        tabOrder: ['note', 'collection', 'likes', 'feed']
+    }
+  },
+  computed: {
+    coverUrl() {
+        const bg = this.info.backgroundImage;
+        if(bg) {
+             let url = bg;
+             if(!bg.startsWith('http')) {
+                  url = this.$fileURL + bg;
+             }
+             return url;
+        }
+        return null;
+    },
+    containerStyle() {
+        return {
+             height: this.isExpanded ? 'auto' : (this.coverHeight + 'px'),
+             transition: this.isPulling ? 'none' : 'height 0.3s ease-out',
+             overflow: 'hidden',
+             position: 'relative'
+        };
+    },
+    imgStyle() {
+        return {
+             width: '100%',
+             height: this.isExpanded ? 'auto' : '100%',
+             objectFit: this.isExpanded ? 'contain' : 'cover',
+             display: 'block'
+        };
+    },
+    defaultCoverStyle() {
+        return {
+             width: '100%',
+             height: '100%',
+             background: 'linear-gradient(to right, #fa709a 0%, #fee140 100%)'
+        };
     }
   },
   created() {
@@ -339,18 +395,17 @@ export default {
      toOrders() {
         this.$router.push('/order/list'); 
      },
+     toCollections() {
+          this.$router.push('/user/star');
+      },
+     toReviews() {
+        this.$router.push('/comment/list'); // Assuming comment list serves as reviews
+     },
      toFollows() {
         this.$router.push('/user/follows');
      },
      toFans() {
         this.$router.push('/user/fans');
-     },
-     toCollections() {
-        this.activeTab = 'collection';
-        this.loadTabData('collection');
-     },
-     toReviews() {
-        this.$router.push('/comment/list'); // Assuming comment list serves as reviews
      },
      toHistory() {
          this.$message.info('浏览历史功能开发中');
@@ -418,6 +473,68 @@ export default {
             this.pageLoading = false;
          });
      },
+      // New Background Logic
+      triggerBgUpload() {
+          this.$refs.bgInput.click();
+      },
+      handleBgUpload(e) {
+          const file = e.target.files[0];
+          if(!file) return;
+          if(file.size > 5 * 1024 * 1024) return this.$message.warning("图片大小不能超过5MB");
+          
+          const formData = new FormData();
+          formData.append('file', file);
+          
+          this.pageLoading = true;
+          uploadFile(formData).then(res => {
+              let path = res.data || res;
+              if (path.includes(filePrefix)) {
+                  path = path.split(filePrefix)[1];
+              }
+              // Call API to update background
+              updateBackgroundImage({ userId: this.user.id, backgroundImage: path }).then(() => {
+                  this.$message.success("背景图修改成功");
+                  // Update local user info to reflect change
+                  this.user.backgroundImage = this.$fileURL + path; // Prioritize local update
+                  this.info.backgroundImage = this.$fileURL + path; // Sync both just in case
+              });
+          }).finally(() => {
+              this.pageLoading = false;
+          });
+      },
+      // Touch Logic
+    handleTouchStart(e) {
+       this.touchStartX = e.touches[0].clientX;
+       this.touchStartY = e.touches[0].clientY;
+       this.isPulling = false;
+    },
+    handleTouchMove(e) {
+       const currentY = e.touches[0].clientY;
+       const diffY = currentY - this.touchStartY;
+       const scrollTop = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop;
+       
+       if (this.isExpanded) {
+           if (diffY < -50) { 
+                this.isExpanded = false;
+                this.coverHeight = 120;
+           }
+       } else {
+           if (scrollTop <= 0 && diffY > 0) {
+              if (e.cancelable && diffY < 200) e.preventDefault(); 
+              this.isPulling = true;
+              this.coverHeight = 120 + Math.pow(diffY, 0.8); 
+           }
+       }
+    },
+    handleTouchEnd(e) {
+       if (this.isPulling) {
+           this.isPulling = false;
+           if (this.coverHeight > 180) {
+              this.isExpanded = true;
+           }
+           this.coverHeight = 120;
+       }
+    },
      queryUserInfo() {
         if(!this.user.id) return;
         getFullUserInfo(this.user.id).then(res => {
@@ -663,6 +780,18 @@ export default {
 }
 </script>
 <style scoped>
+/* Pinned Tag */
+.pinned-tag {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    background: linear-gradient(to right, #ff9966, #ff5e62);
+    color: white;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    z-index: 10;
+}
 .user-info-page {
     min-height: 100vh;
     background: #fff;
@@ -1031,8 +1160,25 @@ export default {
     align-items: center;
 }
 .empty-img {
-    width: 120px;
-    margin-bottom: 10px;
+    width: 100%;
+  padding-bottom: 20px;
+}
+.change-bg-btn {
+    position: absolute;
+    bottom: 40px;
+    right: 15px;
+    background: rgba(0,0,0,0.4);
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    backdrop-filter: blur(4px);
+    z-index: 10;
+}
+.change-bg-btn i {
+    margin-right: 4px;
 }
 
 /* Avatar Dialog */

@@ -251,11 +251,8 @@ export default {
       showNickNameDialog: false,
       showIntroduceDialog: false,
       showGenderDialog: false,
-      showCityDialog: false,
-      showNickNameDialog: false,
-      showIntroduceDialog: false,
-      showGenderDialog: false,
       showCitySheet: false,
+      showBirthdaySheet: false,
       
       // City Picker Data
       cityData: {

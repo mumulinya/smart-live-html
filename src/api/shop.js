@@ -20,6 +20,10 @@ export function getShopVouchers(shopId) {
     return request.get(`/app/marketing/voucher/list/${shopId}`);
 }
 
+export function getVoucherDetail(id) {
+    return request.get(`/app/marketing/voucher/${id}`);
+}
+
 export function buyVoucherAPI(voucherId) {
     return request.post(`/app/marketing/voucher/buy/${voucherId}`);
 }

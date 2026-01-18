@@ -8,6 +8,10 @@ export function login(data) {
     return request.post('/app/auth/appLogin', data);
 }
 
+export function appLoginByPassword(data) {
+    return request.post('/app/auth/appLoginByPassword', data);
+}
+
 export function sendCode(phone) {
     return request.post('/app/code', null, { params: { phone } });
 }
@@ -34,6 +38,10 @@ export function updateUser(data) {
 
 export function updateUserInfo(data) {
     return request.post('/app/user/info/update', data);
+}
+
+export function updateBackgroundImage(data) {
+    return request.post('/app/user/info/updateBackgroundImage', data);
 }
 
 export function uploadFile(formData) {

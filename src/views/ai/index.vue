@@ -168,7 +168,7 @@
 <script setup>
 import { ref, nextTick, onMounted, onUnmounted, computed, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import MarkdownIt from 'markdown-it';
 import { 
   sendMessageStream, 
@@ -183,6 +183,7 @@ import { getCurrentUser } from '@/api/user';
 import { locationUtil } from '@/utils/location';
 
 const router = useRouter();
+const route = useRoute();
 
 const md = new MarkdownIt({
   html: true,
@@ -263,10 +264,7 @@ const checkLoginStatus = async () => {
   }
 };
 
-onMounted(() => {
-  checkLoginStatus();
-  document.addEventListener('fullscreenchange', handleFullscreenChange);
-});
+
 
 onUnmounted(() => {
   document.removeEventListener('fullscreenchange', handleFullscreenChange);
@@ -558,11 +556,20 @@ const scrollToBottom = () => {
 };
 
 // 组件挂载时初始化
+// 组件挂载时初始化
 onMounted(() => {
   scrollToBottom();
-  // 可以在这里加载推荐问题等
+  checkLoginStatus();
+  document.addEventListener('fullscreenchange', handleFullscreenChange);
+  
+  // Auto send if query exists
+  if (route.query.q) {
+     inputText.value = route.query.q;
+     handleSend();
+  }
 });
 </script>
+
 
 <style scoped>
 .ai-container {

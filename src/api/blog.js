@@ -41,3 +41,7 @@ export function deleteBlog(id) {
 export function updateBlog(data) {
     return request.put('/app/blog', data);
 }
+
+export function pinBlog(data) {
+    return request.put('/app/blog/isPin', data);
+}

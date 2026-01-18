@@ -1,276 +1,315 @@
 <template>
-  <div class="login-container">
-    <div class="header">
-      <div class="header-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
-      <div class="header-title">手机号码快捷登录</div>
-    </div>
-    
-    <div class="content">
-      <div class="login-form">
-        <!-- Phone Input -->
-        <div class="input-group">
-          <div class="custom-input-box">
-             <input type="tel" v-model="form.phone" placeholder="请输入手机号" maxlength="11" />
-          </div>
-          <button class="code-btn" :class="{ disabled: disabled }" @click="sendCode" :disabled="disabled">
-            {{ codeBtnMsg }}
-          </button>
-        </div>
-
-        <!-- Code Input -->
-        <div class="input-group">
-          <div class="custom-input-box full-width">
-             <input type="text" v-model="form.code" placeholder="请输入验证码" maxlength="6" />
-          </div>
-        </div>
-
-        <div class="tips">未注册的手机号码验证后自动创建账户</div>
-        
-        <button class="login-btn" @click="login">登录</button>
-        
-        <div class="password-login-link">
-           <span @click="toPasswordLogin">密码登录</span>
-        </div>
+  <div class="login-page">
+    <div class="login-header">
+      <div class="back-btn" @click="goHome">
+        <van-icon name="arrow-left" size="24" color="#333" />
       </div>
+      <h2 class="welcome-text">欢迎登录智评生活</h2>
+      <p class="sub-text">发现更多好店</p>
+    </div>
 
-      <div class="login-radio">
-        <label class="radio-label">
-          <input type="radio" v-model="radio" value="1">
-          <span class="radio-text">
-            我已阅读并同意
-            <a href="javascript:void(0)">《智评生活用户服务协议》</a>、
-            <a href="javascript:void(0)">《隐私政策》</a>
-            等，接受免除或者限制责任、诉讼管辖约定等粗体标示条款
+    <div class="login-form">
+      <van-field 
+        v-model="form.phone" 
+        placeholder="请输入手机号" 
+        class="custom-input"
+        :border="false"
+        type="tel"
+        maxlength="11"
+      >
+        <template #left-icon>
+          <van-icon name="phone-o" size="20" color="#666"/>
+        </template>
+      </van-field>
+
+      <van-field 
+        v-if="!isPasswordMode"
+        v-model="form.code" 
+        placeholder="请输入验证码" 
+        class="custom-input mt-4"
+        :border="false"
+        type="digit"
+        maxlength="6"
+      >
+        <template #left-icon>
+          <van-icon name="shield-o" size="20" color="#666"/>
+        </template>
+        <template #button>
+          <span class="send-code-text" :class="{disabled: counting}" @click="handleSendCode">
+            {{ counting ? `${count}s后重发` : '获取验证码' }}
           </span>
-        </label>
+        </template>
+      </van-field>
+
+      <van-field 
+        v-else
+        v-model="form.password" 
+        placeholder="请输入密码" 
+        class="custom-input mt-4"
+        :border="false"
+        type="password"
+      >
+        <template #left-icon>
+          <van-icon name="lock" size="20" color="#666"/>
+        </template>
+      </van-field>
+
+      <div class="btn-container">
+        <van-button block color="linear-gradient(to right, #ff9966, #ff5e62)" round @click="handleLogin" :loading="loading">
+          登录
+        </van-button>
+      </div>
+
+      <div class="switch-mode" @click="toggleMode">
+        {{ isPasswordMode ? '验证码登录' : '密码登录' }}
       </div>
     </div>
+
+    <div class="login-footer">
+       <van-checkbox v-model="agree" icon-size="14px" checked-color="#ff5e62">
+         <span class="agreement-text">
+            我已阅读并同意 
+            <a href="javascript:void(0)" @click.stop>《用户协议》</a> 与 
+            <a href="javascript:void(0)" @click.stop>《隐私政策》</a>
+         </span>
+       </van-checkbox>
+    </div>
+
+    <Vcode :show="isShowSlider" :imgs="sliderImages" @success="onSliderSuccess" @close="isShowSlider = false" />
   </div>
 </template>
 
-<script>
-import { login, sendCode } from '@/api/user';
+<script setup>
+import { ref, reactive } from 'vue';
+import { useRouter } from 'vue-router';
+import { showToast, showSuccessToast, showFailToast } from 'vant';
+import { login, sendCode, appLoginByPassword } from '@/api/user';
+import Vcode from "vue3-puzzle-vcode";
 
-export default {
-  name: 'UserLogin',
-  data() {
-    return {
-      radio: "",
-      disabled: false,
-      codeBtnMsg: "发送验证码",
-      form:{
-        phone: '',
-        code: ''
-      }
-    }
-  },
-  methods: {
-    login(){
-      if(!this.radio){
-        this.$message.warning("请先勾选同意用户协议");
-        return
-      }
-      if(!this.form.phone || !this.form.code){
-        this.$message.warning("手机号和验证码不能为空");
-        return
-      }
-      
-       login(this.form)
-         .then((data) => {
-          if(data && data.data) {
-             localStorage.setItem("token", data.data);
-             this.$message.success("登录成功");
-             this.$router.push("/");
-          } else if (data) {
-             // Fallback if data is already unwrapped (unlikely given request.js)
-             localStorage.setItem("token", data);
-             this.$message.success("登录成功");
-             this.$router.push("/");
-          }
-      })
-      .catch(err => {
-         const msg = err.response ? err.response.data : err;
-         this.$message.error(msg || "登录失败");
-      });
-    },
-    goBack(){
-      this.$router.go(-1);
-    },
-    toPasswordLogin() {
-      this.$message.info("密码登录即将上线");
-    },
-    sendCode(){
-      if (!this.form.phone) {
-        this.$message.warning("请输入手机号");
+const router = useRouter();
+
+const form = reactive({
+    phone: '',
+    phone: '',
+    code: '',
+    password: ''
+});
+
+const isPasswordMode = ref(false); 
+
+const toggleMode = () => {
+  isPasswordMode.value = !isPasswordMode.value;
+  form.code = '';
+  form.password = '';
+};
+
+const agree = ref(false);
+const loading = ref(false);
+const counting = ref(false);
+const count = ref(60);
+let timer = null;
+
+const handleSendCode = async () => {
+    if (counting.value) return;
+    if (!form.phone) {
+        showToast("请输入手机号");
         return;
-      }
-      if (!/^1[3-9]\d{9}$/.test(this.form.phone)) {
-        this.$message.warning("手机号格式不正确");
-        return;
-      }
-
-      sendCode(this.form.phone)
-        .then(() => {
-           this.$message.success("验证码已发送");
-        })
-        .catch(err => {
-          console.log(err);
-          this.$message.error("发送失败，请稍后重试");
-        });
-
-      this.disabled = true;
-      let i = 60;
-      this.codeBtnMsg = i + 'S';
-      let taskId = setInterval(() => {
-         i--;
-         this.codeBtnMsg = i + 'S';
-         if (i <= 0) {
-            clearInterval(taskId);
-            this.disabled = false;
-            this.codeBtnMsg = "发送验证码";
-         }
-      }, 1000);
     }
-  }
-}
+    if (!/^1[3-9]\d{9}$/.test(form.phone)) {
+        showToast("手机号格式不正确");
+        return;
+    }
+
+    try {
+        await sendCode(form.phone);
+        showSuccessToast("验证码已发送");
+        startCount();
+    } catch (err) {
+        console.error(err);
+        showFailToast("发送失败，请稍后重试");
+    }
+};
+
+const startCount = () => {
+    counting.value = true;
+    count.value = 60;
+    timer = setInterval(() => {
+        count.value--;
+        if (count.value <= 0) {
+            clearInterval(timer);
+            counting.value = false;
+        }
+    }, 1000);
+};
+
+const isShowSlider = ref(false);
+
+const sliderImages = [
+  "https://picsum.photos/id/1/600/300",
+  "https://picsum.photos/id/11/600/300",
+  "https://picsum.photos/id/20/600/300",
+  "https://picsum.photos/id/35/600/300"
+];
+
+const handleLogin = async () => {
+    if (!agree.value) {
+        showToast("请先勾选同意用户协议");
+        return;
+    }
+    
+    // Validate Phone
+    if (!form.phone) {
+        showToast("请输入手机号");
+        return;
+    }
+
+    if (isPasswordMode.value) {
+        // Password Mode Validation
+        if (!form.password) {
+                return showToast("请输入密码");
+        }
+        // Show Slider
+        isShowSlider.value = true;
+    } else {
+        // Code Mode Validation
+        if (!form.code) {
+                return showToast("请输入验证码");
+        }
+        performLogin();
+    }
+};
+
+const onSliderSuccess = () => {
+  isShowSlider.value = false;
+  performLogin();
+};
+
+const performLogin = async () => {
+    loading.value = true;
+    try {
+        let res;
+        
+        if (isPasswordMode.value) {
+            res = await appLoginByPassword(form);
+        } else {
+            res = await login(form);
+        }
+
+        const token = res.data || res;
+        if (token) {
+            localStorage.setItem("token", token);
+            showSuccessToast("登录成功");
+            router.push("/");
+        } else {
+            showFailToast("登录失败：无Token");
+        }
+    } catch (err) {
+        const msg = err.response?.data || err.message || "登录失败";
+        showFailToast(msg);
+    } finally {
+        loading.value = false;
+    }
+};
+
+
+
+const goHome = () => {
+    router.push('/');
+};
 </script>
 
 <style scoped>
-.login-container {
-  min-height: 100vh;
-  background-color: #f5f5f7;
-  display: flex;
-  flex-direction: column;
+.login-page { 
+    padding: 30px 24px; 
+    background: white; 
+    min-height: 100vh; 
+    display: flex; 
+    flex-direction: column; 
+    box-sizing: border-box;
+    position: relative;
 }
 
-.header {
-  height: 50px;
-  background: white;
-  display: flex;
-  align-items: center;
-  padding: 0 15px;
-  border-bottom: 1px solid #ff9c00;
-  position: relative;
-}
-.header-back-btn {
-  font-size: 24px;
-  color: #f63;
-  width: 40px;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-}
-.header-title {
-  flex: 1;
-  text-align: center;
-  font-size: 18px;
-  color: #333;
-  margin-right: 40px; /* Balance back btn */
+.login-header { 
+    margin-top: 40px; 
+    margin-bottom: 40px; 
+    text-align: left; 
 }
 
-.content {
-  padding: 20px;
-  flex: 1;
+.back-btn {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    cursor: pointer;
+    z-index: 10;
 }
 
-.input-group {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 15px;
+
+
+.welcome-text { 
+    font-size: 24px; 
+    font-weight: bold; 
+    color: #333; 
+    margin-bottom: 8px;
 }
 
-.custom-input-box {
-  flex: 1;
-  background: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
-  padding: 0 12px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-}
-.custom-input-box.full-width {
-  width: 100%;
-}
-.custom-input-box input {
-  width: 100%;
-  border: none;
-  background: transparent;
-  font-size: 15px;
-  outline: none;
-  color: #333;
-}
-.custom-input-box input::placeholder {
-  color: #ccc;
+.sub-text {
+    font-size: 14px;
+    color: #999;
 }
 
-.code-btn {
-  width: 110px;
-  height: 44px;
-  background-color: #67c23a; /* Green matching image */
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 14px;
-  cursor: pointer;
-}
-.code-btn.disabled {
-  background-color: #b3e19d;
-  cursor: not-allowed;
+.custom-input { 
+    background-color: #F7F8FA; 
+    border-radius: 24px; 
+    padding: 10px 16px; 
+    align-items: center; 
+    margin-bottom: 16px; 
 }
 
-.tips {
-  text-align: center;
-  font-size: 12px;
-  color: #999;
-  margin: 10px 0 20px;
+.mt-4 { 
+    margin-top: 16px; 
 }
 
-.login-btn {
-  width: 100%;
-  height: 44px;
-  background: linear-gradient(90deg, #ff9c00, #f63);
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 16px;
-  font-weight: 500;
-  cursor: pointer;
-  box-shadow: 0 3px 8px rgba(255, 102, 51, 0.2);
+.send-code-text { 
+    color: #ff5e62; 
+    font-size: 14px; 
+    font-weight: 500; 
+    padding-left: 10px; 
+    border-left: 1px solid #eee; 
+    cursor: pointer;
 }
-.login-btn:active {
-  transform: scale(0.98);
+.send-code-text.disabled {
+    color: #999;
+    cursor: not-allowed;
 }
 
-.password-login-link {
-  text-align: right;
-  margin-top: 15px;
-  font-size: 14px;
-}
-.password-login-link span {
-  color: #409EFF; /* Or maybe keep it simpler dark link? Image showed dark blue link */
-  color: #3b5998;
-  cursor: pointer;
-  text-decoration: underline;
+.btn-container { 
+    margin-top: 30px; 
+    box-shadow: 0 4px 12px rgba(255, 94, 98, 0.3); 
+    border-radius: 999px; 
 }
 
-.login-radio {
-  margin-top: 30px;
+.switch-mode { 
+    text-align: center; 
+    margin-top: 20px; 
+    color: #666; 
+    font-size: 14px; 
+    cursor: pointer;
 }
-.radio-label {
-  display: flex;
-  align-items: flex-start;
-  font-size: 12px;
-  color: #666;
-  line-height: 1.5;
+
+.login-footer { 
+    margin-top: auto; 
+    padding-bottom: 20px; 
+    display: flex; 
+    justify-content: center; 
 }
-.radio-label input {
-  margin-top: 3px;
-  margin-right: 6px;
+
+.agreement-text { 
+    font-size: 12px; 
+    color: #999; 
+    line-height: 1.5; 
 }
-.radio-text a {
-  color: #409EFF;
-  text-decoration: none;
+
+.agreement-text a {
+    color: #ff5e62;
 }
 </style>

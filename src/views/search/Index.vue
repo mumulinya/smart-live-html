@@ -198,6 +198,7 @@
                                           <span class="shop-name">{{v.shopName || '家味道家常菜馆'}}</span>
                                        </div>
                                        <div class="flash-subtitle" v-html="v.subTitle || '周一至周五均可使用'"></div>
+                                       <div class="flash-time-range" v-if="v.beginTime && v.endTime" style="font-size: 11px; color: #ff5000; margin-top: 4px;">{{formatSeckillTime(v)}}</div>
                                     </div>
                                     <div class="flash-footer">
                                        <div class="flash-price-section">
@@ -544,6 +545,18 @@ export default {
     getShopTypeName(id) {
       const t = this.shopTypes.find((t) => t.id === id);
       return t ? t.name : "";
+    },
+    formatSeckillTime(v) {
+        if(!v.beginTime || !v.endTime) return '';
+        const format = (str) => {
+            const d = new Date(str);
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            const h = String(d.getHours()).padStart(2, '0');
+            const min = String(d.getMinutes()).padStart(2, '0');
+            return `${m}.${day} ${h}:${min}`;
+        };
+        return `${format(v.beginTime)} - ${format(v.endTime)}`;
     },
     getVoucherTypeName(val) {
         const t = this.voucherTypeOptions.find(t => t.value === val);

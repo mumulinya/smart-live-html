@@ -108,7 +108,7 @@
                 <div class="ticket-type">{{ v.type === 1 ? '秒杀券' : '代金券' }}</div>
              </div>
              <!-- Middle: Info -->
-             <div class="voucher-info">
+             <div class="voucher-info" @click="toVoucherDetail(v)">
                 <div class="voucher-title">{{v.title}}</div>
                 <div class="voucher-sub">{{v.subTitle}}</div>
                 
@@ -134,6 +134,9 @@
                  <template v-if="v.type === 1">
                     <div class="seckill-timer" v-if="isNotBegin(v)">
                        {{formatTime(v)}} 开始
+                    </div>
+                    <div class="seckill-timer" v-else>
+                       {{formatSeckillTime(v)}}
                     </div>
                     <div class="buy-btn seckill-btn" 
                          :class="{disabled: isNotBegin(v) || v.stock < 1}" 
@@ -793,6 +796,21 @@ export default {
         const hours = String(date.getHours()).padStart(2, '0');
         const minutes = String(date.getMinutes()).padStart(2, '0');
         return `${date.getFullYear()}.${date.getMonth()+1}.${date.getDate()} ${hours}:${minutes}`;
+     },
+     formatSeckillTime(v) {
+        if(!v.beginTime || !v.endTime) return '';
+        const format = (str) => {
+            const d = new Date(str);
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            const h = String(d.getHours()).padStart(2, '0');
+            const min = String(d.getMinutes()).padStart(2, '0');
+            return `${m}.${day} ${h}:${min}`;
+        };
+        return `${format(v.beginTime)} - ${format(v.endTime)}`;
+      },
+     toVoucherDetail(v) {
+        this.$router.push({ path: '/voucher/detail', query: { id: v.id } });
      },
      doBuy(v) {
         if(!localStorage.getItem('token')) return this.$router.push('/user/login');

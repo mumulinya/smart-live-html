@@ -104,6 +104,16 @@ const routes = [
         path: '/user/add-friend',
         name: 'AddFriend',
         component: () => import('@/views/user/AddFriend.vue')
+    },
+    {
+        path: '/user/star',
+        name: 'UserStar',
+        component: () => import('@/views/user/MyStar.vue')
+    },
+    {
+        path: '/voucher/detail',
+        name: 'VoucherDetail',
+        component: () => import('@/views/voucher/Detail.vue')
     }
 ]
 

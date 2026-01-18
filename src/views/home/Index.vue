@@ -40,7 +40,7 @@
     <!-- Van Tabs with Swipeable -->
     <van-tabs v-model:active="activeCategory" swipeable animated sticky offset-top="50px" color="#ff6633" title-active-color="#ff6633" :ellipsis="false" @change="onTabChange">
         <!-- Follow Tab (First) -->
-        <van-tab title="关注" name="follow">
+        <van-tab title="关注" name="follow" v-if="token">
             <div class="blog-list-content" @scroll="onScroll">
                <div class="empty-state" v-if="followBlogs.length === 0 && !isLoading">
                  <div class="empty-icon"><i class="el-icon-user"></i></div>
@@ -172,7 +172,7 @@
     <!-- Dropdown Content (outside tabs, but overlays) -->
     <div class="home-dropdown-content" v-if="showMoreCategories" :style="{ zIndex: 2002 }">
         <div class="category-grid">
-          <div class="grid-item" :class="{ active: activeCategory === 'follow' }" @click="selectCategoryFromModal('follow')">关注</div>
+          <div class="grid-item" v-if="token" :class="{ active: activeCategory === 'follow' }" @click="selectCategoryFromModal('follow')">关注</div>
           <div class="grid-item" :class="{ active: activeCategory === 'hot' }" @click="selectCategoryFromModal('hot')">热门</div>
           <div
                   class="grid-item"
@@ -296,7 +296,13 @@ export default {
     this.initLocation();
     
     // Restore active tab from session storage
-    const savedCategory = sessionStorage.getItem('home_active_category');
+    let savedCategory = sessionStorage.getItem('home_active_category');
+    
+    // Safety check: if saved as 'follow' but no token, switch to hot
+    if (savedCategory === 'follow' && !this.token) {
+        savedCategory = 'hot';
+    }
+
     if (savedCategory) {
       // Small delay to ensure tabs are mounted if needed, though activeCategory binding should handle it
       this.activeCategory = savedCategory;
@@ -308,9 +314,13 @@ export default {
         this.queryBlogsByCategory(savedCategory);
       }
     } else {
-      // Default to follow
-      this.activeCategory = 'follow';
-      this.queryFollowedFeeds(); 
+      // Default to follow if logged in, else hot
+      this.activeCategory = this.token ? 'follow' : 'hot';
+      if (this.activeCategory === 'follow') {
+        this.queryFollowedFeeds(); 
+      } else {
+        this.queryHotBlogsScroll();
+      }
     }
   },
 

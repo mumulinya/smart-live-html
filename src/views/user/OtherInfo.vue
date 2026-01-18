@@ -1,15 +1,21 @@
 <template>
-  <div class="other-info-page" v-loading="isLoading">
+  <div class="other-info-page" v-loading="isLoading"
+       @touchstart="handleTouchStart"
+       @touchmove="handleTouchMove"
+       @touchend="handleTouchEnd">
     <div class="page-header">
       <div class="header-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
       <div class="header-title"></div>
     </div>
 
     <!-- Profile Cover -->
-    <div class="profile-cover" :style="user.cover ? { backgroundImage: 'url(' + user.cover + ')' } : {}"></div>
+    <div class="profile-cover-container" :style="containerStyle" @click="handleHeaderClick">
+       <img v-if="coverUrl" :src="coverUrl" :style="imgStyle" class="cover-img">
+       <div v-else class="default-cover" :style="defaultCoverStyle"></div>
+    </div>
 
     <!-- User Header Layout -->
-    <div class="user-header-content">
+    <div class="user-header-content" @click="isExpanded = false">
        <div class="user-avatar-wrapper" @click.stop="showAvatarDialog = true">
          <img :src="user.icon || '/imgs/icons/default-icon.png'" @error="handleImgError">
        </div>
@@ -97,9 +103,7 @@
         </div>
       </div>
 
-      <div class="custom-tabs-content" 
-           @touchstart="handleTouchStart" 
-           @touchend="handleTouchEnd">
+      <div class="custom-tabs-content">
           <!-- Notes Tab -->
           <div v-if="activeTab==='note'" class="tab-pane" v-infinite-scroll="loadMoreNotes" :infinite-scroll-disabled="noteLoading || noteNoMore">
              <div v-if="notes.length > 0" class="waterfall-container">
@@ -109,8 +113,9 @@
                          :key="b.id"
                          @click="toNoteDetail(b)"
                     >
-                       <div class="card-img-box">
+                       <div class="card-img-box" style="position: relative;">
                            <img :src="getImage(b.images)" class="work-cover" loading="lazy" @error="handleImgError">
+                           <div class="pinned-tag" v-if="b.pin || b.isTop">置顶</div>
                        </div>
                        <div class="card-info">
                            <div class="card-title">{{ b.title }}</div>
@@ -212,6 +217,9 @@
           <img :src="user.icon || '/imgs/icons/default-icon.png'" class="avatar-big">
        </div>
     </div>
+    
+    <!-- Image Preview Component -->
+    <van-image-preview v-model:show="showPreview" :images="previewImages" />
   </div>
 </template>
 
@@ -250,10 +258,66 @@ export default {
       
       sessionId: null,
       
-      // Touch Swipe
+      sessionId: null,
+      
+      // Touch tracking
       touchStartX: 0,
+      touchStartY: 0,
+      coverHeight: 120, // Default height
+      isPulling: false,
+      isExpanded: false,
+      
       tabOrder: ['note', 'collection', 'like'],
-      showAvatarDialog: false
+      showAvatarDialog: false,
+      showAvatarDialog: false,
+      showPreview: false
+    }
+  },
+  computed: {
+    coverUrl() {
+        const bg = this.info.backgroundImage;
+        if(bg) {
+             let url = bg;
+             if(!bg.startsWith('http')) {
+                  url = this.$fileURL + bg;
+             }
+             return url;
+        }
+        return null;
+    },
+    containerStyle() {
+        return {
+             height: this.isExpanded ? 'auto' : (this.coverHeight + 'px'),
+             transition: this.isPulling ? 'none' : 'height 0.3s ease-out',
+             overflow: 'hidden',
+             position: 'relative'
+        };
+    },
+    imgStyle() {
+        return {
+             width: '100%',
+             height: this.isExpanded ? 'auto' : '100%',
+             objectFit: this.isExpanded ? 'contain' : 'cover',
+             display: 'block'
+        };
+    },
+    defaultCoverStyle() {
+        return {
+             width: '100%',
+             height: '100%',
+             background: 'linear-gradient(to right, #a8edea 0%, #fed6e3 100%)'
+        };
+    },
+    previewImages() {
+        const bg = this.info.backgroundImage;
+        if(bg) {
+             let url = bg;
+             if(!bg.startsWith('http')) {
+                  url = this.$fileURL + bg;
+             }
+             return [url];
+        }
+        return [];
     }
   },
   created() {
@@ -541,12 +605,92 @@ export default {
     },
     toFans() {
        this.$router.push({ path: '/user/fans', query: { id: this.userId } });
+    },
+    handleHeaderClick() {
+        if (this.previewImages.length > 0) {
+          this.showPreview = true;
+        }
+    },
+    togglePreview() {
+        if (this.previewImages.length > 0) {
+          this.showPreview = true;
+        }
+    },
+    
+    // Touch Logic
+    handleTouchStart(e) {
+       this.touchStartX = e.touches[0].clientX;
+       this.touchStartY = e.touches[0].clientY;
+       this.isPulling = false;
+    },
+    handleTouchMove(e) {
+       const currentY = e.touches[0].clientY;
+       const diffY = currentY - this.touchStartY;
+       const scrollTop = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop;
+       
+       if (this.isExpanded) {
+           // If expanded, check for slide up to collapse
+           if (diffY < -50) { // Sliding up
+                this.isExpanded = false;
+                this.coverHeight = 120; // Reset height
+           }
+       } else {
+           // Vertical Pull to Expand
+           if (scrollTop <= 0 && diffY > 0) {
+              if (e.cancelable && diffY < 200) e.preventDefault(); 
+              this.isPulling = true;
+              this.coverHeight = 120 + Math.pow(diffY, 0.8);
+           }
+       }
+    },
+    handleTouchEnd(e) {
+       // Reset Cover
+       if (this.isPulling) {
+           this.isPulling = false;
+           // If pulled enough, trigger expand
+           if (this.coverHeight > 180) { // Threshold
+               this.isExpanded = true;
+           }
+           this.coverHeight = 120; // Always reset base height var, expanded state uses fixed height
+       }
+       
+       // Horizontal Swipe (Tab Switch) - Only if NOT pulling significantly vertical
+       // Logic: Check start vs end
+       const touchEndX = e.changedTouches[0].clientX;
+       const touchEndY = e.changedTouches[0].clientY;
+       
+       const xDiff = this.touchStartX - touchEndX;
+       const yDiff = this.touchStartY - touchEndY;
+       
+       // Verify it's primarily a horizontal swipe
+       if (Math.abs(xDiff) > 50 && Math.abs(xDiff) > Math.abs(yDiff)) {
+           const currentIndex = this.tabOrder.indexOf(this.activeTab);
+           if (xDiff > 0) {
+               // Next
+               if (currentIndex < this.tabOrder.length - 1) this.switchTab(this.tabOrder[currentIndex + 1]);
+           } else {
+               // Prev
+               if (currentIndex > 0) this.switchTab(this.tabOrder[currentIndex - 1]);
+           }
+       }
     }
   }
 }
 </script>
 
 <style scoped>
+/* Pinned Tag */
+.pinned-tag {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    background: linear-gradient(to right, #ff9966, #ff5e62);
+    color: white;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    z-index: 10;
+}
 .other-info-page { background: #f5f5f5; min-height: 100vh; padding-bottom: 20px; }
 .page-header { height: 50px; background: white; display: flex; align-items: center; padding: 0 15px; position: sticky; top: 0; z-index: 10; }
 .header-back-btn i { font-size: 20px; }
