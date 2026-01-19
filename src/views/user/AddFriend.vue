@@ -165,9 +165,9 @@ export default {
     },
     toUserDetail(user) {
       if (this.loginUser.id && String(user.id) === String(this.loginUser.id)) {
-        this.$router.push('/info');
+        this.$router.push('/user/profile');
       } else {
-        this.$router.push(`/user-info/${user.id}`);
+        this.$router.push(`/user/profile/${user.id}`);
       }
     },
     handleImgError(e) {
@@ -242,6 +242,7 @@ export default {
   background: transparent;
   outline: none;
   font-size: 14px;
+  color: #333;
 }
 
 .search-btn {

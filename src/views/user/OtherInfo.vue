@@ -11,7 +11,6 @@
     <!-- Profile Cover -->
     <div class="profile-cover-container" :style="containerStyle" @click="handleHeaderClick">
        <img v-if="coverUrl" :src="coverUrl" :style="imgStyle" class="cover-img">
-       <div v-else class="default-cover" :style="defaultCoverStyle"></div>
     </div>
 
     <!-- User Header Layout -->
@@ -155,8 +154,8 @@
                            <div class="card-title">{{ b.title }}</div>
                            <div class="card-bottom">
                                <div class="card-user">
-                                   <img :src="b.userAvatar || '/imgs/icons/default-icon.png'" class="card-avatar">
-                                   <span class="card-name">{{ b.userName }}</span>
+                                   <img :src="b.icon || '/imgs/icons/default-icon.png'" class="card-avatar">
+                                   <span class="card-name">{{ b.name }}</span>
                                </div>
                                <div class="card-likes">
                                    <svg viewBox="0 0 24 24" width="14" height="14" style="margin-right: 2px;">
@@ -190,8 +189,8 @@
                            <div class="card-title">{{ b.title }}</div>
                            <div class="card-bottom">
                                <div class="card-user">
-                                   <img :src="b.userAvatar || '/imgs/icons/default-icon.png'" class="card-avatar">
-                                   <span class="card-name">{{ b.userName }}</span>
+                                   <img :src="b.icon || '/imgs/icons/default-icon.png'" class="card-avatar">
+                                   <span class="card-name">{{ b.name }}</span>
                                </div>
                                <div class="card-likes">
                                    <!-- Heart Icon -->
@@ -283,7 +282,7 @@ export default {
              }
              return url;
         }
-        return null;
+        return '/imgs/default-bg.svg';
     },
     containerStyle() {
         return {
@@ -301,13 +300,7 @@ export default {
              display: 'block'
         };
     },
-    defaultCoverStyle() {
-        return {
-             width: '100%',
-             height: '100%',
-             background: 'linear-gradient(to right, #a8edea 0%, #fed6e3 100%)'
-        };
-    },
+
     previewImages() {
         const bg = this.info.backgroundImage;
         if(bg) {
@@ -588,10 +581,10 @@ export default {
     },
     toUserDetail(u) {
        if(String(u.id) === String(this.loginUser.id)) {
-           this.$router.push('/info');
+           this.$router.push('/user/profile');
        } else {
            // Push to same route with different ID, reusing component
-           this.$router.push(`/user-info/${u.id}`);
+           this.$router.push(`/user/profile/${u.id}`);
            // Reset data
            this.userId = u.id;
            this.notes = [];
@@ -601,10 +594,10 @@ export default {
        }
     },
     toFollows() {
-       this.$router.push({ path: '/user/follows', query: { id: this.userId } });
+       this.$router.push({ path: '/user/list', query: { type: 'follow', id: this.userId } });
     },
     toFans() {
-       this.$router.push({ path: '/user/fans', query: { id: this.userId } });
+       this.$router.push({ path: '/user/list', query: { type: 'fans', id: this.userId } });
     },
     handleHeaderClick() {
         if (this.previewImages.length > 0) {
@@ -937,7 +930,7 @@ export default {
 }
 
 .card-title {
-    font-size: 14px;
+    font-size: 15px; /* Increased from 14px */
     color: #333;
     line-height: 1.4;
     margin-bottom: 8px;
@@ -962,15 +955,15 @@ export default {
 }
 
 .card-avatar {
-    width: 16px;
-    height: 16px;
+    width: 20px; /* Increased from 16px */
+    height: 20px; /* Increased from 16px */
     border-radius: 50%;
     margin-right: 4px;
     flex-shrink: 0;
 }
 
 .card-name {
-    font-size: 10px;
+    font-size: 12px; /* Increased from 10px */
     color: #999;
     white-space: nowrap;
     overflow: hidden;
@@ -979,7 +972,7 @@ export default {
 }
 
 .card-likes {
-    font-size: 10px;
+    font-size: 12px; /* Increased from 10px */
     color: #999;
     display: flex;
     align-items: center;

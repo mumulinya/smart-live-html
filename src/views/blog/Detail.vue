@@ -439,17 +439,17 @@ export default {
      goBack() { this.$router.go(-1); },
      toOtherInfo() {
         if(this.user && this.user.id === this.blog.userId) {
-           this.$router.push('/info');
+           this.$router.push('/user/profile');
         } else {
-           this.$router.push(`/user-info/${this.blog.userId}`);
+           this.$router.push(`/user/profile/${this.blog.userId}`);
         }
      },
       toUserDetail(userId) {
          if(!userId) return;
          if(this.user && String(this.user.id) === String(userId)) {
-            this.$router.push('/info');
+            this.$router.push('/user/profile');
          } else {
-            this.$router.push(`/user-info/${userId}`);
+            this.$router.push(`/user/profile/${userId}`);
          }
       },
       toShopDetail() {

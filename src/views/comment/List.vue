@@ -487,9 +487,9 @@ export default {
     toUserDetail(userId) {
        if(!userId) return;
         if(this.user && String(this.user.id) === String(userId)) {
-           this.$router.push('/info');
+           this.$router.push('/user/profile');
         } else {
-           this.$router.push(`/user-info/${userId}`);
+           this.$router.push(`/user/profile/${userId}`);
         }
     }
 

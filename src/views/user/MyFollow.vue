@@ -1,0 +1,489 @@
+<template>
+  <div class="my-follow-page">
+    <van-nav-bar title="我的关注" left-arrow @click-left="$router.back()" fixed placeholder />
+    
+    <van-tabs v-model:active="activeTab" sticky offset-top="46px" color="#ff2442">
+      <van-tab title="用户" />
+      <van-tab title="店铺" />
+      <van-tab title="代金券" />
+      <van-tab title="团购" />
+    </van-tabs>
+
+    <div class="list-container">
+      <van-list
+        v-model:loading="loading"
+        :finished="finished"
+        finished-text="没有更多了"
+        @load="onLoad"
+      >
+        <!-- User List (Tab 0) -->
+        <template v-if="activeTab === 0">
+           <div class="user-row" v-for="item in list" :key="item.id">
+              <van-image round width="40" height="40" :src="item.icon" class="user-avatar-img" />
+              <div class="user-info-box">
+                 <div class="user-name">{{ item.nickName }}</div>
+                 <div class="user-bio">{{ item.introduce || '暂无简介' }}</div>
+              </div>
+              <van-button size="small" round color="#eee" class="followed-btn">已关注</van-button>
+           </div>
+        </template>
+
+        <!-- Shop List (Tab 1) -->
+        <template v-if="activeTab === 1">
+           <div class="shop-item" v-for="item in list" :key="item.id" @click="toShopDetail(item)">
+              <div class="shop-img-box">
+                  <img :src="item.image || '/imgs/default-shop.png'" class="shop-cover">
+              </div>
+              <div class="shop-main">
+                  <div class="shop-title">{{ item.name }}</div>
+                  <div class="shop-rating-row">
+                      <van-rate 
+                          :model-value="item.score / 10" 
+                          readonly 
+                          allow-half 
+                          color="#ff9900" 
+                          void-icon="star"
+                          void-color="#eee"
+                          size="12px"
+                      />
+                      <span class="shop-score-val">{{ formatScore(item.score) }}</span>
+                      <span class="shop-comment-count">{{ item.comments || 0 }}条</span>
+                  </div>
+                  <div class="shop-meta-row">
+                      <span class="shop-area-text">{{ item.area || '未知区域' }} | 美食</span>
+                  </div>
+                  <div class="shop-tags-row">
+                      <span class="shop-tag">可预约</span>
+                      <span class="shop-tag">有停车位</span>
+                  </div>
+              </div>
+              <div class="shop-side">
+                   <div class="shop-price">¥{{ item.avgPrice || '0' }}/人</div>
+                   <div class="shop-distance">1.5km</div>
+              </div>
+           </div>
+        </template>
+        
+        <!-- Voucher List (Tab 2) -->
+        <template v-if="activeTab === 2">
+           <div class="voucher-item" v-for="item in list" :key="item.id" @click="toVoucherDetail(item)">
+              <!-- Left: Icon -->
+              <div class="ticket-stub" :class="{seckill: item.type === 1}">
+                  <div class="ticket-val">¥{{item.payValue}}</div>
+                  <div class="ticket-type">{{ item.type === 1 ? '秒杀券' : '代金券' }}</div>
+              </div>
+              <!-- Middle: Info -->
+              <div class="voucher-info">
+                  <div class="voucher-title">{{item.title}}</div>
+                  <div class="voucher-sub">{{item.subTitle}}</div>
+                  <div class="voucher-date-info" v-if="getValidityText(item)">{{ getValidityText(item) }}</div>
+                  
+                  <!-- Normal Voucher Meta -->
+                  <div class="voucher-meta" v-if="item.type !== 1">
+                      <span class="current-price">¥{{item.payValue}}</span>
+                      <span class="orig-price" v-if="item.actualValue">¥{{item.actualValue}}</span>
+                      <span class="discount-tag" v-if="item.actualValue">{{((item.payValue*10)/(item.actualValue||1)).toFixed(1)}}折</span>
+                  </div>
+                  <!-- Seckill Meta -->
+                  <div class="seckill-meta" v-else>
+                      <div class="seckill-price-row">
+                          <span class="current-price text-red">¥{{item.payValue}}</span>
+                          <span class="orig-price">¥{{item.actualValue}}</span>
+                      </div>
+                      <div class="seckill-progress">
+                          <div class="progress-txt">剩余 {{item.stock}} 张</div>
+                      </div>
+                  </div>
+              </div>
+              <!-- Right: Button -->
+              <div class="voucher-action">
+                  <div class="buy-btn" :class="getButtonState(item).class" @click.stop="handleBtnClick(item)">
+                     {{ getButtonState(item).text }}
+                  </div>
+              </div>
+           </div>
+        </template>
+        
+         <!-- Group Deal List (Tab 3) -->
+        <template v-if="activeTab === 3">
+           <div class="shop-item" v-for="item in list" :key="item.id">
+              <div class="shop-img-box">
+                   <img :src="item.image" class="shop-cover">
+              </div>
+              <div class="shop-main">
+                 <div class="shop-title">{{ item.title }}</div>
+                 <div class="shop-rating-row">
+                     <span class="shop-score-val" style="color:#ff5000; font-size: 16px;">¥{{ item.price }}</span>
+                     <span class="orig-price" style="text-decoration: line-through; color:#999; margin-left: 5px; font-size:12px">¥{{ item.originalPrice }}</span>
+                 </div>
+              </div>
+           </div>
+        </template>
+
+      </van-list>
+    </div>
+  </div>
+</template>
+
+<script setup>
+
+
+import { ref, watch, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { getFollows } from '@/api/interaction';
+import { getCurrentUser } from '@/api/user';
+import { fileURL } from '@/utils/request';
+
+const router = useRouter();
+const activeTab = ref(0);
+const list = ref([]);
+const loading = ref(false);
+const finished = ref(false);
+const current = ref(1);
+const size = 10;
+const userId = ref(null);
+
+const toShopDetail = (item) => {
+    router.push(`/shop/detail?id=${item.id}`);
+};
+
+const toVoucherDetail = (item) => {
+  router.push(`/voucher/detail?id=${item.id}`);
+};
+
+// Map tab to sourceType: User(1), Shop(2), Voucher(4), Group(5)
+const getSourceType = (index) => {
+    switch(index) {
+        case 0: return 1;
+        case 1: return 2;
+        case 2: return 4;
+        case 3: return 5;
+        default: return 1;
+    }
+}
+
+const formatScore = (score) => {
+    if(!score) return '0.0';
+    return (score / 10).toFixed(1);
+};
+
+const getValidityText = (v) => {
+    if (v.validityType === 1) {
+    const start = v.useStartTime?.split(' ')[0] || '';
+    const end = v.useEndTime?.split(' ')[0] || '';
+    return `${start} 至 ${end} 有效`;
+    } else if (v.validityType === 2) {
+    return `领取/购买后 ${v.validDays} 天内有效`;
+    }
+    return '';
+};
+
+const isSeckill = (item) => item.type === 1;
+
+const isSeckillStarted = (item) => {
+    if(!item.beginTime) return false;
+    return new Date(item.beginTime).getTime() <= Date.now();
+};
+const isSeckillEnded = (item) => {
+    // API might return endTme or endTime? assume endTime
+    if(!item.endTime) return false;
+    return new Date(item.endTime).getTime() <= Date.now();
+};
+
+const getButtonState = (item) => {
+    if (isSeckill(item)) {
+        if (item.stock <= 0) {
+            return { text: '已抢光', class: 'btn-gray', action: 'none' };
+        }
+        if (isSeckillStarted(item) && !isSeckillEnded(item)) {
+             return { text: '去抢购', class: 'btn-red', action: 'buy' };
+        }
+        if (isSeckillEnded(item)) {
+             return { text: '已结束', class: 'btn-gray', action: 'none' };
+        }
+        // Not started
+        return { text: '开抢提醒', class: 'btn-orange', action: 'remind' };
+    } else {
+        return { text: '去抢购', class: 'btn-red', action: 'buy' };
+    }
+};
+
+const handleBtnClick = (item) => {
+    toVoucherDetail(item);
+};
+
+const getFirstImage = (images) => {
+    if(!images) return '/imgs/icons/default-icon.png';
+    const arr = images.split(',');
+    let url = arr[0];
+    if (url && !url.startsWith('http')) {
+        return fileURL + url;
+    }
+    return url;
+};
+const handleImgError = (e) => {
+    e.target.src = '/imgs/icons/default-icon.png';
+};
+
+const processItem = (item) => {
+    // Helper to format item data based on type
+    let img = item.image || item.icon || item.userAvatar;
+    if (img && !img.startsWith('http')) {
+        img = fileURL + img;
+    }
+    
+    // For Vouchers/Shops, ensure fields match template expectations
+    // Template expects: image, icon, userAvatar depending on tab
+    // Let's normalize to template usage or adjust template?
+    // Template uses:
+    // Tab 0: item.icon
+    // Tab 1: item.image
+    // Tab 2: ticket-stub (no image)
+    
+    return {
+        ...item,
+        icon: (item.icon && !item.icon.startsWith('http')) ? fileURL + item.icon : item.icon,
+        image: (item.image && !item.image.startsWith('http')) ? fileURL + item.image : item.image,
+        userAvatar: (item.userAvatar && !item.userAvatar.startsWith('http')) ? fileURL + item.userAvatar : item.userAvatar,
+    };
+};
+
+const onLoad = async () => {
+   if (!userId.value) return;
+
+   try {
+       loading.value = true;
+       const params = {
+           userId: userId.value,
+           sourceType: getSourceType(activeTab.value),
+           current: current.value,
+           size: size
+       };
+       
+       const res = await getFollows(params);
+       let rawList = res.data || res || [];
+       if (rawList.records) rawList = rawList.records; // Handle PageResult
+       
+       const newData = Array.isArray(rawList) ? rawList.map(processItem) : [];
+       
+       if (current.value === 1) {
+           list.value = newData;
+       } else {
+           list.value.push(...newData);
+       }
+       
+       loading.value = false;
+       if (newData.length < size) {
+           finished.value = true;
+       } else {
+           current.value++;
+       }
+   } catch (error) {
+       console.error(error);
+       loading.value = false;
+       finished.value = true; // Stop on error to avoid loop
+   }
+};
+
+const initUser = () => {
+    const userStr = localStorage.getItem('userInfo');
+    if (userStr) {
+        const u = JSON.parse(userStr);
+        userId.value = u.id;
+        onLoad();
+    } else {
+        getCurrentUser().then(res => {
+           const u = res.data || res;
+           if (u && u.id) {
+               userId.value = u.id;
+               localStorage.setItem('userInfo', JSON.stringify(u));
+               onLoad();
+           }
+        });
+    }
+};
+
+watch(activeTab, () => {
+    list.value = [];
+    current.value = 1;
+    finished.value = false;
+    loading.value = true;
+    onLoad();
+});
+
+onMounted(() => {
+    initUser();
+});
+</script>
+
+<style scoped>
+.my-follow-page { min-height: 100vh; background: #f7f8fa; }
+.list-container { padding: 10px; }
+
+/* User Row Style */
+.user-row {
+    display: flex;
+    align-items: center;
+    background: white;
+    padding: 12px 15px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+.user-avatar-img {
+    margin-right: 12px;
+    border: 1px solid #f0f0f0;
+}
+.user-info-box {
+    flex: 1;
+    overflow: hidden;
+}
+.user-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 4px;
+}
+.user-bio {
+    font-size: 12px;
+    color: #999;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.followed-btn {
+    color: #999 !important;
+    font-size: 12px;
+    height: 28px;
+    padding: 0 12px;
+}
+
+/* Shop Item Style (From MyStar) */
+.shop-item {
+    display: flex;
+    padding: 15px;
+    background: #fff;
+    margin-bottom: 0; /* List style usually continuous */
+    border-bottom: 1px solid #f5f5f5;
+}
+.shop-img-box {
+    width: 80px;
+    height: 80px;
+    margin-right: 12px;
+    border-radius: 4px;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: #f0f0f0;
+}
+.shop-cover {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.shop-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
+    padding-right: 5px;
+}
+.shop-title {
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 4px;
+}
+.shop-rating-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 4px;
+}
+.shop-score-val {
+    font-size: 14px;
+    color: #ff5000;
+    font-weight: bold;
+    margin: 0 6px;
+}
+.shop-comment-count {
+    font-size: 12px;
+    color: #999;
+}
+.shop-meta-row {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 4px;
+}
+.shop-tags-row {
+    display: flex;
+    flex-wrap: wrap;
+}
+.shop-tag {
+    font-size: 10px;
+    color: #c9a35e;
+    border: 0.5px solid #e6dcb9;
+    padding: 1px 4px;
+    border-radius: 2px;
+    margin-right: 6px;
+}
+.shop-side {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-end;
+    padding-top: 4px;
+    min-width: 70px;
+}
+.shop-price {
+    font-size: 15px;
+    color: #333;
+    font-weight: 500;
+    margin-bottom: 6px;
+}
+.shop-distance {
+    font-size: 12px;
+    color: #999;
+}
+
+/* Voucher Styles */
+.voucher-item { display: flex; margin: 12px 12px 0; background: #FFFBF5; border: 1px solid #FFE5D2; border-radius: 8px; overflow: hidden; position: relative; }
+.voucher-item::before, .voucher-item::after { content: ''; position: absolute; width: 10px; height: 10px; background: #f7f8fa; border-radius: 50%; top: 50%; border: 1px solid #FFE5D2; }
+.voucher-item::before { left: -6px; margin-top: -5px; clip-path: polygon(50% 0, 100% 0, 100% 100%, 50% 100%); }
+.voucher-item::after { right: -6px; margin-top: -5px; clip-path: polygon(0 0, 50% 0, 50% 100%, 0 100%); }
+
+.ticket-stub { width: 75px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #FFF5F0; border-right: 1px dashed #FFCAB0; color: #FF4400; flex-shrink: 0;}
+.ticket-stub.seckill { background: #FF4400; color: white; border-right: 1px dashed rgba(255,255,255,0.3); }
+
+.ticket-val { font-size: 20px; font-weight: bold; }
+.ticket-type { font-size: 11px; margin-top: 4px; }
+
+.voucher-info { flex: 1; padding: 10px 12px; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+.voucher-title { font-weight: 600; font-size: 14px; color: #333; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.voucher-sub { font-size: 11px; color: #999; margin: 4px 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.voucher-date-info { font-size: 10px; color: #999; margin-bottom: 4px; }
+
+.voucher-meta { display: flex; align-items: baseline; gap: 6px; }
+.current-price { color: #FF4400; font-weight: bold; font-size: 16px; }
+.orig-price { text-decoration: line-through; color: #999; font-size: 11px; }
+.discount-tag { border: 1px solid #FF4400; color: #FF4400; font-size: 10px; padding: 0 4px; border-radius: 2px; transform: scale(0.9); transform-origin: left center;}
+
+.seckill-meta { margin-top: 4px; }
+.seckill-price-row { display: flex; align-items: baseline; gap: 6px; margin-bottom: 2px; }
+.text-red { color: #FF4400; }
+.seckill-progress { font-size: 10px; color: #FF4400; background: #FFE5D2; display: inline-block; padding: 1px 8px; border-radius: 8px; }
+
+.voucher-action { width: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding-right: 10px; flex-shrink: 0;}
+.buy-btn { 
+    padding: 5px 12px; 
+    border-radius: 14px; 
+    font-size: 12px; 
+    cursor: pointer; 
+    text-align: center;
+    min-width: 70px;
+}
+.btn-red { background: #FF4400; color: white; }
+.btn-orange { background: #ff976a; color: white; }
+.btn-gray { background: #ccc; color: white; }
+</style>

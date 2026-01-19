@@ -948,9 +948,9 @@ export default {
     },
     toUser(u) {
       if(this.user && u.id === this.user.id) {
-         this.$router.push('/info');
+         this.$router.push('/user/profile');
       } else {
-         this.$router.push(`/user-info/${u.id}`);
+         this.$router.push(`/user/profile/${u.id}`);
       }
     },
     addLike(b) {

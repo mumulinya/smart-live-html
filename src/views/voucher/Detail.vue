@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { showToast } from 'vant';
 import { getVoucherDetail, buyVoucherAPI, seckillVoucherAPI } from '@/api/shop'; 
-import { toggleStar, isStar } from '@/api/interaction';
+import { toggleStar, followUser } from '@/api/interaction';
 
 const route = useRoute();
 const router = useRouter();
@@ -14,6 +14,20 @@ const validRules = computed(() => {
     // Assuming rules might be a string (as in user sample) or array
     if(typeof info.value.rules === 'string') return [info.value.rules];
     return info.value.rules;
+});
+
+const validityText = computed(() => {
+  const { validityType, useStartTime, useEndTime, validDays } = info.value;
+  
+  if (validityType === 1) {
+    // Fixed Date: "2023-10-01 至 2023-12-31 有效"
+    const start = useStartTime?.split(' ')[0] || '';
+    const end = useEndTime?.split(' ')[0] || '';
+    return `${start} 至 ${end} 有效`;
+  } else {
+    // Dynamic Days: "领取后 7 天内有效"
+    return `领取/购买后 ${validDays} 天内有效`;
+  }
 });
 
 // Computed for Seckill status
@@ -65,10 +79,12 @@ const loadData = async () => {
         if(data) {
             info.value = data;
             // Use field from API directly
-            if (data.isStared !== undefined) {
+            if (data.isStar !== undefined) {
+               info.value.isCollected = data.isStar;
+            } else if (data.isStared !== undefined) {
                info.value.isCollected = data.isStared;
             } else {
-               checkCollectionStatus(data.id);
+               info.value.isCollected = false;
             }
         }
     } catch (e) {
@@ -77,17 +93,7 @@ const loadData = async () => {
     }
 };
 
-const checkCollectionStatus = async (id) => {
-    if(!localStorage.getItem('token')) return;
-    try {
-        const res = await isStar({ sourceId: id, sourceType: 4 });
-        // Assuming API returns boolean or object with isStar
-        // Standard pattern: true/false or { isStar: true }
-        info.value.isCollected = (res.data === true || res === true);
-    } catch(e) {
-        console.warn('Check star failed', e);
-    }
-};
+
 
 const handleCollect = async () => {
   if(!localStorage.getItem('token')) return router.push('/user/login');
@@ -106,9 +112,27 @@ const handleCollect = async () => {
   }
 };
 
-const handleFollowSeckill = () => {
-  info.value.isFollowed = !info.value.isFollowed;
-  showToast(info.value.isFollowed ? '开抢前将提醒您' : '已取消提醒');
+const handleFollowSeckill = async () => {
+  if(!localStorage.getItem('token')) return router.push('/user/login');
+
+  const nextStatus = !info.value.isFollow;
+  
+  // Optimistic update
+  info.value.isFollow = nextStatus;
+
+  try {
+      await followUser({
+          sourceId: info.value.id,
+          sourceType: 4, // Voucher Seckill Reminder
+          isFollow: nextStatus
+      });
+      showToast(nextStatus ? '开抢前将提醒您' : '已取消提醒');
+  } catch (error) {
+       // Revert
+       info.value.isFollow = !nextStatus;
+       console.error(error);
+       showToast('操作失败');
+  }
 };
 
 const handleBuy = async () => {
@@ -128,6 +152,40 @@ const handleBuy = async () => {
         loadData(); 
     } catch (e) {
         showToast(e.message || '抢购失败');
+    }
+};
+
+const buttonState = computed(() => {
+    const { type, stock, isFollow } = info.value;
+    const nowTime = Date.now();
+    
+    // 1. BUY Mode: Seckill Ongoing AND Stock > 0
+    if (isSeckill.value) {
+        // Seckill Logic
+        if (isSeckillStarted.value && !isSeckillEnded.value && stock > 0) {
+            return { type: 'danger', text: '立即抢购', disabled: false, action: 'buy' };
+        }
+        
+        let label = '开抢提醒';
+        if (stock <= 0) label = '缺货提醒';
+        else if (isSeckillEnded.value) label = '下场提醒';
+        
+        return { 
+            type: 'warning', 
+            text: isFollow ? '已设提醒' : label, 
+            disabled: false, 
+            action: 'remind' 
+        };
+    } else {
+        return { type: 'danger', text: '立即抢购', disabled: false, action: 'buy' };
+    }
+});
+
+const handleBtnClick = () => {
+    if (buttonState.value.action === 'buy') {
+        handleBuy();
+    } else {
+        handleFollowSeckill();
     }
 };
 
@@ -171,8 +229,8 @@ onMounted(() => {
     </div>
 
     <div class="section-group">
-      <van-cell title="适用门店" :value="info.shopName" is-link :to="`/shop/${info.shopId}`" icon="shop-o" />
-      <van-cell title="有效期" :label="info.validity" icon="clock-o" />
+      <van-cell title="适用门店" :value="info.shopName" is-link :to="`/shop/detail?id=${info.shopId}`" icon="shop-o" />
+      <van-cell title="有效期" :label="validityText" icon="clock-o" />
       
       <div class="rules-box">
         <div class="section-title">使用规则</div>
@@ -192,20 +250,11 @@ onMounted(() => {
         @click="handleCollect" 
       />
 
-      <template v-if="isSeckill && !isSeckillStarted">
-         <van-action-bar-button 
-            type="warning" 
-            :text="info.isFollowed ? '已设提醒' : '开抢提醒'" 
-            @click="handleFollowSeckill" 
-         />
-      </template>
-      <template v-else>
-         <van-action-bar-button 
-            type="danger" 
-            text="立即抢购" 
-            @click="handleBuy" 
-         />
-      </template>
+      <van-action-bar-button 
+         :type="buttonState.type" 
+         :text="buttonState.text" 
+         @click="handleBtnClick" 
+      />
     </van-action-bar>
   </div>
 </template>

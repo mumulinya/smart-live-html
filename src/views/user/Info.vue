@@ -8,7 +8,6 @@
     <!-- Cover Image -->
     <div class="profile-cover-container" :style="containerStyle" @click="triggerBgUpload">
       <img v-if="coverUrl" :src="coverUrl" :style="imgStyle" class="cover-img">
-      <div v-else class="default-cover" :style="defaultCoverStyle"></div>
       <div class="change-bg-btn" @click.stop="triggerBgUpload" v-if="isExpanded">
          <i class="el-icon-camera"></i>
          <span>更换封面</span>
@@ -37,14 +36,14 @@
        <div class="header-top">
           <!-- Avatar -->
           <div class="avatar-box" @click="showAvatarDialog = true">
-             <img :src="user.icon || '/imgs/icons/default-icon.png'" class="avatar-img">
-             <div class="add-status" v-if="isSelf">+</div>
+             <van-image round width="80" height="80" :src="user.icon || '/imgs/icons/default-icon.png'" class="avatar-img" fit="cover" />
+             <!-- Removed + add status for self -->
           </div>
           <!-- Stats -->
           <div class="stats-box">
              <div class="stat-item">
                 <div class="stat-num">{{ stats.likeCount || 0 }}</div>
-                <div class="stat-label">获赞与收藏</div>
+                <div class="stat-label">获赞</div>
              </div>
              <div class="stat-item" @click="toFollows">
                 <div class="stat-num">{{ stats.followCount || 0 }}</div>
@@ -72,13 +71,13 @@
           </div>
           <!-- Tags -->
           <div class="user-tags-row">
-             <div class="gender-tag" v-if="info.gender">
-                <i :class="info.gender === 1 ? 'el-icon-male' : 'el-icon-female'"></i>
+             <div class="gender-tag" v-if="info.gender !== undefined">
+                <i :class="info.gender === 0 ? 'el-icon-male' : 'el-icon-female'"></i>
                 {{ info.birthday ? getAge(info.birthday) + '岁' : '' }}
              </div>
              <div class="info-tag" v-if="info.city">{{ info.city }}</div>
              <div class="info-tag" v-if="info.school">{{ info.school }}</div>
-             <div class="info-tag add-tag" v-if="isSelf" @click="toEdit">+ 添加信息</div>
+             <!-- Removed + Add Info Tag -->
           </div>
        </div>
 
@@ -92,23 +91,35 @@
     </div>
 
     <!-- Service Bar (Horizontal Scroll if needed, or fixed 4) -->
-    <div class="service-bar">
-        <div class="service-item" @click="toOrders">
-            <i class="el-icon-s-order"></i>
-            <span>订单</span>
-        </div>
-        <div class="service-item" @click="toCollections">
-            <i class="el-icon-star-on"></i>
-            <span>收藏</span>
-        </div>
-        <div class="service-item" @click="toReviews">
-            <i class="el-icon-s-comment"></i>
-            <span>评价</span>
-        </div>
-        <div class="service-item" @click="toHistory">
-            <i class="el-icon-time"></i>
-            <span>历史</span>
-        </div>
+    <!-- Service Bar (Grid) -->
+    <div class="service-bar-container">
+        <van-grid clickable :column-num="5" :border="false">
+            <van-grid-item text="我的订单" @click="toOrders">
+               <template #icon>
+                   <i class="el-icon-s-order" style="font-size: 24px; color: #333; margin-bottom: 6px;"></i>
+               </template>
+            </van-grid-item>
+             <van-grid-item text="我的收藏" @click="toCollections">
+               <template #icon>
+                   <i class="el-icon-star-on" style="font-size: 24px; color: #333; margin-bottom: 6px;"></i>
+               </template>
+            </van-grid-item>
+             <van-grid-item text="我的评价" @click="toReviews">
+               <template #icon>
+                   <i class="el-icon-s-comment" style="font-size: 24px; color: #333; margin-bottom: 6px;"></i>
+               </template>
+            </van-grid-item>
+             <van-grid-item text="我的关注" @click="toMyFollow">
+               <template #icon>
+                    <van-icon name="friends-o" size="24" color="#333" style="margin-bottom: 6px;" />
+               </template>
+            </van-grid-item>
+             <van-grid-item text="我的动态" @click="$router.push('/user/moments')">
+               <template #icon>
+                    <van-icon name="clock-o" size="24" color="#333" style="margin-bottom: 6px;" />
+               </template>
+            </van-grid-item>
+        </van-grid>
     </div>
 
     <!-- Sticky Tabs -->
@@ -171,8 +182,8 @@
                                     <div class="card-title">{{ b.title }}</div>
                                     <div class="card-bottom">
                                         <div class="card-user">
-                                            <img :src="b.userAvatar || user.icon || '/imgs/icons/default-icon.png'" class="card-avatar">
-                                            <span class="card-name">{{ b.userName || user.nickName }}</span>
+                                            <img :src="b.icon || user.icon || '/imgs/icons/default-icon.png'" class="card-avatar">
+                                            <span class="card-name">{{ b.name || user.nickName }}</span>
                                         </div>
                                         <div class="card-likes">
                                             <van-icon name="like-o" v-if="!b.isLike" color="#999" />
@@ -190,10 +201,10 @@
                 </div>
             </van-tab>
 
-            <van-tab title="赞过" name="likes">
+            <van-tab title="喜欢" name="likes">
                 <template #title>
                     <div class="tab-label">
-                        <span>赞过</span> 
+                        <span>喜欢</span> 
                         <span class="tab-num" v-if="stats.blogLikeCount">{{ stats.blogLikeCount }}</span>
                     </div>
                 </template>
@@ -208,8 +219,8 @@
                                     <div class="card-title">{{ b.title }}</div>
                                     <div class="card-bottom">
                                         <div class="card-user">
-                                            <img :src="b.userAvatar || user.icon || '/imgs/icons/default-icon.png'" class="card-avatar">
-                                            <span class="card-name">{{ b.userName || user.nickName }}</span>
+                                            <img :src="b.icon || user.icon || '/imgs/icons/default-icon.png'" class="card-avatar">
+                                            <span class="card-name">{{ b.name || user.nickName }}</span>
                                         </div>
                                         <div class="card-likes">
                                             <van-icon name="like-o" v-if="!b.isLike" color="#999" />
@@ -331,7 +342,7 @@ export default {
              }
              return url;
         }
-        return null;
+        return '/imgs/default-bg.svg';
     },
     containerStyle() {
         return {
@@ -349,13 +360,7 @@ export default {
              display: 'block'
         };
     },
-    defaultCoverStyle() {
-        return {
-             width: '100%',
-             height: '100%',
-             background: 'linear-gradient(to right, #fa709a 0%, #fee140 100%)'
-        };
-    }
+
   },
   created() {
      const token = localStorage.getItem('token');
@@ -398,14 +403,17 @@ export default {
      toCollections() {
           this.$router.push('/user/star');
       },
+     toMyFollow() {
+        this.$router.push('/user/follow');
+     },
      toReviews() {
         this.$router.push('/comment/list'); // Assuming comment list serves as reviews
      },
      toFollows() {
-        this.$router.push('/user/follows');
+        this.$router.push('/user/list?type=follow');
      },
      toFans() {
-        this.$router.push('/user/fans');
+        this.$router.push('/user/list?type=fans');
      },
      toHistory() {
          this.$message.info('浏览历史功能开发中');
@@ -713,10 +721,15 @@ export default {
         return g === 1 ? '男' : (g === 2 ? '女' : '');
      },
      getAge(birthday) {
-        if(!birthday) return 18;
-        const ageDifMs = Date.now() - new Date(birthday).getTime();
-        const ageDate = new Date(ageDifMs);
-        return Math.abs(ageDate.getUTCFullYear() - 1970);
+        if (!birthday) return '';
+        const birthDate = new Date(birthday);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+        return age;
      },
      toBlogDetail(b) {
         this.$router.push({ path: '/blog/detail', query: { id: b.id } });
@@ -863,14 +876,14 @@ export default {
 
 /* Header */
 .profile-header {
-    margin-top: -20px; /* Overlap cover */
-    border-radius: 20px 20px 0 0;
-    padding-top: 20px;
-    padding-left: 16px;
-    padding-right: 16px;
-    background: #fff;
+    background: linear-gradient(to bottom, #fef9f5, #ffffff); /* Added Gradient */
+    padding: 0 16px;
+    padding-bottom: 15px;
     position: relative;
-    z-index: 10;
+    margin-top: -20px; /* Overlap cover */
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    z-index: 2;
 }
 .header-top {
     display: flex;
@@ -911,12 +924,12 @@ export default {
     text-align: center;
 }
 .stat-num {
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 600;
     color: #333;
 }
 .stat-label {
-    font-size: 12px;
+    font-size: 13px;
     color: #999;
     margin-top: 4px;
 }
@@ -929,7 +942,7 @@ export default {
     margin-bottom: 6px;
 }
 .cancel-bold-name {
-    font-size: 20px;
+    font-size: 22px;
     font-weight: 600;
     color: #333;
 }
@@ -945,9 +958,9 @@ export default {
     cursor: pointer;
 }
 .user-bio {
-    font-size: 14px;
+    font-size: 15px;
     color: #333;
-    line-height: 1.4;
+    line-height: 1.5;
     margin-bottom: 12px;
     white-space: pre-wrap;
 }
@@ -959,23 +972,18 @@ export default {
 .gender-tag, .info-tag {
     background: #f5f5f5;
     color: #666;
-    padding: 2px 8px;
+    padding: 4px 10px; /* Increased padding */
     border-radius: 4px;
-    font-size: 10px;
+    font-size: 12px; /* Increased from 10px */
     display: flex;
     align-items: center;
 }
 .gender-tag i {
     margin-right: 2px;
-    font-size: 10px;
+    font-size: 12px; /* Increased from 10px */
 }
 .gender-tag .el-icon-female { color: #ff4d94; }
 .gender-tag .el-icon-male { color: #409eff; }
-.add-tag {
-    color: #555;
-    border: 1px dashed #ccc;
-    background: #fff;
-}
 
 /* Action Buttons */
 .action-buttons-row {
@@ -1052,8 +1060,8 @@ export default {
     justify-content: center;
 }
 .tab-num {
-    margin-left: 2px; /* Fixed spacing */
-    font-size: 12px;
+    margin-left: 2px;
+    font-size: 14px; /* Increased from 12px */
     color: #999;
 }
 /* Deep selector for active tab color */
@@ -1103,7 +1111,7 @@ export default {
     padding: 8px;
 }
 .card-title {
-    font-size: 13px;
+    font-size: 15px;
     color: #333;
     margin-bottom: 8px;
     line-height: 1.4;
@@ -1118,7 +1126,7 @@ export default {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 10px;
+    font-size: 12px;
     color: #999;
 }
 .card-user {
@@ -1127,8 +1135,8 @@ export default {
     max-width: 65%;
 }
 .card-avatar {
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     margin-right: 4px;
 }

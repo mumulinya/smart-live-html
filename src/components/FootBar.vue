@@ -48,7 +48,7 @@ export default {
       if (i === 0) {
         this.$router.push("/blog/edit");
       } else if (i === 4) {
-        this.$router.push("/user/info");
+        this.$router.push("/user/profile");
       } else if (i === 1){
         this.$router.push("/");
       } else if (i === 2) {

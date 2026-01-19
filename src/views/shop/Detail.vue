@@ -111,6 +111,7 @@
              <div class="voucher-info" @click="toVoucherDetail(v)">
                 <div class="voucher-title">{{v.title}}</div>
                 <div class="voucher-sub">{{v.subTitle}}</div>
+                <div class="voucher-date-info" v-if="getValidityText(v)">{{ getValidityText(v) }}</div>
                 
                 <!-- Normal Voucher Meta -->
                 <div class="voucher-meta" v-if="v.type !== 1">
@@ -747,9 +748,9 @@ export default {
         if(!userId) return;
         const token = localStorage.getItem('token');
         if(token && this.user && String(this.user.id) === String(userId)) {
-           this.$router.push('/info');
+           this.$router.push('/user/profile');
         } else {
-           this.$router.push(`/user-info/${userId}`);
+           this.$router.push(`/user/profile/${userId}`);
         }
      },
      writeComment() {
@@ -809,7 +810,17 @@ export default {
         };
         return `${format(v.beginTime)} - ${format(v.endTime)}`;
       },
-     toVoucherDetail(v) {
+      getValidityText(v) {
+         if (v.validityType === 1) {
+            const start = v.useStartTime?.split(' ')[0] || '';
+            const end = v.useEndTime?.split(' ')[0] || '';
+            return `${start} 至 ${end} 有效`;
+         } else if (v.validityType === 2) {
+            return `领取/购买后 ${v.validDays} 天内有效`;
+         }
+         return '';
+      },
+      toVoucherDetail(v) {
         this.$router.push({ path: '/voucher/detail', query: { id: v.id } });
      },
      doBuy(v) {
@@ -1243,6 +1254,7 @@ export default {
 .voucher-info { flex: 1; padding: 10px 12px; display: flex; flex-direction: column; justify-content: center; }
 .voucher-title { font-weight: 600; font-size: 14px; color: #333; }
 .voucher-sub { font-size: 11px; color: #999; margin: 4px 0; }
+.voucher-date-info { font-size: 10px; color: #999; margin-bottom: 4px; }
 .voucher-meta { display: flex; align-items: baseline; gap: 6px; }
 .current-price { color: #FF4400; font-weight: bold; font-size: 15px; }
 .orig-price { text-decoration: line-through; color: #999; font-size: 11px; }

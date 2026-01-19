@@ -980,7 +980,7 @@ export default {
 }
 
 .blog-title {
-  font-size: 14px;
+  font-size: 15px; /* Increased from 14px */
   font-weight: 500;
   color: #333;
   line-height: 1.4;
@@ -1000,8 +1000,8 @@ export default {
 }
 
 .blog-user-icon {
-  width: 18px;
-  height: 18px;
+  width: 20px; /* Increased from 18px */
+  height: 20px; /* Increased from 18px */
   border-radius: 50%;
   overflow: hidden;
   margin-right: 5px;
@@ -1015,7 +1015,7 @@ export default {
 }
 
 .blog-user-name {
-  font-size: 11px;
+  font-size: 12px; /* Increased from 11px */
   color: #666;
   flex: 1;
 }
@@ -1023,7 +1023,7 @@ export default {
 .blog-liked {
   display: flex;
   align-items: center;
-  font-size: 11px;
+  font-size: 12px;
   color: #909399;
   cursor: pointer;
 }

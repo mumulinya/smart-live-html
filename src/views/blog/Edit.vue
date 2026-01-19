@@ -206,7 +206,7 @@ export default {
           .then(() => {
             this.$message.success('修改成功！');
             setTimeout(() => {
-              this.$router.push('/info');
+              this.$router.push('/user/profile');
             }, 1000);
           })
           .catch(err => {
@@ -218,7 +218,7 @@ export default {
           .then(() => {
             this.$message.success('发布成功！');
             setTimeout(() => {
-              this.$router.push('/info');
+              this.$router.push('/user/profile');
             }, 1000);
           })
           .catch(err => {
