@@ -220,8 +220,8 @@
 import { locationUtil } from '@/utils/location';
 // import request, { fileURL, util } from '@/utils/request';
 import { getShopTypes } from '@/api/shop';
-import { getHotBlogs, getBlogsByCategory, getFollowedFeeds } from '@/api/blog';
-import { likeBlog } from '@/api/interaction';
+import { getHotBlogs, getBlogsByCategory } from '@/api/blog';
+import { likeBlog, getFeedList } from '@/api/interaction';
 import FootBar from '@/components/FootBar.vue';
 
 export default {
@@ -443,7 +443,9 @@ export default {
         
         // Use time/offset based pagination for feeds
         const lastId = this.followParams.minTime || new Date().getTime();
-        getFollowedFeeds({ offset: this.followParams.offset, lastId })
+        
+        // feedType 1 represents "User/Note" (Followed users' notes)
+        getFeedList({ feedType: 1, offset: this.followParams.offset, lastId })
           .then((res) => {
              // Handle response structure (data vs records vs direct list)
              const data = res.data || res || {};
@@ -453,44 +455,62 @@ export default {
                  list = data;
              } else if (Array.isArray(data.list)) {
                  list = data.list;
-             } else if (Array.isArray(data.records)) {
-                 list = data.records;
              }
              
             if (!list || list.length === 0) {
               this.noMoreFollowData = true;
             } else {
-               list.forEach(b => {
-                // Handle images (string or array)
-                let firstImg = '';
-                if (b.images) {
-                    if (Array.isArray(b.images)) {
-                        firstImg = b.images[0];
-                    } else if (typeof b.images === 'string') {
-                        firstImg = b.images.split(",")[0];
-                    }
-                }
+               list.forEach(item => {
+                // Map API fields to Component expected fields
+                // Component expects: img, title, icon, name, liked, id (blogId)
                 
-                // Process image URL (add prefix if not full url)
-                if (firstImg && !firstImg.startsWith('http')) {
-                    b.img = this.$fileURL + firstImg;
+                // Map 'cover' to 'img'
+                let firstImg = '';
+                // Check 'cover' first, then 'images', then 'img'
+                const rawImg = item.cover || (item.images ? (Array.isArray(item.images) ? item.images[0] : item.images.split(',')[0]) : '') || item.img;
+                
+                if (rawImg) {
+                     if (rawImg.startsWith('http')) {
+                         firstImg = rawImg;
+                     } else {
+                         firstImg = this.$fileURL + rawImg;
+                     }
+                }
+                item.img = firstImg;
+
+                // Map 'userAvatar' to 'icon'
+                // Check 'userAvatar' first, then 'icon'
+                const rawIcon = item.userAvatar || item.icon;
+                if (rawIcon) {
+                     if (rawIcon.startsWith('http')) {
+                         item.icon = rawIcon;
+                     } else {
+                         item.icon = this.$fileURL + rawIcon;
+                     }
                 } else {
-                    b.img = firstImg || '';
+                    item.icon = '';
                 }
 
-                // Handle icon
-                if (b.icon && !b.icon.startsWith('http')) {
-                    b.icon = this.$fileURL + b.icon;
-                }
+                // Map 'userName' to 'name'
+                // Check 'userName' first, then 'nickName', then 'name'
+                item.name = item.userName || item.nickName || item.name || '匿名用户';
+                item.liked = item.likes || item.liked || 0;
+                
+                // Important: map targetId to id for navigation (fallback to id)
+                item.id = item.targetId || item.id;
 
-                b.imgError = !b.img;
-                if (!b.liked) b.liked = 0;
+                item.imgError = !item.img;
               });
               this.followBlogs = this.followBlogs.concat(list);
               
               // precise updating for next scroll
-              this.followParams.minTime = data.minTime || new Date().getTime();
+              this.followParams.minTime = data.minTime || 0;
               this.followParams.offset = data.offset || 0;
+
+              // Stop if no minTime returned (fix for infinite loop)
+              if (!data.minTime) {
+                  this.noMoreFollowData = true;
+              }
             }
           })
           .catch(err => {

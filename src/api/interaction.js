@@ -91,3 +91,8 @@ export function toggleStar(data) {
 export function starList(params) {
     return request.get('/app/interaction/star/starList', { params });
 }
+
+// Feed / Moments
+export function getFeedList(params) {
+    return request.get('/app/interaction/feed', { params });
+}
