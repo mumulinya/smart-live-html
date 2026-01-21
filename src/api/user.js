@@ -49,3 +49,7 @@ export function uploadFile(formData) {
         headers: { 'Content-Type': 'multipart/form-data' }
     });
 }
+
+export function updatePassword(data) {
+    return request.post('/app/user/updatePassword', data);
+}

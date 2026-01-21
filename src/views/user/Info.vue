@@ -6,7 +6,7 @@
     <!-- Cover Image -->
     <!-- Cover Image -->
     <!-- Cover Image -->
-    <div class="profile-cover-container" :style="containerStyle" @click="triggerBgUpload">
+    <div class="profile-cover-container" :style="containerStyle" @click="isExpanded = !isExpanded">
       <img v-if="coverUrl" :src="coverUrl" :style="imgStyle" class="cover-img">
       <div class="change-bg-btn" @click.stop="triggerBgUpload" v-if="isExpanded">
          <i class="el-icon-camera"></i>
@@ -14,6 +14,8 @@
       </div>
       <input type="file" ref="bgInput" accept="image/*" style="display:none" @change="handleBgUpload">
     </div>
+
+
 
     <!-- Navbar (Fixed, Transparent->White) -->
     <div class="nav-bar" :class="{ 'nav-scrolled': scrollTop > 50 }">
@@ -266,6 +268,10 @@
       close-on-click-action
       @select="onLogoutSelect"
     />
+
+    <!-- Image Preview Component -->
+    <van-image-preview v-model:show="showPreview" :images="previewImages" @change="onChange">
+    </van-image-preview>
   </div>
 </template>
 
@@ -329,6 +335,9 @@ export default {
        isPulling: false,
        isExpanded: false,
        
+       showPreview: false,
+       previewImages: [],
+       
        tabOrder: ['note', 'collection', 'likes', 'feed']
     }
   },
@@ -342,7 +351,7 @@ export default {
              }
              return url;
         }
-        return '/imgs/default-bg.svg';
+        return '/imgs/default-bg.png';
     },
     containerStyle() {
         return {
@@ -378,6 +387,19 @@ export default {
       window.removeEventListener('scroll', this.handleWindowScroll);
   },
   methods: {
+     handlePreview(url) {
+        if(!url) return;
+        let previewUrl = url;
+        // Only prepend fileURL if it's not http and NOT a local asset
+        if(!url.startsWith('http') && !url.startsWith('/imgs/')) {
+             previewUrl = this.$fileURL + url;
+        }
+        this.previewImages = [previewUrl];
+        this.showPreview = true;
+     },
+     onChange(index) {
+        this.index = index;
+     },
      goBack() {
         this.$router.go(-1);
      },

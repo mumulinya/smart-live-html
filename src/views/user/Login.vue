@@ -5,7 +5,13 @@
         <van-icon name="arrow-left" size="24" color="#333" />
       </div>
       <h2 class="welcome-text">欢迎登录智评生活</h2>
-      <p class="sub-text">发现更多好店</p>
+      <p class="sub-text">未注册的手机号登录后将自动注册</p>
+    </div>
+
+    <!-- Tab 切换 -->
+    <div class="login-tabs">
+      <div class="tab-item" :class="{ active: !isPasswordMode }" @click="isPasswordMode = false">验证码登录</div>
+      <div class="tab-item" :class="{ active: isPasswordMode }" @click="isPasswordMode = true">密码登录</div>
     </div>
 
     <div class="login-form">
@@ -58,10 +64,6 @@
         <van-button block color="linear-gradient(to right, #ff9966, #ff5e62)" round @click="handleLogin" :loading="loading">
           登录
         </van-button>
-      </div>
-
-      <div class="switch-mode" @click="toggleMode">
-        {{ isPasswordMode ? '验证码登录' : '密码登录' }}
       </div>
     </div>
 
@@ -288,12 +290,33 @@ const goHome = () => {
     border-radius: 999px; 
 }
 
-.switch-mode { 
-    text-align: center; 
-    margin-top: 20px; 
-    color: #666; 
-    font-size: 14px; 
+/* Tab 切换样式 */
+.login-tabs {
+    display: inline-flex;
+    margin-bottom: 24px;
+}
+.tab-item {
+    padding: 10px 24px;
+    font-size: 14px;
+    color: #666;
     cursor: pointer;
+    border: 1px solid #e0e0e0;
+    background: #fff;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+.tab-item:first-child {
+    border-radius: 20px 0 0 20px;
+    border-right: none;
+}
+.tab-item:last-child {
+    border-radius: 0 20px 20px 0;
+}
+.tab-item.active {
+    color: #333;
+    font-weight: 600;
+    border-color: #333;
+    background: #fff;
 }
 
 .login-footer { 

@@ -3,101 +3,101 @@
        @touchstart="handleTouchStart"
        @touchmove="handleTouchMove"
        @touchend="handleTouchEnd">
-    <div class="page-header">
-      <div class="header-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
-      <div class="header-title"></div>
+    <!-- Custom Navbar -->
+    <div class="custom-nav" :style="{ background: `rgba(255,255,255,${navOpacity})` }">
+      <div class="nav-back" @click="goBack" :class="{ 'dark-icon': navOpacity > 0.5 }">
+        <i class="el-icon-arrow-left"></i>
+      </div>
+      <div class="nav-title" :style="{ opacity: navOpacity }">
+        <span v-if="navOpacity > 0.8">{{ user.nickName }}</span>
+      </div>
+      <div class="nav-more" :class="{ 'dark-icon': navOpacity > 0.5 }">
+        <i class="el-icon-more"></i>
+      </div>
     </div>
 
-    <!-- Profile Cover -->
-    <div class="profile-cover-container" :style="containerStyle" @click="handleHeaderClick">
+    <!-- Cover Image Container (Block Layout) -->
+    <div class="profile-cover-container" :style="containerStyle" @click="handleBgClick">
        <img v-if="coverUrl" :src="coverUrl" :style="imgStyle" class="cover-img">
     </div>
 
-    <!-- User Header Layout -->
-    <div class="user-header-content" @click="isExpanded = false">
-       <div class="user-avatar-wrapper" @click.stop="showAvatarDialog = true">
-         <img :src="user.icon || '/imgs/icons/default-icon.png'" @error="handleImgError">
-       </div>
-       <div class="user-details-right">
-          <div class="name-line">
-             <div class="name">{{ user.nickName || '未知用户' }}</div>
-          </div>
-          <div class="id-line">
-             ID: {{ user.id || '8832' }} <i class="el-icon-document-copy" style="margin-left: 4px;"></i>
-          </div>
-          <div class="user-tags-row">
-             <!-- Gender & Age -->
-             <div class="tag gender-tag" 
-                  :style="{background: info.gender === 0 ? '#54b4ef' : '#ff88a7'}"
-                  v-if="info.gender !== undefined && info.gender !== null">
-                 <i :class="info.gender === 0 ? 'el-icon-male' : 'el-icon-female'"></i>
-                 <span v-if="info.birthday" style="margin-left: 2px; font-size: 10px;">{{getAge(info.birthday)}}岁</span>
+    <!-- Main Content Container (Card) -->
+    <div class="profile-header">
+       
+       <!-- Top Row: Avatar & Stats -->
+       <div class="header-top">
+           <div class="avatar-box" @click.stop="handlePreview(user.icon || '/imgs/icons/default-icon.png')">
+              <img :src="user.icon || '/imgs/icons/default-icon.png'" class="avatar-img" @error="handleImgError">
+           </div>
+           
+           <div class="stats-row">
+             <div class="stat-item">
+               <div class="stat-num">{{ stats.likeCount || 0 }}</div>
+               <div class="stat-lbl">获赞</div>
              </div>
-             
-             <!-- Level -->
-             <div class="tag level-tag">Lv.{{user.level || 5}}</div>
-             
-             <!-- City -->
-             <div class="tag city-tag" v-if="info.city">
-                <i class="el-icon-location-outline" style="margin-right:2px"></i>{{info.city}}
+             <div class="stat-item" @click="toFollows">
+               <div class="stat-num">{{ stats.followCount || 0 }}</div>
+               <div class="stat-lbl">关注</div>
              </div>
-          </div>
+             <div class="stat-item" @click="toFans">
+               <div class="stat-num">{{ stats.fansCount || 0 }}</div>
+               <div class="stat-lbl">粉丝</div>
+             </div>
+           </div>
        </div>
 
-       <!-- Top Right Extras -->
-       <div class="header-extras">
-          <i class="el-icon-more settings-icon"></i>
+       <!-- User Info Details -->
+       <div class="user-info-section">
+           <div class="name-row">
+               <span class="user-nickname">{{ user.nickName || '未知用户' }}</span>
+               
+               <!-- Action Buttons -->
+               <div class="name-actions" v-if="user.id && String(user.id) !== String(loginUser.id)">
+                    <button class="mini-action-btn" :class="user.isFollow ? 'btn-gray' : 'btn-primary'" @click.stop="handleFollow">
+                      {{ user.isFollow ? '已关注' : '关注' }}
+                    </button>
+                    <button class="mini-action-btn btn-outline" @click.stop="handleMessage">
+                      私信
+                    </button>
+               </div>
+           </div>
+           
+           <div class="id-row">
+               <span>小红书号：{{ user.id || '8832' }}</span>
+               <i class="el-icon-document-copy" style="margin-left: 4px;"></i>
+           </div>
+           
+           <div class="intro-row">
+              <span class="intro-text">{{ info.introduce || '这个人很懒，什么都没有留下' }}</span>
+           </div>
+
+           <div class="tags-row">
+               <div class="tag-capsule gender" v-if="info.gender !== undefined">
+                   <i :class="info.gender === 0 ? 'el-icon-male' : 'el-icon-female'"></i>
+                   <span v-if="info.birthday">{{getAge(info.birthday)}}岁</span>
+               </div>
+               <div class="tag-capsule city" v-if="info.city">
+                   {{info.city}}
+               </div>
+               <div class="tag-capsule level">Lv.{{user.level || 5}}</div>
+           </div>
        </div>
+
     </div>
-
-    <div class="user-introduce">
-      <span>{{ info.introduce || '这个人很懒，什么都没有留下' }}</span>
-    </div>
-
-    <!-- Action Buttons Row -->
-    <div class="action-buttons" v-if="user.id && String(user.id) !== String(loginUser.id)">
-         <button class="action-btn" :class="user.isFollow ? 'followed-btn' : 'follow-btn'" @click="handleFollow">
-           <i v-if="!user.isFollow" class="el-icon-plus" style="font-weight: bold; margin-right: 2px;"></i>
-           {{ user.isFollow ? '已关注' : '关注' }}
-         </button>
-         <button class="action-btn message-btn" @click="handleMessage">
-           <i class="el-icon-chat-dot-round" style="margin-right: 4px;"></i> 发私信
-         </button>
-         <button class="action-btn more-btn">
-            <i class="el-icon-more"></i>
-         </button>
-    </div>
-
-    <!-- Stats -->
-    <div class="stats-card">
-      <div class="stat-item" @click="toFans">
-        <div class="stat-value">{{ stats.fansCount||0 }}</div>
-        <div class="stat-label">粉丝</div>
-      </div>
-      <div class="stat-item" @click="toFollows">
-        <div class="stat-value">{{ stats.followCount||0 }}</div>
-        <div class="stat-label">关注</div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-value">{{ stats.likeCount||0 }}</div>
-        <div class="stat-label">获赞</div>
-      </div>
-    </div>
-    
-
-
     <!-- Tabs -->
-    <div class="tabs-container">
-      <div class="custom-tabs-header">
-        <div class="custom-tabs-nav">
-          <div class="custom-tab-item" :class="{active: activeTab==='note'}" @click="switchTab('note')">
+    <div class="sticky-tabs-wrapper" :style="{ top: '64px' }">
+      <div class="custom-tabs-nav">
+          <div class="tab-item" :class="{active: activeTab==='note'}" @click="switchTab('note')">
             <div class="tab-text">笔记 {{stats.blogCount || 0}}</div>
+            <div class="active-line" v-if="activeTab==='note'"></div>
           </div>
-          <div class="custom-tab-item" :class="{active: activeTab==='collection'}" @click="switchTab('collection')">
+          <div class="tab-item" :class="{active: activeTab==='collection'}" @click="switchTab('collection')">
             <div class="tab-text">收藏 {{stats.blogStarCount || 0}}</div>
+            <div class="active-line" v-if="activeTab==='collection'"></div>
           </div>
-          <div class="custom-tab-item" :class="{active: activeTab==='like'}" @click="switchTab('like')">
+          <div class="tab-item" :class="{active: activeTab==='like'}" @click="switchTab('like')">
             <div class="tab-text">喜欢 {{stats.blogLikeCount || 0}}</div>
+            <div class="active-line" v-if="activeTab==='like'"></div>
           </div>
         </div>
       </div>
@@ -207,15 +207,6 @@
               <div v-else class="empty-state">还没有点赞过任何笔记</div>
            </div>
       </div>
-    </div>
-    <!-- Avatar Dialog -->
-    <!-- Avatar Dialog -->
-    <div class="avatar-dialog-overlay" v-if="showAvatarDialog" @click="showAvatarDialog = false">
-       <div class="avatar-dialog-close" @click="showAvatarDialog = false"><i class="el-icon-close"></i></div>
-       <div class="avatar-preview-container" @click.stop>
-          <img :src="user.icon || '/imgs/icons/default-icon.png'" class="avatar-big">
-       </div>
-    </div>
     
     <!-- Image Preview Component -->
     <van-image-preview v-model:show="showPreview" :images="previewImages" />
@@ -268,9 +259,17 @@ export default {
       
       tabOrder: ['note', 'collection', 'like'],
       showAvatarDialog: false,
-      showAvatarDialog: false,
-      showPreview: false
+      showPreview: false,
+      
+      navOpacity: 0,
+      previewImages: [] 
     }
+  },
+  mounted() {
+    window.addEventListener('scroll', this.handleScroll);
+  },
+  beforeUnmount() {
+    window.removeEventListener('scroll', this.handleScroll);
   },
   computed: {
     coverUrl() {
@@ -282,7 +281,7 @@ export default {
              }
              return url;
         }
-        return '/imgs/default-bg.svg';
+        return '/imgs/default-bg.png';
     },
     containerStyle() {
         return {
@@ -299,18 +298,6 @@ export default {
              objectFit: this.isExpanded ? 'contain' : 'cover',
              display: 'block'
         };
-    },
-
-    previewImages() {
-        const bg = this.info.backgroundImage;
-        if(bg) {
-             let url = bg;
-             if(!bg.startsWith('http')) {
-                  url = this.$fileURL + bg;
-             }
-             return [url];
-        }
-        return [];
     }
   },
   created() {
@@ -666,228 +653,323 @@ export default {
                if (currentIndex > 0) this.switchTab(this.tabOrder[currentIndex - 1]);
            }
        }
+    },
+    handleScroll() {
+       const scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop;
+       let opacity = scrollTop / 100;
+       if (opacity > 1) opacity = 1;
+       if (opacity < 0) opacity = 0;
+       this.navOpacity = opacity;
+    },
+    handlePreview(url) {
+        if(!url) return;
+        let previewUrl = url;
+        // Only prepend fileURL if it's not http and NOT a local asset
+        if(!url.startsWith('http') && !url.startsWith('/imgs/')) {
+             previewUrl = this.$fileURL + url;
+        }
+        this.previewImages = [previewUrl];
+        this.showPreview = true;
+    },
+    handleBgClick(e) {
+        // Defensive check: if click originated from interactive elements (like avatar), ignore it
+        if (e.target.closest('.user-avatar-wrapper') || e.target.closest('.mini-action-btn') || e.target.closest('.stat-item')) {
+            return;
+        }
+        this.handlePreview(this.coverUrl);
     }
   }
 }
 </script>
 
 <style scoped>
-/* Pinned Tag */
-.pinned-tag {
-    position: absolute;
-    top: 6px;
-    left: 6px;
-    background: linear-gradient(to right, #ff9966, #ff5e62);
-    color: white;
-    font-size: 10px;
-    padding: 2px 6px;
-    border-radius: 4px;
-    z-index: 10;
-}
-.other-info-page { background: #f5f5f5; min-height: 100vh; padding-bottom: 20px; }
-.page-header { height: 50px; background: white; display: flex; align-items: center; padding: 0 15px; position: sticky; top: 0; z-index: 10; }
-.header-back-btn i { font-size: 20px; }
-.header-title { flex: 1; text-align: center; font-size: 16px; font-weight: bold; }
 
-.user-introduce { padding: 8px 15px; background: white; font-size: 13px; color: #555; }
-
-/* Update action-buttons spacing if needed */
-.action-buttons { display: flex; gap: 10px; padding: 10px 15px; background: white; }
-.action-btn { 
-  flex: 1; 
-  height: 36px; 
-  line-height: normal; 
-  border-radius: 4px; 
-  border: none; 
-  font-size: 14px; 
-  cursor: pointer; 
-  display: flex; 
-  align-items: center; 
-  justify-content: center;
-  font-weight: 500;
-  min-width: 0;
-}
-.logout-btn { background: #ff6633; color: white; } 
-.follow-btn { background: #ff2442; color: white; }
-.followed-btn { background: #f2f2f2; color: #333; border: 1px solid rgba(0,0,0,0.05); }
-.message-btn { background: #f2f2f2; color: #333; border: 1px solid rgba(0,0,0,0.05); }
-.more-btn { flex: none; width: 36px; background: #f2f2f2; color: #333; border: 1px solid rgba(0,0,0,0.05); }
-
-/* New Header Styles */
-.profile-cover {
-    height: 120px;
-    width: 100%;
-    background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
-    background-size: cover;
-    background-position: center;
-}
-.user-header-content {
-    position: relative;
-    padding: 0 15px;
-    display: flex;
-    align-items: flex-start;
-    background: white;
-}
-.user-avatar-wrapper {
-    width: 76px;
-    height: 76px;
-    border-radius: 50%;
-    border: 3px solid white;
-    overflow: hidden;
-    margin-top: -20px; /* Overlap cover */
-    flex-shrink: 0;
-    margin-right: 12px;
-    z-index: 2;
-    background: white;
-}
-.user-avatar-wrapper img { width: 100%; height: 100%; object-fit: cover; }
-
-.user-details-right {
-    padding-top: 10px;
-    flex: 1;
-}
-.name-line {
-    display: flex;
-    align-items: center;
-    margin-bottom: 2px;
-}
-.name { font-size: 18px; font-weight: 600; color: #1a1a1a; }
-
-.id-line {
-    font-size: 11px;
-    color: #999;
-    margin-bottom: 6px;
-    display: flex;
-    align-items: center;
-}
-
-.user-tags-row { 
-    display: flex; 
-    align-items: center; 
-    gap: 6px; 
-    flex-wrap: wrap; 
-}
-
-.tag { 
-    height: 18px; 
-    line-height: normal; 
-    padding: 0 6px; 
-    border-radius: 9px; 
-    font-size: 10px; 
-    display: flex; 
-    align-items: center; 
-    color: white;
-}
-.gender-tag { /* Background handled inline */ }
-.level-tag { background: #FFD700; font-weight: bold; font-style: italic; } 
-.city-tag { background: rgba(0,0,0,0.05); color: #666; }
-
-.header-extras {
-    position: absolute;
-    right: 15px;
-    top: 10px; 
-    display: flex;
-    align-items: center;
-}
-/* user-id-text removed */
-.settings-icon {
-    font-size: 20px;
-    color: #333;
-    background: #f5f5f5;
-    padding: 4px;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-/* Avatar Dialog Styles */
-.avatar-dialog-overlay {
+/* Custom Nav */
+.custom-nav {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
-    bottom: 0;
-    background: black; /* Pure black background for full screen */
-    z-index: 9999;
+    height: 44px; /* Adjust for status bar if needed in uniapp */
+    padding-top: 20px; /* Spacer for status bar, adjust based on platform */
     display: flex;
     align-items: center;
-    justify-content: center;
+    padding-left: 15px;
+    padding-right: 15px;
+    z-index: 100;
+    transition: background 0.3s;
 }
-.avatar-dialog-close {
-    position: absolute;
-    top: 40px;
-    right: 20px;
-    width: 36px;
-    height: 36px;
+.nav-back, .nav-more {
+    width: 32px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.3);
     color: white;
-    font-size: 28px;
+    font-size: 18px;
+    backdrop-filter: blur(4px);
     cursor: pointer;
-    z-index: 10001;
+    transition: all 0.3s;
 }
-.avatar-preview-container {
+.nav-back.dark-icon, .nav-more.dark-icon {
+    background: transparent;
+    color: #333;
+    backdrop-filter: none;
+}
+.nav-title {
+    flex: 1;
+    text-align: center;
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+/* Profile Cover Container (Matches Info.vue) */
+.profile-cover-container {
+    width: 100%;
+    /* height handled by inline style */
+    z-index: 10;
+}
+.cover-img {
+    /* styles handled by inline style mainly */
     width: 100%;
     height: 100%;
+    object-fit: cover;
+}
+
+/* Profile Header (Card Layout) */
+.profile-header {
+    background: linear-gradient(to bottom, #fef9f5, #ffffff);
+    padding: 0 16px;
+    padding-bottom: 15px;
+    position: relative;
+    margin-top: -20px; /* Overlap cover */
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    z-index: 20; /* Above cover */
+}
+
+/* Header Top Row */
+.header-top {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-top: 15px; /* Add padding inside card */
+}
+
+/* Avatar */
+.avatar-box {
+    position: relative;
+    margin-right: 20px;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+.avatar-img {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid #f0f0f0;
+    background: #fff;
+}
+
+/* Stats Row */
+.stats-row {
+    flex: 1;
+    display: flex;
+    justify-content: space-around;
+}
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+}
+.stat-num {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+}
+
+/* User Info Section */
+.user-info-section {
+    position: relative;
+    padding-bottom: 20px;
+}
+
+.name-row {
+    margin-top: 10px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* Space out name and buttons */
+}
+.user-nickname {
+    font-size: 24px;
+    font-weight: 700;
+    color: #222;
+    flex: 1;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    margin-right: 12px;
+}
+
+/* Mini Action Buttons Next to Name */
+.name-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+.mini-action-btn {
+    height: 32px; /* Increased from 28px */
+    padding: 0 20px; /* Increased from 14px */
+    border-radius: 16px; /* Increased radius */
+    font-size: 14px; /* Increased from 13px */
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
+    white-space: nowrap;
 }
-.avatar-big {
-    width: 100%;
-    max-height: 80%; /* Don't fill entire height, leave space */
-    object-fit: contain;
+/* Reusing btn-primary/gray/outline color classes, same definition */
+
+.id-row {
+    font-size: 13px;
+    color: #999;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
 }
 
-.user-introduce { padding: 8px 15px; background: white; font-size: 13px; color: #555; }
-
-.stats-card { display: flex; background: white; padding: 15px 0; margin-top: 10px; }
-.stat-item { flex: 1; text-align: center; }
-.stat-value { font-size: 18px; font-weight: 600; }
-.stat-label { font-size: 13px; color: #666; }
-
-.custom-tabs-header { background: white; margin-top: 10px; border-bottom: 1px solid #eee; position: sticky; top: 50px; z-index: 9; }
-.custom-tabs-nav { display: flex; }
-.custom-tab-item { flex: 1; text-align: center; padding: 12px 0; font-size: 15px; cursor: pointer; }
-.custom-tab-item.active { color: #07c160; border-bottom: 2px solid #07c160; }
-.count-badge { background: #ff6633; color: white; padding: 0 5px; border-radius: 10px; font-size: 10px; margin-left: 2px; }
-
-.custom-tabs-content { min-height: 300px; }
-.tab-pane { padding-bottom: 20px; }
-.empty-state { padding: 40px; text-align: center; color: #999; }
-
-.shop-item, .user-item { background: white; padding: 12px 15px; display: flex; border-bottom: 1px solid #f5f5f5; }
-.blog-item { background: white; margin-bottom: 10px; border-radius: 8px; overflow: hidden; cursor: pointer; padding: 15px; border-bottom: 1px solid #f5f5f5; }
-.blog-header { display: flex; align-items: center; margin-bottom: 10px; }
-
-/* User Item */
-.user-item { align-items: center; }
-.user-info { flex: 1; margin-right: 10px; }
-.user-desc { color: #999; font-size: 12px; margin-top: 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.user-action { flex-shrink: 0; }
-.follow-btn {
-   padding: 4px 12px; border-radius: 14px; font-size: 12px; cursor: pointer; border: none; outline: none;
-   background: #ff6633; color: white;
+.intro-row {
+    margin-bottom: 16px;
 }
-.follow-btn.followed {
-   background: #07c160;
+.intro-text {
+    font-size: 15px; /* Slightly larger */
+    color: #333;
+    line-height: 1.5;
+    white-space: pre-wrap;
 }
-.blog-avatar { width: 40px; height: 40px; border-radius: 50%; margin-right: 10px; object-fit: cover; }
-.blog-user-box { display: flex; flex-direction: column; }
-.blog-username { font-size: 14px; color: #333; font-weight: 500; }
-.blog-date { font-size: 12px; color: #999; margin-top: 2px; }
 
-.blog-body { display: flex; }
-.blog-img { width: 100px; height: 100px; flex-shrink: 0; margin-right: 10px; border-radius: 4px; overflow: hidden; background: #f0f0f0; }
-.blog-img img, .shop-img img, .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.user-avatar { width: 50px; height: 50px; border-radius: 50%; overflow: hidden; margin-right: 12px; flex-shrink: 0; }
-.blog-content-col { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
-.blog-title { font-size: 15px; color: #333; line-height: 1.4; margin-bottom: 5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; height: 42px; }
-.blog-actions { display: flex; align-items: center; justify-content: flex-end; gap: 20px; margin-top: auto; }
-.action-btn { display: flex; align-items: center; color: #999; font-size: 13px; }
-.action-btn i { font-size: 16px; margin-right: 4px; }
-.action-btn.active { color: #ff6633; }
-.loading-state { text-align: center; padding: 20px 0; color: #999; font-size: 13px; }
+/* Larger Tags */
+.tags-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
+}
+.tag-capsule {
+    height: 26px; /* Increased from 22px */
+    padding: 0 12px; /* Increased padding */
+    background: #f5f5f5;
+    border-radius: 13px; /* Adjusted radius */
+    font-size: 13px; /* Increased from 11px */
+    display: flex;
+    align-items: center;
+    color: #666;
+    font-weight: 500;
+}
+.tag-capsule i { margin-right: 2px; }
+.tag-capsule.gender {
+    color: #54b4ef;
+    background: rgba(84, 180, 239, 0.1);
+}
+.gender .el-icon-female { color: #ff88a7; } 
+
+/* Action Buttons */
+.action-row {
+    display: flex;
+    gap: 12px;
+    padding-bottom: 10px;
+}
+.action-btn-new {
+    flex: 1;
+    height: 40px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.btn-primary {
+    background: #ff2442;
+    color: white;
+    box-shadow: 0 4px 12px rgba(255, 36, 66, 0.15);
+}
+.btn-gray {
+    background: #eee;
+    color: #999;
+    font-weight: 500;
+}
+.btn-outline {
+    background: white;
+    border: 1px solid #ddd;
+    color: #333;
+}
+
+/* Sticky Tabs */
+.sticky-tabs-wrapper {
+    position: sticky;
+    top: 64px; /* Adjust based on navbar height */
+    z-index: 90;
+    background: white;
+}
+.custom-tabs-nav {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    height: 44px;
+    border-bottom: 1px solid #f5f5f5;
+}
+.tab-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 16px; /* Increased from 15px */
+    color: #999;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.tab-item.active {
+    font-size: 18px; /* Increased from 16px */
+    font-weight: 600;
+    color: #333;
+}
+.active-line {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 20px;
+    height: 3px;
+    background: #ff2442;
+    border-radius: 2px;
+}
+.custom-tabs-content {
+    background: #fff;
+    min-height: 400px;
+    padding: 10px 6px;
+}
+
+/* Cleanup old styles */
+ .other-info-page { background: #fff; min-height: 100vh; padding-bottom: 20px; }
+ .page-header { display: none; }
+ .action-buttons { display: none; } /* Hide old action row wrapper if any */
+ .stats-card { display: none; }
+ .user-introduce { display: none; }
+
 </style>
 
 <style scoped>
@@ -938,6 +1020,7 @@ export default {
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     overflow: hidden;
     text-overflow: ellipsis;
 }

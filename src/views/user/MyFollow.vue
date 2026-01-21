@@ -21,8 +21,8 @@
            <div class="user-row" v-for="item in list" :key="item.id">
               <van-image round width="40" height="40" :src="item.icon" class="user-avatar-img" />
               <div class="user-info-box">
-                 <div class="user-name">{{ item.nickName }}</div>
-                 <div class="user-bio">{{ item.introduce || '暂无简介' }}</div>
+                 <div class="user-name">{{ item.name || item.nickName }}</div>
+                 <div class="user-bio">{{ item.introduce || item.content || '暂无简介' }}</div>
               </div>
               <van-button size="small" round color="#eee" class="followed-btn">已关注</van-button>
            </div>

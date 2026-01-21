@@ -73,6 +73,11 @@ const routes = [
         name: 'MyMoments',
         component: () => import('@/views/user/MyMoments.vue')
     },
+    {
+        path: '/user/password/update',
+        name: 'UpdatePassword',
+        component: () => import('@/views/user/UpdatePassword.vue')
+    },
 
     // Shop Module
     {
