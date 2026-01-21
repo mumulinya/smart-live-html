@@ -177,6 +177,8 @@ const startDrag = (e) => {
     startTarget = null;
   };
   
+  document.addEventListener('mousemove', handleMove);
+  document.addEventListener('mouseup', handleEnd);
   document.addEventListener('touchmove', handleMove);
   document.addEventListener('touchend', handleEnd);
 };
