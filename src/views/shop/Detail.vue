@@ -1,9 +1,5 @@
 <template>
-  <div class="shop-detail-page">
-    <div class="loading-mask" :class="{ hidden: !isLoading }">
-       <div class="loading-spinner"></div>
-       <div class="loading-text">加载中...</div>
-    </div>
+  <PageLayout :loading="isLoading" skeleton-type="detail" class="shop-detail-page">
 
     <!-- Fixed Top Header -->
     <div class="header">
@@ -409,7 +405,7 @@
       </div>
    </div>
 
-  </div>
+  </PageLayout>
 </template>
 
 <script>
@@ -419,8 +415,11 @@ import { uploadFile } from '@/api/common';
 import { getCurrentUser } from '@/api/user';
 import '@/assets/css/blog-detail.css'; // Import blog styles to reuse reply CSS
 
+import PageLayout from '@/components/PageLayout/PageLayout.vue';
+
 export default {
   name: 'ShopDetail',
+  components: { PageLayout },
   data() {
     return {
        isLoading: true,

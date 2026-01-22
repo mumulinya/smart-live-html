@@ -1,5 +1,5 @@
 <template>
-  <div class="other-info-page" v-loading="isLoading"
+  <PageLayout :loading="isLoading" skeleton-type="profile" class="other-info-page"
        @touchstart="handleTouchStart"
        @touchmove="handleTouchMove"
        @touchend="handleTouchEnd">
@@ -210,7 +210,7 @@
     
     <!-- Image Preview Component -->
     <van-image-preview v-model:show="showPreview" :images="previewImages" />
-  </div>
+  </PageLayout>
 </template>
 
 <script>
@@ -219,8 +219,11 @@ import { getUserBlogs } from '@/api/blog';
 import { getCommonFollows, followUser, isFollowed, likeBlog, likeRecord, starList } from '@/api/interaction';
 import { createChatSession, getSessionId } from '@/api/chat';
 
+import PageLayout from '@/components/PageLayout/PageLayout.vue';
+
 export default {
   name: 'OtherInfo',
+  components: { PageLayout },
   data() {
     return {
       userId: null,
@@ -790,7 +793,7 @@ export default {
     cursor: pointer;
 }
 .stat-num {
-    font-size: 18px;
+    font-size: 22px;
     font-weight: 600;
     color: #333;
 }
@@ -861,16 +864,16 @@ export default {
 /* Larger Tags */
 .tags-row {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     flex-wrap: wrap;
     margin-bottom: 15px;
 }
 .tag-capsule {
-    height: 26px; /* Increased from 22px */
-    padding: 0 12px; /* Increased padding */
+    height: 24px;
+    padding: 0 8px;
     background: #f5f5f5;
-    border-radius: 13px; /* Adjusted radius */
-    font-size: 13px; /* Increased from 11px */
+    border-radius: 12px;
+    font-size: 12px;
     display: flex;
     align-items: center;
     color: #666;

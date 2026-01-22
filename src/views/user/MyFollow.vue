@@ -1,5 +1,5 @@
 <template>
-  <div class="my-follow-page">
+  <PageLayout :loading="loading" skeleton-type="list" class="my-follow-page">
     <van-nav-bar title="我的关注" left-arrow @click-left="$router.back()" fixed placeholder />
     
     <van-tabs v-model:active="activeTab" sticky offset-top="46px" color="#ff2442">
@@ -122,7 +122,7 @@
 
       </van-list>
     </div>
-  </div>
+  </PageLayout>
 </template>
 
 <script setup>
@@ -133,6 +133,7 @@ import { useRouter } from 'vue-router';
 import { getFollows } from '@/api/interaction';
 import { getCurrentUser } from '@/api/user';
 import { fileURL } from '@/utils/request';
+import PageLayout from '@/components/PageLayout/PageLayout.vue';
 
 const router = useRouter();
 const activeTab = ref(0);

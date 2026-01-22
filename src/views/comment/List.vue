@@ -1,5 +1,5 @@
 <template>
-  <div class="comment-list-page" v-loading="loading">
+  <PageLayout :loading="loading" skeleton-type="list" class="comment-list-page">
     <div class="header">
       <div class="header-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
       <div class="header-title">全部评论</div>
@@ -146,7 +146,7 @@
           </div>
        </div>
     </div>
-  </div>
+  </PageLayout>
 </template>
 
 <script>
@@ -156,9 +156,11 @@ import { uploadFile } from '@/api/common';
 import { ElImageViewer } from 'element-plus';
 import '@/assets/css/blog-detail.css'; // Reuse styles
 
+import PageLayout from '@/components/PageLayout/PageLayout.vue';
+
 export default {
   name: 'CommentList',
-  components: { ElImageViewer },
+  components: { ElImageViewer, PageLayout },
   data() {
     return {
       sourceId: null,

@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { showToast } from 'vant';
 import { getVoucherDetail, buyVoucherAPI, seckillVoucherAPI } from '@/api/shop'; 
 import { toggleStar, followUser } from '@/api/interaction';
+import PageLayout from '@/components/PageLayout/PageLayout.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -195,7 +196,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="voucher-detail">
+  <PageLayout :loading="loading" skeleton-type="detail" class="voucher-detail">
     <van-nav-bar title="代金券详情" left-arrow @click-left="$router.back()" fixed placeholder />
 
     <div class="ticket-container">
@@ -256,7 +257,7 @@ onMounted(() => {
          @click="handleBtnClick" 
       />
     </van-action-bar>
-  </div>
+  </PageLayout>
 </template>
 
 <style scoped>

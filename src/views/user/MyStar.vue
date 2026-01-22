@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router';
 import { starList } from '@/api/interaction';
 import { getCurrentUser } from '@/api/user';
 import { fileURL } from '@/utils/request';
+import PageLayout from '@/components/PageLayout/PageLayout.vue';
 
 const router = useRouter();
 const activeTab = ref(0);
@@ -229,7 +230,7 @@ watch(activeTab, () => {
 </script>
 
 <template>
-  <div class="my-star-page">
+  <PageLayout :loading="loading" skeleton-type="list" class="my-star-page">
     <van-nav-bar
       title="我的收藏"
       left-arrow
@@ -384,7 +385,7 @@ watch(activeTab, () => {
          </van-list>
       </van-tab>
     </van-tabs>
-  </div>
+  </PageLayout>
 </template>
 
 <style scoped>

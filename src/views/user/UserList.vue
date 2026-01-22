@@ -1,5 +1,5 @@
 <template>
-  <div class="user-list-page">
+  <PageLayout :loading="loading" skeleton-type="list" class="user-list-page">
     <van-nav-bar
       :title="user.nickName || '用户'"
       left-arrow
@@ -89,15 +89,18 @@
           </div>
       </van-tab>
     </van-tabs>
-  </div>
+  </PageLayout>
 </template>
 
 <script>
 import { getCurrentUser, getUserStats, getUserInfo } from '@/api/user';
 import { getFollows, getFans, getCommonFollows, followUser } from '@/api/interaction';
 
+import PageLayout from '@/components/PageLayout/PageLayout.vue';
+
 export default {
   name: 'UserList',
+  components: { PageLayout },
   props: ['type'],
   data() {
     return {

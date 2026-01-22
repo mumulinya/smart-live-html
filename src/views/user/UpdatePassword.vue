@@ -9,34 +9,64 @@
       <div class="form-box">
         <div class="form-item">
           <div class="form-label">旧密码</div>
-          <input 
-            v-model="form.oldPassword" 
-            type="password" 
-            class="form-input" 
-            placeholder="请输入旧密码"
-          >
+          <div class="form-input-wrapper">
+            <input 
+              v-model="form.oldPassword" 
+              :type="showOldPassword ? 'text' : 'password'" 
+              class="form-input" 
+              placeholder="请输入旧密码"
+              @focus="focusOld = true"
+              @blur="focusOld = false"
+            >
+            <i 
+              v-show="focusOld || form.oldPassword"
+              :class="showOldPassword ? 'el-icon-view' : 'el-icon-hide'" 
+              class="toggle-password-icon"
+              @mousedown.prevent="showOldPassword = !showOldPassword"
+            ></i>
+          </div>
         </div>
         <div class="divider"></div>
         <div class="form-item">
           <div class="form-label">新密码</div>
-          <input 
-            v-model="form.newPassword" 
-            type="password" 
-            class="form-input" 
-            placeholder="请输入新密码，6-20位"
-            maxlength="20"
-          >
+          <div class="form-input-wrapper">
+            <input 
+              v-model="form.newPassword" 
+              :type="showNewPassword ? 'text' : 'password'" 
+              class="form-input" 
+              placeholder="请输入新密码，6-20位"
+              maxlength="20"
+              @focus="focusNew = true"
+              @blur="focusNew = false"
+            >
+            <i 
+              v-show="focusNew || form.newPassword"
+              :class="showNewPassword ? 'el-icon-view' : 'el-icon-hide'" 
+              class="toggle-password-icon"
+              @mousedown.prevent="showNewPassword = !showNewPassword"
+            ></i>
+          </div>
         </div>
         <div class="divider"></div>
         <div class="form-item">
           <div class="form-label">确认密码</div>
-          <input 
-            v-model="form.confirmPassword" 
-            type="password" 
-            class="form-input" 
-            placeholder="请再次确认新密码"
-            maxlength="20"
-          >
+          <div class="form-input-wrapper">
+            <input 
+              v-model="form.confirmPassword" 
+              :type="showConfirmPassword ? 'text' : 'password'" 
+              class="form-input" 
+              placeholder="请再次确认新密码"
+              maxlength="20"
+              @focus="focusConfirm = true"
+              @blur="focusConfirm = false"
+            >
+            <i 
+              v-show="focusConfirm || form.confirmPassword"
+              :class="showConfirmPassword ? 'el-icon-view' : 'el-icon-hide'" 
+              class="toggle-password-icon"
+              @mousedown.prevent="showConfirmPassword = !showConfirmPassword"
+            ></i>
+          </div>
         </div>
       </div>
 
@@ -62,6 +92,12 @@ export default {
   data() {
     return {
       loading: false,
+      showOldPassword: false,
+      showNewPassword: false,
+      showConfirmPassword: false,
+      focusOld: false,
+      focusNew: false,
+      focusConfirm: false,
       form: {
         oldPassword: '',
         newPassword: '',
@@ -110,7 +146,8 @@ export default {
           this.goBack();
         }, 1000);
       } catch (err) {
-        const msg = err.response?.data?.message || err.message || '修改失败';
+        // err 可能是字符串(来自 request 拦截器)或 Error 对象
+        const msg = typeof err === 'string' ? err : (err.response?.data?.errorMsg || err.response?.data?.message || err.message || '修改失败');
         this.$message.error(msg);
       } finally {
         this.loading = false;
@@ -191,6 +228,22 @@ export default {
 }
 .form-input::placeholder {
   color: #ccc;
+}
+
+.form-input-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+.toggle-password-icon {
+  font-size: 18px;
+  color: #999;
+  cursor: pointer;
+  padding: 5px;
+  margin-left: 8px;
+}
+.toggle-password-icon:active {
+  color: #666;
 }
 
 .divider {

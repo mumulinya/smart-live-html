@@ -1,5 +1,5 @@
 <template>
-  <div class="chat-detail-page">
+  <PageLayout :loading="loading" skeleton-type="detail" class="chat-detail-page">
     <div class="header">
       <div class="header-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
       <div class="header-title">{{contactName}}</div>
@@ -110,7 +110,7 @@
     <input type="file" ref="imageInput" accept="image/*" @change="onImageSelected" style="display:none">
     
 
-  </div>
+  </PageLayout>
 </template>
 
 <script>
@@ -119,9 +119,11 @@ import { wsManager } from '@/utils/websocket';
 import { getCurrentUser } from '@/api/user';
 import { getChatSession, getMessageList } from '@/api/chat';
 
+import PageLayout from '@/components/PageLayout/PageLayout.vue';
+
 export default {
   name: 'ChatDetail',
-  components: { FootBar },
+  components: { FootBar, PageLayout },
   data() {
     return {
        sessionId: 0,

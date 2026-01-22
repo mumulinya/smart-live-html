@@ -1,5 +1,5 @@
 <template>
-  <div class="orders-page" v-loading="pageLoading">
+  <PageLayout :loading="pageLoading" skeleton-type="list" class="orders-page">
     <div class="header">
       <div class="header-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
       <div class="header-title">我的订单</div>
@@ -58,14 +58,17 @@
           <p>暂无订单</p>
        </div>
     </div>
-  </div>
+  </PageLayout>
 </template>
 
 <script>
 import { getOrderList, cancelOrder, refundOrder } from '@/api/order';
 
+import PageLayout from '@/components/PageLayout/PageLayout.vue';
+
 export default {
   name: 'OrderList',
+  components: { PageLayout },
   data() {
     return {
        orders: [],

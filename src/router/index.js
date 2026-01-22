@@ -78,6 +78,11 @@ const routes = [
         name: 'UpdatePassword',
         component: () => import('@/views/user/UpdatePassword.vue')
     },
+    {
+        path: '/user/password/set',
+        name: 'SetPassword',
+        component: () => import('@/views/user/SetPassword.vue')
+    },
 
     // Shop Module
     {

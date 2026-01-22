@@ -206,7 +206,8 @@ const performLogin = async () => {
             showFailToast("登录失败：无Token");
         }
     } catch (err) {
-        const msg = err.response?.data || err.message || "登录失败";
+        // err 可能是字符串(来自 request 拦截器)或 Error 对象
+        const msg = typeof err === 'string' ? err : (err.response?.data?.errorMsg || err.response?.data || err.message || "登录失败");
         showFailToast(msg);
     } finally {
         loading.value = false;

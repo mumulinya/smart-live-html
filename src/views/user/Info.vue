@@ -1,5 +1,5 @@
 ﻿<template>
-  <div class="user-info-page"
+  <PageLayout :loading="pageLoading" skeleton-type="profile" class="user-info-page"
        @touchstart="handleTouchStart"
        @touchmove="handleTouchMove"
        @touchend="handleTouchEnd">
@@ -272,7 +272,7 @@
     <!-- Image Preview Component -->
     <van-image-preview v-model:show="showPreview" :images="previewImages" @change="onChange">
     </van-image-preview>
-  </div>
+  </PageLayout>
 </template>
 
 <script>
@@ -284,9 +284,11 @@ import { filePrefix } from '@/utils/request';
 import { locationUtil } from '@/utils/location';
 import { updateBackgroundImage } from '@/api/user'; // Import new API
 
+import PageLayout from '@/components/PageLayout/PageLayout.vue';
+
 export default {
   name: 'UserInfo',
-  components: { FootBar },
+  components: { FootBar, PageLayout },
   data() {
     return {
        user: {},

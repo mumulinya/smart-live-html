@@ -1,5 +1,5 @@
 <template>
-  <div class="ai-container">
+  <PageLayout :loading="isSending && messages.length === 0" skeleton-type="detail" class="ai-container">
     <!-- Header -->
     <div class="ai-header">
       <div class="header-left">
@@ -162,7 +162,7 @@
           </div>
        </div>
     </div>
-  </div>
+  </PageLayout>
 </template>
 
 <script setup>
@@ -181,6 +181,7 @@ import {
 } from '@/api/ai';
 import { getCurrentUser } from '@/api/user';
 import { locationUtil } from '@/utils/location';
+import PageLayout from '@/components/PageLayout/PageLayout.vue';
 
 const router = useRouter();
 const route = useRoute();

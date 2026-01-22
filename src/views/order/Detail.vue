@@ -1,5 +1,5 @@
 <template>
-  <div class="order-detail-page" v-loading="loading">
+  <PageLayout :loading="loading" skeleton-type="detail" class="order-detail-page">
     <div class="header">
       <div class="header-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
       <div class="header-title">订单详情</div>
@@ -116,14 +116,17 @@
           <div class="qr-code-text">{{order.code || '2849 1948 1111'}}</div>
        </div>
     </div>
-  </div>
+  </PageLayout>
 </template>
 
 <script>
 import { cancelOrder, refundOrder } from '@/api/order';
 
+import PageLayout from '@/components/PageLayout/PageLayout.vue';
+
 export default {
   name: 'OrderDetail',
+  components: { PageLayout },
   data() {
     return {
        orderId: '',

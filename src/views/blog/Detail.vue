@@ -1,5 +1,5 @@
 <template>
-  <div class="blog-detail-page" v-loading="pageLoading">
+  <PageLayout :loading="pageLoading" skeleton-type="detail" class="blog-detail-page">
     <!-- 顶部固定用户信息栏 -->
     <div class="fixed-top-bar">
       <div class="top-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
@@ -53,57 +53,73 @@
        </div>
 
        <div v-if="blog.id" class="content-wrapper">
-          <!-- 全图轮播区域 -->
-          <div class="image-carousel-full" 
+          <!-- 沉浸式图片轮播区 -->
+          <div class="immersive-swiper" 
                v-if="blog.images && blog.images.length > 0"
                @touchstart="onTouchStart"
                @touchmove="onTouchMove"
                @touchend="onTouchEnd"
           >
-            <el-carousel 
-              ref="imageCarousel"
-              :height="carouselHeight" 
-              :autoplay="false" 
-              arrow="never" 
-              indicator-position="none"
-              @change="onCarouselChange"
-            >
-               <el-carousel-item v-for="(img, i) in blog.images" :key="i">
-                  <img :src="img" class="full-carousel-img" @click="previewImage(blog.images, i)" @load="onImageLoad">
-               </el-carousel-item>
-            </el-carousel>
-            <!-- 图片序号指示器 (右上角) -->
-            <div class="image-indicator">{{currentImageIndex + 1}}/{{blog.images.length}}</div>
-            <!-- 底部点状指示器 -->
-            <div class="dots-indicator" v-if="blog.images.length > 1">
-              <span 
-                v-for="(img, i) in blog.images" 
-                :key="i" 
-                class="dot" 
-                :class="{active: i === currentImageIndex}"
-                @click="goToImage(i)"
-              ></span>
+            <div class="swiper-container">
+              <el-carousel 
+                ref="imageCarousel"
+                height="100%" 
+                :autoplay="false" 
+                arrow="never" 
+                indicator-position="none"
+                @change="onCarouselChange"
+              >
+                 <el-carousel-item v-for="(img, i) in blog.images" :key="i">
+                    <div class="swiper-slide-inner">
+                       <img 
+                         :src="img" 
+                         class="swiper-image" 
+                         @click="previewImage(blog.images, i)" 
+                         @load="onImageLoad"
+                         @error="(e) => e.target.src = '/imgs/default-placeholder.png'"
+                       >
+                    </div>
+                 </el-carousel-item>
+              </el-carousel>
             </div>
+            <!-- 右下角数字指示器 -->
+            <div class="image-counter">{{currentImageIndex + 1}}/{{blog.images.length}}</div>
+          </div>
+          
+          <!-- 无图片时显示默认占位图 -->
+          <div class="no-image-placeholder" v-else>
+             <img src="/imgs/default-placeholder.png" class="placeholder-image">
           </div>
 
           <!-- 博客文字内容 -->
           <div class="blog-content-section">
-            <div class="blog-title" v-if="blog.title">{{blog.title}}</div>
+            <h1 class="blog-title" v-if="blog.title">{{blog.title}}</h1>
             <div class="blog-text" v-html="blog.content"></div>
-            <div class="blog-time">{{formatDate(blog.createTime)}}</div>
+            <div class="blog-meta">
+               <span class="meta-time">{{formatDate(blog.createTime)}}</span>
+               <span class="meta-location" v-if="blog.ipLocation">· {{blog.ipLocation}}</span>
+            </div>
           </div>
 
-          <!-- 关联店铺信息 -->
-          <div class="shop-card" v-if="shop.id" @click="toShopDetail">
-             <div class="shop-card-icon">
-                <img :src="shop.image || '/imgs/icons/default-icon.png'">
+          <!-- 关联店铺卡片 (POI Card) -->
+          <div class="poi-card" v-if="shop.id" @click="toShopDetail">
+             <div class="poi-thumbnail">
+                <img :src="shop.image || '/imgs/default-placeholder.png'" @error="(e) => e.target.src = '/imgs/default-placeholder.png'">
              </div>
-             <div class="shop-card-info">
-                <div class="shop-card-name">{{shop.name}}</div>
-                <div class="shop-card-rating"><el-rate :model-value="shop.score/10" disabled text-color="#F63" show-score></el-rate></div>
-                <div class="shop-card-price">￥{{shop.avgPrice}}/人</div>
+             <div class="poi-info">
+                <div class="poi-name">{{shop.name}}</div>
+                <div class="poi-rating">
+                   <div class="star-icons">
+                      <i class="el-icon-star-on" v-for="n in Math.floor(shop.score/10)" :key="'f'+n"></i>
+                      <i class="el-icon-star-off" v-for="n in (5 - Math.floor(shop.score/10))" :key="'e'+n"></i>
+                   </div>
+                   <span class="rating-score">{{(shop.score/10).toFixed(1)}}</span>
+                </div>
+                <div class="poi-price">¥{{shop.avgPrice}}/人</div>
              </div>
-             <i class="el-icon-arrow-right shop-card-arrow"></i>
+             <div class="poi-arrow">
+                <i class="el-icon-arrow-right"></i>
+             </div>
           </div>
 
           <!-- 点赞用户列表 -->
@@ -121,7 +137,7 @@
              </div>
           </div>
 
-          <div class="section-divider"></div>
+          <div class="section-line"></div>
 
           <!-- 评论区域 -->
           <div class="comments-section">
@@ -361,7 +377,7 @@
     
     <!-- 图片预览 -->
     <el-image-viewer v-if="showImagePreview" :url-list="previewImages" :initial-index="currentPreviewIndex" @close="closeImagePreview" hide-on-click-modal />
-  </div>
+  </PageLayout>
 </template>
 
 <script>
@@ -373,9 +389,11 @@ import { uploadFile } from '@/api/common';
 import '@/assets/css/blog-detail.css';
 import { ElImageViewer } from 'element-plus';
 
+import PageLayout from '@/components/PageLayout/PageLayout.vue';
+
 export default {
   name: 'BlogDetail',
-  components: { ElImageViewer },
+  components: { ElImageViewer, PageLayout },
   data() {
     return {
        blog: {},
@@ -385,7 +403,7 @@ export default {
        comments: [],
        aiComment: null,
        followed: false,
-       pageLoading: false,
+       pageLoading: true, // 初始为 true，确保骨架屏立即显示
        
        // Carousel
        currentImageIndex: 0,
@@ -529,7 +547,10 @@ export default {
      // Interactions
      checkFollowStatus() {
         isFollowed({ sourceId: this.blog.userId, sourceType: 1 }).then(res => {
-            this.followed = res.data; 
+            this.followed = res.data;
+            this.followStatusLoaded = true;
+        }).catch(() => {
+            this.followStatusLoaded = true;
         });
      },
      toggleFollow() {
@@ -1100,122 +1121,168 @@ export default {
   min-height: 100%;
 }
 
-/* Image Carousel */
-.image-carousel-full {
+/* ============ Immersive Swiper ============ */
+.immersive-swiper {
   position: relative;
   width: 100%;
   background: #f5f5f5;
 }
-.full-carousel-img {
+.swiper-container {
+  width: 100%;
+  padding-top: 100%; /* 1:1 Aspect Ratio */
+  position: relative;
+}
+.swiper-container .el-carousel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+.swiper-slide-inner {
   width: 100%;
   height: 100%;
-  object-fit: contain;
-  cursor: pointer;
-  background: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f0f0f0;
 }
-.image-indicator {
+.swiper-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  cursor: pointer;
+}
+.image-counter {
   position: absolute;
   right: 12px;
-  top: 12px;
-  background: rgba(0, 0, 0, 0.5);
+  bottom: 12px;
+  background: rgba(0, 0, 0, 0.6);
   color: white;
   font-size: 12px;
   padding: 4px 10px;
-  border-radius: 10px;
+  border-radius: 12px;
   z-index: 10;
+  font-weight: 500;
 }
 
-/* Dots Indicator */
-.dots-indicator {
+/* No Image Placeholder */
+/* No Image Placeholder */
+.no-image-placeholder {
+  width: 100%;
+  padding-top: 100%; /* 1:1 比例 */
+  position: relative;
+  background: #f5f5f5;
+}
+.placeholder-image {
   position: absolute;
-  bottom: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 6px;
-  z-index: 10;
-}
-.dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.5);
-  cursor: pointer;
-  transition: all 0.3s;
-}
-.dot.active {
-  background: white;
-  width: 18px;
-  border-radius: 3px;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
-/* Blog Content Section */
+/* ============ Blog Content Section ============ */
 .blog-content-section {
-  padding: 15px;
+  padding: 16px 15px 20px;
+  background: white;
 }
 .blog-title {
   font-size: 18px;
   font-weight: 600;
   color: #333;
-  margin-bottom: 12px;
+  margin: 0 0 12px 0;
   line-height: 1.4;
 }
 .blog-text {
   font-size: 15px;
-  color: #333;
-  line-height: 1.8;
+  color: #666;
+  line-height: 1.6;
   word-break: break-word;
 }
-.blog-time {
+.blog-meta {
+  margin-top: 20px;
   font-size: 12px;
   color: #999;
-  margin-top: 20px;
-}
-
-/* Shop Card */
-.shop-card {
-  margin: 15px;
-  padding: 12px;
-  background: #f8f8f8;
-  border-radius: 10px;
   display: flex;
   align-items: center;
-  cursor: pointer;
+  gap: 4px;
 }
-.shop-card-icon {
-  width: 50px;
-  height: 50px;
+
+/* ============ POI Card (Shop) ============ */
+.poi-card {
+  margin: 12px 15px;
+  padding: 12px;
+  background: white;
+  border: 1px solid #f0f0f0;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.poi-card:active {
+  transform: scale(0.98);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.poi-thumbnail {
+  width: 56px;
+  height: 56px;
   border-radius: 8px;
   overflow: hidden;
   flex-shrink: 0;
+  background: #eee;
 }
-.shop-card-icon img {
+.poi-thumbnail img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
-.shop-card-info {
+.poi-info {
   flex: 1;
-  margin-left: 12px;
+  min-width: 0;
 }
-.shop-card-name {
+.poi-name {
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   margin-bottom: 4px;
 }
-.shop-card-rating {
+.poi-rating {
   display: flex;
   align-items: center;
+  gap: 4px;
+  margin-bottom: 2px;
 }
-.shop-card-price {
+.star-icons {
+  display: flex;
+  gap: 1px;
+}
+.star-icons i {
+  font-size: 12px;
+  color: #ffb800;
+}
+.star-icons .el-icon-star-off {
+  color: #ddd;
+}
+.rating-score {
+  font-size: 12px;
+  color: #ff6633;
+  font-weight: 600;
+}
+.poi-price {
   font-size: 12px;
   color: #999;
-  margin-top: 2px;
 }
-.shop-card-arrow {
+.poi-arrow {
   color: #ccc;
   font-size: 16px;
+  flex-shrink: 0;
 }
 
 /* Like Section */
@@ -1224,6 +1291,7 @@ export default {
   align-items: center;
   padding: 12px 15px;
   gap: 12px;
+  background: white;
 }
 .like-icon-btn {
   cursor: pointer;
@@ -1260,15 +1328,17 @@ export default {
   margin-left: 8px;
 }
 
-/* Section Divider */
-.section-divider {
-  height: 8px;
-  background: #f5f5f5;
+/* Section Line */
+.section-line {
+  height: 1px;
+  background: #f0f0f0;
+  margin: 12px 15px;
 }
 
 /* Comments Section */
 .comments-section {
   padding: 15px;
+  background: white;
 }
 .comments-header {
   font-size: 16px;

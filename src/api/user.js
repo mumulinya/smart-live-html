@@ -53,3 +53,8 @@ export function uploadFile(formData) {
 export function updatePassword(data) {
     return request.post('/app/user/updatePassword', data);
 }
+
+// 设置密码（用于从未设置过密码的用户）
+export function setPassword(data) {
+    return request.post('/app/user/setPassword', data);
+}

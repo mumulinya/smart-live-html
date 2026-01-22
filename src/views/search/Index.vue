@@ -1,5 +1,5 @@
 <template>
-  <div class="search-page" @scroll="onScroll">
+  <PageLayout :loading="isLoading" skeleton-type="list" class="search-page" @scroll="onScroll">
     <!-- Header -->
     <div class="search-header">
       <div class="back-btn" @click="goBack">
@@ -332,7 +332,7 @@
 
         </van-tabs>
     </div>
-  </div>
+  </PageLayout>
 </template>
 
 <script>
@@ -354,8 +354,11 @@ import { followUserBoolean } from "@/api/interaction";
 import { getCurrentUser } from "@/api/user";
 import { locationUtil } from '@/utils/location';
 
+import PageLayout from '@/components/PageLayout/PageLayout.vue';
+
 export default {
   name: "SearchIndex",
+  components: { PageLayout },
   data() {
     return {
       keyword: "",

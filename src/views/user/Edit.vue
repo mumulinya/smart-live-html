@@ -62,7 +62,16 @@
           </div>
         </div>
         <div class="divider"></div>
-        <div class="info-item" @click="goToUpdatePassword">
+        <!-- 状态 A: 用户无密码 -->
+        <div class="info-item" v-if="!hasPassword" @click="goToSetPassword">
+          <div class="info-label">设置密码</div>
+          <div class="info-btn">
+            <div class="hint-text hint-text-warning">去设置</div>
+            <div><i class="el-icon-arrow-right"></i></div>
+          </div>
+        </div>
+        <!-- 状态 B: 用户有密码 -->
+        <div class="info-item" v-else @click="goToUpdatePassword">
           <div class="info-label">修改密码</div>
           <div class="info-btn">
             <div class="hint-text">去修改</div>
@@ -282,6 +291,11 @@ export default {
     vipText() {
         if (this.info.vipLevel > 0) return `VIP${this.info.vipLevel}`;
         return '普通用户';
+    },
+    // 判断用户是否已设置密码
+    hasPassword() {
+        // 从 info 对象获取 hasPassword 或 isSetPassword 字段
+        return this.info.hasPassword === true || this.info.isSetPassword === true;
     }
   },
   watch: {
@@ -592,6 +606,9 @@ export default {
     },
     goToUpdatePassword() {
        this.$router.push('/user/password/update');
+    },
+    goToSetPassword() {
+       this.$router.push('/user/password/set');
     }
   }
 }
@@ -626,6 +643,7 @@ export default {
 .info-btn i { margin-left: 5px; font-size: 16px; color: #ccc; }
 .text-truncate { max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hint-text { font-size: 13px; color: #ccc; }
+.hint-text-warning { color: #FF7D00 !important; font-weight: 500; } /* 橙色醒目提示 */
 
 /* Avatar specific */
 .avatar-item { padding: 12px 15px; }

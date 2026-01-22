@@ -1,5 +1,5 @@
 <template>
-  <div class="chat-list-page">
+  <PageLayout :loading="loading" skeleton-type="list" class="chat-list-page">
     <div class="header">
       <!-- <div class="header-back-btn"><i class="el-icon-arrow-left"></i></div> -->
       <div class="header-title">消息</div>
@@ -80,18 +80,19 @@
     <div class="footer-container">
        <foot-bar :active-btn="3"></foot-bar>
     </div>
-  </div>
+  </PageLayout>
 </template>
 
 <script>
 import FootBar from '@/components/FootBar.vue';
+import PageLayout from '@/components/PageLayout/PageLayout.vue';
 import { wsManager } from '@/utils/websocket';
 import { getCurrentUser } from '@/api/user';
 import { getUserSessions, deleteUserSession, togglePinUserSession } from '@/api/chat';
 
 export default {
   name: 'ChatList',
-  components: { FootBar },
+  components: { FootBar, PageLayout },
   data() {
     return {
        user: {},
