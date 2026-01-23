@@ -198,7 +198,8 @@
                          </div>
                     </div>
                      <div v-if="collections.length === 0 && !collectionLoading" class="empty-state">
-                        <div class="empty-text">这里空空如也</div>
+                         <img src="https://img01.yzcdn.cn/vant/empty-image-default.png" class="empty-img">
+                         <div class="empty-text">这里空空如也</div>
                     </div>
                 </div>
             </van-tab>
@@ -235,7 +236,8 @@
                          </div>
                     </div>
                      <div v-if="likes.length === 0 && !likeLoading" class="empty-state">
-                        <div class="empty-text">去点个赞吧</div>
+                         <img src="https://img01.yzcdn.cn/vant/empty-image-default.png" class="empty-img">
+                         <div class="empty-text">去点个赞吧</div>
                     </div>
                 </div>
             </van-tab>
@@ -1259,6 +1261,25 @@ export default {
 .action-btn.secondary {
     background: transparent;
     border: 1px solid #eee;
+}
+
+.empty-state {
+    padding: 60px 0;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+.empty-img {
+    width: 160px;
+    height: 160px;
+    margin-bottom: 16px;
+    object-fit: contain;
+}
+.empty-text {
+    font-size: 14px;
+    color: #999;
 }
 </style>
 

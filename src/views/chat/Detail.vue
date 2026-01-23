@@ -1,9 +1,9 @@
 <template>
-  <PageLayout :loading="loading" skeleton-type="detail" class="chat-detail-page">
+  <div class="chat-detail-page">
     <div class="header">
       <div class="header-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
       <div class="header-title">{{contactName}}</div>
-      <div style="width: 20px;"></div>
+      <div class="header-more-btn" @click="goToChatInfo"><i class="el-icon-more"></i></div>
     </div>
 
     <div class="connection-status" :class="wsStatus" v-if="showConnectionStatus">
@@ -11,7 +11,14 @@
     </div>
 
     <!-- Message List -->
-    <div class="chat-messages" ref="chatMessages" @scroll="handleScroll">
+    <div class="chat-messages" ref="chatMessages" @scroll="handleScroll"
+         :style="backgroundImage ? { backgroundImage: `url(${backgroundImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}">
+       <div ref="topSentinel" class="top-sentinel"></div>
+
+       <div v-if="loadingOld" class="loading-tip">
+         <span>加载中...</span>
+       </div>
+
        <div v-if="messages.length === 0 && !loading" class="empty-messages">
           <i class="el-icon-chat-round"></i>
           <div>暂无消息，开始聊天吧～</div>
@@ -26,7 +33,7 @@
                class="message-container"
                :class="{'message-container-left': !msg.isSelf, 'message-container-right': msg.isSelf}">
              
-             <div class="avatar" :class="{'avatar-left': !msg.isSelf, 'avatar-right': msg.isSelf}">
+             <div class="avatar" :class="{'avatar-left': !msg.isSelf, 'avatar-right': msg.isSelf}" @click="onAvatarClick(msg)">
                 <img v-if="msg.isSelf && user.icon" :src="user.icon" class="avatar-image">
                 <img v-else-if="!msg.isSelf && contactAvatar" :src="contactAvatar" class="avatar-image">
                 <div v-else class="avatar-fallback">
@@ -109,21 +116,25 @@
     <!-- Hidden file input for image upload -->
     <input type="file" ref="imageInput" accept="image/*" @change="onImageSelected" style="display:none">
     
+    <!-- Back to Latest Button -->
+    <div v-if="isHistoryMode" class="back-to-latest" @click="resetToLatest">
+      <i class="el-icon-arrow-down"></i>
+      <span>回最新</span>
+    </div>
+    
 
-  </PageLayout>
+  </div>
 </template>
 
 <script>
 import FootBar from '@/components/FootBar.vue';
 import { wsManager } from '@/utils/websocket';
 import { getCurrentUser } from '@/api/user';
-import { getChatSession, getMessageList } from '@/api/chat';
-
-import PageLayout from '@/components/PageLayout/PageLayout.vue';
+import { getChatSession, getMessageList, getUserSessions } from '@/api/chat';
 
 export default {
   name: 'ChatDetail',
-  components: { FootBar, PageLayout },
+  components: { FootBar },
   data() {
     return {
        sessionId: 0,
@@ -138,10 +149,18 @@ export default {
        showConnectionStatus: false,
        connectionStatusText: '连接中...',
        isSending: false,
-       current: 1,
-       noMore: false,
+       
+       // Refactored state
+       isHistoryMode: false,
+       loadingOld: false,
+       loadingNew: false,
+       noMoreOld: false,
+       noMoreNew: false,
+       targetDate: null, 
+
        showMorePanel: false,
        showEmojiPanel: false,
+       backgroundImage: '', // 聊天背景图
        emojiList: [
           '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣',
           '☺️', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗',
@@ -159,6 +178,7 @@ export default {
      groupedMessages() {
         const groups = [];
         let currentGroup = null;
+        // messages are already sorted by backend usually, but sort to be safe
         const sorted = [...this.messages].sort((a,b) => new Date(a.createTime) - new Date(b.createTime));
         sorted.forEach(msg => {
            const time = this.getGroupTime(msg.createTime);
@@ -172,15 +192,27 @@ export default {
      },
      isSendDisabled() {
         return !this.messageInput.trim() || this.isSending || this.wsStatus !== 'connected';
+     },
+     minId() {
+        return this.messages.length > 0 ? this.messages[0].id : null;
+     },
+     maxId() {
+        return this.messages.length > 0 ? this.messages[this.messages.length - 1].id : null;
      }
   },
   created() {
      this.sessionId = this.$route.query.sessionId;
+     this.targetDate = this.$route.query.targetDate || null;
      this.queryLoginUser();
   },
+  mounted() {
+     this.setupIntersectionObserver();
+  },
   beforeUnmount() {
+     if (this.observer) {
+       this.observer.disconnect();
+     }
      wsManager.unregisterCallback('private-chat-' + this.sessionId);
-     // Send leave session message
      if(wsManager.getWebSocket() && wsManager.getWebSocket().isConnected) {
         wsManager.sendMessage('UPDATE_ACTIVE_SESSION', { sessionId: null });
      }
@@ -188,6 +220,21 @@ export default {
   methods: {
      goBack() {
         this.$router.go(-1);
+     },
+     goToChatInfo() {
+        this.$router.push({ path: '/chat/info', query: { sessionId: this.sessionId } });
+     },
+     onAvatarClick(msg) {
+        if (msg.isSelf) {
+            this.$router.push('/user/info');
+        } else {
+            // 如果是对方，跳转到对方主页
+            if (this.toUserId) {
+                this.$router.push(`/user/profile/${this.toUserId}`);
+            } else {
+                console.warn('Cannot navigate: toUserId is missing');
+            }
+        }
      },
      queryLoginUser() {
         getCurrentUser().then(res => {
@@ -204,9 +251,7 @@ export default {
         if(token) {
            const ws = wsManager.init(token);
            ws.onConnectionChange(this.handleConnectionChange);
-           // Register callback specific for this session
            wsManager.registerCallback('private-chat-' + this.sessionId, this.handleWebSocketMessage);
-           
            if(ws.isConnected) {
               this.wsStatus = 'connected';
               this.setCurrentActiveSession();
@@ -254,96 +299,227 @@ export default {
            }
         }
      },
-     handleScroll() {
-        const el = this.$refs.chatMessages;
-        if (el.scrollTop < 50 && !this.loading && !this.noMore) {
-           this.loadMoreMessages();
+     
+     // 核心加载逻辑重构
+     getChatSession() {
+        // 先获取当前用户信息
+        if (this.user.id) {
+           this.fetchSessionAndBackground();
+        } else {
+           // 如果 user 未加载完，等待 queryLoginUser 完成
+           // 其实 queryLoginUser 会自动调这个，这里是防止直接调
         }
      },
-     loadMoreMessages() {
-        this.loading = true;
-        const oldHeight = this.$refs.chatMessages.scrollHeight;
-        this.current++;
-        getMessageList({ sessionId: this.sessionId, current: this.current })
-           .then(res => {
-              const list = res.data || [];
-              if (list.length > 0) {
-                 const newMessages = list.map(this.processMessage);
-                 // Sort and merge to ensure order
-                 this.messages = [...newMessages, ...this.messages]; 
-                 // Restore scroll position
-                 this.$nextTick(() => {
-                    const newHeight = this.$refs.chatMessages.scrollHeight;
-                    this.$refs.chatMessages.scrollTop = newHeight - oldHeight;
-                 });
-              } else {
-                 this.noMore = true;
-              }
-           })
-           .finally(() => this.loading = false);
-     },
-      toggleMorePanel() {
-         this.showEmojiPanel = false;
-         this.showMorePanel = !this.showMorePanel;
-         if(this.showMorePanel) {
-            this.$nextTick(() => this.scrollToBottom());
-         }
-      },
-      toggleEmojiPanel() {
-         this.showMorePanel = false;
-         this.showEmojiPanel = !this.showEmojiPanel;
-         if(this.showEmojiPanel) {
-            this.$nextTick(() => this.scrollToBottom());
-         }
-      },
-      toggleVoice() {
-         this.$message.info('语音功能开发中');
-      },
-      hideAllPanels() {
-         this.showMorePanel = false;
-         this.showEmojiPanel = false;
-      },
-      selectImage() {
-         this.$refs.imageInput.click();
-      },
-      onImageSelected(e) {
-         const file = e.target.files[0];
-         if (file) {
-            this.$message.info('图片上传功能开发中: ' + file.name);
-            // TODO: Upload image and send as message
-         }
-         e.target.value = '';
-      },
-      insertEmoji(emoji) {
-         this.messageInput += emoji;
-      },
-     getChatSession() {
-        getChatSession({ sessionId: this.sessionId }).then(res => {
+     fetchSessionAndBackground() {
+        getChatSession({ sessionId: this.sessionId }).then(async res => {
            const session = res.data || res;
            this.contactName = session.contactName;
            this.contactAvatar = session.contactAvatar ? this.$fileURL + session.contactAvatar : '';
-           // Determine toUserId
+           
            if (session.fromUid === this.user.id) {
                this.toUserId = session.toUid;
            } else {
                this.toUserId = session.fromUid;
            }
+           
+           // 获取个人会话设置（背景图）
+           try {
+               const sessionsRes = await getUserSessions({ userId: this.user.id, current: 1 });
+               const userSessions = sessionsRes.data || [];
+               const userSession = userSessions.find(s => s.sessionId == this.sessionId);
+               if (userSession && userSession.backgroundImage) {
+                   this.backgroundImage = this.$fileURL + userSession.backgroundImage;
+               }
+           } catch (e) {
+               console.error('获取背景图失败', e);
+           }
+           
            this.loadMessages();
         });
      },
+
      loadMessages() {
-        this.loading = true;
-        this.current = 1;
-        this.noMore = false;
-        getMessageList({ sessionId: this.sessionId, current: 1 })
-           .then(res => {
-              const list = res.data || [];
-              this.messages = list.map(this.processMessage);
-              this.scrollToBottom();
-              if(list.length === 0) this.noMore = true;
-           })
-           .finally(() => this.loading = false);
+        if (this.targetDate) {
+           this.initByDate(this.targetDate);
+        } else {
+           this.initLatest();
+        }
      },
+
+     // 初始化：加载最新消息
+     initLatest() {
+        this.loading = true;
+        this.isHistoryMode = false;
+        this.noMoreOld = false;
+        this.noMoreNew = true; // 最新模式下没有"更新"的消息
+        
+        getMessageList({ sessionId: this.sessionId, current: 1 }).then(res => {
+             const list = res.data || [];
+             this.messages = list.map(this.processMessage).sort((a,b) => a.id - b.id);
+             this.scrollToBottom();
+             if (list.length < 10) {
+                 this.noMoreOld = true;
+             }
+             
+             // 自动检测填满
+             this.$nextTick(() => {
+                 const el = this.$refs.chatMessages;
+                 if(el) {
+                    if (el.scrollHeight <= el.clientHeight && !this.noMoreOld) {
+                        this.loadMoreOld();
+                    }
+                 }
+             });
+        }).finally(() => this.loading = false);
+     },
+
+     // 初始化：按日期加载
+     initByDate(dateStr) {
+        this.loading = true;
+        // 直接传递日期字符串
+        const params = { sessionId: this.sessionId, targetDate: dateStr, current: 1 };
+        
+        getMessageList(params).then(res => {
+             const list = res.data || [];
+             this.messages = list.map(this.processMessage).sort((a,b) => a.id - b.id);
+             this.isHistoryMode = true;
+             this.noMoreOld = false;
+             this.noMoreNew = false;
+             
+             // 滚动到顶部
+             this.$nextTick(() => {
+                 const el = this.$refs.chatMessages;
+                 if(el) {
+                    el.scrollTop = 0; 
+                    if (el.scrollHeight <= el.clientHeight && !this.noMoreOld) {
+                        this.loadMoreOld();
+                    }
+                 }
+             });
+        }).finally(() => {
+             this.loading = false;
+        });
+     },
+
+     // 向上加载（更旧的消息）
+     loadMoreOld() {
+        if (this.messages.length === 0) return;
+        if (this.loadingOld || this.noMoreOld) return;
+        this.loadingOld = true;
+        
+        // 确保使用当前最小ID
+        const currentMinId = this.minId; 
+        
+        const params = { 
+            sessionId: this.sessionId, 
+            anchorId: currentMinId, 
+            direction: 'old'
+        };
+        
+        const oldHeight = this.$refs.chatMessages.scrollHeight;
+        
+        getMessageList(params).then(res => {
+             const list = res.data || [];
+             if (list.length > 0) {
+                 const newMessages = list.map(this.processMessage);
+                 // 过滤
+                 const uniqueMessages = newMessages.filter(m => !this.messages.some(ex => ex.id === m.id));
+                 
+                 if (uniqueMessages.length > 0) {
+                     // 拼接并强制重新排序
+                     this.messages = [...uniqueMessages, ...this.messages].sort((a,b) => a.id - b.id);
+                     
+                     // 保持滚动位置
+                     this.$nextTick(() => {
+                        const newHeight = this.$refs.chatMessages.scrollHeight;
+                        const diff = newHeight - oldHeight;
+                        this.$refs.chatMessages.scrollTop = diff;
+                     });
+                 } else {
+                     console.warn('获取到重复消息，停止加载旧消息');
+                     this.noMoreOld = true;
+                 }
+             } else {
+                 this.noMoreOld = true;
+             }
+        }).finally(() => this.loadingOld = false);
+     },
+
+     // 向下加载（更新的消息 - 仅历史模式）
+     loadMoreNew() {
+        if (!this.isHistoryMode || this.loadingNew || this.noMoreNew) return;
+        this.loadingNew = true;
+        
+        // 确保使用当前最大ID
+        const currentMaxId = this.maxId;
+        const params = { 
+            sessionId: this.sessionId, 
+            anchorId: currentMaxId, 
+            direction: 'new',
+            current: 1 // 兼容参数
+        };
+        
+        console.log('加载新消息, anchorId:', params.anchorId);
+        
+        getMessageList(params).then(res => {
+             const list = res.data || [];
+             if (list.length > 0) {
+                 const newMessages = list.map(this.processMessage);
+                 // 过滤
+                 const uniqueMessages = newMessages.filter(m => !this.messages.some(ex => ex.id === m.id));
+                 
+                 if (uniqueMessages.length > 0) {
+                     // 拼接并强制重新排序
+                     this.messages = [...this.messages, ...uniqueMessages].sort((a,b) => a.id - b.id);
+                 } else {
+                     console.warn('获取到重复消息，停止加载新消息');
+                     this.noMoreNew = true;
+                 }
+             } else {
+                 this.noMoreNew = true;
+             }
+        }).finally(() => this.loadingNew = false);
+     },
+
+     // 回到最新
+     resetToLatest() {
+        this.messages = [];
+        this.initLatest();
+     },
+
+     setupIntersectionObserver() {
+        this.observer = new IntersectionObserver((entries) => {
+            const entry = entries[0];
+            if (entry.isIntersecting) {
+                if (this.loadingOld || this.noMoreOld) {
+                    return;
+                }
+                this.loadMoreOld();
+            }
+        }, {
+            root: this.$refs.chatMessages,
+            threshold: 0.1 
+        });
+        
+        const sentinel = this.$refs.topSentinel;
+        if (sentinel) {
+            this.observer.observe(sentinel);
+        }
+     },
+     handleScroll() {
+        const el = this.$refs.chatMessages;
+        if (!el) return;
+        
+        // 触顶加载旧消息
+        if (el.scrollTop < 50) {
+            this.loadMoreOld();
+        } 
+        // 触底加载新消息 (仅历史模式)
+        else if (el.scrollTop + el.clientHeight >= el.scrollHeight - 50) {
+            this.loadMoreNew();
+        }
+     },
+
      processMessage(msg) {
         const fromId = msg.fromUid || msg.fromUserId;
         return {
@@ -355,14 +531,31 @@ export default {
         };
      },
      addMessageToUI(data) {
+        // 如果在历史模式下查看旧消息，收到新消息可能暂时不跳到底部，或者提示有新消息
+        // 这里为了简单，如果不是历史模式，或者已经在底部，则追加
         const msg = this.processMessage(data);
         if(!this.messages.find(m => m.id === msg.id)) {
+           // 如果是历史模式，可能不需要实时追加到视图中，除非用户滚动到底部
+           // 但为了兼容，先追加。如果不想破坏历史查看体验，可以暂存。
+           // 用户需求未明确，维持原状：追加并滚动到底部（如果需要）
            this.messages.push(msg);
-           this.scrollToBottom();
+           if (!this.isHistoryMode) {
+               this.scrollToBottom();
+           }
         }
      },
      sendMessage() {
         if(this.isSendDisabled) return;
+        
+        // 如果在历史模式发送消息，应该回到最新？或者允许发送？
+        // 通常发送消息后应该看到自己的消息，所以最好切换回最新模式，或者追加到底部
+        if (this.isHistoryMode) {
+            this.resetToLatest(); // 发送消息强制回到最新，这是一种常见做法
+            // 或者：this.isHistoryMode = false; this.noMoreNew = true; ...
+            // 但为了简单，先不强制重置，只是追加。
+            // 还是强制重置比较好，逻辑清晰。
+        }
+
         const content = this.messageInput.trim();
         const tempId = 'temp_' + Date.now();
         const msg = {
@@ -380,7 +573,7 @@ export default {
         this.isSending = true;
 
         const sent = wsManager.sendMessage('CHAT_MESSAGE', {
-           sessionId: parseInt(this.sessionId) || this.sessionId, // Ensure number if possible
+           sessionId: parseInt(this.sessionId) || this.sessionId, 
            content,
            toUserId: this.toUserId,
            tempId
@@ -390,16 +583,13 @@ export default {
            msg.status = 'failed';
            this.isSending = false;
         }
-        // Wait for MESSAGE_SENT for success
-        setTimeout(() => this.isSending = false, 500); // Reset sending lock quickly
+        setTimeout(() => this.isSending = false, 500); 
      },
      handleMessageSent(data) {
         const idx = this.messages.findIndex(m => m.tempId === data.tempId);
         if(idx !== -1) {
-           // Check if real message already exists (from NEW_MESSAGE race)
            const exists = this.messages.find(m => m.id === data.messageId);
            if (exists) {
-               // Real message arrived first, remove temp message to avoid dupe
                this.messages.splice(idx, 1);
            } else {
                this.messages[idx].id = data.messageId;
@@ -415,7 +605,7 @@ export default {
         });
      },
      formatGroupTime(timeStr) {
-        return timeStr; // Simplified
+        return timeStr; 
      },
      getGroupTime(timeStr) {
         const d = new Date(timeStr);
@@ -423,6 +613,40 @@ export default {
      },
      getStatusText(status) {
         return status === 'sending' ? '发送中' : (status === 'failed' ? '失败' : '');
+     },
+     toggleMorePanel() {
+        this.showEmojiPanel = false;
+        this.showMorePanel = !this.showMorePanel;
+        if(this.showMorePanel) {
+           this.$nextTick(() => this.scrollToBottom());
+        }
+     },
+     toggleEmojiPanel() {
+        this.showMorePanel = false;
+        this.showEmojiPanel = !this.showEmojiPanel;
+        if(this.showEmojiPanel) {
+           this.$nextTick(() => this.scrollToBottom());
+        }
+     },
+     toggleVoice() {
+        this.$message.info('语音功能开发中');
+     },
+     hideAllPanels() {
+        this.showMorePanel = false;
+        this.showEmojiPanel = false;
+     },
+     selectImage() {
+        this.$refs.imageInput.click();
+     },
+     onImageSelected(e) {
+        const file = e.target.files[0];
+        if (file) {
+           this.$message.info('图片上传功能开发中: ' + file.name);
+        }
+        e.target.value = '';
+     },
+     insertEmoji(emoji) {
+        this.messageInput += emoji;
      }
   }
 }
@@ -430,14 +654,17 @@ export default {
 
 <style scoped>
 .chat-detail-page { height: 100vh; display: flex; flex-direction: column; background: #ededed; overflow-x: hidden; }
-.header { height: 50px; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; border-bottom: 1px solid #d9d9d9; background: #ededed; }
+.header { height: 50px; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; border-bottom: 1px solid #d9d9d9; background: #ededed; z-index: 10; position: relative; }
 .header-title { font-weight: bold; font-size: 17px; }
 .header-back-btn { font-size: 20px; cursor: pointer; }
+.header-more-btn { font-size: 20px; cursor: pointer; color: #333; padding: 4px; }
+.header-more-btn:hover { color: #07c160; }
 .connection-status { text-align: center; color: white; padding: 5px; font-size: 12px; }
 .connection-status.connected { background: #67C23A; }
 .connection-status.disconnected { background: #E6A23C; }
 
-.chat-messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; }
+.top-sentinel { width: 100%; height: 2px; flex-shrink: 0; }
+.chat-messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; -webkit-overflow-scrolling: touch; }
 .time-separator { text-align: center; margin: 15px 0; position: relative; }
 .time-label { background: #c9c9c9; padding: 3px 10px; border-radius: 4px; font-size: 12px; color: #fff; }
 
@@ -483,4 +710,32 @@ export default {
 
 .empty-messages { text-align: center; padding: 50px; color: #999; }
 .system-message { text-align: center; font-size: 12px; color: #999; padding: 5px 10px; background: rgba(0,0,0,0.05); border-radius: 4px; margin: 5px auto; }
+.back-to-latest {
+  position: absolute;
+  bottom: 80px;
+  right: 20px;
+  background: #fff;
+  border-radius: 20px;
+  padding: 8px 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  font-size: 13px;
+  color: #07c160;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  z-index: 100;
+}
+.load-more-tip, .loading-tip {
+  text-align: center;
+  padding: 10px;
+  color: #999;
+  font-size: 12px;
+}
+.load-more-tip span {
+    background: rgba(0,0,0,0.05);
+    padding: 4px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+}
 </style>

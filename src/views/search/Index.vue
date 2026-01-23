@@ -188,40 +188,47 @@
                          <!-- Seckill Vouchers -->
                          <div v-if="seckillVouchers.length > 0" class="seckill-wrapper">
                              <div class="voucher-category-title seckill">限时秒杀券</div>
-                             <div class="flash-sale-card" v-for="v in seckillVouchers" :key="v.id" @click="toShopDetail(v)">
-                                 <div class="flash-badge">秒杀</div>
-                                 <div class="flash-content">
-                                    <div class="flash-header">
-                                       <div class="flash-title" v-html="v.title"></div>
-                                       <div class="flash-shop" v-if="v.shopId">
-                                          <span class="shop-label">适用商铺:</span>
-                                          <span class="shop-name">{{v.shopName || '家味道家常菜馆'}}</span>
-                                       </div>
-                                       <div class="flash-subtitle" v-html="v.subTitle || '周一至周五均可使用'"></div>
-                                       <div class="flash-time-range" v-if="v.beginTime && v.endTime" style="font-size: 11px; color: #ff5000; margin-top: 4px;">{{formatSeckillTime(v)}}</div>
+                             <div class="voucher-card-v2 seckill" v-for="v in seckillVouchers" :key="v.id" @click="toShopDetail(v)">
+                                 <!-- Card Header -->
+                                 <div class="voucher-card-header">
+                                    <div class="voucher-title-row">
+                                       <span class="voucher-title" v-html="v.title || (v.actualValue + '元代金券')"></span>
+                                       <span class="voucher-flash-tag"><i class="el-icon-time"></i> 限时抢</span>
                                     </div>
-                                    <div class="flash-footer">
-                                       <div class="flash-price-section">
-                                          <div class="flash-price">
-                                             <span class="price-symbol">￥</span>
-                                             <span class="price-value">{{v.payValue}}</span>
-                                          </div>
-                                          <div class="price-original">
-                                             <span class="original-value">￥{{v.actualValue}}</span>
-                                             <span class="discount-tag">{{(v.payValue/v.actualValue*10).toFixed(1)}}折</span>
-                                          </div>
+                                    <div class="voucher-shops" v-if="v.shopName">
+                                       <span class="shop-label">适用商铺：</span>
+                                       <span class="shop-names">{{v.shopName}}</span>
+                                    </div>
+                                    <div class="voucher-time" v-if="v.beginTime && v.endTime">
+                                       <i class="el-icon-time"></i> {{formatSeckillTime(v)}}
+                                    </div>
+                                    <div class="voucher-validity" v-if="getValidityText(v)">
+                                       <i class="el-icon-calendar"></i> {{getValidityText(v)}}
+                                    </div>
+                                 </div>
+                                 <!-- Card Body (Gradient) -->
+                                 <div class="voucher-card-body gradient-pink">
+                                    <div class="voucher-price-section">
+                                       <div class="voucher-current-price">
+                                          <span class="price-symbol">¥</span>
+                                          <span class="price-value">{{v.payValue}}</span>
                                        </div>
-                                       <div class="flash-action">
-                                          <div class="progress-wrapper">
-                                             <div class="progress-bar">
-                                                <div class="progress-fill" :style="{width: getStockPercent(v) + '%'}"></div>
-                                             </div>
-                                             <div class="progress-text">已抢{{100 - getStockPercent(v)}}% | 剩{{v.stock}}张</div>
-                                          </div>
-                                          <button class="flash-btn" @click.stop="doSeckill(v)" :class="{disabled: isNotBegin(v) || v.stock < 1}">
-                                             {{ isNotBegin(v) ? '待开始' : (v.stock < 1 ? '已抢光' : '限时抢购') }}
-                                          </button>
+                                       <div class="voucher-original-info">
+                                          <span class="original-price">¥{{v.actualValue}}</span>
+                                          <span class="discount-badge">{{(v.payValue/v.actualValue*10).toFixed(1)}}折</span>
                                        </div>
+                                       <div class="voucher-sold-info">
+                                          已售{{100 - getStockPercent(v)}}%
+                                       </div>
+                                       <div class="voucher-progress-bar">
+                                          <div class="progress-fill" :style="{width: (100 - getStockPercent(v)) + '%'}"></div>
+                                       </div>
+                                    </div>
+                                    <div class="voucher-action-section">
+                                       <button class="voucher-buy-btn pink-text" @click.stop="doSeckill(v)" :disabled="isNotBegin(v) || v.stock < 1">
+                                          {{ isNotBegin(v) ? '待开始' : (v.stock < 1 ? '已抢光' : '立即抢购') }}
+                                       </button>
+                                       <div class="voucher-stock">剩{{v.stock}}张</div>
                                     </div>
                                  </div>
                              </div>
@@ -230,20 +237,44 @@
                          <!-- Normal Vouchers -->
                          <div v-if="normalVouchers.length > 0">
                              <div class="voucher-category-title normal">普通代金券</div>
-                             <div class="normal-voucher-card" v-for="v in normalVouchers" :key="v.id" @click="toShopDetail(v)">
-                                 <div class="normal-price-section">
-                                    <div class="normal-price">
-                                       <span class="price-symbol">￥</span>
-                                       <span class="price-value">{{v.payValue}}</span>
+                             <div class="voucher-card-v2 normal" v-for="v in normalVouchers" :key="v.id" @click="toShopDetail(v)">
+                                 <!-- Card Header -->
+                                 <div class="voucher-card-header">
+                                    <div class="voucher-title-row">
+                                       <span class="voucher-title" v-html="v.title || (v.actualValue + '元代金券')"></span>
                                     </div>
-                                    <div class="normal-discount">{{(v.payValue/v.actualValue*10).toFixed(1)}}折</div>
+                                    <div class="voucher-subtitle">
+                                       <span v-html="v.subTitle || '周一至周五均可使用'"></span>
+                                    </div>
+                                    <div class="voucher-usage-time">
+                                       <i class="el-icon-time"></i> <span v-html="v.subTitle || '周一至周五均可使用'"></span>
+                                    </div>
+                                    <div class="voucher-validity" v-if="getValidityText(v)">
+                                       <i class="el-icon-calendar"></i> {{getValidityText(v)}}
+                                    </div>
                                  </div>
-                                 <div class="normal-info">
-                                    <div class="normal-title" v-html="v.title"></div>
-                                    <div class="normal-subtitle" v-html="v.subTitle || '周一至周五均可使用'"></div>
-                                 </div>
-                                 <div class="normal-action">
-                                    <button class="normal-btn" @click.stop="doBuy(v)">抢购</button>
+                                 <!-- Card Body (Orange Gradient) -->
+                                 <div class="voucher-card-body gradient-orange">
+                                    <div class="voucher-price-section">
+                                       <div class="voucher-current-price">
+                                          <span class="price-symbol">¥</span>
+                                          <span class="price-value">{{v.payValue}}</span>
+                                       </div>
+                                       <div class="voucher-original-info">
+                                          <span class="original-price">¥{{v.actualValue}}</span>
+                                          <span class="discount-badge">{{(v.payValue/v.actualValue*10).toFixed(1)}}折</span>
+                                       </div>
+                                       <div class="voucher-sold-info">
+                                          已售{{100 - getStockPercent(v)}}%
+                                       </div>
+                                       <div class="voucher-progress-bar">
+                                          <div class="progress-fill" :style="{width: (100 - getStockPercent(v)) + '%'}"></div>
+                                       </div>
+                                    </div>
+                                    <div class="voucher-action-section">
+                                       <button class="voucher-buy-btn" @click.stop="doBuy(v)">立即抢购</button>
+                                       <div class="voucher-stock">剩{{v.stock}}张</div>
+                                    </div>
                                  </div>
                              </div>
                          </div>
@@ -564,6 +595,22 @@ export default {
     getVoucherTypeName(val) {
         const t = this.voucherTypeOptions.find(t => t.value === val);
         return t ? t.label : "";
+    },
+    getValidityText(v) {
+        if (v.validityType === 1 && v.useStartTime && v.useEndTime) {
+            const start = v.useStartTime.split(' ')[0] || '';
+            const end = v.useEndTime.split(' ')[0] || '';
+            return `${start} 至 ${end} 有效`;
+        } else if (v.validityType === 2 && v.validDays) {
+            return `领取/购买后 ${v.validDays} 天内有效`;
+        }
+        // Fallback: Use beginTime/endTime if validity fields are missing
+        if (v.beginTime && v.endTime) {
+             const start = String(v.beginTime).split(' ')[0];
+             const end = String(v.endTime).split(' ')[0];
+             return `${start} 至 ${end} 有效`;
+        }
+        return '';
     },
 
     // Filter Logic
@@ -2312,5 +2359,247 @@ export default {
 }
 .filter-content.show {
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* ===== Voucher Card V2 Styles ===== */
+.voucher-card-v2 {
+    background: #fff;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.voucher-category-title {
+    font-size: 16px;
+    font-weight: 800;
+    margin: 16px 12px 8px;
+    letter-spacing: 0.5px;
+}
+
+.voucher-category-title.seckill {
+    color: #D9001B; /* 鲜艳的红色 */
+}
+
+.voucher-category-title.normal {
+    color: #333333;
+    margin-top: 24px;
+}
+
+.voucher-card-header {
+    padding: 14px 16px 10px;
+}
+
+.voucher-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.voucher-title {
+    font-size: 17px;
+    font-weight: 600;
+    color: #333;
+}
+
+.voucher-flash-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    background: linear-gradient(135deg, #ff6b6b, #ff2d55);
+    color: #fff;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 500;
+}
+
+.voucher-shops {
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 4px;
+}
+
+.voucher-shops .shop-label {
+    color: #999;
+}
+
+.voucher-shops .shop-names {
+    color: #333;
+}
+
+.voucher-time, .voucher-usage-time {
+    font-size: 12px;
+    color: #ff5000;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.voucher-subtitle {
+    font-size: 13px;
+    color: #999;
+    margin-bottom: 4px;
+}
+
+.voucher-card-body {
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-radius: 12px;
+    margin: 0 10px 10px;
+}
+
+.voucher-card-body.gradient-pink {
+    background: linear-gradient(135deg, #ff6b9d 0%, #ff8a9d 50%, #ffb5c5 100%);
+}
+
+.voucher-card-body.gradient-orange {
+    background: linear-gradient(135deg, #ff9500 0%, #ffb347 50%, #ffc980 100%);
+}
+
+.voucher-price-section {
+    flex: 1;
+}
+
+.voucher-current-price {
+    display: flex;
+    align-items: baseline;
+    color: #fff;
+    margin-bottom: 4px;
+}
+
+.voucher-current-price .price-symbol {
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.voucher-current-price .price-value {
+    font-size: 42px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.voucher-original-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.voucher-original-info .original-price {
+    font-size: 14px;
+    color: rgba(255,255,255,0.8);
+    text-decoration: line-through;
+}
+
+.voucher-original-info .discount-badge {
+    background: rgba(255,255,255,0.25);
+    color: #fff;
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.voucher-sold-info {
+    font-size: 12px;
+    color: rgba(255,255,255,0.9);
+    margin-bottom: 6px;
+}
+
+.voucher-progress-bar {
+    width: 70%;
+    height: 6px;
+    background: rgba(255,255,255,0.3);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.voucher-progress-bar .progress-fill {
+    height: 100%;
+    background: rgba(255,255,255,0.9);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+.voucher-action-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.voucher-buy-btn {
+    background: #fff;
+    color: #ff5000;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.voucher-buy-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.voucher-buy-btn:active {
+    transform: scale(0.98);
+}
+
+.voucher-buy-btn:disabled {
+    background: rgba(255,255,255,0.6);
+    color: #999;
+    cursor: not-allowed;
+}
+
+.voucher-stock {
+    font-size: 12px;
+    color: rgba(255,255,255,0.9);
+}
+
+.voucher-validity {
+    font-size: 12px;
+    color: #666;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+}
+.voucher-validity i {
+    color: #ff5000;
+}
+
+.voucher-title-row {
+    align-items: flex-start; /* Ensure alignment if title wraps */
+}
+
+.voucher-card-v2 .voucher-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #333;
+    line-height: 1.4;
+}
+
+.voucher-flash-tag {
+    margin-left: 6px;
+    vertical-align: middle;
+    display: inline-flex;
+}
+
+.voucher-buy-btn.pink-text {
+    color: #ff3d7f;
+}
+
+.voucher-buy-btn:disabled {
+    color: #999 !important;
 }
 </style>

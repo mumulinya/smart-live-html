@@ -137,6 +137,16 @@ const routes = [
         component: () => import('@/views/chat/Detail.vue')
     },
     {
+        path: '/chat/info',
+        name: 'ChatInfo',
+        component: () => import('@/views/chat/ChatInfo.vue')
+    },
+    {
+        path: '/chat/history-calendar',
+        name: 'ChatHistoryCalendar',
+        component: () => import('@/views/chat/ChatHistoryCalendar.vue')
+    },
+    {
         path: '/comment/list',
         name: 'CommentList',
         component: () => import('@/views/comment/List.vue')

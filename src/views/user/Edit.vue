@@ -392,6 +392,13 @@ export default {
             this.$message.success("修改成功");
         });
     },
+    handleNicknameConfirm(val) {
+        updateUser({ id: this.user.id, nickName: val }).then(() => {
+            this.user.nickName = val;
+            this.showNickNameDialog = false;
+            this.$message.success("修改成功");
+        });
+    },
     handleIntroduceConfirm(val) {
         updateUserInfo({ userId: this.user.id, introduce: val }).then(() => {
             this.info.introduce = val;

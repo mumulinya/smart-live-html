@@ -29,3 +29,13 @@ export function deleteUserSession(sessionId) {
 export function togglePinUserSession(data) {
     return request.put('/app/chat/userSession/isPin', data);
 }
+
+// 获取聊天记录活跃日期列表
+export function getHistoryDates(params) {
+    return request.get('/app/chat/message/history/dates', { params });
+}
+
+// 修改用户会话背景图
+export function updateBackgroundImage(data) {
+    return request.put('/app/chat/userSession/backgroundImage', data);
+}

@@ -3,17 +3,16 @@
     <!-- Header -->
     <div class="ai-header">
       <div class="header-left">
-        <!-- 汉堡菜单按钮 -->
         <i class="el-icon-s-fold menu-btn" @click="toggleSidebar"></i>
       </div>
       <div class="header-center">
-        <span class="logo-text">{{ sessionTitle || '天机AI助理' }}</span>
-        <!-- 当前话题标签 -->
+        <span class="header-logo-icon">✦</span>
+        <span class="logo-text">{{ sessionTitle || '只因智能助手' }}</span>
         <span class="topic-tag" v-if="currentTopic">{{ currentTopic }}</span>
       </div>
       <div class="header-right">
         <div class="tools">
-           <i class="el-icon-s-operation" @click="toggleSettings" title="设置"></i>
+           <i class="el-icon-setting" @click="toggleSettings" title="设置"></i>
            <i class="el-icon-close" @click="goBack" title="退出"></i>
         </div>
       </div>
@@ -104,23 +103,35 @@
       <!-- Empty State -->
       <div v-if="messages.length === 0" class="empty-state">
          <div class="welcome-visual">
-            <div class="chick-wrapper">
-               <img src="@/assets/ai-avatar.jpg" class="chick-img-custom" />
+            <div class="mascot-wrapper">
+               <div class="mascot-glow"></div>
+               <div class="mascot-card">
+                  <img src="@/assets/ai-avatar.jpg" class="mascot-img" />
+               </div>
                <div class="hi-bubble">Hi</div>
             </div>
          </div>
-         <h3 class="welcome-title">Hello, 我是小只因！</h3>
-         <p class="welcome-desc">我是您的智能生活助手，我可以帮您查询附近的热门店铺，搜索超值代金券，还能直接为您下单抢购优惠券，让生活更省心！</p>
+         <h3 class="welcome-title">Hello, 我是小只因!</h3>
+         <p class="welcome-desc">我是您的智能生活助手，我可以帮您查询附近的热门店铺<br>搜索超值代金券服务，还能直接为您下单特惠优惠券，让生活更省心</p>
          
          <div class="suggestion-area">
             <div class="s-header">
-               <span>试试这样问我:</span>
-               <span class="refresh-btn"><i class="el-icon-refresh"></i> 换一换</span>
+               <span class="s-header-text">试试这样问我:</span>
+               <span class="refresh-btn" @click="refreshSuggestions"><i class="el-icon-refresh-right"></i> 换一换</span>
             </div>
-            <div class="suggestion-chips">
-               <div class="chip" @click="quickAsk('查找店铺')">帮我找附近评分最高的火锅店</div>
-               <div class="chip" @click="quickAsk('搜索优惠')">查询附近的可用代金券</div>
-               <div class="chip" @click="quickAsk('下单代金券')">帮我下单一张肯德基的套餐券</div>
+            <div class="suggestion-list">
+               <div class="suggestion-card" @click="quickAsk('帮我找附近评分最高的火锅店')">
+                  <div class="card-icon"><i class="el-icon-search"></i></div>
+                  <span class="card-text">帮我找附近评分最高的火锅店</span>
+               </div>
+               <div class="suggestion-card" @click="quickAsk('查询附近的可用代金券')">
+                  <div class="card-icon"><i class="el-icon-search"></i></div>
+                  <span class="card-text">查询附近的可用代金券</span>
+               </div>
+               <div class="suggestion-card" @click="quickAsk('帮我下单一张首选基础套餐卷')">
+                  <div class="card-icon"><i class="el-icon-search"></i></div>
+                  <span class="card-text">帮我下单一张首选基础套餐卷</span>
+               </div>
             </div>
          </div>
       </div>
@@ -402,6 +413,12 @@ const quickAsk = (text) => {
   handleSend();
 };
 
+// 刷新建议
+const refreshSuggestions = () => {
+  ElMessage.info('正在刷新建议...');
+  // TODO: 可以调用 API 获取新的建议
+};
+
 // 创建新会话
 const createSession = async () => {
   try {
@@ -613,12 +630,22 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 8px;
+}
+.header-logo-icon {
+  font-size: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 .logo-text {
   font-size: 17px;
   font-weight: 700;
-  color: #1f2937;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 .header-right .tools {
   display: flex;
@@ -984,11 +1011,12 @@ textarea:disabled {
   flex: 1;
   overflow-y: auto;
   padding: 30px;
+  padding-bottom: 80px;
   scroll-behavior: smooth;
 }
 
 .empty-state {
-  margin-top: 60px;
+  margin-top: 40px;
   text-align: center;
   color: #333;
   padding: 0 20px;
@@ -996,82 +1024,121 @@ textarea:disabled {
 .welcome-visual {
   margin-bottom: 24px;
 }
-.chick-wrapper {
+/* 吉祥物包装器 */
+.mascot-wrapper {
   position: relative;
   display: inline-block;
+  width: 140px;
+  height: 160px;
 }
-.chick-img {
-  font-size: 72px;
-  animation: bounce 2s ease-in-out infinite;
-}
-.chick-img-custom {
-  width: 80px;
-  height: 80px;
+/* 光晕背景效果 */
+.mascot-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 140px;
+  height: 140px;
   border-radius: 50%;
+  background: radial-gradient(circle, rgba(102, 126, 234, 0.3) 0%, rgba(118, 75, 162, 0.15) 50%, transparent 70%);
+  animation: glow-pulse 3s ease-in-out infinite;
+}
+@keyframes glow-pulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
+  50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+}
+/* 吉祥物卡片 */
+.mascot-card {
+  position: relative;
+  z-index: 2;
+  width: 100px;
+  height: 120px;
+  margin: 20px auto 0;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(102, 126, 234, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 3px solid rgba(102, 126, 234, 0.3);
+}
+.mascot-img {
+  width: 90%;
+  height: 90%;
   object-fit: cover;
-  animation: bounce 2s ease-in-out infinite;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  border-radius: 8px;
 }
-@keyframes bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-}
+/* Hi 气泡 */
 .hi-bubble {
   position: absolute;
-  top: -10px;
-  right: -30px;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: #fff;
   padding: 6px 14px;
-  border-radius: 16px;
+  border-radius: 20px;
   font-size: 14px;
   font-weight: 600;
   box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-  animation: pulse 2s ease-in-out infinite;
+  animation: bubble-bounce 2s ease-in-out infinite;
 }
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
+@keyframes bubble-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
 }
+/* 欢迎标题 */
 .welcome-title {
-  font-size: 24px;
+  font-size: 26px;
   font-weight: 700;
-  color: #1f2937;
-  margin: 0 0 12px;
+  margin: 20px 0 16px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+/* 欢迎描述 */
 .welcome-desc {
-  font-size: 15px;
+  font-size: 14px;
   color: #6b7280;
-  max-width: 420px;
-  margin: 0 auto 32px;
-  line-height: 1.6;
+  max-width: 380px;
+  margin: 0 auto 16px;
+  line-height: 1.8;
 }
+/* 心形图标 */
+.heart-icon {
+  font-size: 18px;
+  margin-bottom: 32px;
+}
+/* 建议区域 */
 .suggestion-area {
-  max-width: 600px;
+  max-width: 500px;
   margin: 0 auto;
+  text-align: left;
 }
 .s-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
+  padding: 0 4px;
+}
+.s-header-text {
   font-size: 14px;
-  color: #666;
+  color: #6b7280;
 }
 .refresh-btn {
   display: flex;
   align-items: center;
   gap: 4px;
   cursor: pointer;
-  color: #3b82f6;
+  color: #667eea;
+  font-size: 14px;
   transition: all 0.2s;
 }
 .refresh-btn:hover {
-  color: #2563eb;
+  color: #764ba2;
 }
 .refresh-btn i {
   transition: transform 0.3s;
@@ -1079,31 +1146,47 @@ textarea:disabled {
 .refresh-btn:hover i {
   transform: rotate(180deg);
 }
-.suggestion-chips {
+/* 建议卡片列表 */
+.suggestion-list {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+  flex-direction: column;
   gap: 12px;
 }
-.chip {
-  padding: 12px 20px;
+.suggestion-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
   background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
+  border: 1px solid #e8e8f0;
+  border-radius: 12px;
   cursor: pointer;
-  color: #374151;
-  font-size: 14px;
   transition: all 0.3s;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-  max-width: 200px;
-  text-align: left;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
 }
-.chip:hover {
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+.suggestion-card:hover {
   border-color: #667eea;
-  color: #667eea;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.15);
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.15);
+}
+.card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.1) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.card-icon i {
+  font-size: 18px;
+  color: #667eea;
+}
+.card-text {
+  font-size: 15px;
+  color: #333;
+  flex: 1;
 }
 
 .message-list {
@@ -1215,33 +1298,50 @@ textarea:disabled {
 }
 
 .footer-input {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
   background: #fff;
-  padding: 16px 20px;
-  box-shadow: 0 -4px 20px rgba(0,0,0,0.04);
-  z-index: 10;
+  padding: 12px 16px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  box-shadow: 0 -2px 12px rgba(0,0,0,0.03);
+  z-index: 100;
 }
 .input-container {
   max-width: 800px;
   margin: 0 auto;
   border: 1px solid #e5e7eb;
-  background: #fff;
-  border-radius: 16px;
-  padding: 12px 16px;
+  background: #f9fafb;
+  border-radius: 24px;
+  padding: 8px 16px;
   transition: all 0.3s;
 }
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .footer-input {
+    padding: 10px 12px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom));
+  }
+  .input-container {
+    border-radius: 20px;
+    padding: 6px 12px;
+  }
+}
 .input-container:focus-within {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #667eea;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 textarea {
   width: 100%;
-  min-height: 40px;
-  max-height: 120px;
+  min-height: 24px;
+  max-height: 80px;
   border: none;
   resize: none;
   outline: none;
-  font-size: var(--ai-font-size, 15px);
+  font-size: 14px;
   color: #333;
   line-height: 1.5;
   background: transparent;
@@ -1255,23 +1355,23 @@ textarea:disabled {
   cursor: not-allowed;
 }
 
-/* 输入框底部工具栏 */
+/* 输入框工具栏 */
 .input-toolbar {
   display: flex;
-  justify-content: flex-end; /* Align to right */
+  justify-content: flex-end;
   align-items: center;
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid #f3f4f6;
+  margin-top: 4px;
+  padding-top: 0;
+  border-top: none;
 }
 .toolbar-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 .send-btn {
-  width: 38px;
-  height: 38px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   border: none;
   display: flex;
@@ -1284,13 +1384,13 @@ textarea:disabled {
 }
 .send-btn:not(:disabled) {
   background: linear-gradient(135deg, #818cf8 0%, #6366f1 100%);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
 }
 .send-btn:not(:disabled):hover {
   transform: scale(1.05);
 }
 .send-btn i { 
-  font-size: 18px; 
+  font-size: 16px; 
 }
 
 /* 深色主题 */

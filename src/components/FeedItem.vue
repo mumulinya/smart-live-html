@@ -87,6 +87,9 @@
                 <span class="symbol">¥</span>
                 <span class="amount">{{ item.price || item.payValue }}</span>
                 <span class="orig">¥{{ item.originalPrice || item.actualValue }}</span>
+                <span class="discount-tag" v-if="(item.price || item.payValue) && (item.originalPrice || item.actualValue)">
+                    {{ ((item.price || item.payValue) / (item.originalPrice || item.actualValue) * 10).toFixed(1) }}折
+                </span>
             </div>
             <div class="grab-btn" :class="{ disabled: buttonState.disabled }">
                 {{ buttonState.disabled ? buttonState.text : '抢购中' }}
@@ -108,6 +111,12 @@
                  {{ seckillTimeText }}
              </div>
          </div>
+         <div class="seckill-bottom" v-if="getValidityText(item)">
+             <div class="time-info">
+                 <van-icon name="calendar-o" color="#fff" size="12" style="margin-right: 2px;" />
+                 {{ getValidityText(item) }}
+             </div>
+         </div>
          
          <!-- 进度条 -->
          <div class="progress-bar-track">
@@ -115,39 +124,56 @@
          </div>
       </div>
 
-      <!-- Type 2: 普通商品/代金券 (原样式) -->
-      <div v-else class="product-body" :class="{ 'has-expired': buttonState.disabled }">
-        <div class="product-info">
-          <div class="price-row">
-            <span class="currency">¥</span>
-            <span class="main-price">{{ item.price || item.payValue }}</span>
-            <span class="original-price" v-if="item.originalPrice || item.actualValue">¥{{ item.originalPrice || item.actualValue }}</span>
-          </div>
-          <div class="product-title">
-            <van-tag plain :type="isVoucher ? 'primary' : 'success'" size="small" class="product-tag">
-              {{ isVoucher ? '代金券' : '团购' }}
-            </van-tag>
-            <span class="title-text">{{ item.title || item.voucherName }}</span>
-          </div>
-          <div v-if="isVoucher && item.beginTime && item.endTime" class="seckill-time">
-            <van-icon name="clock-o" size="11" />
-            {{ formatSeckillTime(item.beginTime) }} - {{ formatSeckillTime(item.endTime) }}
-          </div>
-        </div>
-        
-        <!-- 正常状态：渐变按钮 -->
-        <button 
-          v-if="!buttonState.disabled"
-          class="action-btn gradient"
-          @click.stop="handleButtonClick"
-        >
-          {{ buttonState.text }}
-        </button>
-        
-        <!-- 失效状态：印章效果 -->
-        <div v-else class="stamp-overlay">
-          <span class="stamp-text">{{ buttonState.text }}</span>
-        </div>
+      <!-- 非秒杀代金券 - 使用秒杀券同款样式 -->
+      <div v-if="!isSeckill" class="seckill-body normal-voucher" @click.stop="handleButtonClick">
+         <div class="seckill-top">
+            <div class="price-box">
+                <span class="symbol">¥</span>
+                <span class="amount">{{ item.price || item.payValue }}</span>
+                <span class="orig">¥{{ item.originalPrice || item.actualValue }}</span>
+                <span class="discount-tag" v-if="(item.price || item.payValue) && (item.originalPrice || item.actualValue)">
+                    {{ ((item.price || item.payValue) / (item.originalPrice || item.actualValue) * 10).toFixed(1) }}折
+                </span>
+            </div>
+            <div class="grab-btn" :class="{ disabled: buttonState.disabled }">
+                {{ buttonState.disabled ? buttonState.text : '去看看' }}
+            </div>
+         </div>
+         
+         <div class="seckill-mid">
+             <span class="white-tag">代金券</span>
+             <span class="seckill-title">{{ item.voucherName || item.title || (item.actualValue + '元代金券') }}</span>
+         </div>
+         
+         <div class="seckill-bottom">
+             <div class="progress-info" v-if="item.sold">
+                 <van-icon name="fire" color="#fff" size="12" />
+                 <span>已抢 {{ item.sold }}/{{ (item.sold || 0) + (item.stock || 100) }}</span>
+             </div>
+             <!-- 如果没有已售信息，显示 subtitle 作为第一行信息 -->
+             <div class="time-info" v-else-if="item.subTitle">
+                 <van-icon name="clock-o" color="#fff" size="12" style="margin-right: 2px;" />
+                 {{ item.subTitle }}
+             </div>
+             <!-- 这里的 Time Info 实际上是 Validity -->
+             <div class="time-info" v-if="getValidityText(item)">
+                 <van-icon name="calendar-o" color="#fff" size="12" style="margin-right: 2px;" />
+                 {{ getValidityText(item) }}
+             </div>
+         </div>
+         
+         <!-- 如果有 subtitles 且上面没显示(即有sold信息)，额外显示一行 -->
+         <div class="seckill-bottom" v-if="item.sold && item.subTitle">
+             <div class="time-info">
+                 <van-icon name="clock-o" color="#fff" size="12" style="margin-right: 2px;" />
+                 {{ item.subTitle }}
+             </div>
+         </div>
+         
+         <!-- 进度条 -->
+         <div class="progress-bar-track" v-if="item.stock">
+             <div class="progress-bar-fill" :style="{ width: getProgress(item) + '%' }"></div>
+         </div>
       </div>
     </template>
   </div>
@@ -297,6 +323,17 @@ const getProgress = (item) => {
 
 const handleClick = () => emit('click', props.item);
 const handleButtonClick = () => { if (!buttonState.value.disabled) emit('action', props.item); };
+
+const getValidityText = (item) => {
+    if (item.validityType === 1 && item.useStartTime && item.useEndTime) {
+        const start = item.useStartTime.split(' ')[0] || '';
+        const end = item.useEndTime.split(' ')[0] || '';
+        return `${start} 至 ${end} 有效`;
+    } else if (item.validityType === 2 && item.validDays) {
+        return `领取/购买后 ${item.validDays} 天内有效`;
+    }
+    return '';
+};
 </script>
 
 <style scoped>
@@ -417,6 +454,15 @@ const handleButtonClick = () => { if (!buttonState.value.disabled) emit('action'
   border-radius: 8px; 
   border: 1px solid; 
 }
+
+/* Normal Voucher Override (Orange Theme) */
+.seckill-body.normal-voucher {
+    background: linear-gradient(90deg, #FF9000 0%, #FFB600 100%);
+    box-shadow: 0 4px 12px rgba(255, 144, 0, 0.2);
+}
+.normal-voucher .white-tag {
+    color: #FF9000;
+}
 .outline-red {
     border-color: #FF2442 !important;
     color: #FF2442 !important;
@@ -446,6 +492,15 @@ const handleButtonClick = () => { if (!buttonState.value.disabled) emit('action'
 .seckill-top .symbol { font-size: 18px; font-weight: 700; margin-right: 2px; }
 .seckill-top .amount { font-size: 34px; font-weight: 700; font-family: 'DIN Alternate', sans-serif; line-height: 1; }
 .seckill-top .orig { font-size: 14px; text-decoration: line-through; margin-left: 8px; opacity: 0.8; }
+.seckill-top .discount-tag {
+    background: rgba(255,255,255,0.25);
+    color: #fff;
+    font-size: 10px;
+    padding: 1px 4px;
+    border-radius: 4px;
+    margin-left: 6px;
+    font-weight: 500;
+}
 
 .grab-btn {
     border: 1px solid rgba(255,255,255,0.8);
@@ -612,5 +667,175 @@ const handleButtonClick = () => { if (!buttonState.value.disabled) emit('action'
   transform: rotate(-15deg);
   text-align: center;
   line-height: 1.2;
+}
+
+/* ===== Voucher Card V2 Styles (Orange Gradient) ===== */
+.voucher-card-v2-body {
+    background: linear-gradient(135deg, #ff9500 0%, #ffb347 50%, #ffc980 100%);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    box-shadow: 0 4px 12px rgba(255, 149, 0, 0.2);
+}
+
+.voucher-card-v2-body.has-expired {
+    background: linear-gradient(135deg, #bbb 0%, #ccc 100%);
+    box-shadow: none;
+}
+
+.voucher-v2-price-section {
+    flex: 1;
+}
+
+.voucher-v2-current-price {
+    display: flex;
+    align-items: baseline;
+    color: #fff;
+    margin-bottom: 4px;
+}
+
+.voucher-v2-current-price .price-symbol {
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.voucher-v2-current-price .price-value {
+    font-size: 38px;
+    font-weight: 700;
+    line-height: 1;
+    font-family: 'DIN Alternate', sans-serif;
+}
+
+.voucher-v2-original-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.voucher-v2-original-info .original-price {
+    font-size: 14px;
+    color: rgba(255,255,255,0.8);
+    text-decoration: line-through;
+}
+
+.voucher-v2-original-info .discount-badge {
+    background: rgba(255,255,255,0.25);
+    color: #fff;
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.voucher-v2-sold-info {
+    font-size: 12px;
+    color: rgba(255,255,255,0.9);
+    margin-bottom: 6px;
+}
+
+.voucher-v2-progress-bar {
+    width: 70%;
+    height: 6px;
+    background: rgba(255,255,255,0.3);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.voucher-v2-progress-bar .progress-fill {
+    height: 100%;
+    background: rgba(255,255,255,0.9);
+    border-radius: 3px;
+}
+
+.voucher-v2-action-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.voucher-v2-buy-btn {
+    background: #fff;
+    color: #ff5000;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.voucher-v2-buy-btn:active {
+    transform: scale(0.98);
+}
+
+.voucher-v2-disabled-btn {
+    background: rgba(255,255,255,0.5);
+    color: #999;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.voucher-v2-stock {
+    font-size: 12px;
+    color: rgba(255,255,255,0.9);
+}
+
+/* Voucher Header (Title and Validity - at top) */
+.voucher-v2-header {
+    margin-bottom: 10px;
+}
+
+.voucher-v2-header .title-text {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+}
+
+/* Voucher Footer (Title, Time, Validity) */
+.voucher-v2-footer {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid #f0f0f0;
+}
+
+.voucher-v2-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.voucher-v2-tag {
+    flex-shrink: 0;
+}
+
+.voucher-v2-footer .title-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.voucher-v2-time, .voucher-v2-validity {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: #999;
+    margin-top: 4px;
+}
+
+.voucher-v2-time {
+    color: #ff5000;
 }
 </style>

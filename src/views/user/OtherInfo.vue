@@ -134,7 +134,10 @@
                     </div>
                  </div>
              </div>
-             <div v-else-if="!noteLoading" class="empty-state">还没有发布任何笔记</div>
+             <div v-else-if="!noteLoading" class="empty-state">
+                  <img src="https://img01.yzcdn.cn/vant/empty-image-default.png" class="empty-img">
+                  <div class="empty-text">Ta还没有发布任何笔记</div>
+             </div>
              <div v-else class="loading-state"><i class="el-icon-loading"></i> 加载中...</div>
           </div>
 
@@ -168,7 +171,10 @@
                     </div>
                  </div>
               </div>
-              <div v-else-if="!collectionLoading" class="empty-state">还没有收藏任何笔记</div>
+              <div v-else-if="!collectionLoading" class="empty-state">
+                  <img src="https://img01.yzcdn.cn/vant/empty-image-default.png" class="empty-img">
+                  <div class="empty-text">Ta还没有收藏任何笔记</div>
+              </div>
              <div v-else class="loading-state"><i class="el-icon-loading"></i> 加载中...</div>
           </div>
 
@@ -204,7 +210,10 @@
                     </div>
                  </div>
               </div>
-              <div v-else class="empty-state">还没有点赞过任何笔记</div>
+              <div v-else class="empty-state">
+                  <img src="https://img01.yzcdn.cn/vant/empty-image-default.png" class="empty-img">
+                  <div class="empty-text">Ta还没有点赞过任何笔记</div>
+              </div>
            </div>
       </div>
     
@@ -1066,5 +1075,24 @@ export default {
 
 .card-likes i {
     margin-right: 2px;
+}
+
+.empty-state {
+    padding: 60px 0;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+.empty-img {
+    width: 160px;
+    height: 160px;
+    margin-bottom: 16px;
+    object-fit: contain;
+}
+.empty-text {
+    font-size: 14px;
+    color: #999;
 }
 </style>
