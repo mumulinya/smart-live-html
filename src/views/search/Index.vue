@@ -225,8 +225,8 @@
                                        </div>
                                     </div>
                                     <div class="voucher-action-section">
-                                       <button class="voucher-buy-btn pink-text" @click.stop="doSeckill(v)" :disabled="isNotBegin(v) || v.stock < 1">
-                                          {{ isNotBegin(v) ? '待开始' : (v.stock < 1 ? '已抢光' : '立即抢购') }}
+                                       <button class="voucher-buy-btn pink-text" @click.stop="doSeckill(v)" :disabled="isNotBegin(v) || isEnd(v) || v.stock < 1">
+                                          {{ isEnd(v) ? '已结束' : (isNotBegin(v) ? '待开始' : (v.stock < 1 ? '已抢光' : '立即抢购')) }}
                                        </button>
                                        <div class="voucher-stock">剩{{v.stock}}张</div>
                                     </div>

@@ -101,26 +101,26 @@
              <span class="seckill-title">{{ item.voucherName || item.title }}</span>
          </div>
          
-         <div class="seckill-bottom">
-             <div class="progress-info">
-                 <van-icon name="fire" color="#fff" size="12" />
-                 <span>已抢 {{ item.sold || 68 }}/{{ (item.sold || 68) + (item.stock || 32) }}</span>
-             </div>
-             <div class="time-info">
-                 <van-icon name="clock-o" color="#fff" size="12" style="margin-right: 2px;" />
-                 {{ seckillTimeText }}
-             </div>
-         </div>
+         <!-- 已售/剩余 进度条区域 -->
+          <div class="voucher-progress-section">
+              <div class="progress-label left">已售{{ item.sold || 0 }}张</div>
+              <div class="progress-bar-track">
+                  <div class="progress-bar-fill" :style="{ width: getProgress(item) + '%' }"></div>
+              </div>
+              <div class="progress-label right">剩余{{ item.stock || 0 }}张</div>
+          </div>
+          
+          <div class="seckill-bottom">
+              <div class="time-info">
+                  <van-icon name="clock-o" color="#fff" size="12" style="margin-right: 2px;" />
+                  {{ seckillTimeText }}
+              </div>
+          </div>
          <div class="seckill-bottom" v-if="getValidityText(item)">
              <div class="time-info">
                  <van-icon name="calendar-o" color="#fff" size="12" style="margin-right: 2px;" />
                  {{ getValidityText(item) }}
              </div>
-         </div>
-         
-         <!-- 进度条 -->
-         <div class="progress-bar-track">
-             <div class="progress-bar-fill" :style="{ width: getProgress(item) + '%' }"></div>
          </div>
       </div>
 
@@ -145,34 +145,27 @@
              <span class="seckill-title">{{ item.voucherName || item.title || (item.actualValue + '元代金券') }}</span>
          </div>
          
-         <div class="seckill-bottom">
-             <div class="progress-info" v-if="item.sold">
-                 <van-icon name="fire" color="#fff" size="12" />
-                 <span>已抢 {{ item.sold }}/{{ (item.sold || 0) + (item.stock || 100) }}</span>
+         <!-- 已售/剩余 进度条区域 -->
+         <div class="voucher-progress-section">
+             <div class="progress-label left">已售{{ item.sold || 0 }}张</div>
+             <div class="progress-bar-track">
+                 <div class="progress-bar-fill" :style="{ width: getProgress(item) + '%' }"></div>
              </div>
-             <!-- 如果没有已售信息，显示 subtitle 作为第一行信息 -->
-             <div class="time-info" v-else-if="item.subTitle">
-                 <van-icon name="clock-o" color="#fff" size="12" style="margin-right: 2px;" />
-                 {{ item.subTitle }}
-             </div>
-             <!-- 这里的 Time Info 实际上是 Validity -->
-             <div class="time-info" v-if="getValidityText(item)">
-                 <van-icon name="calendar-o" color="#fff" size="12" style="margin-right: 2px;" />
-                 {{ getValidityText(item) }}
-             </div>
+             <div class="progress-label right">剩余{{ item.stock || 0 }}张</div>
          </div>
          
-         <!-- 如果有 subtitles 且上面没显示(即有sold信息)，额外显示一行 -->
-         <div class="seckill-bottom" v-if="item.sold && item.subTitle">
+         <div class="seckill-bottom" v-if="item.subTitle">
              <div class="time-info">
                  <van-icon name="clock-o" color="#fff" size="12" style="margin-right: 2px;" />
                  {{ item.subTitle }}
              </div>
          </div>
-         
-         <!-- 进度条 -->
-         <div class="progress-bar-track" v-if="item.stock">
-             <div class="progress-bar-fill" :style="{ width: getProgress(item) + '%' }"></div>
+         <!-- 有效期信息 -->
+         <div class="seckill-bottom" v-if="getValidityText(item)">
+             <div class="time-info">
+                 <van-icon name="calendar-o" color="#fff" size="12" style="margin-right: 2px;" />
+                 {{ getValidityText(item) }}
+             </div>
          </div>
       </div>
     </template>
@@ -562,6 +555,38 @@ const getValidityText = (item) => {
     height: 100%;
     background: white;
     border-radius: 3px;
+}
+
+/* 代金券进度条区域 - 已售/剩余样式 */
+.voucher-progress-section {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+.voucher-progress-section .progress-bar-track {
+    flex: 1;
+    height: 6px;
+    background: rgba(255,255,255,0.3);
+    border-radius: 3px;
+    overflow: hidden;
+}
+.voucher-progress-section .progress-bar-fill {
+    height: 100%;
+    background: white;
+    border-radius: 3px;
+}
+.voucher-progress-section .progress-label {
+    font-size: 11px;
+    color: rgba(255,255,255,0.9);
+    white-space: nowrap;
+}
+.voucher-progress-section .progress-label.left {
+    min-width: fit-content;
+}
+.voucher-progress-section .progress-label.right {
+    min-width: fit-content;
+    text-align: right;
 }
 
 /* 商品区域 - 原有样式 */

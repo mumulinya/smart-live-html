@@ -21,7 +21,7 @@ export function getShopVouchers(shopId) {
 }
 
 export function getVoucherDetail(id) {
-    return request.get(`/app/marketing/voucher/${id}`);
+    return request.get(`/app/marketing/voucher/getVoucherById/${id}`);
 }
 
 export function buyVoucherAPI(voucherId) {
