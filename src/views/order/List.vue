@@ -6,49 +6,89 @@
     </div>
 
     <div class="orders-container">
-       <div v-if="orders.length > 0">
-          <div v-for="order in orders" :key="order.id" class="order-item">
-             <div class="order-header">
-                <div class="order-info-text">
-                   <div class="order-no">订单号: {{order.id}}</div>
-                   <div class="order-time">{{order.createTime}}</div>
+       <!-- Filter & Stats Bar -->
+       <div class="filter-bar">
+          <div class="filter-tabs">
+             <div class="tab-item" :class="{active: activeTab==='all'}" @click="activeTab='all'">全部</div>
+             <div class="tab-item" :class="{active: activeTab==='1'}" @click="activeTab='1'">待支付</div>
+             <div class="tab-item" :class="{active: activeTab==='2'}" @click="activeTab='2'">未使用</div>
+             <div class="tab-item" :class="{active: activeTab==='3'}" @click="activeTab='3'">已使用</div>
+             <div class="tab-item" :class="{active: activeTab==='4'}" @click="activeTab='4'">已取消</div>
+             <div class="tab-item" :class="{active: activeTab==='6'}" @click="activeTab='6'">已退款</div>
+          </div>
+          <div class="total-stats">
+             <i class="el-icon-box"></i>
+             <span>{{filteredOrders.length}}笔订单</span>
+          </div>
+       </div>
+
+       <div v-if="filteredOrders.length > 0">
+          <div v-for="order in filteredOrders" :key="order.id" class="order-card">
+             <!-- Header: Time & Status -->
+             <div class="card-header">
+                <div class="header-left">
+                   <i class="el-icon-tickets blue-icon"></i>
+                   <span class="order-time-text">订单号: {{order.id}}</span>
                 </div>
-                <div class="order-status" :class="getStatusClass(order.status)">{{getOrderStatusText(order.status)}}</div>
+                <!-- Status Badge -->
+                <div class="status-badge" :class="getStatusClass(order.status)">
+                   <i v-if="order.status===4 || order.status===5 || order.status===6" class="el-icon-circle-close"></i>
+                   <i v-if="order.status===3" class="el-icon-circle-check"></i>
+                   <i v-if="order.status===2" class="el-icon-success"></i>
+                   <i v-if="order.status===1" class="el-icon-time"></i>
+                   {{getOrderStatusText(order.status)}}
+                </div>
              </div>
-             <div class="order-content">
-                <div class="voucher-title">{{order.title || '未知商品'}}</div>
-                <div class="voucher-sub">{{order.subTitle}}</div>
-                <div class="voucher-rule-box" v-if="order.rule">{{order.rule}}</div>
+
+             <!-- Countdown Bar (Only if Unpaid) -->
+             <div class="countdown-bar" v-if="order.status === 1">
+                 <i class="el-icon-warning-outline"></i>
+                 <span>支付剩余时间: <span class="cd-timer">{{order.countDownStr || '00:00'}}</span></span>
+             </div>
+
+             <!-- Content -->
+             <div class="card-content" @click="toDetail(order)">
+                <div class="product-title">
+                   {{order.title || '未知商品'}}
+                   <span class="seckill-tag" v-if="order.title && order.title.includes('秒杀')">秒杀</span>
+                </div>
                 
-                <div class="price-row-stacked">
-                   <div class="price-col">
-                      <div class="price-label">支付金额</div>
-                      <div class="price-val red">￥{{formatPrice(order.payValue || order.price)}}</div>
+                <div class="info-row">
+                   <span class="info-label">适用商铺:</span>
+                   <span class="shop-link">{{order.shopName || '家味道家常菜馆'}}</span>
+                </div>
+                <div class="info-row">
+                   <span class="info-desc">{{order.subTitle || '周一至周日可用'}}</span>
+                </div>
+
+                <!-- Price Block -->
+                <div class="price-block">
+                   <div class="pb-col">
+                      <div class="pb-label">支付金额</div>
+                      <div class="pb-val red">¥{{formatPrice(order.payValue || order.price)}}</div>
                    </div>
-                   <div class="price-col">
-                      <div class="price-label">抵扣金额</div>
-                      <div class="price-val green">￥{{formatPrice(order.actualValue || order.value)}}</div>
+                   <div class="pb-col">
+                      <div class="pb-label">抵扣金额</div>
+                      <div class="pb-val green">¥{{formatPrice(order.actualValue || order.value)}}</div>
                    </div>
                 </div>
              </div>
-             <div class="order-footer">
-                <div class="footer-left">
-                   <div class="real-pay-stacked" v-if="order.status !== 1">
-                      <div class="pay-label">实付:</div>
-                      <div class="pay-amount">￥{{formatPrice(order.payValue || order.price)}}</div>
-                   </div>
-                   <div class="countdown-box" v-if="order.status === 1">
-                      <div class="pay-label">实付: </div>
-                      <div class="pay-amount">￥{{formatPrice(order.payValue || order.price)}}</div>
-                      <div class="cd-row"><i class="el-icon-time"></i> {{order.countDownStr || '00:00'}}</div>
-                   </div>
+
+             <!-- Footer -->
+             <div class="card-footer">
+                <div class="real-pay">
+                   实付: <span class="pay-num">¥{{formatPrice(order.payValue || order.price)}}</span>
                 </div>
-                <div class="order-actions">
-                   <button class="square-btn btn-default" @click="toDetail(order)">查看<br>详情</button>
-                   <button class="square-btn btn-primary" v-if="order.status===1" @click="toPay(order)">立即<br>支付</button>
-                   <button class="square-btn btn-danger" v-if="order.status===1" @click="cancelOrder(order)">取消<br>订单</button>
-                   <button class="square-btn btn-primary" v-if="order.status===2" @click="useOrder(order)">立即<br>使用</button>
-                   <button class="square-btn btn-danger" v-if="order.status===2" @click="refundOrder(order)">申请<br>退款</button>
+                <div class="action-buttons">
+                   <button class="action-btn btn-outline" @click="toDetail(order)">查看详情</button>
+                   
+                   <button class="action-btn btn-outline" v-if="order.status===1" @click="cancelOrder(order)">取消订单</button>
+                   <button class="action-btn btn-solid-orange" v-if="order.status===1" @click="toPay(order)">立即支付</button>
+
+                   <button class="action-btn btn-solid-blue" v-if="order.status===2" @click="useOrder(order)">立即使用</button>
+                   <button class="action-btn btn-outline" v-if="order.status===2" @click="refundOrder(order)">申请退款</button>
+                   
+                   <!-- Show text for other states if needed, or just view detail -->
                 </div>
              </div>
           </div>
@@ -63,7 +103,6 @@
 
 <script>
 import { getOrderList, cancelOrder, refundOrder } from '@/api/order';
-
 import PageLayout from '@/components/PageLayout/PageLayout.vue';
 
 export default {
@@ -73,8 +112,20 @@ export default {
     return {
        orders: [],
        pageLoading: false,
-       timer: null
+       timer: null,
+       activeTab: 'all'
     }
+  },
+  computed: {
+     filteredOrders() {
+        if (this.activeTab === 'all') {
+           return this.orders;
+        }
+        // Filter by status
+        // Tabs use string keys, order status is number
+        const status = Number(this.activeTab);
+        return this.orders.filter(o => o.status === status);
+     }
   },
   created() {
      this.queryOrders();
@@ -129,25 +180,7 @@ export default {
            this.useMockData();
         }).finally(() => this.pageLoading = false);
      },
-     getOrderStatusText(status) {
-        const statusMap = {
-          '1': '待支付',
-          '2': '已支付',
-          '3': '已使用',
-          '4': '已取消',
-          '5': '退款中',
-          '6': '已退款'
-        };
-        return statusMap[status] || '未知状态';
-     },
-     getPayTypeText(payType) {
-        const payTypeMap = {
-          '1': '余额支付',
-          '2': '支付宝',
-          '3': '微信支付'
-        };
-        return payTypeMap[payType] || '未知支付方式';
-     },
+
      useMockData() {
         const now = new Date().getTime();
         this.orders = [
@@ -164,7 +197,8 @@ export default {
               payValue: 19.90, 
               actualValue: 100.00, 
               price: 19.90, 
-              value: 100.00 
+              value: 100.00,
+              shopName: '家味道家常菜馆'
            },
            { 
               id: '540186545148133378', 
@@ -172,14 +206,15 @@ export default {
               voucherId: 13,
               createTime: '2025-12-26 16:39:42',
               payTime: '2025-12-26 16:40:46',
-              status: 2, 
+              status: 4, // Cancelled for demo 
               title: '100元代金券', 
               subTitle: '周一至周五均可使用',
               rule: '无规则333',
               payValue: 80.00, 
               actualValue: 100.00,
               price: 80.00,
-              value: 100.00
+              value: 100.00,
+              shopName: '家味道家常菜馆'
            },
            { 
               id: '550186545148133399', 
@@ -187,29 +222,61 @@ export default {
               voucherId: 14,
               createTime: '2025-11-11 12:00:00',
               payTime: '2025-11-11 12:01:00',
-              status: 3, 
+              status: 3, // Used
               title: '洗车卡', 
               subTitle: '普通洗车',
               rule: '',
               payValue: 30.00, 
               actualValue: 30.00,
               price: 30.00,
-              value: 30.00
+              value: 30.00,
+              shopName: '巴蜀风味川菜馆'
+           },
+           { 
+              id: '550186545148133377', 
+              userId: 1010,
+              voucherId: 14,
+              createTime: '2025-12-25 10:20:15',
+              status: 3, // Completed
+              title: '200元代金券', 
+              subTitle: '领取/购买后 7 天内有效',
+              rule: '',
+              payValue: 88.00, 
+              actualValue: 112.00,
+              price: 88.00,
+              value: 112.00,
+              shopName: '坤坤蜜味轩小火锅呀'
            }
         ];
      },
-      formatPrice(p) {
-         if(p === undefined || p === null || isNaN(p)) return '0.00';
-         return Number(p).toFixed(2);
-      },
+     formatPrice(p) {
+        if(p === undefined || p === null || isNaN(p)) return '0.00';
+        return Number(p).toFixed(2);
+     },
+     getOrderStatusText(status) {
+        const statusMap = {
+          '1': '待支付',
+          '2': '已支付', // User provided: 已支付
+          '3': '已核销', // User provided: 已核销
+          '4': '已取消',
+          '5': '退款中',
+          '6': '已退款',
+          '7': '已过期'
+        };
+        return statusMap[status] || '未知状态';
+     },
      getStatusClass(status) {
+        // 1: Unpaid (Orange)
         if(status === 1) return 'status-unpaid';
-        if(status === 2) return 'status-paid';
-        if(status === 3) return 'status-used';
-        if(status === 4) return 'status-used'; // Grey
-        if(status === 5) return 'status-used';
-        if(status === 6) return 'status-used';
-        return '';
+        // 2: Paid (Green)
+        if(status === 2) return 'status-paid'; 
+        // 3: Verified (Green/Blue?) Let's use standard Completed/Paid style
+        if(status === 3) return 'status-completed';
+        // 4: Cancelled (Grey)
+        if(status === 4) return 'status-cancelled';
+        // 5/6/7: Grey/Other
+        if(status === 5 || status === 6 || status === 7) return 'status-cancelled';
+        return 'status-cancelled';
      },
      toDetail(order) {
         sessionStorage.setItem('currentOrder', JSON.stringify(order));
@@ -243,46 +310,129 @@ export default {
 </script>
 
 <style scoped>
-.orders-page { min-height: 100vh; background: #f5f5f5; box-sizing: border-box; }
-.orders-page * { box-sizing: border-box; }
-.header { height: 50px; background: white; display: flex; align-items: center; padding: 0 15px; border-bottom: 1px solid #eee; position: sticky; top: 0; z-index: 10; }
-.header-title { flex: 1; text-align: center; font-weight: bold; font-size: 18px; }
+.orders-page { min-height: 100vh; background: #f2f4f8; box-sizing: border-box; }
+.header { height: 44px; background: white; display: flex; align-items: center; padding: 0 12px; position: sticky; top: 0; z-index: 10; font-size: 16px; border-bottom: 1px solid #eee; }
+.header-title { flex: 1; text-align: center; font-weight: 600; }
 
-.orders-container { padding: 10px; }
-.order-item { background: white; border-radius: 8px; margin-bottom: 15px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+.orders-container { padding: 12px; }
 
-.order-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
-.order-info-text { font-size: 12px; color: #999; line-height: 1.5; }
-.order-status { padding: 2px 8px; border-radius: 4px; font-size: 12px; background: #eee; color: #999; }
-.order-status.status-unpaid { background: #fdf6ec; color: #e6a23c; }
-.order-status.status-paid { background: #f0f9eb; color: #67c23a; }
-.order-status.status-used { background: #f4f4f5; color: #909399; }
+/* Filter Bar */
+.filter-bar { display: flex; align-items: center; margin-bottom: 15px; }
+.filter-tabs { flex: 1; display: flex; overflow-x: auto; gap: 8px; scrollbar-width: none; -ms-overflow-style: none; }
+.filter-tabs::-webkit-scrollbar { display: none; }
+.tab-item { 
+    white-space: nowrap; 
+    padding: 6px 14px; 
+    border-radius: 20px; 
+    font-size: 13px; 
+    background: white; 
+    color: #666; 
+    transition: all 0.3s; 
+    border: 1px solid transparent; 
+}
+.tab-item.active { 
+    background: linear-gradient(90deg, #7F7FD5, #86A8E7); 
+    color: white; 
+    box-shadow: 0 2px 8px rgba(127, 127, 213, 0.4); 
+    font-weight: 500;
+}
+.total-stats { 
+    display: flex; align-items: center; 
+    padding-left: 10px; border-left: 1px solid #eee; 
+    margin-left: 5px; 
+    color: #409EFF; font-size: 12px; font-weight: bold; 
+    white-space: nowrap;
+}
+.total-stats i { margin-right: 4px; font-size: 14px; }
 
-.order-content { padding-bottom: 10px; border-bottom: 1px dashed #eee; margin-bottom: 10px; }
-.voucher-title { font-size: 16px; font-weight: bold; color: #333; margin-bottom: 5px; }
-.voucher-sub { font-size: 13px; color: #666; margin-bottom: 10px; }
-.voucher-rule-box { background: #f8f8f8; padding: 8px 10px; border-radius: 4px; font-size: 12px; color: #999; margin-bottom: 15px; }
+.order-card {
+    background: white;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    padding: 12px 16px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+}
 
-.price-row-stacked { display: flex; margin-top: 10px; }
-.price-col { margin-right: 30px; display: flex; flex-direction: column; }
-.price-label { font-size: 12px; color: #999; margin-bottom: 4px; }
-.price-val { font-size: 15px; font-weight: bold; }
-.price-val.red { color: #ff0000; }
-.price-val.green { color: #67c23a; }
+/* Header */
+.card-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #f9f9f9;
+}
+.header-left { display: flex; align-items: center; font-size: 12px; color: #999; }
+.blue-icon { color: #409EFF; margin-right: 6px; font-size: 14px; }
+.order-time-text { transform: scale(0.95); transform-origin: left; }
 
-.order-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 10px; }
-.footer-left { flex: 1; }
-.real-pay-stacked { display: flex; flex-direction: column; }
-.countdown-box { display: flex; flex-direction: column; }
-.cd-row { color: #ff6633; font-size: 12px; margin-top: 2px; }
-.pay-label { font-size: 12px; font-weight: bold; color: #333; margin-bottom: 2px; }
-.pay-amount { font-size: 16px; font-weight: bold; color: #333; }
+.status-badge {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    display: flex; align-items: center; gap: 4px;
+}
+.status-badge.status-unpaid { background: #fee; color: #ff6600; } /* Orange */
+.status-badge.status-paid { background: #e0f8e9; color: #00c458; } /* Green */
+.status-badge.status-completed { background: #e0f8e9; color: #00c458; } /* Green "已完成" */
+.status-badge.status-cancelled { background: #f5f5f5; color: #999; } /* Grey "已取消" */
 
-.order-actions { display: flex; gap: 8px; }
-.square-btn { min-width: 60px; padding: 6px 4px; border-radius: 6px; font-size: 12px; cursor: pointer; border: 1px solid #ddd; background: white; display: flex; align-items: center; justify-content: center; line-height: 1.25; text-align: center; height: auto; }
-.btn-default { border-color: #eee; color: #666; }
-.btn-primary { border-color: #409EFF; color: #409EFF; }
-.btn-danger { border-color: #F56C6C; color: #F56C6C; }
+/* Countdown Bar */
+.countdown-bar {
+    margin-top: 10px;
+    background: #FFFAF0; /* Light Orange */
+    border: 1px solid #FFEDD5;
+    color: #FF6600;
+    font-size: 13px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    display: flex; align-items: center; gap: 6px;
+    font-weight: 500;
+}
+.cd-timer { font-weight: bold; }
+
+/* Content */
+.card-content { padding: 12px 0; }
+.product-title { font-size: 16px; font-weight: bold; color: #333; margin-bottom: 8px; display: flex; align-items: center; }
+.seckill-tag { background: #ff2442; color: white; font-size: 10px; padding: 1px 4px; border-radius: 4px; margin-left: 6px; font-weight: normal; }
+
+.info-row { margin-bottom: 6px; font-size: 13px; display: flex; align-items: baseline; }
+.info-label { color: #666; margin-right: 6px; }
+.shop-link { color: #409EFF; cursor: pointer; }
+.info-desc { color: #999; font-size: 12px; }
+
+/* Price Block */
+.price-block {
+    margin-top: 12px;
+    background: #F8FBFF; /* Light Blue-ish */
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+}
+.pb-col { margin-right: 40px; }
+.pb-label { font-size: 12px; color: #999; margin-bottom: 4px; }
+.pb-val { font-size: 16px; font-weight: bold; font-family: 'DINAlternate-Bold', sans-serif; }
+.pb-val.red { color: #FF4400; }
+.pb-val.green { color: #00C458; }
+
+/* Footer */
+.card-footer {
+    display: flex; justify-content: space-between; align-items: center;
+    padding-top: 12px;
+    border-top: 1px solid #f9f9f9;
+}
+.real-pay { font-size: 13px; color: #333; }
+.pay-num { font-size: 18px; color: #FF4400; font-weight: bold; margin-left: 4px; font-family: 'DINAlternate-Bold', sans-serif; }
+
+.action-buttons { display: flex; gap: 8px; }
+.action-btn { 
+    padding: 6px 14px; 
+    border-radius: 18px; /* Capsule shape */
+    font-size: 13px; 
+    cursor: pointer; 
+    font-weight: 500;
+}
+.btn-outline { background: white; border: 1px solid #ddd; color: #666; }
+.btn-solid-orange { background: linear-gradient(90deg, #FF6600, #FF4400); color: white; border: none; box-shadow: 0 2px 6px rgba(255,102,0,0.3); }
+.btn-solid-blue { background: #409EFF; color: white; border: none; }
+.btn-disabled { background: #f5f5f5; border: 1px solid #ebebeb; color: #ccc; cursor: not-allowed; }
 
 .empty-state { padding: 50px 0; text-align: center; color: #999; }
 .empty-state i { font-size: 40px; margin-bottom: 10px; }

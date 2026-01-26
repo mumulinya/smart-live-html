@@ -8,6 +8,10 @@ export function createOrder(data) {
     return request.post('/app/order/voucher-order', data);
 }
 
+export function getOrderDetail(orderId) {
+    return request.get(`/app/order/voucher-order/getOrderById/${orderId}`);
+}
+
 export function payOrder(orderId) {
     return request.post(`/app/order/voucher-order/pay/${orderId}`);
 }

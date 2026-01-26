@@ -120,7 +120,7 @@
 </template>
 
 <script>
-import { cancelOrder, refundOrder } from '@/api/order';
+import { cancelOrder, refundOrder, getOrderDetail } from '@/api/order';
 
 import PageLayout from '@/components/PageLayout/PageLayout.vue';
 
@@ -138,9 +138,8 @@ export default {
   },
   created() {
      this.orderId = this.$route.query.id;
-     if(this.orderId) {
-        this.queryDetail();
-     }
+     // Always try to query, allow fallback to default mock if no ID
+     this.queryDetail();
   },
   beforeUnmount() {
      if(this.timer) clearInterval(this.timer);
@@ -176,35 +175,37 @@ export default {
       },
      queryDetail() {
         this.loading = true;
-        try {
-            const stored = sessionStorage.getItem('currentOrder');
-            if (stored) {
-                const obj = JSON.parse(stored);
-                if (String(obj.id) === String(this.orderId)) {
-                    this.order = obj;
+        // Priority: Real API
+        if(this.orderId) {
+            getOrderDetail(this.orderId).then(res => {
+                const data = res.data || res;
+                if(data) {
+                    this.order = data;
                     this.startTimer();
-                    this.loading = false;
-                    return;
+                } else {
+                    this.useMockData();
                 }
-            }
+            }).catch(e => {
+                console.error("API failed, using mock:", e);
+                this.useMockData();
+            }).finally(() => {
+                this.loading = false;
+            });
+        } else {
             this.useMockData();
-            this.startTimer();
             this.loading = false;
-        } catch (e) {
-            console.error(e);
-            this.useMockData();
             this.startTimer();
-            this.loading = false;
         }
      },
      getOrderStatusText(status) {
         const statusMap = {
           '1': '待支付',
           '2': '已支付',
-          '3': '已使用',
+          '3': '已核销',
           '4': '已取消',
           '5': '退款中',
-          '6': '已退款'
+          '6': '已退款',
+          '7': '已过期'
         };
         return statusMap[status] || '未知状态';
      },
@@ -232,7 +233,8 @@ export default {
               payValue: 19.90, 
               actualValue: 100.00, 
               price: 19.90, 
-              value: 100.00 
+              value: 100.00,
+              shopName: '家味道家常菜馆'
            },
            { 
               id: '540186545148133378', 
@@ -240,14 +242,15 @@ export default {
               voucherId: 13,
               createTime: '2025-12-26 16:39:42',
               payTime: '2025-12-26 16:40:46',
-              status: 2, 
+              status: 4, 
               title: '100元代金券', 
               subTitle: '周一至周五均可使用',
               rule: '无规则333',
               payValue: 80.00, 
               actualValue: 100.00,
               price: 80.00,
-              value: 100.00
+              value: 100.00,
+              shopName: '家味道家常菜馆'
            },
            { 
               id: '550186545148133399', 
@@ -262,7 +265,23 @@ export default {
               payValue: 30.00, 
               actualValue: 30.00,
               price: 30.00,
-              value: 30.00
+              value: 30.00,
+              shopName: '巴蜀风味川菜馆'
+           },
+           { 
+              id: '550186545148133377', 
+              userId: 1010,
+              voucherId: 14,
+              createTime: '2025-12-25 10:20:15',
+              status: 3, 
+              title: '200元代金券', 
+              subTitle: '领取/购买后 7 天内有效',
+              rule: '',
+              payValue: 88.00, 
+              actualValue: 112.00,
+              price: 88.00,
+              value: 112.00,
+              shopName: '坤坤蜜味轩小火锅呀'
            }
         ];
         this.order = mocks.find(m => String(m.id) === String(this.orderId)) || mocks[0];

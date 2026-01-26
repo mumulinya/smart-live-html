@@ -1,102 +1,64 @@
 <template>
   <PageLayout :loading="isLoading" skeleton-type="detail" class="shop-detail-page">
 
-    <!-- Fixed Top Header -->
-    <div class="header">
-      <div class="header-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
-      <div class="header-title">{{shop.name}}</div>
-      <div class="header-share">...</div>
-    </div>
-
-    <div class="shop-info-container" v-if="shop.id">
-       <!-- Immersive Hero Section -->
-       <div class="hero-section"
-            @touchstart="onTouchStart"
-            @touchmove="onTouchMove"
-            @touchend="onTouchEnd"
-       >
-           <el-carousel 
-             ref="imageCarousel"
-             height="240px" 
-             :autoplay="false" 
-             arrow="never" 
-             indicator-position="none"
-             @change="onCarouselChange"
-             v-if="gallery.length > 0"
-           >
-              <el-carousel-item v-for="(img, idx) in gallery" :key="idx">
-                 <img :src="img" class="hero-img" @click="previewImage(gallery, idx)">
-              </el-carousel-item>
-           </el-carousel>
-           <div class="hero-placeholder" v-else>
-              <img src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800" class="hero-img">
-           </div>
-           
-           <!-- Gradient Overlay -->
-           <div class="hero-gradient"></div>
-           
-           <!-- Image Indicator -->
-           <div class="image-indicator" v-if="gallery.length > 1">{{currentImageIndex + 1}}/{{gallery.length}}</div>
-           
-           <!-- Shop Info Overlay (inside hero) -->
-           <div class="hero-content">
-              <div class="hero-info-left">
-                 <div class="hero-shop-name">{{shop.name}}</div>
-                 <div class="hero-shop-rating">
-                    <el-rate disabled :model-value="shop.score/10" :max="5" :colors="['#fff', '#fff', '#fff']"></el-rate>
-                    <span class="hero-score">{{(shop.score/10).toFixed(1)}}</span>
-                    <span class="hero-count">{{shop.comments}}条评价</span>
-                 </div>
-              </div>
-              <div class="hero-follow-btn" @click="toggleFollow">
-                 <button :class="shop.isFollowed ? 'followed' : 'not-followed'">
-                    <span v-if="!shop.isFollowed">+ 关注</span>
-                    <span v-else>已关注</span>
-                 </button>
-              </div>
-           </div>
+    <!-- Static Header (Match Image) -->
+    <div class="static-header">
+       <div class="nav-bar-transparent">
+          <div class="nav-btn-round" @click="goBack"><i class="el-icon-arrow-left"></i></div>
+          <div class="nav-btn-round"><i class="el-icon-share"></i></div>
        </div>
        
-       <!-- Floating Info Card -->
-       <div class="floating-info-card">
-          <div class="info-card-row">
-             <div class="info-card-tags">
-                <span class="detail-tag">口味 {{(shop.score/10).toFixed(1)}}</span>
-                <span class="detail-tag">环境 {{(shop.score/10).toFixed(1)}}</span>
-                <span class="detail-tag">服务 {{(shop.score/10).toFixed(1)}}</span>
-             </div>
-             <div class="info-card-price">￥{{shop.avgPrice}}/人</div>
-          </div>
-          
-          <div class="info-card-divider"></div>
-          
-          <div class="info-card-address" @click="openMap">
-             <i class="el-icon-location-outline"></i>
-             <span class="address-text">{{shop.address || '暂无详细地址'}}</span>
-             <i class="el-icon-arrow-right"></i>
-          </div>
-          
-          <div class="info-card-time">
-             <i class="el-icon-time"></i>
-             <span class="time-label">营业时间</span>
-             <span class="time-value">{{shop.openHours || '10:00-22:00'}}</span>
-          </div>
-          
-          <div class="info-card-phone" v-if="shop.phone">
-             <i class="el-icon-phone-outline"></i>
-             <span>{{shop.phone}}</span>
-             <a :href="'tel:' + shop.phone" class="call-btn">拨打</a>
-          </div>
+       <div class="header-carousel">
+           <van-swipe :autoplay="4000" indicator-color="white" style="height: 100%;">
+                <van-swipe-item v-for="(img, index) in gallery" :key="index" @click="handlePreviewImage(index)">
+                    <img :src="img" style="width: 100%; height: 100%; object-fit: cover;">
+                </van-swipe-item>
+                <!-- Fallback if empty -->
+                <van-swipe-item v-if="gallery.length === 0">
+                    <img :src="shop.cover || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4'" style="width: 100%; height: 100%; object-fit: cover;">
+                </van-swipe-item>
+           </van-swipe>
        </div>
+       <div class="header-dark-mask"></div>
+       <div class="image-count-badge" v-if="gallery.length > 0">
+           <i class="el-icon-picture-outline"></i> {{gallery.length}}
+       </div>
+       
+       <div class="header-content-overlay">
+           <h1 class="shop-title-large">{{shop.name}}</h1>
+           <div class="shop-score-row">
+               <van-rate :model-value="shop.score ? shop.score/10 : 0" readonly color="#FF9900" void-icon="star" void-color="#eee" size="12px" allow-half />
+               <span class="score-val">{{shop.score ? (shop.score/10).toFixed(1) : 0}}</span>
+               <span class="comment-num">{{shop.comments}}条评价</span>
+           </div>
+           
+           <div class="shop-addr-row" @click="openMap">
+               <span class="addr-txt">{{shop.address}}</span>
+               <i class="el-icon-arrow-right"></i>
+           </div>
+           
+           <div class="shop-time-row">
+               <span class="status-badge">营业中</span>
+               <span class="time-txt">营业时间 {{shop.openHours}}</span>
+           </div>
+           
+           <div class="follow-btn-pos" @click="toggleFollow">
+               <div class="red-follow-btn" :class="{followed: shop.isFollowed}">
+                   <template v-if="!shop.isFollowed">+ 关注</template>
+                   <template v-else>已关注</template>
+               </div>
+           </div>
+       </div>
+    </div>
 
-       <div class="section-gap"></div>
-
-       <!-- Vouchers -->
-       <div class="voucher-list" v-if="vouchers.length>0">
+       <van-tabs v-model:active="activeTab" scrollspy sticky color="#ff2442" title-active-color="#ff2442" line-width="20px" offset-top="44">
+          <van-tab title="代金券">
+             <div id="voucher" class="section-block">
           <div class="section-title">
              <span class="icon-text text-orange">券</span> 
              <span class="title-text">代金券</span>
           </div>
+       <div class="voucher-list" v-if="vouchers.length>0">
           
           <!-- Seckill Vouchers -->
           <template v-for="v in vouchers.filter(x => x.type === 1)" :key="'seckill-' + v.id">
@@ -189,10 +151,27 @@
        <div class="voucher-list" v-else>
            <div class="empty-tip">暂无优惠券</div>
        </div>
+       </div> <!-- End #voucher -->
+          </van-tab>
+       
+       <van-tab title="团购">
+       <div class="shop-divider"></div>
+
+       <!-- Group Buy Section -->
+       <div id="groupbuy" class="section-block" style="background: white; padding: 16px;">
+          <div class="section-title" style="margin-bottom: 16px;">
+             <span class="icon-text text-orange" style="background: #FFF5E2; color: #FF9900; padding: 2px 6px; border-radius: 4px; font-size: 12px; margin-right: 6px;">团</span>
+             <span class="title-text" style="font-weight: 600; font-size: 16px;">团购套餐</span>
+          </div>
+          <div class="empty-placeholder" style="padding: 20px 0; text-align: center; color: #999;">暂无团购套餐</div>
+       </div>
        
        <div class="shop-divider"></div>
+       </van-tab>
        
-       <!-- Comments -->
+       <van-tab title="评价">
+       <!-- Comments Section -->
+       <div id="review" class="section-block" style="background: white; padding: 16px;">
        <div class="comments-section">
           <div class="section-header">
              <div class="section-title">网友评价 <span class="count">({{comments.length || 0}})</span></div>
@@ -295,7 +274,29 @@
           </div>
        </div>
 
-    </div>
+       </div> <!-- End #review -->
+       </van-tab>
+       
+       <div class="shop-divider"></div>
+
+       <van-tab title="详情">
+       <!-- Detail Section -->
+       <div id="detail" class="section-block" style="background: white; padding: 16px;">
+           <div class="section-title" style="margin-bottom: 16px; font-weight: 600; font-size: 16px;">商家信息</div>
+           <div class="info-cell" style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #f5f5f5;">
+              <i class="el-icon-location-outline" style="font-size: 16px; color: #666;"></i>
+              <span style="flex: 1; margin: 0 10px; font-size: 14px; color: #333;">{{shop.address}}</span>
+              <a :href="'tel:'+shop.phone" class="cell-action" style="color: #FF9900; font-size: 18px;"><i class="el-icon-phone-outline"></i></a>
+           </div>
+           <div class="info-cell" style="display: flex; align-items: center; padding: 12px 0;">
+              <i class="el-icon-time" style="font-size: 16px; color: #666;"></i>
+              <span style="margin-left: 10px; font-size: 14px; color: #333;">营业时间：{{shop.openHours}}</span>
+           </div>
+       </div>
+       </van-tab>
+       </van-tabs>
+    
+    <div style="height: 60px;"></div>
 
     <!-- Foot Bar - Local Service Style -->
     <div class="foot-bar">
@@ -316,8 +317,12 @@
     
      <div class="image-preview" v-if="showPreview" @click="closePreview">
         <div class="preview-close" @click.stop="closePreview"><i class="el-icon-close"></i></div>
-        <div class="preview-swiper">
-           <img :src="previewList[previewIndex]" class="preview-img">
+        <div class="preview-swiper" @click.stop>
+           <van-swipe :initial-swipe="previewIndex" @change="(idx) => previewIndex = idx" style="height: 100vh; width: 100vw;">
+              <van-swipe-item v-for="(img, idx) in previewList" :key="idx" style="display: flex; align-items: center; justify-content: center;">
+                 <img :src="img" class="preview-img" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+              </van-swipe-item>
+           </van-swipe>
         </div>
         <div class="preview-indicator">{{previewIndex+1}} / {{previewList.length}}</div>
      </div>
@@ -527,8 +532,18 @@ export default {
               // Parse images
               if(this.shop.images) {
                  const rawImgs = this.shop.images.split(',');
-                 this.gallery = rawImgs.map(img => this.fileURL + img);
-                 // Main image fallback if needed, but we use gallery now
+                 this.gallery = rawImgs.map(img => {
+                     if(img.startsWith('http')) return img;
+                     return this.fileURL + img;
+                 });
+                 if (!this.shop.cover && this.gallery.length > 0) {
+                     this.shop.cover = this.gallery[0];
+                 }
+              }
+              
+              // Ensure cover has prefix if it exists and is relative
+              if (this.shop.cover && !this.shop.cover.startsWith('http')) {
+                  this.shop.cover = this.fileURL + this.shop.cover;
               }
                // isStared and isFollowed come from shop data directly
             }
@@ -869,6 +884,15 @@ export default {
         
         buyVoucherAPI(v.id).then(res => {
             this.$message.success("抢购成功，订单ID: " + (res.data || res));
+        }).catch(err => {
+            console.error(err);
+            let msg = "抢购失败";
+            if (typeof err === 'string') msg = err;
+            else if (err && err.errorMsg) msg = err.errorMsg;
+            else if (err && err.response && err.response.data && err.response.data.errorMsg) msg = err.response.data.errorMsg;
+            else if (err && err.message) msg = err.message;
+            
+            this.$message.error(msg);
         });
      },
      doSeckill(v) {
@@ -882,7 +906,13 @@ export default {
             v.stock--; // Simple optimist update
         }).catch(err => {
             console.error(err);
-            this.$message.error(err.message || "抢购失败");
+            let msg = "抢购失败";
+            if (typeof err === 'string') msg = err;
+            else if (err && err.errorMsg) msg = err.errorMsg;
+            else if (err && err.response && err.response.data && err.response.data.errorMsg) msg = err.response.data.errorMsg;
+            else if (err && err.message) msg = err.message;
+            
+            this.$message.error(msg);
         });
      },
      handleCommentLike(c) {
@@ -1111,6 +1141,25 @@ export default {
         }
      },
      
+     handlePreviewImage(index) {
+        if(!this.gallery || this.gallery.length === 0) return;
+        this.previewList = this.gallery;
+        this.previewIndex = index;
+        this.showPreview = true;
+     },
+     
+     previewImage(list, index) {
+        if(!list || list.length === 0) return;
+        this.previewList = list;
+        this.previewIndex = index;
+        this.showPreview = true;
+     },
+     
+     closePreview() {
+        this.showPreview = false;
+        this.previewList = [];
+     },
+     
      // Carousel methods
      onCarouselChange(index) {
         this.currentImageIndex = index;
@@ -1151,7 +1200,133 @@ export default {
 </script>
 
 <style scoped>
-.shop-detail-page { height: 100vh; display: flex; flex-direction: column; background: #f0f2f5; overflow-x: hidden; }
+/* Static Header Styles */
+.static-header {
+   position: relative;
+   height: 260px;
+   background: #333;
+   color: white;
+   overflow: hidden;
+}
+.nav-bar-transparent {
+   position: absolute;
+   top: 0; left: 0; right: 0;
+   height: 44px;
+   display: flex;
+   justify-content: space-between;
+   align-items: center;
+   padding: 0 16px;
+   z-index: 10;
+}
+.nav-btn-round {
+   width: 32px; height: 32px;
+   background: rgba(0,0,0,0.3);
+   border-radius: 50%;
+   display: flex; align-items: center; justify-content: center;
+   color: white;
+   font-size: 18px;
+}
+.header-carousel {
+   position: absolute;
+   top: 0; left: 0; right: 0; bottom: 0;
+   z-index: 1;
+}
+.image-count-badge {
+    position: absolute;
+    right: 16px;
+    bottom: 130px; /* Moved higher to avoid overlap with Follow button */
+    background: rgba(0,0,0,0.5);
+    color: white;
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    z-index: 20;
+    pointer-events: none;
+}
+.header-bg-image {
+   position: absolute;
+   top: 0; left: 0; right: 0; bottom: 0;
+   background-size: cover;
+   background-position: center;
+   filter: blur(2px);
+   opacity: 0.8;
+}
+.header-dark-mask {
+   position: absolute;
+   top: 0; left: 0; right: 0; bottom: 0;
+   background: rgba(0,0,0,0.4);
+   z-index: 2;
+   pointer-events: none;
+}
+.header-content-overlay {
+   position: absolute;
+   left: 0; right: 0; bottom: 0; 
+   padding: 16px;
+   z-index: 5;
+   /* Gradient from bottom */
+   background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+   pointer-events: none; /* Let clicks pass through to image */
+}
+/* Re-enable pointer events for interactive elements inside overlay */
+.header-content-overlay > * {
+   pointer-events: auto;
+}
+.shop-title-large {
+   font-size: 24px;
+   font-weight: 700;
+   margin-bottom: 8px;
+   text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+.shop-score-row {
+   display: flex; align-items: center; gap: 6px;
+   font-size: 12px; color: #fff;
+   margin-bottom: 10px;
+}
+.score-val { color: #feeb5d; font-weight: 600; font-size: 14px; }
+.shop-addr-row {
+   display: flex; align-items: center;
+   color: rgba(255,255,255,0.9);
+   font-size: 13px;
+   margin-bottom: 6px;
+}
+.addr-txt { flex: 1; margin-right: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shop-time-row {
+   display: flex; align-items: center;
+   font-size: 12px;
+   color: rgba(255,255,255,0.8);
+   margin-bottom: 10px;
+}
+.status-badge {
+    background: #00B96B;
+    color: white;
+    padding: 1px 4px;
+    border-radius: 2px;
+    font-size: 10px;
+    margin-right: 6px;
+}
+.follow-btn-pos {
+   position: absolute;
+   right: 16px;
+   bottom: 80px; /* Moved up from 60px */
+}
+.red-follow-btn {
+    background: #ff2442;
+    color: white;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(255, 36, 66, 0.4);
+}
+.red-follow-btn.followed {
+    background: rgba(255,255,255,0.2);
+    border: 1px solid rgba(255,255,255,0.5);
+    box-shadow: none;
+}
+.section-block { background: white; }
+
+.shop-detail-page { min-height: 100vh; display: flex; flex-direction: column; background: #f0f2f5; padding-bottom: 60px; }
 
 /* Loading */
 .loading-mask { position: fixed; inset: 0; background: white; z-index: 999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
