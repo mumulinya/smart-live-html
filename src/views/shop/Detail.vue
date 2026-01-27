@@ -1023,7 +1023,7 @@ export default {
            sourceType: 2, // Shop
            userId: this.user.id,
            parentId: 0,
-           answerId: 0,
+
            images: this.selectedImages.map(img => img.rawUrl).join(',')
          };
 

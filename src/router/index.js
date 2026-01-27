@@ -63,6 +63,11 @@ const routes = [
         component: () => import('@/views/user/MyFollow.vue')
     },
     {
+        path: '/user/my-reviews',
+        name: 'MyReviews',
+        component: () => import('@/views/user/MyReviews.vue')
+    },
+    {
         path: '/user/list',
         name: 'UserList',
         component: () => import('@/views/user/UserList.vue'),
@@ -150,6 +155,11 @@ const routes = [
         path: '/comment/list',
         name: 'CommentList',
         component: () => import('@/views/comment/List.vue')
+    },
+    {
+        path: '/review/detail',
+        name: 'ReviewDetail',
+        component: () => import('@/views/comment/ReviewDetail.vue')
     }
 ]
 

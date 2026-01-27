@@ -58,6 +58,14 @@ export function addComment(data) {
     return request.post('/app/interaction/comment/addComment', data);
 }
 
+export function getUserComments(params) {
+    return request.get('/app/interaction/comment/of/user', { params });
+}
+
+export function getCommentDetail(id) {
+    return request.get(`/app/interaction/comment/getComment/${id}`);
+}
+
 // Like Comment: Reuse like logic with sourceType 5
 export function likeComment(id) {
     return request.put('/app/interaction/like', { sourceType: 5, sourceId: id });

@@ -85,137 +85,142 @@
 
     </div>
     <!-- Tabs -->
-    <div class="sticky-tabs-wrapper" :style="{ top: '64px' }">
-      <div class="custom-tabs-nav">
-          <div class="tab-item" :class="{active: activeTab==='note'}" @click="switchTab('note')">
-            <div class="tab-text">笔记 {{stats.blogCount || 0}}</div>
-            <div class="active-line" v-if="activeTab==='note'"></div>
-          </div>
-          <div class="tab-item" :class="{active: activeTab==='collection'}" @click="switchTab('collection')">
-            <div class="tab-text">收藏 {{stats.blogStarCount || 0}}</div>
-            <div class="active-line" v-if="activeTab==='collection'"></div>
-          </div>
-          <div class="tab-item" :class="{active: activeTab==='like'}" @click="switchTab('like')">
-            <div class="tab-text">喜欢 {{stats.blogLikeCount || 0}}</div>
-            <div class="active-line" v-if="activeTab==='like'"></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="custom-tabs-content">
-          <!-- Notes Tab -->
-          <div v-if="activeTab==='note'" class="tab-pane" v-infinite-scroll="loadMoreNotes" :infinite-scroll-disabled="noteLoading || noteNoMore">
-             <div v-if="notes.length > 0" class="waterfall-container">
-                 <div class="waterfall-column" v-for="(col, i) in [0, 1]" :key="i">
-                    <div class="waterfall-item" 
-                         v-for="b in notes.filter((_, index) => index % 2 === i)" 
-                         :key="b.id"
-                         @click="toNoteDetail(b)"
-                    >
-                       <div class="card-img-box" style="position: relative;">
-                           <img :src="getImage(b.images)" class="work-cover" loading="lazy" @error="handleImgError">
-                           <div class="pinned-tag" v-if="b.pin || b.isTop">置顶</div>
-                       </div>
-                       <div class="card-info">
-                           <div class="card-title">{{ b.title }}</div>
-                           <div class="card-bottom">
-                               <div class="card-user">
-                                   <img :src="user.icon || '/imgs/icons/default-icon.png'" class="card-avatar">
-                                   <span class="card-name">{{ user.nickName }}</span>
-                               </div>
-                               <div class="card-likes">
-                                   <svg viewBox="0 0 24 24" width="14" height="14" style="margin-right: 2px;">
-                                     <path :fill="b.isLike ? '#ff2442' : '#999'" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                                   </svg>
-                                   {{b.liked||0}}
-                               </div>
-                           </div>
-                       </div>
+    <!-- Sticky Tabs (Refactored to match Info.vue) -->
+    <div class="sticky-tabs-container">
+        <van-tabs v-model:active="activeTab" sticky offset-top="64" swipeable animated @change="switchTab">
+            <van-tab name="note">
+                <template #title>
+                    <div class="tab-label">
+                        <span>笔记</span> 
+                        <span class="tab-num" v-if="stats.blogCount">{{ stats.blogCount }}</span>
                     </div>
-                 </div>
-             </div>
-             <div v-else-if="!noteLoading" class="empty-state">
-                  <img src="https://img01.yzcdn.cn/vant/empty-image-default.png" class="empty-img">
-                  <div class="empty-text">Ta还没有发布任何笔记</div>
-             </div>
-             <div v-else class="loading-state"><i class="el-icon-loading"></i> 加载中...</div>
-          </div>
+                </template>
+                <div class="tab-content" v-infinite-scroll="loadMoreNotes" :infinite-scroll-disabled="noteLoading || noteNoMore">
+                     <div v-if="notes.length > 0" class="waterfall-container">
+                         <div class="waterfall-column" v-for="(col, i) in [0, 1]" :key="i">
+                            <div class="waterfall-item" 
+                                 v-for="b in notes.filter((_, index) => index % 2 === i)" 
+                                 :key="b.id"
+                                 @click="toNoteDetail(b)"
+                            >
+                               <div class="card-img-box" style="position: relative;">
+                                   <img :src="getImage(b.images)" class="work-cover" loading="lazy" @error="handleImgError">
+                                   <div class="pinned-tag" v-if="b.pin || b.isTop">置顶</div>
+                               </div>
+                               <div class="card-info">
+                                   <div class="card-title">{{ b.title }}</div>
+                                   <div class="card-bottom">
+                                       <div class="card-user">
+                                           <img :src="user.icon || '/imgs/icons/default-icon.png'" class="card-avatar">
+                                           <span class="card-name">{{ user.nickName }}</span>
+                                       </div>
+                                       <div class="card-likes">
+                                           <svg viewBox="0 0 24 24" width="14" height="14" style="margin-right: 2px;">
+                                             <path :fill="b.isLike ? '#ff2442' : '#999'" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                                           </svg>
+                                           {{b.liked||0}}
+                                       </div>
+                                   </div>
+                               </div>
+                            </div>
+                         </div>
+                     </div>
+                     <div v-else-if="!noteLoading" class="empty-state">
+                          <img src="https://img01.yzcdn.cn/vant/empty-image-default.png" class="empty-img">
+                          <div class="empty-text">Ta还没有发布任何笔记</div>
+                     </div>
+                     <div v-else class="loading-state"><i class="el-icon-loading"></i> 加载中...</div>
+                </div>
+            </van-tab>
 
-          <!-- Collections Tab -->
-          <div v-if="activeTab==='collection'" class="tab-pane" v-infinite-scroll="loadMoreCollections" :infinite-scroll-disabled="collectionLoading || collectionNoMore">
-             <div v-if="collections.length > 0" class="waterfall-container">
-                 <div class="waterfall-column" v-for="(col, i) in [0, 1]" :key="i">
-                    <div class="waterfall-item" 
-                         v-for="b in collections.filter((_, index) => index % 2 === i)" 
-                         :key="b.id"
-                         @click="toNoteDetail(b)"
-                    >
-                       <div class="card-img-box">
-                           <img :src="getImage(b.images)" class="work-cover" loading="lazy">
-                       </div>
-                       <div class="card-info">
-                           <div class="card-title">{{ b.title }}</div>
-                           <div class="card-bottom">
-                               <div class="card-user">
-                                   <img :src="b.icon || '/imgs/icons/default-icon.png'" class="card-avatar">
-                                   <span class="card-name">{{ b.name }}</span>
-                               </div>
-                               <div class="card-likes">
-                                   <svg viewBox="0 0 24 24" width="14" height="14" style="margin-right: 2px;">
-                                     <path :fill="b.isLike ? '#ff2442' : '#999'" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                                   </svg>
-                                   {{b.liked||0}}
-                               </div>
-                           </div>
-                       </div>
+            <van-tab name="collection">
+                <template #title>
+                    <div class="tab-label">
+                        <span>收藏</span> 
+                        <span class="tab-num" v-if="stats.blogStarCount">{{ stats.blogStarCount }}</span>
                     </div>
-                 </div>
-              </div>
-              <div v-else-if="!collectionLoading" class="empty-state">
-                  <img src="https://img01.yzcdn.cn/vant/empty-image-default.png" class="empty-img">
-                  <div class="empty-text">Ta还没有收藏任何笔记</div>
-              </div>
-             <div v-else class="loading-state"><i class="el-icon-loading"></i> 加载中...</div>
-          </div>
+                </template>
+                <div class="tab-content" v-infinite-scroll="loadMoreCollections" :infinite-scroll-disabled="collectionLoading || collectionNoMore">
+                     <div v-if="collections.length > 0" class="waterfall-container">
+                         <div class="waterfall-column" v-for="(col, i) in [0, 1]" :key="i">
+                            <div class="waterfall-item" 
+                                 v-for="b in collections.filter((_, index) => index % 2 === i)" 
+                                 :key="b.id"
+                                 @click="toNoteDetail(b)"
+                            >
+                               <div class="card-img-box">
+                                   <img :src="getImage(b.images)" class="work-cover" loading="lazy">
+                               </div>
+                               <div class="card-info">
+                                   <div class="card-title">{{ b.title }}</div>
+                                   <div class="card-bottom">
+                                       <div class="card-user">
+                                           <img :src="b.icon || '/imgs/icons/default-icon.png'" class="card-avatar">
+                                           <span class="card-name">{{ b.name }}</span>
+                                       </div>
+                                       <div class="card-likes">
+                                           <svg viewBox="0 0 24 24" width="14" height="14" style="margin-right: 2px;">
+                                             <path :fill="b.isLike ? '#ff2442' : '#999'" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                                           </svg>
+                                           {{b.liked||0}}
+                                       </div>
+                                   </div>
+                               </div>
+                            </div>
+                         </div>
+                      </div>
+                      <div v-else-if="!collectionLoading" class="empty-state">
+                          <img src="https://img01.yzcdn.cn/vant/empty-image-default.png" class="empty-img">
+                          <div class="empty-text">Ta还没有收藏任何笔记</div>
+                      </div>
+                     <div v-else class="loading-state"><i class="el-icon-loading"></i> 加载中...</div>
+                </div>
+            </van-tab>
 
-          <!-- Likes Tab (Stub) -->
-           <div v-if="activeTab==='like'" class="tab-pane" v-infinite-scroll="loadMoreLikes" :infinite-scroll-disabled="likeLoading || likeNoMore">
-              <!-- Reusing waterfall structure for future like list -->
-              <div v-if="likes.length > 0" class="waterfall-container">
-                 <div class="waterfall-column" v-for="(col, i) in [0, 1]" :key="i">
-                    <div class="waterfall-item" 
-                         v-for="b in likes.filter((_, index) => index % 2 === i)" 
-                         :key="b.id"
-                         @click="toNoteDetail(b)"
-                    >
-                       <div class="card-img-box">
-                           <img :src="getImage(b.images)" class="work-cover" loading="lazy">
-                       </div>
-                       <div class="card-info">
-                           <div class="card-title">{{ b.title }}</div>
-                           <div class="card-bottom">
-                               <div class="card-user">
-                                   <img :src="b.icon || '/imgs/icons/default-icon.png'" class="card-avatar">
-                                   <span class="card-name">{{ b.name }}</span>
-                               </div>
-                               <div class="card-likes">
-                                   <!-- Heart Icon -->
-                                   <svg viewBox="0 0 24 24" width="14" height="14" style="margin-right: 2px;">
-                                     <path :fill="b.isLike ? '#ff2442' : '#999'" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                                   </svg>
-                                   {{b.liked||0}}
-                               </div>
-                           </div>
-                       </div>
+            <van-tab name="like">
+                <template #title>
+                    <div class="tab-label">
+                        <span>喜欢</span> 
+                        <span class="tab-num" v-if="stats.blogLikeCount">{{ stats.blogLikeCount }}</span>
                     </div>
-                 </div>
-              </div>
-              <div v-else class="empty-state">
-                  <img src="https://img01.yzcdn.cn/vant/empty-image-default.png" class="empty-img">
-                  <div class="empty-text">Ta还没有点赞过任何笔记</div>
-              </div>
-           </div>
-      </div>
+                </template>
+                <div class="tab-content" v-infinite-scroll="loadMoreLikes" :infinite-scroll-disabled="likeLoading || likeNoMore">
+                   <div v-if="likes.length > 0" class="waterfall-container">
+                      <div class="waterfall-column" v-for="(col, i) in [0, 1]" :key="i">
+                         <div class="waterfall-item" 
+                              v-for="b in likes.filter((_, index) => index % 2 === i)" 
+                              :key="b.id"
+                              @click="toNoteDetail(b)"
+                         >
+                            <div class="card-img-box">
+                                <img :src="getImage(b.images)" class="work-cover" loading="lazy">
+                            </div>
+                            <div class="card-info">
+                                <div class="card-title">{{ b.title }}</div>
+                                <div class="card-bottom">
+                                    <div class="card-user">
+                                        <img :src="b.icon || '/imgs/icons/default-icon.png'" class="card-avatar">
+                                        <span class="card-name">{{ b.name }}</span>
+                                    </div>
+                                    <div class="card-likes">
+                                        <svg viewBox="0 0 24 24" width="14" height="14" style="margin-right: 2px;">
+                                          <path :fill="b.isLike ? '#ff2442' : '#999'" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                                        </svg>
+                                        {{b.liked||0}}
+                                    </div>
+                                </div>
+                            </div>
+                         </div>
+                      </div>
+                   </div>
+                   <div v-else class="empty-state">
+                       <img src="https://img01.yzcdn.cn/vant/empty-image-default.png" class="empty-img">
+                       <div class="empty-text">Ta还没有点赞过任何笔记</div>
+                   </div>
+                </div>
+            </van-tab>
+        </van-tabs>
+    </div>
     
     <!-- Image Preview Component -->
     <van-image-preview v-model:show="showPreview" :images="previewImages" />
@@ -873,11 +878,11 @@ export default {
 /* Larger Tags */
 .tags-row {
     display: flex;
-    gap: 6px;
     flex-wrap: wrap;
     margin-bottom: 15px;
 }
 .tag-capsule {
+    margin-right: 8px;
     height: 24px;
     padding: 0 8px;
     background: #f5f5f5;
@@ -931,48 +936,34 @@ export default {
 }
 
 /* Sticky Tabs */
-.sticky-tabs-wrapper {
-    position: sticky;
-    top: 64px; /* Adjust based on navbar height */
-    z-index: 90;
-    background: white;
+.sticky-tabs-container {
+    background: #fff;
+    min-height: 500px;
 }
-.custom-tabs-nav {
-    display: flex;
-    justify-content: center;
-    gap: 40px;
-    height: 44px;
-    border-bottom: 1px solid #f5f5f5;
-}
-.tab-item {
-    position: relative;
+.tab-label {
     display: flex;
     align-items: center;
-    gap: 4px;
-    font-size: 16px; /* Increased from 15px */
-    color: #999;
-    cursor: pointer;
-    transition: all 0.2s;
+    justify-content: center;
 }
-.tab-item.active {
-    font-size: 18px; /* Increased from 16px */
+.tab-num {
+    margin-left: 2px;
+    font-size: 14px;
+    color: #999;
+}
+/* Deep selector for active tab color */
+:deep(.van-tab--active .tab-label span:first-child) {
     font-weight: 600;
+    font-size: 16px;
     color: #333;
 }
-.active-line {
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 20px;
-    height: 3px;
-    background: #ff2442;
-    border-radius: 2px;
-}
-.custom-tabs-content {
+:deep(.van-tabs__nav) {
     background: #fff;
+}
+/* Content */
+.tab-content {
+    background: #f9f9f9;
+    padding: 0; /* Reset padding as waterfall container has its own */
     min-height: 400px;
-    padding: 10px 6px;
 }
 
 /* Cleanup old styles */

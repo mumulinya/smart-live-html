@@ -18,12 +18,12 @@
           </div>
           <div class="total-stats">
              <i class="el-icon-box"></i>
-             <span>{{filteredOrders.length}}笔订单</span>
+             <span>{{orders.length}}笔订单</span>
           </div>
        </div>
 
-       <div v-if="filteredOrders.length > 0">
-          <div v-for="order in filteredOrders" :key="order.id" class="order-card">
+       <div v-if="orders.length > 0">
+          <div v-for="order in orders" :key="order.id" class="order-card">
              <!-- Header: Time & Status -->
              <div class="card-header">
                 <div class="header-left">
@@ -116,15 +116,9 @@ export default {
        activeTab: 'all'
     }
   },
-  computed: {
-     filteredOrders() {
-        if (this.activeTab === 'all') {
-           return this.orders;
-        }
-        // Filter by status
-        // Tabs use string keys, order status is number
-        const status = Number(this.activeTab);
-        return this.orders.filter(o => o.status === status);
+  watch: {
+     activeTab() {
+         this.queryOrders();
      }
   },
   created() {
@@ -167,17 +161,37 @@ export default {
      },
      queryOrders() {
         this.pageLoading = true;
-        getOrderList({ current: 1 }).then(res => {
+        const params = { current: 1 };
+        if (this.activeTab !== 'all') {
+            params.status = Number(this.activeTab);
+        }
+        
+        getOrderList(params).then(res => {
            let list = res.data || res || [];
            if (res && res.records) list = res.records;
            
            if (list.length === 0) {
-              this.useMockData();
+              // If server returns empty, we might want to show empty state
+              // But if we are in "all" tab and it's empty, maybe fall back to mock?
+              // The user specifically wants server data. 
+              // I will leave mock fallback ONLY if it looks like a complete failure or 'all' tab with no data?
+              // Actually user said "did not get data from backend".
+              // I should probably remove aggressive mock fallback if connection works but returns empty.
+              // But for safety, I'll keep default mock ONLY if it errors out, 
+              // or maybe if list is empty AND we want to show something?
+              // Let's trust the server. If empty, show empty.
+              // ONLY use mock data in catch block (network error).
+              this.orders = []; 
            } else {
               this.orders = list;
            }
         }).catch(() => {
            this.useMockData();
+           // Filter mock data locally if we fell back to it
+           if (this.activeTab !== 'all') {
+               const s = Number(this.activeTab);
+               this.orders = this.orders.filter(o => o.status === s);
+           }
         }).finally(() => this.pageLoading = false);
      },
 

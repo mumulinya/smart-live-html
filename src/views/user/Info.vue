@@ -433,7 +433,7 @@ export default {
         this.$router.push('/user/follow');
      },
      toReviews() {
-        this.$router.push('/comment/list'); // Assuming comment list serves as reviews
+        this.$router.push('/user/my-reviews');
      },
      toFollows() {
         this.$router.push('/user/list?type=follow');

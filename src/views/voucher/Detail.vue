@@ -102,11 +102,27 @@ const handleBuy = async () => {
             if(info.value.stock < 1) return showToast('已抢光');
         }
         
-        await api(info.value.id);
+        const res = await api(info.value.id);
+        const orderId = typeof res === 'object' ? (res.data || res.orderId || res) : res;
+
         showToast('抢购成功');
-        loadData(); 
+        
+        if (orderId) {
+            setTimeout(() => {
+                router.push(`/order/detail?id=${orderId}`);
+            }, 500);
+        } else {
+            loadData(); 
+        }
     } catch (e) {
-        showToast(e.message || '抢购失败');
+        console.error(e);
+        const msg = e.msg || e.message || '抢购失败';
+        // Handle specific error codes if known, e.g. "Duplicate purchase"
+        if(msg.includes('库存') || msg.includes('stock')) {
+           showToast('手慢了，已抢光');
+        } else {
+           showToast(msg);
+        }
     }
 };
 

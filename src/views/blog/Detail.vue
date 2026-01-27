@@ -826,7 +826,7 @@ export default {
            sourceType: 3, // Blog
            userId: this.user.id,
            parentId: 0, // Default for top-level comments
-           answerId: 0, // Default for top-level comments
+
            images: this.selectedImages.map(i => i.rawUrl).join(',')
         };
 

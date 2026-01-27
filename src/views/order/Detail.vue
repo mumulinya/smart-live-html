@@ -120,7 +120,7 @@
 </template>
 
 <script>
-import { cancelOrder, refundOrder, getOrderDetail } from '@/api/order';
+import { cancelOrder, refundOrder, getOrderDetail, payOrder } from '@/api/order';
 
 import PageLayout from '@/components/PageLayout/PageLayout.vue';
 
@@ -138,7 +138,6 @@ export default {
   },
   created() {
      this.orderId = this.$route.query.id;
-     // Always try to query, allow fallback to default mock if no ID
      this.queryDetail();
   },
   beforeUnmount() {
@@ -148,45 +147,56 @@ export default {
      goBack() {
         this.$router.go(-1);
      },
+      currentTimestamp() {
+        return new Date().getTime();
+      },
       startTimer() {
          if(this.timer) clearInterval(this.timer);
-         this.timer = setInterval(() => {
-            if(this.order.status === 1) {
-                let end = 0;
-                if(this.order.expireTime) {
-                     end = new Date(this.order.expireTime).getTime();
-                } else if(this.order.createTime) {
-                     end = new Date(this.order.createTime).getTime() + 15 * 60 * 1000;
-                }
-                
-                if(end > 0) {
-                    const now = new Date().getTime();
-                    const diff = end - now;
-                    if(diff > 0) {
-                        const m = Math.floor(diff / 60000);
-                        const s = Math.floor((diff % 60000) / 1000);
-                        this.order.countDownStr = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-                    } else {
-                        this.order.countDownStr = '00:00';
-                    }
-                }
-            }
-         }, 1000);
+         if(this.order.status !== 1) return;
+
+         const updateTimer = () => {
+             let end = 0;
+             if(this.order.expireTime) {
+                  end = new Date(this.order.expireTime).getTime();
+             } else if(this.order.createTime) {
+                  // Default 15 min if not specified
+                  end = new Date(this.order.createTime).getTime() + 15 * 60 * 1000;
+             }
+             
+             if(end > 0) {
+                 const now = new Date().getTime();
+                 const diff = end - now;
+                 if(diff > 0) {
+                     const m = Math.floor(diff / 60000);
+                     const s = Math.floor((diff % 60000) / 1000);
+                     this.order.countDownStr = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+                 } else {
+                     this.order.countDownStr = '00:00';
+                     // Optionally auto-cancel or refresh
+                 }
+             }
+         };
+         
+         updateTimer(); // run immediately
+         this.timer = setInterval(updateTimer, 1000);
       },
      queryDetail() {
         this.loading = true;
-        // Priority: Real API
         if(this.orderId) {
             getOrderDetail(this.orderId).then(res => {
-                const data = res.data || res;
-                if(data) {
+                const data = res.data || res; // Adapt to various response wrappers
+                if(data && (data.id || data.orderId)) {
                     this.order = data;
+                    // Ensure ID matches string format for checks
+                    if(!this.order.id) this.order.id = this.orderId;
                     this.startTimer();
                 } else {
-                    this.useMockData();
+                    this.$message.error('订单不存在');
+                    this.useMockData(); // Fallback for demo purposes if API returns empty
                 }
             }).catch(e => {
-                console.error("API failed, using mock:", e);
+                console.error("API failed:", e);
+                this.$message.error('获取订单详情失败，显示模拟数据');
                 this.useMockData();
             }).finally(() => {
                 this.loading = false;
@@ -218,73 +228,25 @@ export default {
         return payTypeMap[payType] || '未知支付方式';
      },
      useMockData() {
+        // Create a mock order that matches the requested ID to avoid confusion
         const now = new Date().getTime();
-        const mocks = [
-           { 
-              id: '99', 
-              userId: 1010,
-              voucherId: 13,
-              createTime: new Date().toISOString(), 
-              expireTime: new Date(now + 15 * 60 * 1000).toISOString(), 
-              status: 1, 
-              title: '秒杀代金券', 
-              subTitle: '限时秒杀',
-              rule: '不可退款',
-              payValue: 19.90, 
-              actualValue: 100.00, 
-              price: 19.90, 
-              value: 100.00,
-              shopName: '家味道家常菜馆'
-           },
-           { 
-              id: '540186545148133378', 
-              userId: 1010,
-              voucherId: 13,
-              createTime: '2025-12-26 16:39:42',
-              payTime: '2025-12-26 16:40:46',
-              status: 4, 
-              title: '100元代金券', 
-              subTitle: '周一至周五均可使用',
-              rule: '无规则333',
-              payValue: 80.00, 
-              actualValue: 100.00,
-              price: 80.00,
-              value: 100.00,
-              shopName: '家味道家常菜馆'
-           },
-           { 
-              id: '550186545148133399', 
-              userId: 1010,
-              voucherId: 14,
-              createTime: '2025-11-11 12:00:00',
-              payTime: '2025-11-11 12:01:00',
-              status: 3, 
-              title: '洗车卡', 
-              subTitle: '普通洗车',
-              rule: '',
-              payValue: 30.00, 
-              actualValue: 30.00,
-              price: 30.00,
-              value: 30.00,
-              shopName: '巴蜀风味川菜馆'
-           },
-           { 
-              id: '550186545148133377', 
-              userId: 1010,
-              voucherId: 14,
-              createTime: '2025-12-25 10:20:15',
-              status: 3, 
-              title: '200元代金券', 
-              subTitle: '领取/购买后 7 天内有效',
-              rule: '',
-              payValue: 88.00, 
-              actualValue: 112.00,
-              price: 88.00,
-              value: 112.00,
-              shopName: '坤坤蜜味轩小火锅呀'
-           }
-        ];
-        this.order = mocks.find(m => String(m.id) === String(this.orderId)) || mocks[0];
+        this.order = { 
+           id: this.orderId || 'MOCK_ID', 
+           userId: 1010,
+           voucherId: 13,
+           createTime: new Date().toISOString(),
+           expireTime: new Date(now + 15 * 60 * 1000).toISOString(), 
+           status: 1, 
+           title: '模拟-80元代金券', 
+           subTitle: 'API调用失败时的模拟数据',
+           rule: '周一至周日可用',
+           payValue: 80.00, 
+           actualValue: 100.00, 
+           price: 80.00, 
+           value: 100.00,
+           shopName: '模拟店铺'
+        };
+        this.startTimer();
      },
       formatPrice(p) {
          if(p === undefined || p === null || isNaN(p)) return '0.00';
@@ -294,7 +256,20 @@ export default {
         this.qrVisible = true;
      },
      toPay() {
-        this.$message.success('跳转支付...');
+        if(!this.orderId) return;
+        this.loading = true;
+        payOrder(this.orderId).then(() => {
+           this.$message.success('支付成功');
+           this.order.status = 2; 
+           this.order.payTime = new Date().toISOString(); 
+           // Clear timer if paid
+           if(this.timer) clearInterval(this.timer);
+        }).catch(err => {
+           console.error(err);
+           this.$message.error('支付失败: ' + (err.msg || '请稍后重试'));
+        }).finally(() => {
+           this.loading = false;
+        });
      },
      doCancel() {
         this.$confirm('确定要取消订单吗?', '提示', { type: 'warning' }).then(() => {
