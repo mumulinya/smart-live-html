@@ -359,10 +359,9 @@
 
 .comment-replies {
     margin-top: 10px;
-    background: #f9f9f9;
-    /* Very light gray */
-    padding: 12px;
-    border-radius: 8px;
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
 }
 
 .reply-item {
@@ -648,7 +647,129 @@
 }
 
 .pop-btns {
-    display: flex;
     gap: 10px;
     margin-left: auto;
+}
+
+/* View All Button */
+.view-all-btn {
+    text-align: center;
+    padding: 15px 0;
+    color: #666;
+    font-size: 14px;
+    border-top: 1px solid #f5f5f5;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+/* Review Popup Bottom Sheet */
+.review-popup-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    display: flex;
+    align-items: flex-end;
+}
+
+.review-popup-sheet {
+    width: 100%;
+    height: 75vh;
+    background: white;
+    border-radius: 16px 16px 0 0;
+    display: flex;
+    flex-direction: column;
+    animation: slideUp 0.3s ease;
+}
+
+/* slideUp keyframes already defined above */
+.review-popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #f0f0f0;
+    flex-shrink: 0;
+}
+
+.review-popup-title {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.review-popup-close {
+    font-size: 22px;
+    color: #999;
+    cursor: pointer;
+    padding: 4px;
+}
+
+.review-popup-close:hover {
+    color: #333;
+}
+
+.review-popup-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 16px 20px;
+}
+
+.review-popup-body .comment-box {
+    padding: 16px 0;
+    border-bottom: 1px solid #f5f5f5;
+}
+
+.review-popup-body .comment-box:last-child {
+    border-bottom: none;
+}
+
+.empty-reviews {
+    text-align: center;
+    padding: 60px 20px;
+    color: #999;
+}
+
+.empty-reviews i {
+    font-size: 48px;
+    margin-bottom: 12px;
+    color: #ddd;
+}
+
+.loading-more {
+    text-align: center;
+    padding: 15px;
+    color: #999;
+    font-size: 13px;
+}
+
+.no-more-reviews {
+    text-align: center;
+    padding: 15px;
+    color: #ccc;
+    font-size: 12px;
+}
+
+/* Popup Bottom Input Bar */
+.popup-bottom-bar {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    border-top: 1px solid #f0f0f0;
+    background: white;
+    flex-shrink: 0;
+    gap: 12px;
+}
+
+.popup-input-placeholder {
+    flex: 1;
+    background: #f5f5f5;
+    padding: 10px 16px;
+    border-radius: 20px;
+    color: #999;
+    font-size: 14px;
+}
+
+/* Ensure comment modal is above review popup */
+.comment-pop-overlay {
+    z-index: 1100 !important;
 }

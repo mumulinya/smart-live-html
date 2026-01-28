@@ -58,6 +58,11 @@ export function addComment(data) {
     return request.post('/app/interaction/comment/addComment', data);
 }
 
+export function getChildComments(params) {
+    // params: { id, current, size }
+    return request.get('/app/interaction/comment/listChildComment', { params });
+}
+
 export function getUserComments(params) {
     return request.get('/app/interaction/comment/of/user', { params });
 }

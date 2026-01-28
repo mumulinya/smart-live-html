@@ -44,15 +44,15 @@
           <!-- Stats -->
           <div class="stats-box">
              <div class="stat-item">
-                <div class="stat-num">{{ stats.likeCount || 0 }}</div>
+                <div class="stat-num">{{ formatCount(stats.likeCount || 0) }}</div>
                 <div class="stat-label">获赞</div>
              </div>
              <div class="stat-item" @click="toFollows">
-                <div class="stat-num">{{ stats.followCount || 0 }}</div>
+                <div class="stat-num">{{ formatCount(stats.followCount || 0) }}</div>
                 <div class="stat-label">关注</div>
              </div>
              <div class="stat-item" @click="toFans">
-                <div class="stat-num">{{ stats.fansCount || 0 }}</div>
+                <div class="stat-num">{{ formatCount(stats.fansCount || 0) }}</div>
                 <div class="stat-label">粉丝</div>
              </div>
           </div>
@@ -64,7 +64,7 @@
              <div class="cancel-bold-name">{{ user.nickName || '未命名' }}</div>
           </div>
           <div class="user-id-row">
-             <span>小红书号：{{ user.id || '未知' }}</span>
+             <span>生活号：{{ user.id || '未知' }}</span>
              <i class="el-icon-document-copy" @click="copyId"></i>
           </div>
           <!-- Bio -->
@@ -391,6 +391,13 @@ export default {
       window.removeEventListener('scroll', this.handleWindowScroll);
   },
   methods: {
+     formatCount(num) {
+         if (!num) return '0';
+         if (num >= 10000) {
+             return (num / 10000).toFixed(1).replace(/\.0$/, '') + '万';
+         }
+         return num;
+     },
      handlePreview(url) {
         if(!url) return;
         let previewUrl = url;

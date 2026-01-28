@@ -323,6 +323,36 @@ export default {
       }
     }
   },
+  activated() {
+    // Check if token changed (User logged in or out)
+    const newToken = localStorage.getItem("token") || '';
+    if (this.token !== newToken) {
+        this.token = newToken;
+        
+        // Reset data
+        this.blogs = [];
+        this.followBlogs = [];
+        this.current = 1;
+        this.followParams = { offset: 0, minTime: 0 };
+        this.noMoreData = false;
+        this.noMoreFollowData = false;
+        this.isLoading = false;
+        
+        // If logged out and currently on 'follow', switch to 'hot'
+        if (!this.token && this.activeCategory === 'follow') {
+            this.activeCategory = 'hot';
+        }
+        
+        // Refresh current category
+        if (this.activeCategory === 'follow') {
+            this.queryFollowedFeeds();
+        } else if (this.activeCategory === 'hot') {
+            this.queryHotBlogsScroll();
+        } else {
+            this.queryBlogsByCategory(this.activeCategory);
+        }
+    }
+  },
 
   methods: {
     toSearchPage() {

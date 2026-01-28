@@ -206,9 +206,9 @@
                    <el-rate :model-value="c.rating" disabled size="small"></el-rate>
                    <span class="score">{{c.rating}}分</span>
                 </div>
-                <div class="comment-content">{{c.content}}</div>
+                <div class="comment-content" @click="toReviewDetail(c)">{{c.content}}</div>
                 <div class="comment-images" v-if="c.images && c.images.length">
-                   <img v-for="(img, idx) in c.images" :key="idx" :src="img" @click="previewImage(c.images, idx)">
+                   <img v-for="(img, idx) in c.images" :key="idx" :src="img" @click.stop="previewImage(c.images, idx)">
                 </div>
                 <div class="comment-stats">
                    <div class="comment-interactions">
@@ -230,39 +230,64 @@
                 </div>
 
                 <!-- Replies -->
-                <div class="comment-replies" v-if="c.replies && c.replies.length > 0">
-                    <div class="reply-item" v-for="r in c.replies" :key="r.id">
-                        <div class="reply-avatar" @click.stop="toUserDetail(r.userId)">
-                           <img :src="r.userIcon || r.icon || '/imgs/icons/default-icon.png'" alt="">
-                        </div>
-                        <div class="reply-main">
-                           <div class="reply-header">
-                              <span class="reply-user" @click.stop="toUserDetail(r.userId)">{{r.nickName || '匿名用户'}}</span>
-                              <span class="reply-time">{{formatDate(r.createTime)}}</span>
-                           </div>
-                           <div class="reply-content">
-                                <span v-if="r.replyToName" class="reply-target">回复 @{{r.replyToName}}</span>
-                                {{r.content}}
-                           </div>
-                           <div class="comment-images" v-if="r.images && r.images.length">
-                              <img v-for="(img, idx) in r.images" :key="idx" :src="img" @click.stop="previewImage(r.images, idx)">
-                           </div>
-                           <div class="reply-actions">
-                                <div class="c-action-btn" @click.stop="handleCommentLike(r)">
-                                   <svg viewBox="0 0 24 24" width="16" height="16">
-                                     <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" :fill="r.isLike ? '#ff2442' : '#999'"></path>
-                                   </svg>
-                                   <span v-if="r.liked > 0">{{r.liked}}</span>
-                                </div>
-                                <div class="c-action-btn" @click.stop="handleCommentReply(r)">
-                                   <i class="el-icon-chat-dot-square"></i>
-                                </div>
-                                 <div class="c-action-btn delete-btn" v-if="user && user.id === r.userId" @click.stop="handleCommentDelete(r)">
-                                   <i class="el-icon-delete"></i>
-                                </div>
-                           </div>
-                        </div>
-                    </div>
+                <!-- Replies -->
+                <div class="comment-replies" v-if="c.comments > 0">
+                   <!-- Initial Expand Button -->
+                   <div class="reply-expand" v-if="!c.showReplies" @click.stop="toggleReplies(c)">
+                       展开{{c.comments}}条回复 <i class="el-icon-arrow-down"></i>
+                   </div>
+
+                   <!-- Reply List -->
+                   <template v-if="c.showReplies">
+                      <div class="reply-item" v-for="r in c.replies" :key="r.id">
+                          <div class="reply-avatar" @click.stop="toUserDetail(r.userId)">
+                             <img :src="r.userIcon || r.icon || '/imgs/icons/default-icon.png'" alt="">
+                          </div>
+                          <div class="reply-main">
+                             <div class="reply-header">
+                                <span class="reply-user" @click.stop="toUserDetail(r.userId)">{{r.nickName || '匿名用户'}}</span>
+                                <!-- Remove time from here -->
+                             </div>
+                             <div class="reply-content">
+                                  <span v-if="r.replyToName" class="reply-target">回复 @{{r.replyToName}}</span>
+                                  {{r.content}}
+                             </div>
+                             <!-- Images in replies -->
+                             <div class="comment-images" v-if="r.images && r.images.length">
+                                <img v-for="(img, idx) in r.images" :key="idx" :src="img" @click.stop="previewImage(r.images, idx)">
+                             </div>
+
+                             <div class="reply-actions">
+                                  <span class="reply-time" style="margin-right: 10px;">{{formatDate(r.createTime)}}</span>
+                                  
+                                  <div class="c-action-btn" @click.stop="handleCommentLike(r)">
+                                     <svg viewBox="0 0 24 24" width="16" height="16">
+                                       <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" :fill="r.isLike ? '#ff2442' : '#999'"></path>
+                                     </svg>
+                                     <span v-if="r.liked > 0">{{r.liked}}</span>
+                                  </div>
+                                  <div class="c-action-btn" @click.stop="handleCommentReply(r)">
+                                     <i class="el-icon-chat-dot-square"></i>
+                                  </div>
+                                   <div class="c-action-btn delete-btn" v-if="user && user.id === r.userId" @click.stop="handleCommentDelete(r)">
+                                     <i class="el-icon-delete"></i>
+                                  </div>
+                             </div>
+                          </div>
+                      </div>
+                      
+                      <!-- Load More / Collapse Button -->
+                      <div class="reply-expand" 
+                           v-if="c.replies.length > 0" 
+                           @click.stop="toggleReplies(c)">
+                           <template v-if="c.replies.length < Number(c.comments)">
+                              展开更多回复 <i class="el-icon-arrow-down"></i>
+                           </template>
+                           <template v-else>
+                              收起回复 <i class="el-icon-arrow-up"></i>
+                           </template>
+                      </div>
+                   </template>
                 </div>
                  </div>
              </div>
@@ -373,7 +398,7 @@
    <div class="review-popup-overlay" v-if="showReviewPopup" @click="showReviewPopup = false">
       <div class="review-popup-sheet" @click.stop>
          <div class="review-popup-header">
-            <span class="review-popup-title">全部评论 ({{shop.comments || 0}})</span>
+            <span class="review-popup-title">评价列表 ({{shop.comments || 0}})</span>
             <i class="el-icon-close review-popup-close" @click="showReviewPopup = false"></i>
          </div>
          <div class="review-popup-body" @scroll="onPopupScroll">
@@ -394,9 +419,9 @@
                      <el-rate :model-value="c.rating" disabled size="small"></el-rate>
                      <span class="score">{{c.rating}}分</span>
                   </div>
-                  <div class="comment-content">{{c.content}}</div>
+                  <div class="comment-content" @click="toReviewDetail(c)">{{c.content}}</div>
                   <div class="comment-images" v-if="c.images && c.images.length">
-                     <img v-for="(img, idx) in c.images" :key="idx" :src="img" @click="previewImage(c.images, idx)">
+                     <img v-for="(img, idx) in c.images" :key="idx" :src="img" @click.stop="previewImage(c.images, idx)">
                   </div>
                   <div class="comment-interactions">
                      <span class="comment-time">{{formatDate(c.createTime)}}</span>
@@ -417,23 +442,62 @@
                   </div>
                   
                   <!-- Replies -->
-                  <div class="comment-replies" v-if="c.replies && c.replies.length > 0">
-                     <div class="reply-item" v-for="r in c.replies" :key="r.id">
-                        <div class="reply-avatar" @click.stop="toUserDetail(r.userId)">
-                           <img :src="r.userIcon || '/imgs/icons/default-icon.png'">
-                        </div>
-                        <div class="reply-main">
-                           <div class="reply-header">
-                              <span class="reply-user" @click.stop="toUserDetail(r.userId)">{{r.nickName || '匿名用户'}}</span>
-                              <span class="reply-time">{{formatDate(r.createTime)}}</span>
-                           </div>
-                           <div class="reply-content">
-                              <span v-if="r.replyToName" class="reply-target">回复 @{{r.replyToName}}</span>
-                              {{r.content}}
-                           </div>
-                        </div>
-                     </div>
-                  </div>
+                   <div class="comment-replies" v-if="c.comments > 0">
+                      <!-- Initial Expand Button -->
+                      <div class="reply-expand" v-if="!c.showReplies" @click.stop="toggleReplies(c)">
+                          展开{{c.comments}}条回复 <i class="el-icon-arrow-down"></i>
+                      </div>
+
+                      <!-- Reply List -->
+                      <template v-if="c.showReplies">
+                         <div class="reply-item" v-for="r in c.replies" :key="r.id">
+                             <div class="reply-avatar" @click.stop="toUserDetail(r.userId)">
+                                <img :src="r.userIcon || r.icon || '/imgs/icons/default-icon.png'" alt="">
+                             </div>
+                             <div class="reply-main">
+                                <div class="reply-header">
+                                   <span class="reply-user" @click.stop="toUserDetail(r.userId)">{{r.nickName || '匿名用户'}}</span>
+                                   <!-- Time moved to bottom actions if needed, or keep here -->
+                                </div>
+                                <div class="reply-content">
+                                     <span v-if="r.replyToName" class="reply-target">回复 @{{r.replyToName}}:</span>
+                                     {{r.content}}
+                                </div>
+                                <div class="comment-images" v-if="r.images && r.images.length">
+                                   <img v-for="(img, idx) in r.images" :key="idx" :src="img" @click.stop="previewImage(r.images, idx)">
+                                </div>
+                                <div class="reply-actions">
+                                     <span class="reply-time" style="margin-right: 10px;">{{formatDate(r.createTime)}}</span>
+                                     
+                                     <div class="c-action-btn" @click.stop="handleCommentLike(r)">
+                                        <svg viewBox="0 0 24 24" width="16" height="16">
+                                          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" :fill="r.isLike ? '#ff2442' : '#999'"></path>
+                                        </svg>
+                                        <span v-if="r.liked > 0">{{r.liked}}</span>
+                                     </div>
+                                     <div class="c-action-btn" @click.stop="handleCommentReply(r)">
+                                        <i class="el-icon-chat-dot-square"></i>
+                                     </div>
+                                      <div class="c-action-btn delete-btn" v-if="user.id === r.userId" @click.stop="handleCommentDelete(r)">
+                                        <i class="el-icon-delete"></i>
+                                     </div>
+                                </div>
+                             </div>
+                         </div>
+                         
+                         <!-- Load More / Collapse Button -->
+                         <div class="reply-expand" 
+                              v-if="c.replies.length > 0" 
+                              @click.stop="toggleReplies(c)">
+                              <template v-if="c.replies.length < Number(c.comments)">
+                                 展开更多回复 <i class="el-icon-arrow-down"></i>
+                              </template>
+                              <template v-else>
+                                 收起回复 <i class="el-icon-arrow-up"></i>
+                              </template>
+                         </div>
+                      </template>
+                   </div>
                </div>
             </div>
             
@@ -455,6 +519,7 @@
 import { getShopDetail, getShopVouchers, buyVoucherAPI, seckillVoucherAPI } from '@/api/shop';
 import { isStar, toggleStar, getComments, likeComment, addComment, removeComment, isFollowed, followUser } from '@/api/interaction';
 import { uploadFile } from '@/api/common';
+import { showConfirmDialog } from 'vant';
 import { getCurrentUser } from '@/api/user';
 import '@/assets/css/blog-detail.css'; // Import blog styles to reuse reply CSS
 
@@ -521,6 +586,13 @@ export default {
      this.checkLogin();
   },
   methods: {
+     toReviewDetail(comment) {
+         if (!comment || !comment.id) return;
+         this.$router.push({
+             name: 'ReviewDetail',
+             query: { id: comment.id }
+         });
+     },
      fetchData(id) {
         // 1. Shop Detail
         getShopDetail(id).then(res => {
@@ -569,139 +641,130 @@ export default {
            this.onDataLoaded();
         });
         
-        // 3. Comments
-        getComments({ sourceId: id, sourceType: 2, current: 1 }).then(res => {
-           let list = [];
-           if(Array.isArray(res)) list = res;
-           else if(res && Array.isArray(res.list)) list = res.list;
-           else if(res && Array.isArray(res.data)) list = res.data;
-           else if(res && res.data && Array.isArray(res.data.records)) list = res.data.records;
-           
-            const processedList = (list || []).map(c => ({
-               ...c,
-               userIcon: c.userIcon ? (c.userIcon.startsWith('http') ? c.userIcon : this.fileURL + c.userIcon) : '',
-               images: c.images ? c.images.split(',').filter(x=>x).map(i => i.startsWith('http') ? i : this.fileURL + i) : []
-            }));
+            getComments({ sourceId: id, sourceType: 2, current: 1 }).then(res => {
+               let list = [];
+               if(Array.isArray(res)) list = res;
+               else if(res && Array.isArray(res.list)) list = res.list;
+               else if(res && Array.isArray(res.data)) list = res.data;
+               else if(res && res.data && Array.isArray(res.data.records)) list = res.data.records;
+               
+               const processedList = (list || []).map(c => ({
+                  ...c,
+                  userIcon: c.userIcon ? (c.userIcon.startsWith('http') ? c.userIcon : this.fileURL + c.userIcon) : '',
+                  images: c.images ? c.images.split(',').filter(x=>x).map(i => i.startsWith('http') ? i : this.fileURL + i) : [],
+                  isLike: c.isLike || false,
+                  liked: c.liked || 0,
+                  // Map API count to UI comments count
+                  comments: c.replyCount || c.comments || c.childCount || 0, 
+                  showReplies: false, 
+                  replies: [],
+                  replyPage: 1
+               }));
 
-            // Extract AI Comment
-            const aiIdx = processedList.findIndex(c => c.isAIGenerated);
-            if(aiIdx > -1) {
-               this.aiComment = processedList[aiIdx];
-               processedList.splice(aiIdx, 1);
-            }
-
-            // Flatten logic
-            const commentMap = {};
-            processedList.forEach(c => {
-               c.replies = []; 
-               commentMap[c.id] = c;
-            });
-            
-            const roots = [];
-            
-            // Helper to find root ancestor
-            const findRoot = (comment) => {
-               let curr = comment;
-               let depth = 0;
-               while(curr && curr.answerId && depth < 20) {
-                   curr = commentMap[curr.answerId];
-                   depth++;
+               // Extract AI Comment
+               const aiIdx = processedList.findIndex(c => c.isAIGenerated);
+               if(aiIdx > -1) {
+                  this.aiComment = processedList[aiIdx];
+                  processedList.splice(aiIdx, 1);
                }
-               return (curr && !curr.answerId) ? curr : null;
-            };
 
-            processedList.forEach(c => {
-                if (!c.answerId) {
-                    roots.push(c);
-                } else {
-                    const directParent = commentMap[c.answerId];
-                    if(directParent) {
-                        c.replyToName = directParent.nickName;
-                        const root = findRoot(c);
-                        if(root) root.replies.push(c);
-                        else roots.push(c);
-                    } else {
-                       roots.push(c);
-                    }
-                }
+               // Filter roots
+               const roots = processedList.filter(c => !c.answerId || c.answerId === 0 || c.answerId === '0');
+               this.comments = roots.slice(0, 3);
+               this.onDataLoaded();
+            }).catch(err => {
+               this.onDataLoaded();
             });
-            // Sort replies
-            roots.forEach(r => {
-               if(r.replies && r.replies.length) {
-                  r.replies.sort((a,b) => new Date(a.createTime) - new Date(b.createTime));
+         },
+         loadComments() {
+            getComments({ sourceId: this.shop.id, sourceType: 2, current: 1 }).then(res => {
+               let list = [];
+               if(Array.isArray(res)) list = res;
+               else if(res && Array.isArray(res.list)) list = res.list;
+               else if(res && Array.isArray(res.data)) list = res.data;
+               else if(res && res.data && Array.isArray(res.data.records)) list = res.data.records;
+               
+               const processedList = (list || []).map(c => ({
+                  ...c,
+                  userIcon: c.userIcon ? (c.userIcon.startsWith('http') ? c.userIcon : this.fileURL + c.userIcon) : '',
+                  images: c.images ? c.images.split(',').filter(x=>x).map(i => i.startsWith('http') ? i : this.fileURL + i) : [],
+                  isLike: c.isLike || false,
+                  liked: c.liked || 0,
+                  comments: c.replyCount || c.comments || c.childCount || 0, 
+                  showReplies: false, 
+                  replies: [],
+                  replyPage: 1
+               }));
+
+               const aiIdx = processedList.findIndex(c => c.isAIGenerated);
+               if(aiIdx > -1) {
+                  this.aiComment = processedList[aiIdx];
+                  processedList.splice(aiIdx, 1);
                }
+
+               const roots = processedList.filter(c => !c.answerId || c.answerId === 0 || c.answerId === '0');
+               this.comments = roots.slice(0, 3);
             });
-
-            this.comments = roots.slice(0, 3);
-            this.onDataLoaded();
-         }).catch(err => {
-            this.onDataLoaded();
-         });
-     },
-     loadComments() {
-        getComments({ sourceId: this.shop.id, sourceType: 2, current: 1 }).then(res => {
-           let list = [];
-           if(Array.isArray(res)) list = res;
-           else if(res && Array.isArray(res.list)) list = res.list;
-           else if(res && Array.isArray(res.data)) list = res.data;
-           else if(res && res.data && Array.isArray(res.data.records)) list = res.data.records;
-           
-            const processedList = (list || []).map(c => ({
-               ...c,
-               userIcon: c.userIcon ? (c.userIcon.startsWith('http') ? c.userIcon : this.fileURL + c.userIcon) : '',
-               images: c.images ? c.images.split(',').filter(x=>x).map(i => i.startsWith('http') ? i : this.fileURL + i) : []
-            }));
-
-            // Extract AI Comment
-            const aiIdx = processedList.findIndex(c => c.isAIGenerated);
-            if(aiIdx > -1) {
-               this.aiComment = processedList[aiIdx];
-               processedList.splice(aiIdx, 1);
-            }
-
-            // Flatten logic
-            const commentMap = {};
-            processedList.forEach(c => {
-               c.replies = []; 
-               commentMap[c.id] = c;
-            });
-            
-            const roots = [];
-            
-            const findRoot = (comment) => {
-               let curr = comment;
-               let depth = 0;
-               while(curr && curr.answerId && depth < 20) {
-                   curr = commentMap[curr.answerId];
-                   depth++;
-               }
-               return (curr && !curr.answerId) ? curr : null;
-            };
-
-            processedList.forEach(c => {
-                if (!c.answerId) {
-                    roots.push(c);
-                } else {
-                    const directParent = commentMap[c.answerId];
-                    if(directParent) {
-                        c.replyToName = directParent.nickName;
-                        const root = findRoot(c);
-                        if(root) root.replies.push(c);
-                        else roots.push(c);
-                    } else {
-                       roots.push(c);
-                    }
-                }
-            });
-            roots.forEach(r => {
-               if(r.replies && r.replies.length) {
-                  r.replies.sort((a,b) => new Date(a.createTime) - new Date(b.createTime));
-               }
-            });
-
-            this.comments = roots.slice(0, 3);
-         });
-     },
+         },
+         toggleReplies(comment) {
+             if (!comment.showReplies) {
+                 // Expand
+                 comment.showReplies = true;
+                 if (!comment.replies || comment.replies.length === 0) {
+                      comment.replyPage = 1;
+                      this.fetchReplies(comment);
+                 }
+             } else {
+                 // Already expanded
+                 if (comment.replies.length < comment.comments) {
+                      // Load More
+                      comment.replyPage = (comment.replyPage || 1) + 1;
+                      this.fetchReplies(comment);
+                 } else {
+                      // Collapse
+                      comment.showReplies = false;
+                 }
+             }
+         },
+         fetchReplies(comment) {
+             getComments({ 
+                 sourceId: comment.id, 
+                 sourceType: 5, 
+                 current: comment.replyPage || 1, 
+                 size: 10 
+             }).then(res => {
+                 let list = [];
+                 if (Array.isArray(res)) list = res;
+                 else if (res && Array.isArray(res.data)) list = res.data;
+                 else if (res && res.data && Array.isArray(res.data.records)) list = res.data.records;
+                 
+                 if (list) {
+                     const newReplies = list.map(r => ({
+                         ...r,
+                         userIcon: r.userIcon ? (r.userIcon.startsWith('http') ? r.userIcon : this.fileURL + r.userIcon) : '',
+                         images: r.images ? r.images.split(',').filter(x=>x).map(i => i.startsWith('http') ? i : this.fileURL + i) : [],
+                         liked: r.liked || 0,
+                         isLike: r.isLike || false
+                     }));
+                     
+                     if (comment.replyPage === 1) {
+                         comment.replies = newReplies;
+                     } else {
+                         comment.replies = [...comment.replies, ...newReplies];
+                     }
+                     
+                     // Count Correction Logic
+                     if (res && res.data && res.data.total) {
+                          comment.comments = res.data.total;
+                     }
+                     if (list.length < 10) {
+                         if (comment.replies.length < comment.comments) {
+                             comment.comments = comment.replies.length;
+                         }
+                     }
+                 }
+             });
+         },
      onDataLoaded() {
         this.dataLoadedCount++;
         if(this.dataLoadedCount >= 3) {
@@ -1029,9 +1092,9 @@ export default {
 
          if (this.replyToComment) {
              data.sourceType = 5; 
-             data.parentId = this.shop.id; 
-             data.answerId = this.replyToComment.id; 
-             data.sourceId = this.replyToComment.id; 
+             data.answerId = this.replyToComment.id;
+             data.sourceId = this.replyToComment.id; // Use reply id as sourceId for replies
+             data.parentId = this.shop.id; // Root source (shop) as parentId
              delete data.rating;
          }
 
@@ -1049,11 +1112,11 @@ export default {
          });
      },
      handleCommentDelete(c) {
-        this.$confirm('确定要删除这条评论吗？删除后不可恢复。', '删除评论', {
-           confirmButtonText: '确定删除',
+        showConfirmDialog({
+           title: '提示',
+           message: '确定删除该评论吗？',
+           confirmButtonText: '确认',
            cancelButtonText: '取消',
-           type: 'warning',
-           confirmButtonClass: 'el-button--danger'
         }).then(() => {
            // Use fallback values if sourceType/sourceId are missing
            const sourceType = c.sourceType || 2; // Default to shop type
@@ -1078,62 +1141,52 @@ export default {
         this.allCommentsNoMore = false;
         this.loadAllComments();
      },
-     loadAllComments() {
-        if(this.allCommentsLoading || this.allCommentsNoMore) return;
-        this.allCommentsLoading = true;
-        
-        getComments({ sourceId: this.shop.id, sourceType: 2, current: this.allCommentsPage }).then(res => {
-           let list = [];
-           if(Array.isArray(res)) list = res;
-           else if(res && Array.isArray(res.list)) list = res.list;
-           else if(res && Array.isArray(res.data)) list = res.data;
-           else if(res && res.data && Array.isArray(res.data.records)) list = res.data.records;
-           
-           if(list.length === 0) {
-              this.allCommentsNoMore = true;
-           } else {
-              const processed = list.filter(c => !c.isAIGenerated).map(c => ({
-                 ...c,
-                 userIcon: c.userIcon ? (c.userIcon.startsWith('http') ? c.userIcon : this.fileURL + c.userIcon) : '',
-                 images: c.images ? c.images.split(',').filter(x=>x).map(i => i.startsWith('http') ? i : this.fileURL + i) : [],
-                 replies: []
-              }));
-              
-              // Build reply tree
-              const map = {};
-              processed.forEach(c => map[c.id] = c);
-              
-              const roots = [];
-              processed.forEach(c => {
-                 if(!c.answerId) {
-                    roots.push(c);
-                 } else {
-                    const parent = map[c.answerId];
-                    if(parent) {
-                       c.replyToName = parent.nickName;
-                       let curr = parent;
-                       while(curr && curr.answerId && map[curr.answerId]) {
-                          curr = map[curr.answerId];
-                       }
-                       if(curr && !curr.answerId) {
-                          if(!curr.replies) curr.replies = [];
-                          curr.replies.push(c);
-                       } else {
-                          roots.push(c);
-                       }
-                    } else {
-                       roots.push(c);
-                    }
-                 }
-              });
-              
-              this.allComments = [...this.allComments, ...roots];
-              this.allCommentsPage++;
-           }
-        }).finally(() => {
-           this.allCommentsLoading = false;
-        });
-     },
+      loadAllComments() {
+         if(this.allCommentsLoading || this.allCommentsNoMore) return;
+         this.allCommentsLoading = true;
+         
+         getComments({ sourceId: this.shop.id, sourceType: 2, current: this.allCommentsPage }).then(res => {
+            let list = [];
+            if(Array.isArray(res)) list = res;
+            else if(res && Array.isArray(res.list)) list = res.list;
+            else if(res && Array.isArray(res.data)) list = res.data;
+            else if(res && res.data && Array.isArray(res.data.records)) list = res.data.records;
+            
+            if(!list || list.length === 0) {
+               this.allCommentsNoMore = true;
+            } else {
+               const processed = list.filter(c => !c.isAIGenerated).map(c => ({
+                  ...c,
+                  userIcon: c.userIcon ? (c.userIcon.startsWith('http') ? c.userIcon : this.fileURL + c.userIcon) : '',
+                  images: c.images ? c.images.split(',').filter(x=>x).map(i => i.startsWith('http') ? i : this.fileURL + i) : [],
+                  clickedLike: false,
+                  // Reply logic
+                  comments: c.replyCount || c.comments || c.childCount || 0,
+                  showReplies: false,
+                  replies: [],
+                  replyPage: 1
+               }));
+               
+               // Filter root comments
+               const roots = processed.filter(c => !c.answerId || c.answerId === 0 || c.answerId === '0');
+               
+               if(this.allCommentsPage === 1) {
+                  this.allComments = roots;
+               } else {
+                  this.allComments = [...this.allComments, ...roots];
+               }
+               
+               // Check if end
+               if(list.length < 10) {
+                  this.allCommentsNoMore = true;
+               } else {
+                  this.allCommentsPage++;
+               }
+            }
+         }).finally(() => {
+            this.allCommentsLoading = false;
+         });
+      },
      onPopupScroll(e) {
         const { scrollTop, clientHeight, scrollHeight } = e.target;
         if(scrollTop + clientHeight >= scrollHeight - 50) {

@@ -32,15 +32,15 @@
            
            <div class="stats-row">
              <div class="stat-item">
-               <div class="stat-num">{{ stats.likeCount || 0 }}</div>
+               <div class="stat-num">{{ formatCount(stats.likeCount || 0) }}</div>
                <div class="stat-lbl">获赞</div>
              </div>
              <div class="stat-item" @click="toFollows">
-               <div class="stat-num">{{ stats.followCount || 0 }}</div>
+               <div class="stat-num">{{ formatCount(stats.followCount || 0) }}</div>
                <div class="stat-lbl">关注</div>
              </div>
              <div class="stat-item" @click="toFans">
-               <div class="stat-num">{{ stats.fansCount || 0 }}</div>
+               <div class="stat-num">{{ formatCount(stats.fansCount || 0) }}</div>
                <div class="stat-lbl">粉丝</div>
              </div>
            </div>
@@ -63,7 +63,7 @@
            </div>
            
            <div class="id-row">
-               <span>小红书号：{{ user.id || '8832' }}</span>
+               <span>生活号：{{ user.id || '8832' }}</span>
                <i class="el-icon-document-copy" style="margin-left: 4px;"></i>
            </div>
            
@@ -336,7 +336,11 @@ export default {
       this.$router.back();
     },
     formatCount(n) {
-       return n > 99 ? '99+' : n;
+       if (!n) return '0';
+       if (n >= 10000) {
+           return (n / 10000).toFixed(1).replace(/\.0$/, '') + '万';
+       }
+       return n;
     },
     formatDistance(d) {
       if(!d) return '';

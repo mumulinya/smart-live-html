@@ -53,39 +53,62 @@
                 </div>
 
                 <!-- Replies -->
-                <div class="comment-replies" v-if="c.replies && c.replies.length > 0">
-                    <div class="reply-item" v-for="r in c.replies" :key="r.id">
-                        <div class="reply-avatar" @click.stop="toUserDetail(r.userId)">
-                           <img :src="r.userIcon || r.icon || '/imgs/icons/default-icon.png'" alt="">
-                        </div>
-                        <div class="reply-main">
-                           <div class="reply-header">
-                              <span class="reply-user" @click.stop="toUserDetail(r.userId)">{{r.nickName || '匿名用户'}}</span>
-                              <span class="reply-time">{{formatTime(r.createTime)}}</span>
-                           </div>
-                           <div class="reply-content">
-                                <span v-if="r.replyToName" class="reply-target">回复 @{{r.replyToName}}</span>
-                                {{r.content}}
-                           </div>
-                           <div class="comment-images" v-if="r.images && r.images.length">
-                              <img v-for="(img, idx) in r.images" :key="idx" :src="img" @click.stop="previewImage(r.images, idx)">
-                           </div>
-                           <div class="reply-actions">
-                                <div class="c-action-btn" @click.stop="handleCommentLike(r)">
-                                   <svg viewBox="0 0 24 24" width="16" height="16">
-                                     <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" :fill="r.isLike ? '#ff2442' : '#999'"></path>
-                                   </svg>
-                                   <span v-if="r.liked > 0">{{r.liked}}</span>
-                                </div>
-                                <div class="c-action-btn" @click.stop="handleCommentReply(r)">
-                                   <i class="el-icon-chat-dot-square"></i>
-                                </div>
-                                 <div class="c-action-btn delete-btn" v-if="user.id === r.userId" @click.stop="handleCommentDelete(r)">
-                                   <i class="el-icon-delete"></i>
-                                </div>
-                           </div>
-                        </div>
-                    </div>
+                <!-- Replies -->
+                <div class="comment-replies" v-if="c.comments > 0">
+                   <!-- Initial Expand Button -->
+                   <div class="reply-expand" v-if="!c.showReplies" @click.stop="toggleReplies(c)">
+                       展开{{c.comments}}条回复 <i class="el-icon-arrow-down"></i>
+                   </div>
+
+                   <!-- Reply List -->
+                   <template v-if="c.showReplies">
+                      <div class="reply-item" v-for="r in c.replies" :key="r.id">
+                          <div class="reply-avatar" @click.stop="toUserDetail(r.userId)">
+                             <img :src="r.userIcon || r.icon || '/imgs/icons/default-icon.png'" alt="">
+                          </div>
+                          <div class="reply-main">
+                             <div class="reply-header">
+                                <span class="reply-user" @click.stop="toUserDetail(r.userId)">{{r.nickName || '匿名用户'}}</span>
+                                <!-- Remove time from here if consistent with others, or keep formatTime -->
+                             </div>
+                             <div class="reply-content">
+                                  <span v-if="r.replyToName" class="reply-target">回复 @{{r.replyToName}}:</span>
+                                  {{r.content}}
+                             </div>
+                             <div class="comment-images" v-if="r.images && r.images.length">
+                                <img v-for="(img, idx) in r.images" :key="idx" :src="img" @click.stop="previewImage(r.images, idx)">
+                             </div>
+                             <div class="reply-actions">
+                                  <span class="reply-time" style="margin-right: 10px;">{{formatTime(r.createTime)}}</span>
+                                  
+                                  <div class="c-action-btn" @click.stop="handleCommentLike(r)">
+                                     <svg viewBox="0 0 24 24" width="16" height="16">
+                                       <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" :fill="r.isLike ? '#ff2442' : '#999'"></path>
+                                     </svg>
+                                     <span v-if="r.liked > 0">{{r.liked}}</span>
+                                  </div>
+                                  <div class="c-action-btn" @click.stop="handleCommentReply(r)">
+                                     <i class="el-icon-chat-dot-square"></i>
+                                  </div>
+                                   <div class="c-action-btn delete-btn" v-if="user.id === r.userId" @click.stop="handleCommentDelete(r)">
+                                     <i class="el-icon-delete"></i>
+                                  </div>
+                             </div>
+                          </div>
+                      </div>
+                      
+                      <!-- Load More / Collapse Button -->
+                      <div class="reply-expand" 
+                           v-if="c.replies.length > 0" 
+                           @click.stop="toggleReplies(c)">
+                           <template v-if="c.replies.length < Number(c.comments)">
+                              展开更多回复 <i class="el-icon-arrow-down"></i>
+                           </template>
+                           <template v-else>
+                              收起回复 <i class="el-icon-arrow-up"></i>
+                           </template>
+                      </div>
+                   </template>
                 </div>
             </div>
          </div>
@@ -153,6 +176,7 @@
 import { getComments, addComment, likeComment, removeComment } from '@/api/interaction';
 import { getCurrentUser } from '@/api/user';
 import { uploadFile } from '@/api/common';
+import { showConfirmDialog } from 'vant';
 import { ElImageViewer } from 'element-plus';
 import '@/assets/css/blog-detail.css'; // Reuse styles
 
@@ -219,138 +243,99 @@ export default {
           else if (res && res.data && Array.isArray(res.data.list)) list = res.data.list;
           else if (res && res.data && Array.isArray(res.data.records)) list = res.data.records;
 
-          if(list.length === 0) {
+          if(!list || list.length === 0) {
              this.noMore = true;
           } else {
-             const newItems = list.filter(c => !c.isAIGenerated).map(this.processComment);
+             const newItems = list.filter(c => !c.isAIGenerated).map(c => ({
+                 ...c,
+                 userIcon: c.userIcon ? (c.userIcon.startsWith('http') ? c.userIcon : this.$fileURL + c.userIcon) : '',
+                 images: c.images ? c.images.split(',').map(i => i.startsWith('http') ? i : this.$fileURL + i) : [],
+                 // Reply Improvements
+                 comments: c.replyCount || c.comments || c.childCount || 0,
+                 showReplies: false,
+                 replies: [],
+                 replyPage: 1
+             }));
              
-             // Merge with existing comments first to handle pagination properly with flattening?
-             // Flattening usually requires the whole list if we want to attach orphans.
-             // But with pagination, we might just append.
-             // Ideally we re-flatten the whole displayed list?
-             // Or just append newItems as roots + replies.
-             // If a reply's parent is already in `this.comments`, we should attach it?
-             // For simplicity, we treat `this.comments` as a flat list of *roots* plus their *nested* replies is tricky with "Show More".
-             // WAIT: User's requirement "Just one level of reply".
-             // Actually, if we use the "Flattened Reply" logic where everything is a root or attached to a root.
-             // In `CommentList`, maybe we should just LIST them flatly if they are roots, and show replies under them.
-             // If a new page brings a reply to an old comment, ideally it attaches.
-             // Complexity: implementing full re-flattening on every load.
+             const roots = newItems.filter(c => !c.answerId || c.answerId === 0 || c.answerId === '0');
              
-             const allComments = [...this.comments, ...newItems]; // Mix of processed objects
-             // We need to re-map IDs because `this.comments` already has structure?
-             // Actually `this.comments` in previous `BlogDetail` was rewritten every time.
-             // Here we have pagination.
-             // Let's just flatten the *new* batch? No, parents might be in old batch.
-             // Construct a temporary map of ALL comments properly.
+             if (this.current === 1) {
+                 this.comments = roots;
+             } else {
+                 this.comments = [...this.comments, ...roots];
+             }
              
-             // 1. Re-normalize all to flat array first?
-             // Since we modified objects in place (pushing to `replies`), it's messy.
-             // Let's try to just process newItems and see if they can attach to existing roots or new roots.
-             
-             // Map of existing roots
-             const commentMap = {};
-             this.comments.forEach(c => {
-                 commentMap[c.id] = c;
-                 if(c.replies) c.replies.forEach(r => commentMap[r.id] = r);
-             });
-             
-             const roots = [];
-             // We only add NEW roots from the new batch. Existing roots stay in `this.comments`.
-             
-             // Helper to find root in existing map or new batch
-             // ... This is getting complex 
-             
-             // Alternative: Simple append for now, but handle reply logic for *display*.
-             // Only apply flattening if the API returns mixed replies/roots.
-             
-             // Let's use the same logic as BlogDetail:
-             // But we need to handle `replyToName` for display.
-             
-             // Enhanced Logic:
-             // 1. Append new items.
-             // 2. Clear `replies` array of all items to rebuild tree? 
-             //    Expensive but ensures correctness across pages if parents loaded earlier.
-             
-             newItems.forEach(c => {
-                c.replies = [];
-                // If it's a new batch, just add to map later.
-             });
-
-             const combined = [...this.comments, ...newItems]; // Flattened source? 
-             // Wait, `this.comments` currently stores roots with populated `replies`.
-             // We need to "unroll" to get the flat list of all accumulated comments.
-             const flatAccumulated = [];
-             this.comments.forEach(c => {
-                 flatAccumulated.push(c);
-                 if(c.replies) flatAccumulated.push(...c.replies);
-                 c.replies = []; // Reset for rebuild
-             });
-             newItems.forEach(c => flatAccumulated.push(c));
-             
-             // Remove duplicates if any
-             const unique = [];
-             const seen = new Set();
-             flatAccumulated.forEach(c => {
-                 if(!seen.has(c.id)) {
-                     seen.add(c.id);
-                     unique.push(c);
-                 }
-             });
-             
-             // Now Re-build Tree
-             const map = {};
-             unique.forEach(c => map[c.id] = c);
-             
-             const newRoots = [];
-             unique.forEach(c => {
-                if(!c.answerId) {
-                    newRoots.push(c);
-                } else {
-                    const parent = map[c.answerId];
-                    if(parent) {
-                        c.replyToName = parent.nickName;
-                        // Attach to root
-                        let curr = parent;
-                        let depth = 0;
-                        while(curr && curr.answerId && depth < 20) {
-                            curr = map[curr.answerId];
-                            depth++;
-                        }
-                        const root = (curr && !curr.answerId) ? curr : null;
-                        
-                        if(root) {
-                            if(!root.replies) root.replies = [];
-                            root.replies.push(c);
-                        } else {
-                             // Orphaned reply (root not loaded yet), treat as root
-                             newRoots.push(c);
-                        }
-                    } else {
-                        // Parent not found
-                        newRoots.push(c);
-                    }
-                }
-             });
-             
-            //  newRoots.forEach(r => {
-            //     if(r.replies) r.replies.sort((a,b) => new Date(a.createTime) - new Date(b.createTime));
-            //  });
-             
-             this.comments = newRoots;
-             this.current++;
+             // Prevent infinite scroll if returned less than page size (assuming 10)
+             if (list.length < 10) {
+                 this.noMore = true;
+             } else {
+                 this.current++;
+             }
           }
        }).finally(() => this.loading = false);
     },
-    processComment(c) {
-       return {
-          ...c,
-          userIcon: c.userIcon ? (c.userIcon.startsWith('http') ? c.userIcon : this.$fileURL + c.userIcon) : '',
-          images: c.images ? c.images.split(',').map(i => i.startsWith('http') ? i : this.$fileURL + i) : [],
-          replies: []
-       };
+    
+    toggleReplies(comment) {
+        if (!comment.showReplies) {
+            // Expand
+            comment.showReplies = true;
+            if (!comment.replies || comment.replies.length === 0) {
+                 comment.replyPage = 1;
+                 this.fetchReplies(comment);
+            }
+        } else {
+            // Already expanded
+            if (comment.replies.length < comment.comments) {
+                 // Load More
+                 comment.replyPage = (comment.replyPage || 1) + 1;
+                 this.fetchReplies(comment);
+            } else {
+                 // Collapse
+                 comment.showReplies = false;
+            }
+        }
     },
     
+    fetchReplies(comment) {
+        getComments({ 
+            sourceId: comment.id, 
+            sourceType: 5, 
+            current: comment.replyPage || 1, 
+            size: 10 
+        }).then(res => {
+            let list = [];
+            if (Array.isArray(res)) list = res;
+            else if (res && Array.isArray(res.data)) list = res.data;
+            else if (res && res.data && Array.isArray(res.data.records)) list = res.data.records;
+            
+            if (list) {
+                const newReplies = list.map(r => ({
+                    ...r,
+                    userIcon: r.userIcon ? (r.userIcon.startsWith('http') ? r.userIcon : this.$fileURL + r.userIcon) : '',
+                    images: r.images ? r.images.split(',').filter(x=>x).map(i => i.startsWith('http') ? i : this.$fileURL + i) : [],
+                    liked: r.liked || 0,
+                    isLike: r.isLike || false
+                }));
+                
+                if (comment.replyPage === 1) {
+                    comment.replies = newReplies;
+                } else {
+                    comment.replies = [...comment.replies, ...newReplies];
+                }
+                
+                // Count Correction Logic
+                if (res && res.data && res.data.total) {
+                     comment.comments = res.data.total;
+                }
+                if (list.length < 10) {
+                    if (comment.replies.length < comment.comments) {
+                        comment.comments = comment.replies.length;
+                    }
+                }
+            }
+        });
+    },
+
     // Publish
     async handleImageUpload(e) {
         const files = e.target.files;
@@ -364,14 +349,18 @@ export default {
            if (res && typeof res === 'object' && res.data) path = res.data;
            if (typeof path !== 'string') path = String(path);
            
-           // Strip the fileURL prefix, keep only relative path like /2025/10/18/filename.png
+           // Strip the fileURL prefix
            const filePrefix = this.$fileURL || '';
            if (path.startsWith(filePrefix)) {
              path = path.substring(filePrefix.length);
            }
            if (path.startsWith('http')) {
-             const urlParts = path.split('/smart-live');
-             if (urlParts.length > 1) path = urlParts[1];
+             try {
+                const urlObj = new URL(path);
+                path = urlObj.pathname;
+             } catch(e) {
+                if(path.includes('/smart-live')) path = path.split('/smart-live')[1];
+             }
            }
            
            this.selectedImages.push({ file, url: this.$fileURL + path, rawUrl: path });
@@ -397,9 +386,9 @@ export default {
 
        if(this.replyToComment) {
             data.sourceType = 5;
-            data.parentId = this.sourceId;
+            data.parentId = this.sourceId; // The main resource (blog/shop)
             data.answerId = this.replyToComment.id;
-            data.sourceId = this.replyToComment.id;
+            data.sourceId = this.replyToComment.id; // Use reply id as source
             delete data.rating;
        }
 
@@ -437,11 +426,11 @@ export default {
          this.showCommentPublish = true;
     },
     handleCommentDelete(c) {
-        this.$confirm('确定要删除这条评论吗？删除后不可恢复。', '删除评论', {
-           confirmButtonText: '确定删除',
+        showConfirmDialog({
+           title: '提示',
+           message: '确定删除该评论吗？',
+           confirmButtonText: '确认',
            cancelButtonText: '取消',
-           type: 'warning',
-           confirmButtonClass: 'el-button--danger'
         }).then(() => {
            removeComment({ id: c.id, sourceType: c.sourceType, sourceId: c.sourceId }).then(() => {
                this.$message.success('删除成功');
