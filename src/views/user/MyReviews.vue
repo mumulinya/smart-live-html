@@ -89,7 +89,7 @@
 
 <script>
 import PageLayout from '@/components/PageLayout/PageLayout.vue';
-import { getUserComments } from '@/api/interaction';
+import { getUserReviewList } from '@/api/reviews';
 import { getCurrentUser } from '@/api/user';
 import { filePrefix } from '@/utils/request';
 
@@ -155,7 +155,7 @@ export default {
               userId: this.user.id
           };
 
-          getUserComments(params).then(res => {
+          getUserReviewList(params).then(res => {
               let list = [];
               // Robust response handling
               if (Array.isArray(res)) list = res;

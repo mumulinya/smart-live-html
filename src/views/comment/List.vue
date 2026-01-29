@@ -174,6 +174,7 @@
 
 <script>
 import { getComments, addComment, likeComment, removeComment } from '@/api/interaction';
+import { getReviewList } from '@/api/reviews';
 import { getCurrentUser } from '@/api/user';
 import { uploadFile } from '@/api/common';
 import { showConfirmDialog } from 'vant';
@@ -235,7 +236,8 @@ export default {
      loadComments() {
        if(this.loading || this.noMore) return;
        this.loading = true;
-       getComments({ sourceId: this.sourceId, sourceType: this.sourceType, current: this.current }).then(res => {
+       const api = this.sourceType == 2 ? getReviewList : getComments;
+       api({ sourceId: this.sourceId, sourceType: this.sourceType, current: this.current }).then(res => {
           let list = [];
           if (Array.isArray(res)) list = res;
           else if (res && Array.isArray(res.list)) list = res.list;
@@ -248,8 +250,8 @@ export default {
           } else {
              const newItems = list.filter(c => !c.isAIGenerated).map(c => ({
                  ...c,
-                 userIcon: c.userIcon ? (c.userIcon.startsWith('http') ? c.userIcon : this.$fileURL + c.userIcon) : '',
-                 images: c.images ? c.images.split(',').map(i => i.startsWith('http') ? i : this.$fileURL + i) : [],
+                 userIcon: c.userIcon ? (c.userIcon.startsWith('http') ? c.userIcon : this.$fileURL + (c.userIcon.startsWith('/')?'':'/') + c.userIcon) : '',
+                 images: c.images ? c.images.split(',').map(i => i.startsWith('http') ? i : this.$fileURL + (i.startsWith('/')?'':'/') + i) : [],
                  // Reply Improvements
                  comments: c.replyCount || c.comments || c.childCount || 0,
                  showReplies: false,

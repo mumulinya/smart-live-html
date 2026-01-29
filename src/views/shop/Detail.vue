@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <PageLayout :loading="isLoading" skeleton-type="detail" class="shop-detail-page">
 
     <!-- Static Header (Match Image) -->
@@ -214,7 +214,7 @@
                    <div class="comment-interactions">
                    <span class="comment-time">{{formatDate(c.createTime)}}</span>
                    <div class="comment-actions">
-                      <div class="c-action-btn" @click.stop="handleCommentLike(c)">
+                      <div class="c-action-btn" @click.stop="handleCommentLike(c, true)">
                          <svg viewBox="0 0 24 24" width="16" height="16">
                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" :fill="c.isLike ? '#ff2442' : '#999'"></path>
                          </svg>
@@ -517,7 +517,9 @@
 
 <script>
 import { getShopDetail, getShopVouchers, buyVoucherAPI, seckillVoucherAPI } from '@/api/shop';
+
 import { isStar, toggleStar, getComments, likeComment, addComment, removeComment, isFollowed, followUser } from '@/api/interaction';
+import { getReviewList, likeReviewComment } from '@/api/reviews';
 import { uploadFile } from '@/api/common';
 import { showConfirmDialog } from 'vant';
 import { getCurrentUser } from '@/api/user';
@@ -641,7 +643,7 @@ export default {
            this.onDataLoaded();
         });
         
-            getComments({ sourceId: id, sourceType: 2, current: 1 }).then(res => {
+            getReviewList({ sourceId: id, sourceType: 2, current: 1 }).then(res => {
                let list = [];
                if(Array.isArray(res)) list = res;
                else if(res && Array.isArray(res.list)) list = res.list;
@@ -652,6 +654,7 @@ export default {
                   ...c,
                   userIcon: c.userIcon ? (c.userIcon.startsWith('http') ? c.userIcon : this.fileURL + c.userIcon) : '',
                   images: c.images ? c.images.split(',').filter(x=>x).map(i => i.startsWith('http') ? i : this.fileURL + i) : [],
+                  rating: c.score || c.rating || 5, 
                   isLike: c.isLike || false,
                   liked: c.liked || 0,
                   // Map API count to UI comments count
@@ -677,7 +680,7 @@ export default {
             });
          },
          loadComments() {
-            getComments({ sourceId: this.shop.id, sourceType: 2, current: 1 }).then(res => {
+            getReviewList({ sourceId: this.shop.id, sourceType: 2, current: 1 }).then(res => {
                let list = [];
                if(Array.isArray(res)) list = res;
                else if(res && Array.isArray(res.list)) list = res.list;
@@ -688,6 +691,7 @@ export default {
                   ...c,
                   userIcon: c.userIcon ? (c.userIcon.startsWith('http') ? c.userIcon : this.fileURL + c.userIcon) : '',
                   images: c.images ? c.images.split(',').filter(x=>x).map(i => i.startsWith('http') ? i : this.fileURL + i) : [],
+                  rating: c.score || c.rating || 5,
                   isLike: c.isLike || false,
                   liked: c.liked || 0,
                   comments: c.replyCount || c.comments || c.childCount || 0, 
@@ -729,7 +733,7 @@ export default {
          fetchReplies(comment) {
              getComments({ 
                  sourceId: comment.id, 
-                 sourceType: 5, 
+                 sourceType: 7, 
                  current: comment.replyPage || 1, 
                  size: 10 
              }).then(res => {
@@ -978,13 +982,13 @@ export default {
             this.$message.error(msg);
         });
      },
-     handleCommentLike(c) {
+     handleCommentLike(c, isReview = false) {
         if(!this.user.id) return this.$router.push('/user/login');
         const oldState = c.isLike;
         c.isLike = !c.isLike;
         c.liked = c.isLike ? (c.liked + 1) : (c.liked - 1);
         
-        likeComment(c.id).catch(() => {
+        const likeFunc = isReview ? likeReviewComment : likeComment; likeFunc(c.id).catch(() => {
            c.isLike = oldState;
            c.liked = c.isLike ? (c.liked + 1) : (c.liked - 1);
         });
@@ -1000,15 +1004,9 @@ export default {
            this.$message.warning("请先登录");
            return this.$router.push('/user/login');
         }
-        this.replyToComment = null;
-        this.commentText = '';
-        this.commentRating = 5;
-        this.selectedImages = [];
-        this.showCommentPublish = true;
-        this.$nextTick(() => {
-           if(this.$refs.commentTextarea) {
-              this.$refs.commentTextarea.focus();
-           }
+        this.$router.push({
+            path: '/review/publish',
+            query: { shopId: this.shop.id }
         });
      },
      closeCommentModal() {
@@ -1091,10 +1089,9 @@ export default {
          };
 
          if (this.replyToComment) {
-             data.sourceType = 5; 
-             data.answerId = this.replyToComment.id;
-             data.sourceId = this.replyToComment.id; // Use reply id as sourceId for replies
-             data.parentId = this.shop.id; // Root source (shop) as parentId
+             data.sourceType = 7; 
+             data.sourceId = this.replyToComment.id; // Review ID
+             delete data.answerId;
              delete data.rating;
          }
 
@@ -1145,7 +1142,7 @@ export default {
          if(this.allCommentsLoading || this.allCommentsNoMore) return;
          this.allCommentsLoading = true;
          
-         getComments({ sourceId: this.shop.id, sourceType: 2, current: this.allCommentsPage }).then(res => {
+         getReviewList({ sourceId: this.shop.id, sourceType: 2, current: this.allCommentsPage }).then(res => {
             let list = [];
             if(Array.isArray(res)) list = res;
             else if(res && Array.isArray(res.list)) list = res.list;

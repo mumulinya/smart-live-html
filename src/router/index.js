@@ -162,7 +162,7 @@ const routes = [
         component: () => import('@/views/comment/ReviewDetail.vue')
     },
     {
-        path: '/shop/comment/publish',
+        path: '/review/publish',
         name: 'ReviewPublish',
         component: () => import('@/views/comment/ReviewPublish.vue')
     }

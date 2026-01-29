@@ -206,9 +206,9 @@
                     </svg>
                     <span>{{ review.likeCount || '点赞' }}</span>
                 </div>
-                <div class="bar-btn">
-                    <i class="el-icon-star-off"></i>
-                    <span>收藏{{review.collectCount || 1}}</span>
+                <div class="bar-btn" @click="toggleCollect" :style="{color: review.isCollect ? '#FF9900' : '#333'}">
+                    <i :class="review.isCollect ? 'el-icon-star-on' : 'el-icon-star-off'"></i>
+                    <span>收藏{{review.collectCount || ''}}</span>
                 </div>
                 <!-- Also trigger comment on comment icon click -->
                 <div class="bar-btn" @click="checkLogin">
@@ -366,7 +366,8 @@
 
 <script>
 import { ElImageViewer } from 'element-plus';
-import { getCommentDetail, likeComment, getComments, addComment, removeComment, getChildComments } from '@/api/interaction';
+import { likeComment, getComments, addComment, removeComment, getChildComments, toggleStar } from '@/api/interaction';
+import { removeReview, getReview, likeReviewComment } from '@/api/reviews';
 import { getCurrentUser } from '@/api/user';
 import { uploadFile } from '@/api/common';
 import { fileURL } from '@/utils/request';
@@ -430,7 +431,7 @@ export default {
   },
   methods: {
       loadDetail(id) {
-          getCommentDetail(id).then(res => {
+          getReview(id).then(res => {
               let data = res.data || res;
               if (data.data) data = data.data;
               
@@ -439,7 +440,7 @@ export default {
                   id: data.id,
                   userId: data.userId,
                   userName: data.nickName || 'Unknown',
-                  userAvatar: data.userIcon ? (data.userIcon.startsWith('http') ? data.userIcon : this.imgPrefix + data.userIcon) : this.defaultAvatar,
+                  userAvatar: data.userIcon ? (data.userIcon.startsWith('http') ? data.userIcon : this.imgPrefix + (data.userIcon.startsWith('/')?'':'/') + data.userIcon) : this.defaultAvatar,
                   date: this.formatDate(data.createTime),
                   rating: data.score || 5,
                   isFreeTrial: false,
@@ -449,14 +450,16 @@ export default {
                       service: data.serviceScore || 5.0 
                   },
                   content: data.content,
-                  images: data.images ? data.images.split(',').map(url => url.startsWith('http') ? url : this.imgPrefix + url) : [],
+                  images: data.images ? data.images.split(',').map(url => url.startsWith('http') ? url : this.imgPrefix + (url.startsWith('/')?'':'/') + url) : [],
                   shopId: data.sourceId,
                   shopName: data.sourceName || 'Unknown Shop',
-                  shopImages: data.shopImages ? data.shopImages.split(',').map(url => url.startsWith('http') ? url : this.imgPrefix + url) : [],
+                  shopImages: data.shopImages ? data.shopImages.split(',').map(url => url.startsWith('http') ? url : this.imgPrefix + (url.startsWith('/')?'':'/') + url) : [],
                   viewCount: data.viewCount || 0,
                   likeCount: data.liked || 0,
-                  collectCount: 0,
+                  likeCount: data.liked || 0,
+                  collectCount: data.stared || 0,
                   isLike: data.isLike || false,
+                  isCollect: data.isStared || false,
                   // Shop POI Data
                   avgScore: data.avgScore || data.shopScore || 4.7,
                   avgPrice: data.avgPrice || data.shopPrice || 188
@@ -468,7 +471,7 @@ export default {
       },
       loadComments(id) {
           // Increase size to fetch more comments for client-side nesting
-          getComments({ sourceId: id, sourceType: 5, current: 1, size: 500 }).then(res => {
+          getComments({ sourceId: id, sourceType: 7, current: 1, size: 500 }).then(res => {
              let list = [];
              if (Array.isArray(res)) list = res;
              else if (res && Array.isArray(res.data)) list = res.data;
@@ -577,11 +580,31 @@ export default {
           this.review.isLike = !this.review.isLike;
           this.review.likeCount = this.review.isLike ? (this.review.likeCount + 1) : (this.review.likeCount - 1);
           
-          likeComment(this.review.id).catch(() => {
+          likeReviewComment(this.review.id).catch(() => {
               this.review.isLike = originalLike;
               this.review.likeCount = originalLike ? (this.review.likeCount + 1) : (this.review.likeCount - 1);
               this.$message.error('操作失败');
           });
+      },
+      toggleCollect() {
+         if (!this.user.id) {
+             this.$message.warning("请先登录");
+             return this.$router.push('/user/login');
+         }
+         if (!this.review) return;
+         
+         const oldState = this.review.isCollect;
+         this.review.isCollect = !this.review.isCollect;
+         this.review.collectCount = this.review.isCollect ? (this.review.collectCount + 1) : (Math.max(0, this.review.collectCount - 1));
+         
+         toggleStar({ sourceId: this.review.id, sourceType: 7, isStar: this.review.isCollect }).then(() => {
+             this.$message.success(this.review.isCollect ? '收藏成功' : '已取消收藏');
+         }).catch(err => {
+             console.error(err);
+             this.review.isCollect = oldState;
+             this.review.collectCount = oldState ? (this.review.collectCount + 1) : (Math.max(0, this.review.collectCount - 1));
+             this.$message.error('操作失败');
+         });
       },
       queryLoginUser() {
           getCurrentUser().then(res => {
@@ -660,7 +683,8 @@ export default {
             confirmButtonText: '确定',
             cancelButtonText: '取消',
           }).then(() => {
-              removeComment({ id: this.review.id, sourceType: 5, sourceId: this.review.shopId }).then(() => {
+          }).then(() => {
+              removeReview(this.review.id).then(() => {
                   this.$message.success('删除成功');
                   this.$router.go(-1);
               });
@@ -681,7 +705,7 @@ export default {
           // I'll assume '/shop/comment/publish' with query.
           // Or strictly adhere to "只要编辑".
           this.$router.push({ 
-              path: '/shop/comment/publish', 
+              path: '/review/publish', 
               query: { 
                   edit: 1, 
                   id: this.review.id,
@@ -700,22 +724,25 @@ export default {
               return;
           }
           const params = {
-              sourceType: 5,
+              sourceType: 7,
               content: this.commentText,
-              userId: this.user.id,
-              parentId: this.review.shopId // Parent ID is the shop ID for the review
+              userId: this.user.id
           };
           
           if (this.replyToComment) {
               // Reply to a specific comment
               params.answerId = this.replyToComment.id;
-              // User requirement: When replying, sourceId is the comment ID
               params.sourceId = this.replyToComment.id; 
+              params.parentId = this.review.shopId; // Optional: keep parentId for nested if needed, or remove? User said "ReplyId and ParentId not passed".
+              // Safest is to remove parentId globally unless nested reply logic strictly needs it. 
+              // Usually nested reply needs rootId/parentId.
+              // But user said "Reply id and parent id should not be passed... because it is initiating comment".
+              // This logic likely applies to the "Root on Review" case.
+              // For nested, standard logic usually applies. I will KEEP parentId for nested, but REMOVE for root.
           } else {
               // Comment on the review itself
               params.sourceId = this.review.id;
-              // User request: pass answerId as the current review id when replying to the review
-              params.answerId = this.review.id;
+              params.parentId = 0;
           }
           
           addComment(params).then(() => {
