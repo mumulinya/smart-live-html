@@ -6,25 +6,20 @@
                <i class="el-icon-arrow-left"></i>
            </div>
            <div class="header-center">
-               <span class="header-tab">待评价</span>
-               <span class="header-tab">草稿箱·2</span>
+               <span class="header-tab" @click="$router.push('/review/wait')">待评价</span>
+               <span class="header-tab" @click="$router.push({name: 'MyDrafts'})">草稿箱</span>
                <span class="header-tab active">半月小结</span>
            </div>
            <div class="header-right"></div>
       </div>
 
      <div class="scroll-wrapper">
-       <!-- Banner -->
-       <div class="review-banner-new">
-           <i class="el-icon-present banner-icon"></i>
-           <span>写评价，赢黑珍珠限定翻盖冰箱贴！</span>
-           <i class="el-icon-arrow-right arrow-icon"></i>
-       </div>
+
 
        <!-- Filter -->
        <div class="review-filter-row">
-           <div class="filter-left">
-               按时间筛选 <i class="el-icon-caret-bottom"></i>
+           <div class="filter-left" @click="showSortSheet = true">
+               {{ currentSortLabel }} <i class="el-icon-caret-bottom"></i>
            </div>
            <div class="filter-right">全部评价共{{reviews.length}}条</div>
        </div>
@@ -83,6 +78,20 @@
                </div>
            </van-list>
        </div>
+       <!-- Sort Popup -->
+       <van-popup v-model:show="showSortSheet" position="bottom" round>
+           <div class="sort-sheet-content">
+               <div class="sort-item" :class="{active: currentSort==='desc'}" @click="onSortSelect({value: 'desc'})">
+                   最新发布
+               </div>
+               <div class="sort-item" :class="{active: currentSort==='asc'}" @click="onSortSelect({value: 'asc'})">
+                   最早发布
+               </div>
+               <div class="sort-cancel" @click="showSortSheet = false">
+                   取消
+               </div>
+           </div>
+       </van-popup>
     </div>
   </PageLayout>
 </template>
@@ -104,8 +113,23 @@ export default {
        finished: false,
        page: 1,
        size: 10,
-       filePrefix: filePrefix
+
+       filePrefix: filePrefix,
+       showSortSheet: false,
+       currentSort: 'desc',
     }
+  },
+  computed: {
+      sortActions() {
+          return [
+              { name: '最新发布', value: 'desc', color: this.currentSort === 'desc' ? '#ff9900' : '#333' },
+              { name: '最早发布', value: 'asc', color: this.currentSort === 'asc' ? '#ff9900' : '#333' }
+          ];
+      },
+      currentSortLabel() {
+          const item = this.sortActions.find(a => a.value === this.currentSort);
+          return item ? item.name : '按时间筛选';
+      }
   },
   created() {
       this.getUserAndLoad();
@@ -152,7 +176,10 @@ export default {
               sourceType: 2, 
               current: this.page,
               size: this.size,
-              userId: this.user.id
+              userId: this.user.id,
+              sortBy: 'createTime',
+              sort: 'createTime', // Add redundant param for safety
+              sortOrder: this.currentSort
           };
 
           getUserReviewList(params).then(res => {
@@ -200,14 +227,24 @@ export default {
               expanded: false
           };
       },
-      formatDate(time) {
-          if (!time) return '';
-          const date = new Date(time);
-          const y = date.getFullYear();
-          const m = date.getMonth() + 1;
-          const d = date.getDate();
-          return `${y}年${m}月${d}日`;
-      }
+
+       formatDate(time) {
+           if (!time) return '';
+           const date = new Date(time);
+           const y = date.getFullYear();
+           const m = date.getMonth() + 1;
+           const d = date.getDate();
+           return `${y}年${m}月${d}日`;
+       },
+       onSortSelect(item) {
+           this.currentSort = item.value;
+           this.showSortSheet = false;
+           // Reload
+           this.reviews = [];
+           this.page = 1;
+           this.finished = false;
+           this.loadReviews();
+       }
   }
 }
 </script>
@@ -396,5 +433,28 @@ export default {
 }
 .action-btn i {
     font-size: 16px;
+}
+.sort-item {
+    padding: 16px;
+    text-align: center;
+    font-size: 16px;
+    color: #333;
+    border-bottom: 1px solid #f5f5f5;
+}
+.sort-item:active {
+    background-color: #f9f9f9;
+}
+.sort-item.active {
+    color: #ff9900;
+}
+.sort-cancel {
+    padding: 16px;
+    text-align: center;
+    font-size: 16px;
+    color: #666;
+    border-top: 8px solid #f7f8fa;
+}
+.sort-cancel:active {
+    background-color: #f9f9f9;
 }
 </style>

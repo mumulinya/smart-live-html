@@ -28,65 +28,74 @@ const routes = [
     {
         path: '/user/login',
         name: 'Login',
-        component: () => import('@/views/user/Login.vue')
+        component: () => import('@/views/user/auth/Login.vue')
     },
     {
         path: '/user/profile',
         name: 'UserProfile',
-        alias: ['/info', '/user/info'], // Backward compatibility
-        component: () => import('@/views/user/Info.vue')
+        alias: ['/info', '/user/info'],
+        component: () => import('@/views/user/profile/Info.vue')
     },
     {
         path: '/user/profile/:id',
         name: 'OtherProfile',
-        alias: '/user-info/:id', // Backward compatibility
-        component: () => import('@/views/user/OtherInfo.vue')
+        alias: '/user-info/:id',
+        component: () => import('@/views/user/profile/OtherInfo.vue')
     },
     {
         path: '/user/edit',
         name: 'UserEdit',
-        component: () => import('@/views/user/Edit.vue')
+        component: () => import('@/views/user/profile/Edit.vue')
     },
     {
         path: '/user/add-friend',
         name: 'AddFriend',
-        component: () => import('@/views/user/AddFriend.vue')
+        component: () => import('@/views/user/social/AddFriend.vue')
     },
     {
         path: '/user/star',
         name: 'UserStar',
-        component: () => import('@/views/user/MyStar.vue')
+        component: () => import('@/views/user/content/MyStar.vue')
     },
     {
         path: '/user/follow',
         name: 'MyFollow',
-        component: () => import('@/views/user/MyFollow.vue')
+        component: () => import('@/views/user/social/MyFollow.vue')
+    },
+    {
+        path: '/review/mine',
+        name: 'MyReviews',
+        component: () => import('@/views/review/MyReviews.vue')
+    },
+    {
+        path: '/review/drafts',
+        name: 'MyDrafts',
+        component: () => import('@/views/review/Drafts.vue')
     },
     {
         path: '/user/my-reviews',
-        name: 'MyReviews',
-        component: () => import('@/views/user/MyReviews.vue')
+        redirect: '/review/mine'
     },
     {
         path: '/user/list',
         name: 'UserList',
-        component: () => import('@/views/user/UserList.vue'),
+        component: () => import('@/views/user/social/UserList.vue'),
         props: route => ({ type: route.query.type })
     },
     {
         path: '/user/moments',
         name: 'MyMoments',
-        component: () => import('@/views/user/MyMoments.vue')
+        component: () => import('@/views/user/content/MyMoments.vue')
     },
     {
         path: '/user/password/update',
         name: 'UpdatePassword',
-        component: () => import('@/views/user/UpdatePassword.vue')
+        component: () => import('@/views/user/auth/UpdatePassword.vue')
     },
     {
         path: '/user/password/set',
         name: 'SetPassword',
-        component: () => import('@/views/user/SetPassword.vue')
+        component: () => import('@/views/user/auth/SetPassword.vue')
     },
 
     // Shop Module
@@ -159,12 +168,17 @@ const routes = [
     {
         path: '/review/detail',
         name: 'ReviewDetail',
-        component: () => import('@/views/comment/ReviewDetail.vue')
+        component: () => import('@/views/review/Detail.vue')
     },
     {
         path: '/review/publish',
         name: 'ReviewPublish',
-        component: () => import('@/views/comment/ReviewPublish.vue')
+        component: () => import('@/views/review/Publish.vue')
+    },
+    {
+        path: '/review/wait',
+        name: 'WaitReview',
+        component: () => import('@/views/review/WaitReview.vue')
     }
 ]
 

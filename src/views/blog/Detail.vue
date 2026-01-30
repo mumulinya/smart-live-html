@@ -224,9 +224,6 @@
                                              </svg>
                                              <span v-if="r.liked > 0">{{r.liked}}</span>
                                           </div>
-                                          <div class="c-action-btn" @click.stop="handleCommentReply(r)">
-                                             <i class="el-icon-chat-dot-square"></i>
-                                          </div>
                                            <div class="c-action-btn delete-btn" v-if="user.id === r.userId" @click.stop="handleCommentDelete(r)">
                                              <i class="el-icon-delete"></i>
                                           </div>
@@ -369,7 +366,8 @@
                   <!-- Replies -->
                    <div class="comment-replies" v-if="c.comments > 0">
                       <!-- Initial Expand Button -->
-                      <div class="reply-expand" v-if="!c.showReplies" @click.stop="toggleReplies(c)">
+                      <!-- Initial Expand Button -->
+                      <div class="reply-expand-btn" v-if="!c.showReplies" @click.stop="toggleReplies(c)">
                           展开{{c.comments}}条回复 <i class="el-icon-arrow-down"></i>
                       </div>
 
@@ -400,10 +398,7 @@
                                         </svg>
                                         <span v-if="r.liked > 0">{{r.liked}}</span>
                                      </div>
-                                     <div class="c-action-btn" @click.stop="handleCommentReply(r)">
-                                        <i class="el-icon-chat-dot-square"></i>
-                                     </div>
-                                      <div class="c-action-btn delete-btn" v-if="user.id === r.userId" @click.stop="handleCommentDelete(r)">
+                                     <div class="c-action-btn delete-btn" v-if="user.id === r.userId" @click.stop="handleCommentDelete(r)">
                                         <i class="el-icon-delete"></i>
                                      </div>
                                 </div>
@@ -411,7 +406,7 @@
                          </div>
                          
                          <!-- Load More / Collapse Button -->
-                         <div class="reply-expand" 
+                         <div class="reply-expand-btn" 
                               v-if="c.replies.length > 0" 
                               @click.stop="toggleReplies(c)">
                               <template v-if="c.replies.length < Number(c.comments)">
@@ -445,7 +440,7 @@
 <script>
 import { getBlogDetail, deleteBlog, pinBlog } from '@/api/blog';
 import { getShopDetail } from '@/api/shop';
-import { getLikeList, isFollowed, followUser, likeBlog, getComments, addComment, likeComment, replyComment, removeComment, toggleStar } from '@/api/interaction';
+import { getLikeList, isFollowed, followUser, likeBlog, getComments, addComment, likeComment, replyComment, removeComment, toggleStar, getChildComments } from '@/api/interaction';
 import { getCurrentUser } from '@/api/user';
 import { uploadFile } from '@/api/common';
 import '@/assets/css/blog-detail.css';
@@ -714,21 +709,11 @@ export default {
       },
 
       fetchReplies(comment) {
-          // Use getChildComments if available, or fetch comments with answerId
-          // Assuming existing getComments can filter by answerId? 
-          // Actually ReviewDetail used `getComments({ sourceType: 5, sourceId: comment.id ... })`. 
-          // But here comments are sourceId=blogId, and Replies are linked via answerId?
-          // WAIT. ReviewDetail sourceId=5 is "COMMENT" type.
-          // Let's verify `ReviewDetail` logic. `getComments` was used.
-          // `sourcetype` 5 is usually "Reply/Comment".
-          // In `ReviewDetail.vue` we saw: `getComments({ sourceId: c.id, sourceType: 5, ... })`
-          // Let's assume the same API works here.
-          
-          getComments({ 
-              sourceId: comment.id, // Parent comment ID
-              sourceType: 5, // Reply type
-              current: comment.replyPage || 1, 
-              size: 10 
+          // Use getChildComments as per user request/API definition
+          getChildComments({
+              id: comment.id,
+              current: comment.replyPage || 1,
+              size: 10
           }).then(res => {
               let list = [];
               if (Array.isArray(res)) list = res;
@@ -741,7 +726,11 @@ export default {
                       userIcon: r.userIcon ? (r.userIcon.startsWith('http') ? r.userIcon : this.fileURL + r.userIcon) : '',
                       images: r.images ? r.images.split(',').filter(x=>x).map(i => i.startsWith('http') ? i : this.fileURL + i) : [],
                       liked: r.liked || 0,
-                      isLike: r.isLike || false
+                      isLike: r.isLike || false,
+                      comments: r.replyCount || r.comments || 0,
+                      showReplies: false,
+                      replies: [],
+                      replyPage: 1
                   }));
                   
                   if (comment.replyPage === 1) {

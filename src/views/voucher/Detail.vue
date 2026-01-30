@@ -1,15 +1,38 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { showToast } from 'vant';
+import { showToast, showConfirmDialog } from 'vant';
 import { getVoucherDetail, buyVoucherAPI, seckillVoucherAPI } from '@/api/shop'; 
-import { toggleStar, followUser } from '@/api/interaction';
+import { toggleStar, likeComment, getComments } from '@/api/interaction';
+import { getReviewList, addReview, removeReview } from '@/api/reviews';
+import { getCurrentUser } from '@/api/user';
+import { fileURL } from '@/utils/request';
 import PageLayout from '@/components/PageLayout/PageLayout.vue';
+import '@/assets/css/blog-detail.css';
 
 const route = useRoute();
 const router = useRouter();
 
 const info = ref({});
+const user = ref({});
+
+// Comments
+const comments = ref([]);
+const commentsLoading = ref(false);
+
+// Comment Publish Modal
+const showCommentPublish = ref(false);
+const commentText = ref('');
+const commentRating = ref(5);
+const replyToComment = ref(null);
+const replyRootId = ref(null);
+
+// All Comments Popup
+const showReviewPopup = ref(false);
+const allComments = ref([]);
+const allCommentsPage = ref(1);
+const allCommentsLoading = ref(false);
+const allCommentsNoMore = ref(false);
 const validRules = computed(() => {
     if(!info.value.rules) return [];
     if(typeof info.value.rules === 'string') return [info.value.rules];
@@ -142,8 +165,296 @@ const goToShop = (id) => {
     if(id) router.push(`/shop/detail?id=${id}`);
 };
 
-onMounted(() => {
-    loadData();
+// --- Comment Methods ---
+const queryUser = async () => {
+    try {
+        const res = await getCurrentUser();
+        let u = res.data || res;
+        if(u && u.data) u = u.data;
+        user.value = u || {};
+        if(user.value.icon) user.value.icon = fileURL + user.value.icon;
+    } catch(e) {
+        console.error('Failed to fetch user', e);
+    }
+};
+
+const loadComments = async () => {
+    if(commentsLoading.value) return;
+    commentsLoading.value = true;
+    try {
+        const res = await getReviewList({ sourceType: 4, sourceId: info.value.id, current: 1, size: 20 });
+        let list = [];
+        if (Array.isArray(res)) list = res;
+        else if (res && Array.isArray(res.data)) list = res.data;
+        else if (res && res.data && Array.isArray(res.data.records)) list = res.data.records;
+        else if (res && res.data && Array.isArray(res.data.list)) list = res.data.list;
+        
+        comments.value = list.map(c => ({
+            ...c,
+            userIcon: (c.userIcon || c.icon) ? ((c.userIcon || c.icon).startsWith('http') ? (c.userIcon || c.icon) : fileURL + ((c.userIcon || c.icon).startsWith('/') ? '' : '/') + (c.userIcon || c.icon)) : '',
+            images: c.images ? c.images.split(',').filter(x=>x).map(i => i.startsWith('http') ? i : fileURL + (i.startsWith('/') ? '' : '/') + i) : [],
+            rating: c.score || c.rating || 5,
+            isLike: c.isLike || false,
+            liked: c.liked || 0,
+            comments: c.replyCount || c.comments || c.childCount || 0,
+            showReplies: false,
+            replies: [],
+            replyPage: 1
+        }));
+    } catch(e) {
+        console.error('Failed to load comments', e);
+    } finally {
+        commentsLoading.value = false;
+    }
+};
+
+const handleCommentLike = async (c) => {
+    if(!user.value.id) return router.push('/user/login');
+    const oldState = c.isLike;
+    c.isLike = !c.isLike;
+    c.liked = c.isLike ? (c.liked || 0) + 1 : (c.liked || 1) - 1;
+    try {
+        await likeComment(c.id);
+    } catch(e) {
+        c.isLike = oldState;
+        c.liked = c.isLike ? (c.liked || 0) + 1 : (c.liked || 1) - 1;
+    }
+};
+
+const handleCommentReply = (c, rootId) => {
+    if(!user.value.id) return router.push('/user/login');
+    replyToComment.value = c;
+    replyRootId.value = rootId || null;
+    commentText.value = '';
+    showCommentPublish.value = true;
+};
+
+const handleCommentDelete = async (c) => {
+    try {
+        await showConfirmDialog({
+            title: '提示',
+            message: '确定删除该评论吗？',
+            confirmButtonText: '确认',
+            cancelButtonText: '取消',
+        });
+        await removeReview(c.id);
+        showToast('删除成功');
+        loadComments();
+    } catch(e) {
+        // Cancelled or error
+    }
+};
+
+const toggleReplies = (comment) => {
+    if (!comment.showReplies) {
+        comment.showReplies = true;
+        if (!comment.replies || comment.replies.length === 0) {
+            comment.replyPage = 1;
+            fetchReplies(comment);
+        }
+    } else {
+        if (comment.replies.length < comment.comments) {
+            comment.replyPage = (comment.replyPage || 1) + 1;
+            fetchReplies(comment);
+        } else {
+            comment.showReplies = false;
+        }
+    }
+};
+
+const fetchReplies = async (comment) => {
+    try {
+        const res = await getComments({
+            sourceId: comment.id,
+            sourceType: 7,
+            current: comment.replyPage || 1,
+            size: 10
+        });
+        let list = [];
+        if (Array.isArray(res)) list = res;
+        else if (res && Array.isArray(res.data)) list = res.data;
+        else if (res && res.data && Array.isArray(res.data.records)) list = res.data.records;
+        
+        const newReplies = list.map(r => ({
+            ...r,
+            userIcon: (r.userIcon || r.icon) ? ((r.userIcon || r.icon).startsWith('http') ? (r.userIcon || r.icon) : fileURL + ((r.userIcon || r.icon).startsWith('/') ? '' : '/') + (r.userIcon || r.icon)) : '',
+            images: r.images ? r.images.split(',').filter(x=>x).map(i => i.startsWith('http') ? i : fileURL + (i.startsWith('/') ? '' : '/') + i) : [],
+            liked: r.liked || 0,
+            isLike: r.isLike || false
+        }));
+        
+        if (comment.replyPage === 1) {
+            comment.replies = newReplies;
+        } else {
+            comment.replies = [...comment.replies, ...newReplies];
+        }
+        
+        if (res && res.data && res.data.total) {
+            comment.comments = res.data.total;
+        }
+        if (list.length < 10 && comment.replies.length < comment.comments) {
+            comment.comments = comment.replies.length;
+        }
+    } catch(e) {
+        console.error('Failed to fetch replies', e);
+    }
+};
+
+const closeCommentModal = () => {
+    showCommentPublish.value = false;
+    commentText.value = '';
+    replyToComment.value = null;
+    replyRootId.value = null;
+    commentRating.value = 5;
+};
+
+const publishComment = async () => {
+    if(!user.value.id) return router.push('/user/login');
+    if(!commentText.value.trim()) return showToast('请输入内容');
+    
+    const data = {
+        content: commentText.value,
+        rating: commentRating.value,
+        type: 4, // Voucher
+        sourceId: info.value.id,
+        userId: user.value.id,
+        images: ''
+    };
+    
+    // For replies, we still use addComment from interaction API
+    // For new reviews, we use addReview
+    if (replyToComment.value) {
+        // Import addComment for replies
+        const { addComment } = await import('@/api/interaction');
+        const replyData = {
+            content: commentText.value,
+            sourceId: replyToComment.value.id,
+            userId: user.value.id,
+            parentId: 0,
+            answerId: 0,
+            images: ''
+        };
+        if (replyRootId.value) {
+            // Level 2: Reply to Comment (Sub-reply)
+            replyData.sourceType = 5;
+            replyData.answerId = replyToComment.value.id;
+            replyData.parentId = replyRootId.value;
+        } else {
+            // Level 1: Comment on Review
+            replyData.sourceType = 7;
+        }
+        await addComment(replyData);
+    } else {
+        await addReview(data);
+    }
+    
+    try {
+        showToast('发布成功');
+        closeCommentModal();
+        loadComments();
+    } catch(e) {
+        showToast('发布失败');
+    }
+};
+
+const viewAllComments = () => {
+    showReviewPopup.value = true;
+    allComments.value = [];
+    allCommentsPage.value = 1;
+    allCommentsNoMore.value = false;
+    loadAllComments();
+};
+
+const loadAllComments = async () => {
+    if(allCommentsLoading.value || allCommentsNoMore.value) return;
+    allCommentsLoading.value = true;
+    try {
+        const res = await getReviewList({ sourceType: 4, sourceId: info.value.id, current: allCommentsPage.value, size: 10 });
+        let list = [];
+        if (Array.isArray(res)) list = res;
+        else if (res && Array.isArray(res.data)) list = res.data;
+        else if (res && res.data && Array.isArray(res.data.records)) list = res.data.records;
+        else if (res && res.data && Array.isArray(res.data.list)) list = res.data.list;
+        
+        if(!list || list.length === 0) {
+            allCommentsNoMore.value = true;
+        } else {
+            const newItems = list.map(c => ({
+                ...c,
+                userIcon: (c.userIcon || c.icon) ? ((c.userIcon || c.icon).startsWith('http') ? (c.userIcon || c.icon) : fileURL + ((c.userIcon || c.icon).startsWith('/') ? '' : '/') + (c.userIcon || c.icon)) : '',
+                images: c.images ? c.images.split(',').filter(x=>x).map(i => i.startsWith('http') ? i : fileURL + (i.startsWith('/') ? '' : '/') + i) : [],
+                rating: c.score || c.rating || 5,
+                isLike: c.isLike || false,
+                liked: c.liked || 0,
+                comments: c.replyCount || c.comments || c.childCount || 0,
+                showReplies: false,
+                replies: [],
+                replyPage: 1
+            }));
+            allComments.value = [...allComments.value, ...newItems];
+            if(list.length < 10) {
+                allCommentsNoMore.value = true;
+            } else {
+                allCommentsPage.value++;
+            }
+        }
+    } catch(e) {
+        console.error('Failed to load all comments', e);
+    } finally {
+        allCommentsLoading.value = false;
+    }
+};
+
+const onPopupScroll = (e) => {
+    const { scrollTop, clientHeight, scrollHeight } = e.target;
+    if(scrollTop + clientHeight >= scrollHeight - 50) {
+        loadAllComments();
+    }
+};
+
+const formatDate = (time) => {
+    if(!time) return '';
+    const d = new Date(time);
+    const now = new Date();
+    const diff = (now - d) / 1000;
+    if(diff < 60) return '刚刚';
+    if(diff < 3600) return Math.floor(diff / 60) + '分钟前';
+    if(diff < 86400) return Math.floor(diff / 3600) + '小时前';
+    if(diff < 86400 * 30) return Math.floor(diff / 86400) + '天前';
+    return `${d.getMonth()+1}月${d.getDate()}日`;
+};
+
+const toUserDetail = (userId) => {
+    if(!userId) return;
+    if(user.value && String(user.value.id) === String(userId)) {
+        router.push('/user/profile');
+    } else {
+        router.push(`/user/profile/${userId}`);
+    }
+};
+
+const toReviewDetail = (comment) => {
+    if (!comment || !comment.id) return;
+    router.push({
+        name: 'ReviewDetail',
+        query: { id: comment.id }
+    });
+};
+
+const writeCommentFromPopup = () => {
+    if(!user.value.id) return router.push('/user/login');
+    replyToComment.value = null;
+    replyRootId.value = null;
+    commentText.value = '';
+    showCommentPublish.value = true;
+};
+
+onMounted(async () => {
+    await loadData();
+    await queryUser();
+    if(info.value.id) {
+        loadComments();
+    }
 });
 </script>
 
@@ -224,6 +535,236 @@ onMounted(() => {
                 <div class="shop-name">{{ i===1?'蜀香坊川菜':'坤坤蜀味轩' }}</div>
                 <div class="shop-addr"><i class="el-icon-location-outline"></i> 佛山市禅城区张槎街道</div>
                  <i class="el-icon-arrow-right shop-arrow"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comments Section -->
+    <div class="section-card comments-section">
+        <div class="section-header">网友评价 <span class="count">({{comments.length || 0}})</span></div>
+        
+        <div class="empty-comments" v-if="comments.length === 0">
+            <div class="empty-text">暂无评价，快来抢沙发～</div>
+        </div>
+        
+        <div class="comment-box" v-for="c in comments.slice(0, 3)" :key="c.id">
+            <div class="comment-icon" @click.stop="toUserDetail(c.userId)">
+                <img :src="c.userIcon || '/imgs/icons/default-icon.png'">
+            </div>
+            <div class="comment-info">
+                <div class="comment-user" @click.stop="toUserDetail(c.userId)">
+                    {{c.nickName || '匿名用户'}} <span>Lv{{c.userLevel || 1}}</span>
+                </div>
+                <div class="comment-rating">
+                    <el-rate :model-value="c.rating" disabled size="small"></el-rate>
+                    <span class="score">{{c.rating}}分</span>
+                </div>
+                <div class="comment-content" @click="toReviewDetail(c)">{{c.content}}</div>
+                <div class="comment-images" v-if="c.images && c.images.length">
+                    <img v-for="(img, idx) in c.images" :key="idx" :src="img">
+                </div>
+                <div class="comment-stats">
+                    <div class="comment-interactions">
+                        <span class="comment-time">{{formatDate(c.createTime)}}</span>
+                        <div class="comment-actions">
+                            <div class="c-action-btn" @click.stop="handleCommentLike(c)">
+                                <svg viewBox="0 0 24 24" width="16" height="16">
+                                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" :fill="c.isLike ? '#ff2442' : '#999'"></path>
+                                </svg>
+                                {{c.liked || 0}}
+                            </div>
+                            <div class="c-action-btn" @click.stop="handleCommentReply(c)">
+                                <i class="el-icon-chat-dot-square"></i>
+                            </div>
+                            <div class="c-action-btn delete-btn" v-if="user && user.id === c.userId" @click.stop="handleCommentDelete(c)">
+                                <i class="el-icon-delete"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Replies -->
+                    <div class="comment-replies" v-if="c.comments > 0">
+                        <div class="reply-expand" v-if="!c.showReplies" @click.stop="toggleReplies(c)">
+                            展开{{c.comments}}条回复 <i class="el-icon-arrow-down"></i>
+                        </div>
+                        
+                        <template v-if="c.showReplies">
+                            <div class="reply-item" v-for="r in c.replies" :key="r.id">
+                                <div class="reply-avatar" @click.stop="toUserDetail(r.userId)">
+                                    <img :src="r.userIcon || '/imgs/icons/default-icon.png'" alt="">
+                                </div>
+                                <div class="reply-main">
+                                    <div class="reply-header">
+                                        <span class="reply-user" @click.stop="toUserDetail(r.userId)">{{r.nickName || '匿名用户'}}</span>
+                                    </div>
+                                    <div class="reply-content">
+                                        <span v-if="r.replyToName" class="reply-target">回复 @{{r.replyToName}}</span>
+                                        {{r.content}}
+                                    </div>
+                                    <div class="reply-actions">
+                                        <span class="reply-time" style="margin-right: 10px;">{{formatDate(r.createTime)}}</span>
+                                        <div class="c-action-btn" @click.stop="handleCommentLike(r)">
+                                            <svg viewBox="0 0 24 24" width="16" height="16">
+                                                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" :fill="r.isLike ? '#ff2442' : '#999'"></path>
+                                            </svg>
+                                            <span v-if="r.liked > 0">{{r.liked}}</span>
+                                        </div>
+                                        <div class="c-action-btn" @click.stop="handleCommentReply(r, c.id)">
+                                            <i class="el-icon-chat-dot-square"></i>
+                                        </div>
+                                        <div class="c-action-btn delete-btn" v-if="user && user.id === r.userId" @click.stop="handleCommentDelete(r)">
+                                            <i class="el-icon-delete"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="reply-expand" v-if="c.replies.length > 0" @click.stop="toggleReplies(c)">
+                                <template v-if="c.replies.length < Number(c.comments)">
+                                    展开更多回复 <i class="el-icon-arrow-down"></i>
+                                </template>
+                                <template v-else>
+                                    收起回复 <i class="el-icon-arrow-up"></i>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="view-all" v-if="comments.length > 0" @click="viewAllComments">
+            查看全部{{comments.length}}条评价 <i class="el-icon-arrow-right"></i>
+        </div>
+    </div>
+
+    <!-- Comment Publish Modal -->
+    <div class="comment-pop-overlay" v-if="showCommentPublish" @click="closeCommentModal">
+        <div class="comment-pop-box" @click.stop>
+            <div class="pop-header">
+                <span class="pop-title">{{ replyToComment ? ('回复 @' + replyToComment.nickName) : '发表评价' }}</span>
+                <i class="el-icon-close pop-close" @click="closeCommentModal"></i>
+            </div>
+            <div class="pop-textarea">
+                <textarea 
+                    v-model="commentText" 
+                    placeholder="分享你的使用体验..." 
+                    :maxlength="500"
+                    rows="3"
+                ></textarea>
+            </div>
+            <div class="pop-toolbar">
+                <div class="pop-toolbar-left">
+                    <div class="pop-rating-inline" v-if="!replyToComment">
+                        <el-rate v-model="commentRating" :colors="['#99A9BF', '#F7BA2A', '#FF9900']"></el-rate>
+                    </div>
+                </div>
+                <el-button type="primary" size="small" :disabled="!commentText.trim()" @click="publishComment">发送</el-button>
+            </div>
+        </div>
+    </div>
+
+    <!-- All Comments Popup -->
+    <div class="review-popup-overlay" v-if="showReviewPopup" @click="showReviewPopup = false">
+        <div class="review-popup-sheet" @click.stop>
+            <div class="review-popup-header">
+                <span class="review-popup-title">全部评价 ({{comments.length || 0}})</span>
+                <i class="el-icon-close review-popup-close" @click="showReviewPopup = false"></i>
+            </div>
+            <div class="review-popup-body" @scroll="onPopupScroll">
+                <div v-if="allComments.length === 0 && !allCommentsLoading" class="empty-reviews">
+                    <i class="el-icon-chat-round"></i>
+                    <p>暂无评价</p>
+                </div>
+                
+                <div class="comment-box" v-for="c in allComments" :key="c.id">
+                    <div class="comment-icon" @click.stop="toUserDetail(c.userId)">
+                        <img :src="c.userIcon || '/imgs/icons/default-icon.png'">
+                    </div>
+                    <div class="comment-info">
+                        <div class="comment-user" @click.stop="toUserDetail(c.userId)">
+                            {{c.nickName || '匿名用户'}} <span>Lv{{c.userLevel || 1}}</span>
+                        </div>
+                        <div class="comment-rating">
+                            <el-rate :model-value="c.rating" disabled size="small"></el-rate>
+                            <span class="score">{{c.rating}}分</span>
+                        </div>
+                        <div class="comment-content" @click="toReviewDetail(c)">{{c.content}}</div>
+                        <div class="comment-images" v-if="c.images && c.images.length">
+                            <img v-for="(img, idx) in c.images" :key="idx" :src="img">
+                        </div>
+                        <div class="comment-interactions">
+                            <span class="comment-time">{{formatDate(c.createTime)}}</span>
+                            <div class="comment-actions">
+                                <div class="c-action-btn" @click.stop="handleCommentLike(c)">
+                                    <svg viewBox="0 0 24 24" width="16" height="16">
+                                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" :fill="c.isLike ? '#ff2442' : '#999'"></path>
+                                    </svg>
+                                    {{c.liked || 0}}
+                                </div>
+                                <div class="c-action-btn" @click.stop="handleCommentReply(c)">
+                                    <i class="el-icon-chat-dot-square"></i>
+                                </div>
+                                <div class="c-action-btn delete-btn" v-if="user && user.id === c.userId" @click.stop="handleCommentDelete(c)">
+                                    <i class="el-icon-delete"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Replies in Popup -->
+                        <div class="comment-replies" v-if="c.comments > 0">
+                            <div class="reply-expand" v-if="!c.showReplies" @click.stop="toggleReplies(c)">
+                                展开{{c.comments}}条回复 <i class="el-icon-arrow-down"></i>
+                            </div>
+                            
+                            <template v-if="c.showReplies">
+                                <div class="reply-item" v-for="r in c.replies" :key="r.id">
+                                    <div class="reply-avatar" @click.stop="toUserDetail(r.userId)">
+                                        <img :src="r.userIcon || '/imgs/icons/default-icon.png'" alt="">
+                                    </div>
+                                    <div class="reply-main">
+                                        <div class="reply-header">
+                                            <span class="reply-user" @click.stop="toUserDetail(r.userId)">{{r.nickName || '匿名用户'}}</span>
+                                        </div>
+                                        <div class="reply-content">
+                                            <span v-if="r.replyToName" class="reply-target">回复 @{{r.replyToName}}</span>
+                                            {{r.content}}
+                                        </div>
+                                        <div class="reply-actions">
+                                            <span class="reply-time" style="margin-right: 10px;">{{formatDate(r.createTime)}}</span>
+                                            <div class="c-action-btn" @click.stop="handleCommentLike(r)">
+                                                <svg viewBox="0 0 24 24" width="16" height="16">
+                                                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" :fill="r.isLike ? '#ff2442' : '#999'"></path>
+                                                </svg>
+                                                <span v-if="r.liked > 0">{{r.liked}}</span>
+                                            </div>
+                                            <div class="c-action-btn delete-btn" v-if="user && user.id === r.userId" @click.stop="handleCommentDelete(r)">
+                                                <i class="el-icon-delete"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="reply-expand" v-if="c.replies.length > 0" @click.stop="toggleReplies(c)">
+                                    <template v-if="c.replies.length < Number(c.comments)">
+                                        展开更多回复 <i class="el-icon-arrow-down"></i>
+                                    </template>
+                                    <template v-else>
+                                        收起回复 <i class="el-icon-arrow-up"></i>
+                                    </template>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+                
+                <div v-if="allCommentsLoading" class="loading-more">加载中...</div>
+                <div v-if="allCommentsNoMore && allComments.length > 0" class="no-more-reviews">没有更多评价了</div>
+            </div>
+            <!-- Bottom Input Bar in Popup -->
+            <div class="popup-bottom-bar" @click="writeCommentFromPopup">
+                <div class="popup-input-placeholder">发条评价，和大家一起讨论</div>
+                <el-button type="primary" size="small" round>发布</el-button>
             </div>
         </div>
     </div>
@@ -435,5 +976,47 @@ onMounted(() => {
     font-size: 16px;
     font-weight: 600;
     display: flex; align-items: center; justify-content: center;
+}
+
+/* Comments Section Styles */
+.comments-section {
+    margin-bottom: 12px;
+}
+.comments-section .count {
+    color: #999;
+    font-weight: normal;
+}
+.empty-comments {
+    padding: 30px 0;
+    text-align: center;
+}
+.empty-comments .empty-text {
+    color: #999;
+    font-size: 14px;
+}
+.view-all {
+    text-align: center;
+    color: #666;
+    font-size: 14px;
+    padding: 12px 0 4px;
+    cursor: pointer;
+}
+.view-all i {
+    font-size: 12px;
+    margin-left: 4px;
+}
+.comment-rating {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 0;
+}
+.comment-rating .score {
+    color: #ff9900;
+    font-size: 12px;
+}
+.pop-rating-inline {
+    display: flex;
+    align-items: center;
 }
 </style>

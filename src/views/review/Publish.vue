@@ -4,8 +4,8 @@
     <div class="custom-nav">
       <div class="nav-left" @click="goBack">取消</div>
       <div class="nav-title">{{ shopName || '写评价' }}</div>
-      <div class="nav-right">
-        <van-icon name="info-o" size="20" color="#333" />
+      <div class="nav-right" @click="saveDraft">
+        <span style="font-size: 14px; color: #666;">存草稿</span>
       </div>
     </div>
 
@@ -111,7 +111,7 @@
 
     <!-- Footer -->
     <div class="footer-action">
-        <div class="draft-btn">
+        <div class="draft-btn" @click="saveDraft">
             <van-icon name="orders-o" size="20" />
             <span>存草稿</span>
         </div>
@@ -311,6 +311,35 @@ export default {
                   this.submitting = false;
               });
           }
+      },
+      saveDraft() {
+          if (!this.content && !this.fileList.length) {
+              this.$toast('写点什么再存草稿吧');
+              return;
+          }
+          const draft = {
+              id: this.isEdit && this.id ? this.id : Date.now(), // Use existing ID if edit? No, draft ID separate usually. But let's use timestamp.
+              shopId: this.shopId,
+              shopName: this.shopName,
+              content: this.content,
+              images: this.fileList.map(f => f.url), 
+              updateTime: Date.now()
+          };
+          
+          let drafts = [];
+          try {
+              const stored = localStorage.getItem('review_drafts');
+              if (stored) drafts = JSON.parse(stored);
+          } catch(e) {}
+          
+          // Check duplication or update? 
+          // Simple append for now
+          drafts.unshift(draft);
+          localStorage.setItem('review_drafts', JSON.stringify(drafts));
+          this.$toast('已存入草稿箱');
+          setTimeout(() => {
+              this.$router.go(-1);
+          }, 500);
       }
   }
 }

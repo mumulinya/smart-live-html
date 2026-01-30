@@ -266,7 +266,7 @@
                                      </svg>
                                      <span v-if="r.liked > 0">{{r.liked}}</span>
                                   </div>
-                                  <div class="c-action-btn" @click.stop="handleCommentReply(r)">
+                                  <div class="c-action-btn" @click.stop="handleCommentReply(r, c.id)">
                                      <i class="el-icon-chat-dot-square"></i>
                                   </div>
                                    <div class="c-action-btn delete-btn" v-if="user && user.id === r.userId" @click.stop="handleCommentDelete(r)">
@@ -993,9 +993,10 @@ export default {
            c.liked = c.isLike ? (c.liked + 1) : (c.liked - 1);
         });
      },
-     handleCommentReply(c) {
+     handleCommentReply(c, rootId) {
         if(!this.user.id) return this.$router.push('/user/login');
         this.replyToComment = c;
+        this.replyRootId = rootId || null;
         this.commentText = '';
         this.showCommentPublish = true;
      },
@@ -1014,6 +1015,7 @@ export default {
         this.commentText = '';
         this.selectedImages = [];
         this.replyToComment = null;
+        this.replyRootId = null;
         this.commentRating = 5;
      },
      callShop() {
@@ -1089,9 +1091,18 @@ export default {
          };
 
          if (this.replyToComment) {
-             data.sourceType = 7; 
-             data.sourceId = this.replyToComment.id; // Review ID
-             delete data.answerId;
+             if (this.replyRootId) {
+                 // Level 2: Reply to Comment (Sub-reply)
+                 data.sourceType = 5;
+                 data.sourceId = this.replyToComment.id;
+                 data.answerId = this.replyToComment.id;
+                 data.parentId = this.replyRootId; // Pass Review ID as parent
+             } else {
+                 // Level 1: Comment on Review (Reply to Evaluation)
+                 data.sourceType = 7; 
+                 data.sourceId = this.replyToComment.id; // Review ID
+                 delete data.answerId;
+             }
              delete data.rating;
          }
 

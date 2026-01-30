@@ -163,9 +163,6 @@
                                                 </svg>
                                                 <span v-if="r.liked > 0">{{r.liked}}</span>
                                                 </div>
-                                                <div class="c-action-btn" @click.stop="handleReply(r)">
-                                                    <i class="el-icon-chat-dot-square"></i>
-                                                </div>
                                                 <div class="c-action-btn delete-btn" v-if="user.id === r.userId" @click.stop="handleCommentDelete(r)">
                                                     <i class="el-icon-delete"></i>
                                                 </div>
@@ -316,12 +313,9 @@
                                          </svg>
                                          <span v-if="r.liked > 0">{{r.liked}}</span>
                                          </div>
-                                         <div class="c-action-btn" @click.stop="handleReply(r)">
-                                             <i class="el-icon-chat-dot-square"></i>
-                                         </div>
                                          <div class="c-action-btn delete-btn" v-if="user.id === r.userId" @click.stop="handleCommentDelete(r)">
-                                             <i class="el-icon-delete"></i>
-                                         </div>
+                                            <i class="el-icon-delete"></i>
+                                        </div>
                                      </div>
                                  </div>
                              </div>
@@ -731,14 +725,13 @@ export default {
           
           if (this.replyToComment) {
               // Reply to a specific comment
+              params.sourceType = 5; // Set type to 5 (Comment) for replies
               params.answerId = this.replyToComment.id;
               params.sourceId = this.replyToComment.id; 
-              params.parentId = this.review.shopId; // Optional: keep parentId for nested if needed, or remove? User said "ReplyId and ParentId not passed".
-              // Safest is to remove parentId globally unless nested reply logic strictly needs it. 
-              // Usually nested reply needs rootId/parentId.
-              // But user said "Reply id and parent id should not be passed... because it is initiating comment".
-              // This logic likely applies to the "Root on Review" case.
-              // For nested, standard logic usually applies. I will KEEP parentId for nested, but REMOVE for root.
+              params.parentId = this.review.shopId; // Keep parentId if needed/consistent with existing logic
+              // Note: User previously mentioned "ReplyId and ParentId not passed" for *root* comments on *Shop*, 
+              // but for Review, usually nested replies need linkage. 
+              // Given "Review Detail Page's reply... type should be 5", I am correcting the type.
           } else {
               // Comment on the review itself
               params.sourceId = this.review.id;

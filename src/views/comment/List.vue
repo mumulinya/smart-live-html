@@ -87,10 +87,7 @@
                                      </svg>
                                      <span v-if="r.liked > 0">{{r.liked}}</span>
                                   </div>
-                                  <div class="c-action-btn" @click.stop="handleCommentReply(r)">
-                                     <i class="el-icon-chat-dot-square"></i>
-                                  </div>
-                                   <div class="c-action-btn delete-btn" v-if="user.id === r.userId" @click.stop="handleCommentDelete(r)">
+                                  <div class="c-action-btn delete-btn" v-if="user.id === r.userId" @click.stop="handleCommentDelete(r)">
                                      <i class="el-icon-delete"></i>
                                   </div>
                              </div>
