@@ -182,7 +182,7 @@ const loadComments = async () => {
     if(commentsLoading.value) return;
     commentsLoading.value = true;
     try {
-        const res = await getReviewList({ sourceType: 4, sourceId: info.value.id, current: 1, size: 20 });
+        const res = await getReviewList({ sourceType: 4, sourceId: info.value.id, current: 1, size: 20, status: 0 });
         let list = [];
         if (Array.isArray(res)) list = res;
         else if (res && Array.isArray(res.data)) list = res.data;
@@ -369,7 +369,7 @@ const loadAllComments = async () => {
     if(allCommentsLoading.value || allCommentsNoMore.value) return;
     allCommentsLoading.value = true;
     try {
-        const res = await getReviewList({ sourceType: 4, sourceId: info.value.id, current: allCommentsPage.value, size: 10 });
+        const res = await getReviewList({ sourceType: 4, sourceId: info.value.id, current: allCommentsPage.value, size: 10, status: 0 });
         let list = [];
         if (Array.isArray(res)) list = res;
         else if (res && Array.isArray(res.data)) list = res.data;

@@ -234,7 +234,9 @@ export default {
        if(this.loading || this.noMore) return;
        this.loading = true;
        const api = this.sourceType == 2 ? getReviewList : getComments;
-       api({ sourceId: this.sourceId, sourceType: this.sourceType, current: this.current }).then(res => {
+       const params = { sourceId: this.sourceId, sourceType: this.sourceType, current: this.current };
+       if (this.sourceType == 2) params.status = 0;
+       api(params).then(res => {
           let list = [];
           if (Array.isArray(res)) list = res;
           else if (res && Array.isArray(res.list)) list = res.list;

@@ -121,6 +121,21 @@
     </div>
 
   </div>
+
+    <!-- iOS Exit Confirmation Dialog -->
+    <div class="ios-mask" v-if="showExitDialog" @click.self="showExitDialog = false">
+        <div class="ios-alert">
+            <div class="ios-alert-content">
+                <div class="ios-alert-title">放弃编辑？</div>
+                <div class="ios-alert-msg">确定要放弃编辑吗？<br>已输入的内容将会丢失</div>
+            </div>
+            <div class="ios-alert-footer">
+                <div class="ios-btn-cancel" @click="showExitDialog = false">继续编辑</div>
+                <div class="ios-btn-confirm" @click="confirmExit">放弃</div>
+            </div>
+    </div>
+
+  </div>
 </template>
 
 <script>
@@ -138,6 +153,7 @@ export default {
       isEdit: false,
       id: null,
       shopId: null,
+      orderId: null,
 
       shopName: '',
       createTime: null,
@@ -149,14 +165,15 @@ export default {
       serviceScore: 5,
       
       content: '',
-      fileList: [], // { url, path, type }
+      fileList: [],
       isAnonymous: false,
       
       submitting: false,
       fileURL: fileURL,
       
       overallLabels: ['很糟糕', '较差', '一般', '还可以', '很棒'],
-      moodIcons: ['😖', '😞', '😐', '🙂', '😍']
+      moodIcons: ['😖', '😞', '😐', '🙂', '😍'],
+      showExitDialog: false
     };
   },
   computed: {
@@ -165,10 +182,17 @@ export default {
     }
   },
   created() {
-      const { edit, id, shopId } = this.$route.query;
+      const { edit, id, shopId, orderId } = this.$route.query;
       this.shopId = shopId;
-      
+      this.orderId = orderId;
+
       if (edit && id) {
+          // 从草稿箱编辑
+          this.isEdit = true;
+          this.id = id;
+          this.loadReview(id);
+      } else if (edit === 'true' && id) {
+          // 从草稿箱编辑（兼容写法）
           this.isEdit = true;
           this.id = id;
           this.loadReview(id);
@@ -179,6 +203,15 @@ export default {
   },
   methods: {
       goBack() {
+          // Check if there's any content
+          if (this.content || this.fileList.length > 0) {
+              this.showExitDialog = true;
+          } else {
+              this.$router.go(-1);
+          }
+      },
+      confirmExit() {
+          this.showExitDialog = false;
           this.$router.go(-1);
       },
       formatTime(isoStr) {
@@ -203,29 +236,37 @@ export default {
           getReview(id).then(res => {
               const data = res.data || res;
               if (data) {
-                  this.content = data.content;
+                  this.content = data.content || '';
                   this.overallRating = data.score || 5;
-                  this.tasteScore = data.tasteScore || data.score || 5;
-                  this.envScore = data.envScore || data.score || 5;
-                  this.serviceScore = data.serviceScore || data.score || 5;
-                  
+                  this.tasteScore = data.tasteScore || 5;
+                  this.envScore = data.envScore || 5;
+                  this.serviceScore = data.serviceScore || 5;
+
                   this.shopId = data.shopId || data.sourceId;
                   this.createTime = data.createTime;
-                  // Handle Anonymous if backend supports it (assuming isAnonymous field exists or ignoring if not)
-                  // this.isAnonymous = data.isAnonymous || false; 
+                  
+                  // Drafts use status=1
+                  if (data.status === 0) {
+                      // If loading a published review, we might want to warn or just edit
+                  }
 
                   if (this.shopId) this.loadShop(this.shopId);
 
                   if (data.images) {
                       const imgs = data.images.split(',');
-                      this.fileList = imgs.map(path => ({
-                          url: path.startsWith('http') ? path : this.fileURL + (path.startsWith('/') ? '' : '/') + path,
-                          path: path
-                      }));
+                      this.fileList = imgs.map(path => {
+                          const url = path.startsWith('http') ? path : (this.fileURL + (path.startsWith('/') ? '' : '/') + path);
+                          return {
+                            url: url,
+                            path: path,
+                            type: this.isImage(path) ? 'image' : 'video'
+                          };
+                      });
                   }
               }
           });
       },
+
       triggerUpload(type) {
           if (type === 'image') this.$refs.imageInput.click();
           else this.$refs.videoInput.click();
@@ -256,7 +297,6 @@ export default {
           this.fileList.splice(index, 1);
       },
       isImage(path) {
-          // Simple check, backend usually handles this or we store type
           return !path.match(/\.(mp4|mov|avi)$/i);
       },
       getUserInfo() {
@@ -287,8 +327,9 @@ export default {
               serviceScore: this.serviceScore,
               images: images,
               isAnonymous: this.isAnonymous,
-              orderId: 0,
-              userId: this.userId
+              orderId: this.orderId || 0,
+              userId: this.userId,
+              status: 0  // 0=发布
           };
           
           if (this.isEdit) {
@@ -318,28 +359,48 @@ export default {
               return;
           }
           const draft = {
-              id: this.isEdit && this.id ? this.id : Date.now(), // Use existing ID if edit? No, draft ID separate usually. But let's use timestamp.
+              id: this.isEdit && this.id ? this.id : Date.now(),
               shopId: this.shopId,
               shopName: this.shopName,
               content: this.content,
-              images: this.fileList.map(f => f.url), 
+              images: this.fileList.map(f => f.url),
               updateTime: Date.now()
           };
-          
-          let drafts = [];
-          try {
-              const stored = localStorage.getItem('review_drafts');
-              if (stored) drafts = JSON.parse(stored);
-          } catch(e) {}
-          
-          // Check duplication or update? 
-          // Simple append for now
-          drafts.unshift(draft);
-          localStorage.setItem('review_drafts', JSON.stringify(drafts));
-          this.$toast('已存入草稿箱');
-          setTimeout(() => {
-              this.$router.go(-1);
-          }, 500);
+
+          // 调用API保存到服务器，status=1表示草稿
+          const params = {
+              sourceId: this.shopId || 0,
+              shopId: this.shopId || 0,
+              sourceType: 2,
+              content: this.content || '',
+              score: this.overallRating,
+              tasteScore: this.tasteScore,
+              envScore: this.envScore,
+              serviceScore: this.serviceScore,
+              images: this.fileList.map(f => {
+                  if (f.path.startsWith(this.fileURL)) {
+                      return f.path.replace(this.fileURL, '')
+                  }
+                  return f.path;
+              }).join(','),
+              isAnonymous: this.isAnonymous,
+              orderId: this.orderId || 0,
+              userId: this.userId,
+              status: 1  // 1=草稿
+          };
+
+          // 如果是编辑模式，传递草稿ID用于更新
+          if (this.isEdit && this.id) {
+              params.id = this.id;
+              updateReview(params).then(() => {
+                  this.$message.success('草稿已更新');
+              });
+          } else {
+              // 新草稿，直接添加
+              addReview(params).then(() => {
+                  this.$message.success('已存入草稿箱');
+              });
+          }
       }
   }
 }
@@ -462,4 +523,57 @@ export default {
     font-size: 16px; font-weight: 500;
 }
 .publish-btn.disabled { opacity: 0.5; }
+
+/* iOS Dialog */
+.ios-mask {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.ios-alert {
+    width: 270px;
+    background: white;
+    border-radius: 14px;
+    overflow: hidden;
+}
+.ios-alert-content {
+    padding: 20px 16px;
+    text-align: center;
+}
+.ios-alert-title {
+    font-size: 17px;
+    font-weight: 600;
+    color: #000;
+    margin-bottom: 8px;
+}
+.ios-alert-msg {
+    font-size: 13px;
+    color: #666;
+    line-height: 1.5;
+}
+.ios-alert-footer {
+    display: flex;
+    border-top: 0.5px solid #e0e0e0;
+}
+.ios-btn-cancel, .ios-btn-confirm {
+    flex: 1;
+    height: 44px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 17px;
+    cursor: pointer;
+}
+.ios-btn-cancel {
+    color: #007aff;
+    border-right: 0.5px solid #e0e0e0;
+}
+.ios-btn-confirm {
+    color: #ff3b30;
+    font-weight: 600;
+}
 </style>

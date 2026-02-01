@@ -7,7 +7,7 @@
         </div>
         <div class="header-title">评价详情</div>
         <div class="header-right">
-             <van-popover 
+             <van-popover
                 v-model:show="showMenu"
                 :actions="menuActions"
                 trigger="click"
@@ -684,6 +684,45 @@ export default {
               });
           }).catch(() => {});
       },
+      saveReviewDraft() {
+          // 检查登录状态
+          if (!this.user || !this.user.id) {
+              this.$message.warning("请先登录");
+              this.$router.push('/user/login');
+              return;
+          }
+
+          // 构建草稿数据
+          const draft = {
+              id: Date.now(),
+              shopId: this.review.shopId || 0,
+              shopName: this.review.shopName || '',
+              content: this.review.content || '',
+              images: this.review.images ? this.review.images.join(',') : '',
+              updateTime: Date.now()
+          };
+
+          // 保存到localStorage
+          let drafts = [];
+          try {
+              const stored = localStorage.getItem('review_drafts');
+              if (stored) drafts = JSON.parse(stored);
+          } catch (e) {}
+
+          // 检查是否已存在相同内容的草稿，避免重复
+          const exists = drafts.some(d =>
+              d.shopId === draft.shopId &&
+              d.content === draft.content
+          );
+
+          if (!exists) {
+              drafts.unshift(draft);
+              localStorage.setItem('review_drafts', JSON.stringify(drafts));
+              this.$message.success('已存入草稿箱');
+          } else {
+              this.$message.warning('草稿已存在');
+          }
+      },
       handleEditReview() {
           // Navigate to publish page in edit mode
           // Assuming /shop/assess?id=... or similar. Since I am not sure of the exact edit route, 
@@ -956,6 +995,18 @@ export default {
     text-align: right;
     font-size: 20px;
     color: #333;
+}
+
+.save-draft-btn {
+    font-size: 14px;
+    color: #666;
+    cursor: pointer;
+    padding: 8px 0;
+    margin-left: 8px;
+}
+
+.save-draft-btn:active {
+    color: #999;
 }
 .review-detail-page {
     padding-bottom: 60px;

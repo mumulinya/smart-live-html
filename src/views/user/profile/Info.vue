@@ -605,7 +605,7 @@ export default {
         this.blogCurrent = 1;
         this.blogLoading = true;
         this.blogNoMore = false;
-        getMyBlogs({ current: this.blogCurrent }).then(res => {
+        getMyBlogs({ current: this.blogCurrent, status: 0 }).then(res => {
            const list = res.data || res || [];
            this.blogs = list.map(this.processBlog);
            if(list.length < 10) this.blogNoMore = true;
@@ -616,7 +616,7 @@ export default {
          if(this.blogLoading || this.blogNoMore) return;
          this.blogLoading = true;
          this.blogCurrent++;
-         getMyBlogs({ current: this.blogCurrent }).then(res => {
+         getMyBlogs({ current: this.blogCurrent, status: 0 }).then(res => {
              const list = res.data || res || [];
              if(list.length > 0) {
                  this.blogs = [...this.blogs, ...list.map(this.processBlog)];
@@ -704,7 +704,7 @@ export default {
         this.feedParams.minTime = new Date().getTime();
         this.feedParams.offset = 0;
         const lastId = this.feedParams.minTime;
-        getFollowedFeeds({ offset: 0, lastId }).then(res => {
+        getFollowedFeeds({ offset: 0, lastId, status: 0 }).then(res => {
            const data = res.data || res || {};
            const list = data.list || [];
            this.feeds = list.map(this.processBlog);
@@ -717,7 +717,7 @@ export default {
          if(this.feedLoading || this.feedNoMore) return;
          this.feedLoading = true;
          const lastId = this.feedParams.minTime || new Date().getTime();
-         getFollowedFeeds({ offset: this.feedParams.offset, lastId }).then(res => {
+         getFollowedFeeds({ offset: this.feedParams.offset, lastId, status: 0 }).then(res => {
             const data = res.data || res || {};
             const list = data.list || [];
             if(list.length > 0) {

@@ -424,7 +424,7 @@ export default {
         this.isLoading = true;
         this.isRequesting = true;
         
-        const apiCall = categoryId === 'hot' ? getHotBlogs({ current: this.current }) : getBlogsByCategory(categoryId, this.current);
+        const apiCall = categoryId === 'hot' ? getHotBlogs({ current: this.current, status: 0 }) : getBlogsByCategory(categoryId, this.current);
         
         apiCall
           .then((res) => {

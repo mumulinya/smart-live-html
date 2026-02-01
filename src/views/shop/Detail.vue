@@ -643,7 +643,7 @@ export default {
            this.onDataLoaded();
         });
         
-            getReviewList({ sourceId: id, sourceType: 2, current: 1 }).then(res => {
+        getReviewList({ sourceId: id, sourceType: 2, current: 1, status: 0 }).then(res => {
                let list = [];
                if(Array.isArray(res)) list = res;
                else if(res && Array.isArray(res.list)) list = res.list;
@@ -680,7 +680,7 @@ export default {
             });
          },
          loadComments() {
-            getReviewList({ sourceId: this.shop.id, sourceType: 2, current: 1 }).then(res => {
+            getReviewList({ sourceId: this.shop.id, sourceType: 2, current: 1, status: 0 }).then(res => {
                let list = [];
                if(Array.isArray(res)) list = res;
                else if(res && Array.isArray(res.list)) list = res.list;

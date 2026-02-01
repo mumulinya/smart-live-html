@@ -73,6 +73,11 @@ const routes = [
         component: () => import('@/views/review/Drafts.vue')
     },
     {
+        path: '/drafts',
+        name: 'Drafts',
+        component: () => import('@/views/draft/Index.vue')
+    },
+    {
         path: '/user/my-reviews',
         redirect: '/review/mine'
     },
@@ -177,8 +182,7 @@ const routes = [
     },
     {
         path: '/review/wait',
-        name: 'WaitReview',
-        component: () => import('@/views/review/WaitReview.vue')
+        redirect: '/review/mine?tab=pending'
     }
 ]
 

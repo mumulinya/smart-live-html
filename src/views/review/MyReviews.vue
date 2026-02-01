@@ -3,19 +3,26 @@
       <!-- Custom Header -->
       <div class="custom-header">
            <div class="header-left" @click="$router.go(-1)">
-               <i class="el-icon-arrow-left"></i>
+               <van-icon name="arrow-left" size="20" color="#333"/>
            </div>
            <div class="header-center">
-               <span class="header-tab" @click="$router.push('/review/wait')">待评价</span>
-               <span class="header-tab" @click="$router.push({name: 'MyDrafts'})">草稿箱</span>
-               <span class="header-tab active">半月小结</span>
+               <span class="header-tab" :class="{active: activeHeaderTab === 'pending'}" @click="switchTab('pending')">待评价</span>
+               <span class="header-tab" :class="{active: activeHeaderTab === 'reviewed'}" @click="switchTab('reviewed')">已评价</span>
            </div>
-           <div class="header-right"></div>
+           <div class="header-right" @click="$router.push('/drafts')">
+               <van-icon name="notes-o" size="18" />
+               <span class="drafts-text">草稿箱({{ draftsCount }})</span>
+           </div>
       </div>
 
-     <div class="scroll-wrapper">
+     <!-- Tab Content -->
+     <!-- Wait Review Tab -->
+     <div v-show="activeHeaderTab === 'pending'" class="tab-content">
+         <WaitReviewList />
+     </div>
 
-
+     <!-- Reviewed Tab -->
+     <div v-show="activeHeaderTab === 'reviewed'" class="tab-content scroll-wrapper">
        <!-- Filter -->
        <div class="review-filter-row">
            <div class="filter-left" @click="showSortSheet = true">
@@ -71,7 +78,7 @@
                                {{r.likeCount || 0}}
                            </div>
                            <div class="action-btn">
-                               <i class="el-icon-more"></i>
+                               <van-icon name="ellipsis" size="16" />
                            </div>
                        </div>
                    </div>
@@ -98,13 +105,14 @@
 
 <script>
 import PageLayout from '@/components/PageLayout/PageLayout.vue';
+import WaitReviewList from './components/WaitReviewList.vue';
 import { getUserReviewList } from '@/api/reviews';
 import { getCurrentUser } from '@/api/user';
 import { filePrefix } from '@/utils/request';
 
 export default {
   name: 'MyReviews',
-  components: { PageLayout },
+  components: { PageLayout, WaitReviewList },
   data() {
     return {
        user: {},
@@ -117,6 +125,8 @@ export default {
        filePrefix: filePrefix,
        showSortSheet: false,
        currentSort: 'desc',
+       activeHeaderTab: 'reviewed', // Default
+       draftsCount: 5,
     }
   },
   computed: {
@@ -132,9 +142,20 @@ export default {
       }
   },
   created() {
+      // Check query param for tab
+      const tab = this.$route.query.tab;
+      if (tab === 'pending') {
+          this.activeHeaderTab = 'pending';
+      }
       this.getUserAndLoad();
   },
   methods: {
+      switchTab(tab) {
+          this.activeHeaderTab = tab;
+          // Optional: Update query param without reloading
+          this.$router.replace({ query: { ...this.$route.query, tab } });
+      },
+      // Removed goToPending since it's now a tab switch
       toReviewDetail(review) {
           this.$router.push({
               name: 'ReviewDetail',
@@ -155,7 +176,14 @@ export default {
               
               this.user = userData;
               // Trigger initial load manually after user is ready
-              this.loadReviews();
+              // Only load reviews if on review tab, or we can just load it anyway
+              if (this.activeHeaderTab === 'reviewed') {
+                   this.loadReviews();
+              } else {
+                  // If started on pending, we might want to lazy load reviews when switched
+                  // simplified: just call it first time we are on the tab or if we want pre-loading
+                  this.loadReviews(); 
+              }
           }).catch(err => {
               console.error(err);
               // Handle error silently or show toast
@@ -178,8 +206,9 @@ export default {
               size: this.size,
               userId: this.user.id,
               sortBy: 'createTime',
-              sort: 'createTime', // Add redundant param for safety
-              sortOrder: this.currentSort
+              sort: 'createTime',
+              sortOrder: this.currentSort,
+              status: 0
           };
 
           getUserReviewList(params).then(res => {
@@ -269,21 +298,55 @@ export default {
     font-size: 20px;
     color: #333;
     width: 40px;
+    display: flex; /* Centering icon */
+    align-items: center;
 }
 .header-right {
-    width: 40px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #333;
+    font-size: 13px;
+    cursor: pointer;
+}
+.drafts-text {
+    white-space: nowrap;
 }
 .header-center {
     display: flex;
     gap: 20px;
     font-size: 16px;
     color: #666;
+    font-weight: 500;
 }
 .header-tab {
     cursor: pointer;
+    position: relative;
+    padding-bottom: 4px;
+    transition: all 0.2s;
 }
+.header-tab.active {
+    color: #333;
+    font-weight: 600;
+    font-size: 17px;
+}
+.header-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 16px;
+    height: 3px;
+    background: #ff2442;
+    border-radius: 2px;
+}
+
 .scroll-wrapper {
     padding-top: 10px;
+}
+.tab-content {
+    min-height: calc(100vh - 48px);
 }
 
 /* Banner */
@@ -314,14 +377,11 @@ export default {
 
 /* Filter */
 .review-filter-row {
-    background: #fff; /* Original had it separate? Screenshot looks like it's part of page bg or white bar? It looks transparent/white. */
-    /* Screenshot: "按时间筛选" is on gray bg? No, looks like white header or just below banner. */
-    /* Actually looks like a white bar below banner. Let's keep it clean. */
+    background: #fff;
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 10px 15px;
-    background: #fff;
     margin-bottom: 2px;
 }
 .filter-left {
@@ -337,7 +397,7 @@ export default {
 
 /* Review Card */
 .review-list {
-    padding: 10px 0; /* Full width cards? Screenshot has margin sides? Yes, cards with margin. */
+    padding: 10px 0;
 }
 .review-card {
     background: #fff;

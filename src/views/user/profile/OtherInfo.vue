@@ -447,7 +447,7 @@ export default {
     },
     loadNotes() {
        this.noteLoading = true;
-       getUserBlogs({ userId: this.userId, current: this.noteCurrent, size: 10 }).then(res => {
+       getUserBlogs({ userId: this.userId, current: this.noteCurrent, size: 10, status: 0 }).then(res => {
           const list = res.data || res || [];
           if(list.length < 5) this.noteNoMore = true;
           this.notes = this.noteCurrent === 1 ? list : [...this.notes, ...list];

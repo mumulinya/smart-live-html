@@ -5,7 +5,7 @@
       <div class="header-title">发笔记</div>
       <div class="header-right">
         <button class="publish-btn" @click="submitBlog" :disabled="!canSubmit" :class="{ 'submitting': isSubmitting }">
-          <span v-if="!isSubmitting">{{ editMode ? '保存' : '发布' }}</span>
+          <span v-if="!isSubmitting">{{ (editMode && !isDraft) ? '保存' : '发布' }}</span>
           <i v-else class="el-icon-loading"></i>
         </button>
       </div>
@@ -49,6 +49,17 @@
                     <i class="el-icon-arrow-right"></i>
                 </div>
             </div>
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="footer-action">
+            <div class="draft-btn" @click="saveDraft">
+                <i class="el-icon-document"></i>
+                <span>存草稿</span>
+            </div>
+            <button class="publish-btn-footer" :disabled="!canSubmit" @click="submitBlog">
+                {{ (editMode && !isDraft) ? '保存' : '发布' }}
+            </button>
         </div>
     </div>
 
@@ -129,7 +140,8 @@ export default {
       
       // Edit mode
       editMode: false,
-      blogId: null
+      blogId: null,
+      isDraft: false
     };
   },
   created() {
@@ -138,9 +150,11 @@ export default {
     
     // Check if editing existing blog
     const id = this.$route.query.id;
+    const draft = this.$route.query.draft;
     if (id) {
       this.editMode = true;
       this.blogId = id;
+      this.isDraft = draft === 'true';
       this.loadBlogData(id);
     }
   },
@@ -196,7 +210,8 @@ export default {
         title: this.params.title,
         content: this.params.content,
         images: this.serverFilePaths.join(","),
-        shopId: this.selectedShop.id
+        shopId: this.selectedShop.id,
+        status: 0  // 0=发布
       };
       
       // If editing, add id and use update API
@@ -340,6 +355,53 @@ export default {
     confirmExit() {
         this.showExitDialog = false;
         this.$router.go(-1);
+    },
+    saveDraft() {
+        if (!this.params.title && !this.params.content && !this.fileList.length) {
+            this.$message.warning('写点什么再存草稿吧');
+            return;
+        }
+        
+        this.isSubmitting = true;
+        const data = {
+            title: this.params.title,
+            content: this.params.content,
+            images: this.serverFilePaths.join(","),
+            shopId: this.selectedShop.id,
+            status: 1  // 1=草稿
+        };
+        
+        // If editing existing blog/draft
+        if (this.editMode && this.blogId) {
+            data.id = this.blogId;
+            updateBlog(data)
+                .then(() => {
+                    this.$message.success('已存入草稿箱');
+                    setTimeout(() => {
+                        this.$router.go(-1);
+                    }, 500);
+                })
+                .catch(err => {
+                    this.$message.error(err.response?.data?.message || '保存失败');
+                })
+                .finally(() => {
+                    this.isSubmitting = false;
+                });
+        } else {
+            saveBlog(data)
+                .then(() => {
+                    this.$message.success('已存入草稿箱');
+                    setTimeout(() => {
+                        this.$router.go(-1);
+                    }, 500);
+                })
+                .catch(err => {
+                    this.$message.error(err.response?.data?.message || '保存失败');
+                })
+                .finally(() => {
+                    this.isSubmitting = false;
+                });
+        }
     }
   }
 };
@@ -670,5 +732,66 @@ export default {
 @keyframes popIn {
     from { transform: scale(0.9); opacity: 0; }
     to { transform: scale(1); opacity: 1; }
+}
+
+/* Save Draft Link in Header */
+.save-draft-link {
+    font-size: 14px;
+    color: #666;
+    margin-right: 12px;
+    cursor: pointer;
+}
+.save-draft-link:active {
+    opacity: 0.7;
+}
+
+/* Footer Action Bar */
+.footer-action {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: white;
+    border-top: 1px solid #eee;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 16px;
+    z-index: 100;
+    padding-bottom: env(safe-area-inset-bottom);
+}
+.draft-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    color: #666;
+    font-size: 10px;
+    cursor: pointer;
+}
+.draft-btn i {
+    font-size: 20px;
+}
+.draft-btn:active {
+    opacity: 0.7;
+}
+.publish-btn-footer {
+    flex: 1;
+    height: 40px;
+    background: #ff2442;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+}
+.publish-btn-footer:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 </style>
