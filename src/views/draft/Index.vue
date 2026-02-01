@@ -18,10 +18,14 @@
       <van-checkbox v-model="allSelected" @click="handleSelectAll">全选</van-checkbox>
     </div>
 
-    <van-tabs v-model:active="activeTab" sticky offset-top="0">
+    <van-tabs v-model:active="activeTab" sticky offset-top="0" background="#f5f6f8">
       <van-tab :title="`全部(${totalCount})`">
         <div class="draft-list" :class="{ 'has-footer': isMultiSelect }">
-          <div
+           <div v-if="allDrafts.length === 0" class="empty-state">
+                <van-icon name="description" class="empty-icon" />
+                <div class="empty-text">暂无草稿</div>
+            </div>
+            <div
             v-for="item in allDrafts"
             :key="item.id"
             class="draft-item"
@@ -34,46 +38,80 @@
               class="draft-checkbox"
               @click.stop="toggleSelect(item.id)"
             />
-            <div class="item-content-wrapper">
-              <div class="item-header">
-                <h3 class="item-title truncate">{{ item.title }}</h3>
-              </div>
-              <div class="item-sub text-gray-400 text-xs mb-2">
-                {{ item.subTitle }}
-              </div>
+                <div class="item-content-wrapper">
+                    <div class="item-top-row">
+                        <div class="left-info">
+                            <!-- Order Review Header -->
+                            <template v-if="item.reviewType === 'order'">
+                                <span class="type-tag order">
+                                    <van-icon name="bag-o" style="margin-right: 2px; font-size: 14px;" />
+                                    订单评价 {{  item.orderId ? '#' + (item.orderId.length > 6 ? item.orderId.slice(-6) : item.orderId) : '' }}
+                                </span>
+                            </template>
+                            <!-- Shop Review Header -->
+                            <template v-else-if="item.reviewType === 'shop'">
+                                <span class="type-tag shop">
+                                    <van-icon name="shop-o" style="margin-right: 2px; font-size: 14px;" />
+                                    店铺评价 {{ item.shopName }}
+                                </span>
+                            </template>
+                            <!-- Note Draft Header -->
+                            <template v-else>
+                                <span class="type-tag note">笔记草稿</span>
+                            </template>
+                        </div>
+                        <!-- More icon removed or replaced by delete button in footer -->
+                        <!-- Status Badge (Fixed position) -->
+                        <span class="status-badge" :class="item.type === 'review' ? item.reviewType : 'note'">草稿</span>
+                    </div>
 
-              <div class="item-content mb-2" v-if="item.content || item.images">
-                  <div v-if="item.content" class="text-sm text-gray-600 mb-2 line-clamp-2">
-                      {{ item.content }}
-                  </div>
-                  <div v-if="item.images && item.images.length" class="flex gap-2">
-                      <van-image
-                          v-for="(img, index) in item.images.slice(0, 3)"
-                          :key="index"
-                          width="80"
-                          height="80"
-                          fit="cover"
-                          radius="4"
-                          :src="img"
-                      />
-                  </div>
-              </div>
+                    <!-- Body Content -->
+                    <div class="item-body-content">
+                        <!-- Main Title (Shop Name for Order Review) -->
+                        <h3 class="item-main-title truncate">{{ item.mainTitle }}</h3>
 
-              <div class="item-footer">
-                <span class="footer-text">{{ item.date }} 写{{ item.type === 'review' ? '评价' : '笔记' }}保存草稿</span>
-                <div v-if="!isMultiSelect" class="footer-actions">
-                  <van-icon name="send-o" class="publish-icon" @click.stop="handlePublish(item)" />
-                  <van-icon name="delete" class="delete-icon" @click.stop="handleDelete(item)" />
+                         <!-- Rating -->
+                         <div class="item-rating-row" v-if="item.type === 'review'">
+                             <van-rate readonly v-model="item.rating" :size="12" color="#ff9900" void-icon="star" void-color="#eee" />
+                         </div>
+
+                        <!-- Text Content -->
+                        <div class="item-content-text line-clamp-2" v-if="item.content">
+                            {{ item.content }}
+                        </div>
+
+                        <!-- Images -->
+                        <div v-if="item.images && item.images.length" class="image-grid">
+                            <van-image
+                                v-for="(img, index) in item.images.slice(0, 3)"
+                                :key="index"
+                                class="grid-image"
+                                fit="cover"
+                                :src="img"
+                                radius="4"
+                            />
+                        </div>
+                    </div>
+
+                    <div class="item-footer">
+                        <span class="date-text">{{ item.date }}</span>
+                        <div v-if="!isMultiSelect" class="action-btns">
+                           <van-button round size="small" plain class="btn-delete" @click.stop="handleDelete(item)">删除</van-button>
+                           <van-button round size="small" class="btn-publish" type="primary" color="#ff6600" icon="guide-o" @click.stop="handlePublish(item)">发布</van-button>
+                        </div>
+                    </div>
                 </div>
-              </div>
-            </div>
           </div>
         </div>
       </van-tab>
       
       <van-tab :title="`评价(${reviewCount})`">
          <div class="draft-list" :class="{ 'has-footer': isMultiSelect }">
-          <div
+           <div v-if="reviewDrafts.length === 0" class="empty-state">
+                <van-icon name="comment-o" class="empty-icon" />
+                <div class="empty-text">暂无评价草稿</div>
+            </div>
+           <div
             v-for="item in reviewDrafts"
             :key="item.id"
             class="draft-item"
@@ -87,35 +125,64 @@
               @click.stop="toggleSelect(item.id)"
             />
             <div class="item-content-wrapper">
-             <div class="item-header">
-              <h3 class="item-title truncate">{{ item.title }}</h3>
-            </div>
-            <div class="item-sub text-gray-400 text-xs mb-2">
-              {{ item.subTitle }}
-            </div>
-             <div class="item-content mb-2" v-if="item.content || item.images?.length">
-                <div v-if="item.content" class="text-sm text-gray-600 mb-2 line-clamp-2">
-                    {{ item.content }}
+                <div class="item-top-row">
+                    <div class="left-info">
+                         <!-- Order Review Header -->
+                        <template v-if="item.reviewType === 'order'">
+                            <span class="type-tag order">
+                                <van-icon name="bag-o" style="margin-right: 2px; font-size: 14px;" />
+                                订单评价 {{  item.orderId ? '#' + (item.orderId.length > 6 ? item.orderId.slice(-6) : item.orderId) : '' }}
+                            </span>
+                        </template>
+                         <!-- Shop Review Header -->
+                        <template v-else>
+                            <span class="type-tag shop">
+                                <van-icon name="shop-o" style="margin-right: 2px; font-size: 14px;" />
+                                店铺评价 {{ item.shopName }}
+                            </span>
+                        </template>
+                    </div>
+                         <!-- More action (delete) moved to footer or distinct button, but keeping ellipsis for standard if needed, 
+                              User asked to Add Delete button. Usually Delete replaces ellipsis or is explicit.
+                              Replacing Ellipsis with Badge or just cleaning up. 
+                              User said "Delete button is needed".
+                         -->
+                        <!-- Status Badge (Fixed position) -->
+                        <span class="status-badge" :class="item.reviewType">草稿</span>
+                    </div>
+               
+               <!-- Body Content -->
+               <div class="item-body-content">
+                    <h3 class="item-main-title truncate">{{ item.mainTitle }}</h3>
+
+                     <!-- Rating -->
+                     <div class="item-rating-row">
+                         <van-rate readonly v-model="item.rating" :size="12" color="#ff9900" void-icon="star" void-color="#eee" />
+                     </div>
+
+                    <div class="item-content-text line-clamp-2" v-if="item.content">
+                        {{ item.content }}
+                    </div>
+
+                    <div v-if="item.images && item.images.length" class="image-grid">
+                        <van-image
+                            v-for="(img, index) in item.images.slice(0, 3)"
+                            :key="index"
+                            class="grid-image"
+                            fit="cover"
+                            :src="img"
+                            radius="4"
+                        />
+                    </div>
                 </div>
-                <div v-if="item.images && item.images.length" class="flex gap-2">
-                    <van-image
-                        v-for="(img, index) in item.images.slice(0, 3)"
-                        :key="index"
-                        width="80"
-                        height="80"
-                        fit="cover"
-                        radius="4"
-                        :src="img"
-                    />
+
+                <div class="item-footer">
+                    <span class="date-text">{{ item.date }}</span>
+                    <div v-if="!isMultiSelect" class="action-btns">
+                        <van-button round size="small" plain class="btn-delete" @click.stop="handleDelete(item)">删除</van-button>
+                        <van-button round size="small" class="btn-publish" type="primary" color="#ff6600" icon="guide-o" @click.stop="handlePublish(item)">发布</van-button>
+                    </div>
                 </div>
-            </div>
-            <div class="item-footer">
-              <span class="footer-text">{{ item.date }} 写{{ item.type === 'review' ? '评价' : '笔记' }}保存草稿</span>
-              <div v-if="!isMultiSelect" class="footer-actions">
-                <van-icon name="send-o" class="publish-icon" @click.stop="handlePublish(item)" />
-                <van-icon name="delete" class="delete-icon" @click.stop="handleDelete(item)" />
-              </div>
-            </div>
             </div>
           </div>
         </div>
@@ -123,6 +190,10 @@
       
       <van-tab :title="`笔记(${noteCount})`">
         <div class="draft-list" :class="{ 'has-footer': isMultiSelect }">
+          <div v-if="noteDrafts.length === 0" class="empty-state">
+                <van-icon name="notes-o" class="empty-icon" />
+                <div class="empty-text">暂无笔记草稿</div>
+            </div>
           <div
             v-for="item in noteDrafts"
             :key="item.id"
@@ -137,33 +208,35 @@
               @click.stop="toggleSelect(item.id)"
             />
             <div class="item-content-wrapper">
-             <div class="item-header">
-              <h3 class="item-title truncate">{{ item.title }}</h3>
-            </div>
-            <div class="item-sub text-gray-400 text-xs mb-2">
-              {{ item.subTitle }}
-            </div>
-             <div class="item-content mb-2" v-if="item.content || item.images?.length">
-                <div v-if="item.content" class="text-sm text-gray-600 mb-2 line-clamp-2">
+                <div class="item-top-row">
+                 <div class="left-info">
+                      <span class="type-tag note">笔记草稿</span>
+                 </div>
+                 <span class="status-badge note">草稿</span>
+               </div>
+
+               <h3 class="item-main-title truncate">{{ item.mainTitle }}</h3>
+
+             <div class="item-content" v-if="item.content || item.images?.length">
+                <div v-if="item.content" class="item-content-text line-clamp-2">
                     {{ item.content }}
                 </div>
-                <div v-if="item.images && item.images.length" class="flex gap-2">
+                <div v-if="item.images && item.images.length" class="image-grid">
                     <van-image
                         v-for="(img, index) in item.images.slice(0, 3)"
                         :key="index"
-                        width="80"
-                        height="80"
+                        class="grid-image"
                         fit="cover"
-                        radius="4"
                         :src="img"
+                         radius="4"
                     />
                 </div>
             </div>
             <div class="item-footer">
-              <span class="footer-text">{{ item.date }} 写{{ item.type === 'review' ? '评价' : '笔记' }}保存草稿</span>
-              <div v-if="!isMultiSelect" class="footer-actions">
-                <van-icon name="send-o" class="publish-icon" @click.stop="handlePublish(item)" />
-                <van-icon name="delete" class="delete-icon" @click.stop="handleDelete(item)" />
+              <span class="date-text">{{ item.date }}</span>
+              <div v-if="!isMultiSelect" class="action-btns">
+                <van-button round size="small" plain class="btn-delete" @click.stop="handleDelete(item)">删除</van-button>
+                  <van-button round size="small" class="btn-publish" type="primary" color="#ff6600" icon="guide-o" @click.stop="handlePublish(item)">发布</van-button>
               </div>
             </div>
             </div>
@@ -178,8 +251,8 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast, showDialog, showConfirmDialog } from 'vant'
-import { addReview, getUserReviewList, updateReview, removeReview } from '@/api/reviews'
-import { saveBlog, getMyBlogs } from '@/api/blog'
+import { addReview, getUserReviewList, removeReview, updateReview } from '@/api/reviews'
+import { saveBlog, getMyBlogs, updateBlog } from '@/api/blog'
 import { getCurrentUser } from '@/api/user'
 import { fileURL } from '@/utils/request'
 
@@ -240,12 +313,7 @@ const loadDrafts = () => {
 
 const loadReviewDrafts = () => {
     getUserReviewList({
-        userId: userId.value, // It might be empty initially, but API might handle it or we wait for userId? 
-        // Actually getUserReviewList likely needs userId. 
-        // But let's check if we can pass it without userId if it's "my" reviews?
-        // The API path is /of/user, so it probably expects a userId param.
-        // However, loadDrafts calls this immediately. userId might be null.
-        // Let's assume the API handles it or we should just pass status=1.
+        userId: userId.value, 
         status: 1,
         current: 1,
         size: 100
@@ -287,13 +355,25 @@ const allDrafts = computed(() => {
         })
       }
     }
+    
+    // Robust shop info extraction
+    const sName = item.shopName || item.sourceName || item.shop?.name || '';
+    const sIcon = item.shopIcon || item.sourceIcon || item.shop?.icon || item.image || item.shopImage || '';
+    
+    // Determine Type: Order or Shop
+    const isOrderReview = !!(item.orderId && item.orderId !== 0 && item.orderId !== '0');
+    
     return {
       ...item,
       type: 'review',
-      title: item.shopName || item.title || '评价草稿',
-      subTitle: item.content ? '写评价' : '',
+      reviewType: isOrderReview ? 'order' : 'shop',
+      orderId: item.orderId,
+      rating: item.score || 5, // Rating
+      shopName: sName,
+      shopIcon: sIcon ? (sIcon.startsWith('http') ? sIcon : fileURL + (sIcon.startsWith('/') ? '' : '/') + sIcon) : '',
+      mainTitle: item.title || (isOrderReview ? sName : sName), // Both use shop name usually as title
       images: images,
-      date: formatDate(item.updateTime)
+      date: formatDate(item.updateTime || item.createTime)
     }
   })
   const noteList = noteDraftsData.value.map(item => {
@@ -313,10 +393,10 @@ const allDrafts = computed(() => {
     return {
       ...item,
       type: 'note',
-      title: item.title || '笔记草稿',
-      subTitle: item.content ? '写笔记' : '',
+      mainTitle: item.title || '笔记草稿',
+      shopName: '',
       images: images,
-      date: formatDate(item.updateTime || Date.now())
+      date: formatDate(item.updateTime || item.createTime || Date.now())
     }
   })
   return [...reviewList, ...noteList]
@@ -329,7 +409,12 @@ const noteDrafts = computed(() => allDrafts.value.filter(item => item.type === '
 const formatDate = (timestamp) => {
   if (!timestamp) return ''
   const date = new Date(timestamp)
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  const h = String(date.getHours()).padStart(2, '0')
+  const Min = String(date.getMinutes()).padStart(2, '0')
+  return `${y}-${m}-${d} ${h}:${Min}`
 }
 
 const totalCount = computed(() => allDrafts.value.length)
@@ -358,10 +443,10 @@ const handleEdit = (item) => {
 }
 
 const handleDelete = (item) => {
-  showDialog({
+  showConfirmDialog({
     title: '提示',
     message: '确定要删除这条草稿吗？',
-    showCancelButton: true,
+    confirmButtonColor: '#ff4d4f',
   }).then(() => {
     if (item.type === 'review') {
       // 删除评价草稿（从API）
@@ -396,22 +481,35 @@ const handlePublish = (item) => {
 }
 
 const publishReview = (item) => {
-  showDialog({
+  showConfirmDialog({
     title: '确认发布',
     message: '确定要发布这条评价吗？',
     confirmButtonText: '发布',
     confirmButtonColor: '#ff6600',
-    cancelButtonText: '取消',
   }).then(() => {
     const images = item.images ? item.images.map(img => {
+      // 这里的img可能是完整url，需要处理回相对路径或保持url，看后端要求
+      // 通常需要去除prefix
       if (img.startsWith(fileURL)) return img.replace(fileURL, '')
       return img
     }).join(',') : ''
 
+    // Determine Source Type
+    let sType = 2
+    let sId = item.shopId || 0
+    
+    // 如果存在orderId (或者是voucherId), 则是订单评价
+    if (item.orderId && item.orderId !== 0) {
+        sType = 4
+        // 优先使用 voucherId 或 原有 sourceId (如果是Type 4)，否则如果不传voucherId可能导致问题，但Draft可能没存voucherId?
+        // 假设Draft存了sourceId (作为voucherId)
+        sId = item.voucherId || (item.sourceType === 4 ? item.sourceId : (item.voucherId || 0))
+    }
+
     const params = {
-      sourceId: item.shopId || 0,
+      sourceId: sId,
       shopId: item.shopId || 0,
-      sourceType: 2,
+      sourceType: sType,
       content: item.content || '',
       score: 5,
       tasteScore: 5,
@@ -419,11 +517,13 @@ const publishReview = (item) => {
       serviceScore: 5,
       images: images,
       isAnonymous: false,
-      orderId: 0,
-      userId: userId.value
+      orderId: item.orderId || 0,
+      userId: userId.value,
+      status: 0, // 0表示发布
+      id: item.id // 传递id以更新或删除草稿
     }
 
-    addReview(params)
+    updateReview(params)
       .then(() => {
         // 发布成功后删除草稿
         reviewDraftsData.value = reviewDraftsData.value.filter(d => d.id !== item.id)
@@ -440,12 +540,11 @@ const publishReview = (item) => {
 }
 
 const publishNote = (item) => {
-  showDialog({
+  showConfirmDialog({
     title: '确认发布',
     message: '确定要发布这条笔记吗？',
     confirmButtonText: '发布',
     confirmButtonColor: '#ff6600',
-    cancelButtonText: '取消',
   }).then(() => {
     const images = item.images ? item.images.map(img => {
       if (img.startsWith(fileURL)) return img.replace(fileURL, '')
@@ -453,6 +552,7 @@ const publishNote = (item) => {
     }).join(',') : ''
 
     const data = {
+      id: item.id,
       title: item.title || '',
       content: item.content || '',
       images: images,
@@ -460,7 +560,7 @@ const publishNote = (item) => {
       status: 0  // 0=发布
     }
 
-    saveBlog(data)
+    updateBlog(data)
       .then(() => {
         // 发布成功后删除草稿
         noteDraftsData.value = noteDraftsData.value.filter(d => d.id !== item.id)
@@ -490,6 +590,8 @@ const handleItemClick = (item) => {
   if (isMultiSelect.value) {
     toggleSelect(item.id)
   } else {
+    // 点击卡片进入编辑？或无操作（已有编辑按钮）
+    // 设计上通常点击整个卡片进入编辑
     handleEdit(item)
   }
 }
@@ -525,17 +627,20 @@ const handleBatchDelete = () => {
     message: `确定要删除选中的 ${selectedIds.value.length} 条草稿吗？`,
     confirmButtonText: '删除',
     confirmButtonColor: '#ff4d4f',
-    cancelButtonText: '取消',
   }).then(() => {
     // 批量删除
-    if (activeTab.value === 1) {
-      // 删除评价草稿
-      reviewDraftsData.value = reviewDraftsData.value.filter(item => !selectedIds.value.includes(item.id))
-      localStorage.setItem('review_drafts', JSON.stringify(reviewDraftsData.value))
-    } else if (activeTab.value === 2) {
-      // 删除笔记草稿
-      noteDraftsData.value = noteDraftsData.value.filter(item => !selectedIds.value.includes(item.id))
-    }
+    // 这里需要调API删除
+    // 此处简化，仅前端移除，实际应循环调API或批量接口
+     selectedIds.value.forEach(id => {
+         // Try removal
+         if (reviewDraftsData.value.find(d => d.id === id)) {
+             removeReview(id).catch(() => {})
+             reviewDraftsData.value = reviewDraftsData.value.filter(d => d.id !== id)
+         }
+         if (noteDraftsData.value.find(d => d.id === id)) {
+             noteDraftsData.value = noteDraftsData.value.filter(d => d.id !== id)
+         }
+     })
     showToast('删除成功')
     // 退出多选模式
     isMultiSelect.value = false
@@ -573,7 +678,7 @@ const handleBatchDelete = () => {
 }
 
 .draft-list {
-  padding: 16px;
+  padding: 12px;
   padding-bottom: 80px;
 }
 
@@ -583,184 +688,158 @@ const handleBatchDelete = () => {
 
 .draft-item {
   background: white;
-  border-radius: 16px;
-  margin-bottom: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  transition: all 0.3s ease;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
   display: flex;
   overflow: hidden;
-}
-
-.draft-item.multi-select-mode {
-  padding: 12px;
-}
-
-.draft-item:active:not(.multi-select-mode) {
-  transform: scale(0.98);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-}
-
-.draft-item.selected {
-  background: #fff5f0;
-  box-shadow: 0 2px 12px rgba(255, 102, 0, 0.15);
-}
-
-.draft-checkbox {
-  margin-right: 12px;
-  display: flex;
-  align-items: flex-start;
-  padding-top: 8px;
-}
-
-:deep(.draft-checkbox .van-checkbox__label) {
-  display: none;
-}
-
-:deep(.draft-checkbox .van-checkbox__icon) {
-  border-color: #ddd;
-}
-
-:deep(.draft-checkbox.van-checkbox--checked .van-checkbox__icon) {
-  background-color: #ff6600;
-  border-color: #ff6600;
 }
 
 .item-content-wrapper {
   flex: 1;
-  padding: 8px 8px 8px 0;
+  padding: 16px;
+  width: 100%;
 }
 
-.draft-item:not(.multi-select-mode) .item-content-wrapper {
-  padding: 20px;
+.item-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
 }
 
-.item-header {
-  margin-bottom: 8px;
+.left-info {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  overflow: hidden;
 }
 
-.item-title {
-  font-size: 17px;
-  font-weight: 600;
-  color: #1a1a1a;
-  line-height: 1.5;
-  margin: 0;
+.type-tag {
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-right: 8px;
+  white-space: nowrap;
 }
 
-.item-sub {
-  color: #999;
+.type-tag.review {
+  background-color: #e8f3ff;
+  color: #1677ff;
+}
+
+.type-tag.note {
+  background-color: #fce8ff;
+  color: #d02adf;
+}
+
+.shop-info {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  margin-left: 2px;
+}
+
+.shop-icon {
+  margin-right: 4px;
+  border: 1px solid #f0f0f0;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+}
+
+.shop-name {
   font-size: 13px;
-  margin-bottom: 16px;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+  font-weight: 500;
+}
+
+.arrow-icon {
+    font-size: 12px;
+    color: #ccc;
+    margin-left: 2px;
+}
+
+.more-icon {
+  font-size: 18px;
+  color: #ccc;
+  padding: 4px;
+  margin-right: -4px;
+}
+
+.item-main-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 8px 0;
   line-height: 1.4;
 }
 
-.item-content {
-  margin-bottom: 16px;
-}
-
-.line-clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  line-height: 1.6;
+.item-content-text {
   font-size: 14px;
   color: #666;
-  word-break: break-word;
+  line-height: 1.6;
+  margin-bottom: 12px;
 }
 
-/* 图片容器优化 */
-.item-content :deep(.flex) {
+.image-grid {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
-}
-
-.item-content :deep(.van-image) {
-  border-radius: 8px;
+  margin-bottom: 12px;
   overflow: hidden;
 }
 
-/* Custom Tab Styles */
-:deep(.van-tabs__wrap) {
-  background: white;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
-}
-
-:deep(.van-tabs__nav) {
-  background: white;
-  padding: 12px 16px 0;
-  gap: 8px;
-}
-
-:deep(.van-tab) {
-  flex: 1;
-  padding: 0;
-  height: 40px;
-  line-height: 40px;
-  background: transparent;
-  color: #666;
-  font-size: 15px;
-  border: none;
-  border-radius: 20px;
-  transition: all 0.2s ease;
-  position: relative;
-}
-
-:deep(.van-tab--active) {
-  color: #ff6600;
-  font-weight: 500;
-  background: #fff5f0;
-}
-
-:deep(.van-tabs__line) {
-  display: none;
+.grid-image {
+    width: 80px;
+    height: 80px;
 }
 
 .item-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
+  padding-top: 12px;
+  border-top: 1px solid #f9f9f9;
 }
 
-.footer-text {
-  font-size: 13px;
+.date-text {
+  font-size: 12px;
   color: #999;
 }
 
-.footer-actions {
+.action-btns {
   display: flex;
   gap: 8px;
 }
 
-.publish-icon {
-  font-size: 20px;
-  color: #ff6600;
-  padding: 8px;
-  margin: -8px;
-  border-radius: 50%;
-  transition: all 0.2s ease;
+.btn-delete {
+  padding: 0 12px;
+  border-color: #ebedf0;
+  color: #999;
+  font-size: 13px;
+  height: 30px;
 }
 
-.publish-icon:active {
-  color: #e65c00;
-  background: rgba(255, 102, 0, 0.1);
+.btn-edit {
+  padding: 0 12px;
+  border-color: #ebedf0;
+  color: #666;
+  font-size: 13px;
+  height: 30px;
 }
 
-.delete-icon {
-  font-size: 20px;
-  color: #ccc;
-  padding: 8px;
-  margin: -8px;
-  border-radius: 50%;
-  transition: all 0.2s ease;
+.btn-publish {
+  padding: 0 12px;
+  font-size: 13px;
+  height: 30px;
 }
 
-.delete-icon:active {
-  color: #ff4d4f;
-  background: rgba(255, 77, 79, 0.1);
+.multi-select-mode .item-content-wrapper {
+  padding-left: 0;
 }
 
 /* 多选底部栏 */
@@ -783,6 +862,90 @@ const handleBatchDelete = () => {
   color: #333;
 }
 
+/* Checkbox style */
+.draft-checkbox {
+    margin-left: 12px;
+    margin-right: 4px;
+    align-self: flex-start;
+    margin-top: 16px;
+}
+
+/* Updated Card Styles */
+.left-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.type-tag {
+    font-size: 13px;
+    padding: 2px 0;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+}
+
+/* Order Review: Orange Theme */
+.type-tag.order {
+    color: #ff6600;
+    background: none;
+}
+
+/* Shop Review: Blue Theme */
+.type-tag.shop {
+    color: #1677ff;
+    background: none;
+}
+
+/* Note Draft: Purple Theme */
+.type-tag.note {
+    color: #d02adf;
+    background: #fce8ff;
+    padding: 2px 6px;
+}
+
+.status-badge {
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: white;
+    /* Static position to avoid overlap */
+    margin-left: auto; /* Push to right */
+    white-space: nowrap;
+}
+
+.status-badge.order {
+    background: #ff6600;
+}
+.status-badge.shop {
+    background: #1677ff;
+}
+.status-badge.note {
+    background: #d02adf;
+}
+/* Fallback */
+.status-badge:not(.order):not(.shop):not(.note) {
+     background: #ff9900; 
+}
+
+
+.item-rating-row {
+    margin-bottom: 8px;
+}
+
+.btn-wrap {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px;
+    border: 1px solid #ebedf0;
+    border-radius: 15px;
+    color: #666;
+    font-size: 13px;
+    height: 30px;
+}
+
+
 /* 空状态样式 */
 .empty-state {
   display: flex;
@@ -795,7 +958,7 @@ const handleBatchDelete = () => {
 
 .empty-icon {
   font-size: 64px;
-  color: #ddd;
+  color: #eee;
   margin-bottom: 16px;
 }
 

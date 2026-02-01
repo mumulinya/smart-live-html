@@ -41,44 +41,62 @@
                @load="loadReviews"
            >
                <div class="review-card" v-for="r in reviews" :key="r.id" @click="toReviewDetail(r)">
-                   <!-- Shop Name -->
-                   <div class="rc-shop-name-row">{{r.shopName}}</div>
-                   
-                   <!-- Date -->
-                   <div class="rc-date-row">发布于 {{r.date}}</div>
-                   
-                   <!-- Rating -->
-                   <div class="rc-rating-row">
-                       <van-rate v-model="r.rating" readonly size="14" color="#ff9900" void-icon="star" void-color="#eee" />
-                       <span class="rc-rating-tag"><span class="emoji">😲</span> 超预期</span>
-                   </div>
-                   
-                   <!-- Content -->
-                   <div class="rc-content" v-if="r.content">
-                       <div class="rc-text-body" :class="{'collapsed': !r.expanded}">
-                           {{ r.content }}
+                    <!-- Header -->
+                    <div class="rc-header">
+                        <!-- Order Review Header -->
+                        <template v-if="r.reviewType === 'order'">
+                             <span class="type-tag order">
+                                <van-icon name="bag-o" style="margin-right: 4px; font-size: 15px;" />
+                                订单评价 {{ r.orderId ? '#' + (r.orderId.length > 6 ? r.orderId.slice(-6) : r.orderId) : '' }}
+                            </span>
+                        </template>
+                         <!-- Shop Review Header -->
+                        <template v-else>
+                            <span class="type-tag shop">
+                                <van-icon name="shop-o" style="margin-right: 4px; font-size: 15px;" />
+                                店铺评价 {{ r.shopName }}
+                            </span>
+                        </template>
+                        <span class="rc-date">{{r.date}}</span>
+                    </div>
+
+                   <div class="rc-body">
+                        <!-- Main Title -->
+                       <div class="rc-shop-name-row">{{r.shopName}}</div>
+                       
+                        <!-- Rating -->
+                       <div class="rc-rating-row">
+                           <van-rate v-model="r.rating" readonly size="14" color="#ff9900" void-icon="star" void-color="#eee" />
+                           <span class="rc-rating-tag"><span class="emoji">😲</span> 超预期</span>
                        </div>
-                       <div class="rc-full-text" v-if="r.content.length > 50" @click.stop="r.expanded = !r.expanded">
-                           {{ r.expanded ? '收起' : '全文' }}
-                       </div>
-                   </div>
-                   
-                   <!-- Images -->
-                   <div class="rc-images" v-if="r.images && r.images.length">
-                       <img v-for="(img, idx) in r.images" :key="idx" :src="img" class="rc-img">
-                   </div>
-                    
-                   <!-- Footer -->
-                   <div class="rc-footer-new">
-                       <div class="rc-actions" style="margin-left: auto;">
-                           <div class="action-btn">
-                               <svg viewBox="0 0 24 24" width="16" height="16">
-                                   <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" :fill="r.liked ? '#ff2442' : '#999'"></path>
-                               </svg>
-                               {{r.likeCount || 0}}
+                       
+                       <!-- Content -->
+                       <div class="rc-content" v-if="r.content">
+                           <div class="rc-text-body" :class="{'collapsed': !r.expanded}">
+                               {{ r.content }}
                            </div>
-                           <div class="action-btn">
-                               <van-icon name="ellipsis" size="16" />
+                           <div class="rc-full-text" v-if="r.content.length > 50" @click.stop="r.expanded = !r.expanded">
+                               {{ r.expanded ? '收起' : '全文' }}
+                           </div>
+                       </div>
+                       
+                       <!-- Images -->
+                       <div class="rc-images" v-if="r.images && r.images.length">
+                           <img v-for="(img, idx) in r.images" :key="idx" :src="img" class="rc-img">
+                       </div>
+                        
+                       <!-- Footer -->
+                       <div class="rc-footer-new">
+                           <div class="rc-actions" style="margin-left: auto;">
+                               <div class="action-btn">
+                                   <svg viewBox="0 0 24 24" width="16" height="16">
+                                       <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" :fill="r.liked ? '#ff2442' : '#999'"></path>
+                                   </svg>
+                                   {{r.likeCount || 0}}
+                               </div>
+                               <div class="action-btn">
+                                   <van-icon name="ellipsis" size="16" />
+                               </div>
                            </div>
                        </div>
                    </div>
@@ -253,7 +271,9 @@ export default {
               images: images,
               viewCount: item.viewCount || 0,
               likeCount: item.liked || 0,
-              expanded: false
+              expanded: false,
+              orderId: item.orderId,
+              reviewType: (item.orderId && item.orderId !== 0 && item.orderId !== '0') ? 'order' : 'shop'
           };
       },
 
@@ -402,15 +422,51 @@ export default {
 .review-card {
     background: #fff;
     margin: 0 10px 10px 10px;
-    padding: 20px 15px;
+    padding: 0; /* Remove padding from card, use inner padding */
     border-radius: 12px;
+    overflow: hidden;
 }
+
+.rc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.type-tag {
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+}
+
+.type-tag.order {
+    color: #ff6600;
+}
+
+.type-tag.shop {
+    color: #1677ff;
+}
+
+.rc-date {
+     font-size: 12px;
+     color: #bfbfbf;
+}
+
+.rc-body {
+    padding: 15px;
+}
+
 .rc-shop-name-row {
     font-size: 16px;
     font-weight: 700;
     color: #333;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
 }
+
 .rc-date-row {
     font-size: 12px;
     color: #999;

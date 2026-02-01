@@ -14,7 +14,7 @@
         <input 
           type="text" 
           v-model="keyword" 
-          placeholder="搜索用户名字 / 抖音号"
+          placeholder="搜索用户名字 / 生活号"
           @keyup.enter="handleSearch"
         >
       </div>
@@ -40,7 +40,7 @@
           </div>
           <div class="user-info">
             <div class="user-name" v-html="user.nickName || '未知用户'"></div>
-            <div class="user-id">抖音号：{{ user.id }}</div>
+            <div class="user-id">生活号：{{ user.id }}</div>
             <div class="user-intro" v-if="user.introduce">{{ user.introduce }}</div>
           </div>
           <div class="user-action">

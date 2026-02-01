@@ -125,6 +125,7 @@ export default {
                 query: {
                     shopId: order.shopId || 1,
                     orderId: order.id,
+                    voucherId: order.voucherId, // Strictly pass voucherId
                     shopName: order.shopName
                 }
             });

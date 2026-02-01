@@ -95,20 +95,20 @@
     <!-- Service Bar (Horizontal Scroll if needed, or fixed 4) -->
     <!-- Service Bar (Grid) -->
     <div class="service-bar-container">
-        <van-grid clickable :column-num="5" :border="false">
+        <van-grid clickable :column-num="4" :border="false">
             <van-grid-item text="我的订单" @click="toOrders">
                <template #icon>
-                   <i class="el-icon-s-order" style="font-size: 24px; color: #333; margin-bottom: 6px;"></i>
+                   <van-icon name="orders-o" size="24" color="#333" style="margin-bottom: 6px;" />
                </template>
             </van-grid-item>
              <van-grid-item text="我的收藏" @click="toCollections">
                <template #icon>
-                   <i class="el-icon-star-on" style="font-size: 24px; color: #333; margin-bottom: 6px;"></i>
+                   <van-icon name="star-o" size="24" color="#333" style="margin-bottom: 6px;" />
                </template>
             </van-grid-item>
              <van-grid-item text="我的评价" @click="toReviews">
                <template #icon>
-                   <i class="el-icon-s-comment" style="font-size: 24px; color: #333; margin-bottom: 6px;"></i>
+                   <van-icon name="comment-o" size="24" color="#333" style="margin-bottom: 6px;" />
                </template>
             </van-grid-item>
              <van-grid-item text="我的关注" @click="toMyFollow">
@@ -119,6 +119,11 @@
              <van-grid-item text="我的动态" @click="$router.push('/user/moments')">
                <template #icon>
                     <van-icon name="clock-o" size="24" color="#333" style="margin-bottom: 6px;" />
+               </template>
+            </van-grid-item>
+            <van-grid-item text="草稿箱" @click="toDrafts">
+               <template #icon>
+                    <van-icon name="description-o" size="24" color="#333" style="margin-bottom: 6px;" />
                </template>
             </van-grid-item>
         </van-grid>
@@ -441,6 +446,9 @@ export default {
      },
      toReviews() {
         this.$router.push('/review/mine');
+     },
+     toDrafts() {
+        this.$router.push('/drafts');
      },
      toFollows() {
         this.$router.push('/user/list?type=follow');
@@ -1059,6 +1067,16 @@ export default {
 }
 
 /* Service Bar */
+.service-bar-container {
+    padding: 12px 4px;
+    background: #fff;
+    margin-bottom: 10px;
+}
+:deep(.van-grid-item__text) {
+    font-size: 13px !important;
+    color: #333 !important;
+    margin-top: 4px;
+}
 .service-bar {
     display: flex;
     justify-content: space-around;

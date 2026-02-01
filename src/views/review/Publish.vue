@@ -154,6 +154,8 @@ export default {
       id: null,
       shopId: null,
       orderId: null,
+      voucherId: null,
+      sourceType: 2, // Default to shop
 
       shopName: '',
       createTime: null,
@@ -182,9 +184,17 @@ export default {
     }
   },
   created() {
-      const { edit, id, shopId, orderId } = this.$route.query;
+      const { edit, id, shopId, orderId, voucherId } = this.$route.query;
       this.shopId = shopId;
       this.orderId = orderId;
+      this.voucherId = voucherId;
+      
+      // Determine implicit source type
+      if (this.voucherId || this.orderId) {
+          this.sourceType = 4;
+      } else {
+          this.sourceType = 2;
+      }
 
       if (edit && id) {
           // 从草稿箱编辑
@@ -244,6 +254,14 @@ export default {
 
                   this.shopId = data.shopId || data.sourceId;
                   this.createTime = data.createTime;
+                  
+                  // Restore source info
+                  if (data.sourceType) this.sourceType = data.sourceType;
+                  else if (data.orderId) this.sourceType = 4;
+                  
+                  if (this.sourceType === 4 && data.sourceId) {
+                      this.voucherId = data.sourceId;
+                  }
                   
                   // Drafts use status=1
                   if (data.status === 0) {
@@ -317,9 +335,9 @@ export default {
           }).join(',');
 
           const params = {
-              sourceId: this.shopId,
+              sourceId: this.sourceType === 4 ? (this.voucherId || 0) : this.shopId,
               shopId: this.shopId,
-              sourceType: 2,
+              sourceType: this.sourceType,
               content: this.content,
               score: this.overallRating,
               tasteScore: this.tasteScore,
@@ -369,9 +387,9 @@ export default {
 
           // 调用API保存到服务器，status=1表示草稿
           const params = {
-              sourceId: this.shopId || 0,
+              sourceId: this.sourceType === 4 ? (this.voucherId || 0) : (this.shopId || 0),
               shopId: this.shopId || 0,
-              sourceType: 2,
+              sourceType: this.sourceType,
               content: this.content || '',
               score: this.overallRating,
               tasteScore: this.tasteScore,
@@ -394,11 +412,17 @@ export default {
               params.id = this.id;
               updateReview(params).then(() => {
                   this.$message.success('草稿已更新');
+                  setTimeout(() => {
+                      this.$router.go(-1);
+                  }, 500);
               });
           } else {
               // 新草稿，直接添加
               addReview(params).then(() => {
                   this.$message.success('已存入草稿箱');
+                  setTimeout(() => {
+                      this.$router.go(-1);
+                  }, 500);
               });
           }
       }
