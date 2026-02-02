@@ -14,6 +14,11 @@ const routes = [
         component: () => import('@/views/search/Index.vue')
     },
     {
+        path: '/search/user',
+        name: 'UserSearch',
+        component: () => import('@/views/search/UserSearch.vue')
+    },
+    {
         path: '/map',
         name: 'Map',
         component: () => import('@/views/map/Index.vue')

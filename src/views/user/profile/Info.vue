@@ -28,7 +28,7 @@
        </div>
        <div class="nav-title" v-if="scrollTop > 50">{{ user.nickName }}</div>
        <div class="nav-right">
-          <div class="icon-btn" :style="{ color: scrollTop > 50 ? '#333' : '#fff', background: scrollTop > 50 ? 'transparent' : 'rgba(0,0,0,0.2)',  border: scrollTop > 50 ? 'none' : '0.5px solid rgba(255,255,255,0.2)' }"><i class="el-icon-share"></i></div>
+          <div class="icon-btn" @click="$router.push('/search/user')" :style="{ color: scrollTop > 50 ? '#333' : '#fff', background: scrollTop > 50 ? 'transparent' : 'rgba(0,0,0,0.2)',  border: scrollTop > 50 ? 'none' : '0.5px solid rgba(255,255,255,0.2)' }"><i class="el-icon-search"></i></div>
           <div class="icon-btn" @click="logout" v-if="isSelf" :style="{ color: scrollTop > 50 ? '#333' : '#fff', background: scrollTop > 50 ? 'transparent' : 'rgba(0,0,0,0.2)', border: scrollTop > 50 ? 'none' : '0.5px solid rgba(255,255,255,0.2)' }"><i class="el-icon-setting"></i></div>
        </div>
     </div>
