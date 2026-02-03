@@ -434,6 +434,21 @@
     
     <!-- 图片预览 -->
     <el-image-viewer v-if="showImagePreview" :url-list="previewImages" :initial-index="currentPreviewIndex" @close="closeImagePreview" hide-on-click-modal />
+
+    <!-- Custom Delete Dialog -->
+    <van-dialog
+      v-model:show="showDeleteDialog"
+      title="提示"
+      show-cancel-button
+      confirm-button-color="#576b95"
+      @confirm="confirmDelete"
+      class="custom-delete-dialog"
+    >
+      <div class="delete-dialog-content">
+        <van-icon name="warning" color="#ff9900" size="36" />
+        <div class="delete-dialog-text">确定删除这篇笔记吗？删除后不可恢复</div>
+      </div>
+    </van-dialog>
   </PageLayout>
 </template>
 
@@ -487,7 +502,10 @@ export default {
        allComments: [],
        allCommentsPage: 1,
        allCommentsNoMore: false,
-       allCommentsLoading: false
+       allCommentsLoading: false,
+
+       // Delete Dialog
+       showDeleteDialog: false
     }
   },
   computed: {
@@ -1052,18 +1070,15 @@ export default {
       },
       handleDelete() {
           this.showMenu = false;
-          this.$confirm('确定删除这篇笔记吗？删除后不可恢复', '提示', {
-            confirmButtonText: '确定',
-            cancelButtonText: '取消',
-            type: 'warning'
-          }).then(() => {
-             deleteBlog(this.blog.id).then(() => {
-                this.$message.success('删除成功');
-                this.$router.push('/user/info'); 
-             }).catch(() => {
-                this.$message.error('删除失败');
-             });
-          }).catch(() => {});
+          this.showDeleteDialog = true;
+      },
+      confirmDelete() {
+         deleteBlog(this.blog.id).then(() => {
+            this.$message.success('删除成功');
+            this.$router.push('/user/info');
+         }).catch(() => {
+            this.$message.error('删除失败');
+         });
       },
       goHome() {
           this.showMenu = false;
@@ -1717,4 +1732,24 @@ export default {
 
 /* Ensure comment modal is above review popup */
 .comment-pop-overlay { z-index: 1100 !important; }
+
+/* Custom Delete Dialog Styles */
+.delete-dialog-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 20px 10px;
+  gap: 12px;
+}
+.delete-dialog-text {
+  font-size: 15px;
+  color: #666;
+  text-align: center;
+  margin-top: 8px;
+}
+:deep(.custom-delete-dialog .van-dialog__header) {
+  padding-top: 20px;
+  font-weight: 600;
+}
 </style>

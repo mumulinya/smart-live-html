@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { showToast, showConfirmDialog } from 'vant';
 import { getVoucherDetail, buyVoucherAPI, seckillVoucherAPI } from '@/api/shop'; 
-import { toggleStar, likeComment, getComments } from '@/api/interaction';
+import { toggleStar, likeComment, getComments, followUser } from '@/api/interaction';
 import { getReviewList, addReview, removeReview } from '@/api/reviews';
 import { getCurrentUser } from '@/api/user';
 import { fileURL } from '@/utils/request';
@@ -92,6 +92,13 @@ const loadData = async () => {
             } else {
                info.value.isCollected = false;
             }
+            
+            // Map isFollow
+            if (data.isFollow !== undefined) {
+                info.value.isFollow = data.isFollow;
+            } else {
+                info.value.isFollow = false;
+            }
         }
     } catch (e) {
         console.error(e);
@@ -112,6 +119,23 @@ const handleCollect = async () => {
       info.value.isCollected = !newState; 
       showToast('操作失败');
   }
+};
+
+const handleFollow = async () => {
+    if(!localStorage.getItem('token')) return router.push('/user/login');
+    
+    const newState = !info.value.isFollow;
+    // Optimistic update
+    info.value.isFollow = newState;
+    
+    try {
+        await followUser({ sourceId: info.value.id, sourceType: 4, isFollow: newState }); 
+        showToast(newState ? '关注成功，开抢将会提醒您' : '已取消提醒');
+    } catch (e) {
+        info.value.isFollow = !newState;
+        showToast('操作失败');
+        console.error(e);
+    }
 };
 
 const handleBuy = async () => {
@@ -149,9 +173,62 @@ const handleBuy = async () => {
     }
 };
 
-const handleBtnClick = () => {
-    handleBuy();
-};
+const btnStatus = computed(() => {
+    // 1. Seckill Logic
+    if (isSeckill.value) {
+        if (isSeckillEnded.value) {
+            return {
+                text: info.value.isFollow ? '已关注提醒' : '关注提醒', 
+                disabled: false,
+                type: 'collect',
+                action: handleFollow
+            };
+        }
+        if (!isSeckillStarted.value) {
+            return {
+                text: info.value.isFollow ? '已设置提醒' : '设置提醒', // "Set Reminder" - maps to Follow
+                disabled: false,
+                type: 'collect',
+                action: handleFollow
+            };
+        }
+        if (info.value.stock < 1) {
+            return {
+                text: info.value.isFollow ? '已设置缺货提醒' : '缺货提醒', // "Restock Reminder" - maps to Follow
+                disabled: false,
+                type: 'collect',
+                action: handleFollow
+            };
+        }
+        return {
+            text: '🔥 立即抢购',
+            disabled: false,
+            type: 'buy',
+            action: handleBuy
+        };
+    }
+
+    // 2. Normal Voucher Logic
+    if (info.value.stock < 1) {
+         return {
+            text: info.value.isFollow ? '已设置缺货提醒' : '缺货提醒',
+            disabled: false,
+            type: 'collect',
+            action: handleFollow
+        };
+    }
+    
+    return {
+        text: '¥' + (info.value.payValue || '') + ' 立即抢购',
+        disabled: false,
+        type: 'buy',
+        action: handleBuy
+    };
+});
+
+// const handleBtnClick = () => {
+//     handleBuy();
+// };
 
 const openShopList = () => {
     // Just a placeholder for now, usually scrolls to shop list or opens a popup
@@ -780,8 +857,11 @@ onMounted(async () => {
             <span>收藏</span>
         </div>
         <div class="bar-btn-wrapper">
-            <button class="buy-btn" @click="handleBtnClick">
-                🔥 立即抢购
+             <button class="buy-btn" 
+                :class="{ disabled: btnStatus.disabled, warning: btnStatus.type === 'collect' }" 
+                :disabled="btnStatus.disabled"
+                @click="btnStatus.action">
+                {{ btnStatus.text }}
             </button>
         </div>
     </div>
@@ -976,6 +1056,15 @@ onMounted(async () => {
     font-size: 16px;
     font-weight: 600;
     display: flex; align-items: center; justify-content: center;
+}
+.buy-btn.warning {
+    background: linear-gradient(90deg, #ffc107 0%, #ff9800 100%);
+}
+.buy-btn[disabled], .buy-btn.disabled {
+    background: #ccc;
+    color: #fff;
+    cursor: not-allowed;
+    opacity: 0.8;
 }
 
 /* Comments Section Styles */
