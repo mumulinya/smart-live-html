@@ -85,7 +85,7 @@
 import { ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
 import { showToast, showSuccessToast, showFailToast } from 'vant';
-import { login, sendCode, appLoginByPassword } from '@/api/user';
+import { login, sendCode, appLoginByPassword, getCurrentUser } from '@/api/user';
 import Vcode from "vue3-puzzle-vcode";
 
 const router = useRouter();
@@ -200,6 +200,7 @@ const performLogin = async () => {
         const token = res.data || res;
         if (token) {
             localStorage.setItem("token", token);
+            await getCurrentUser(); // Prefetch and cache user info
             showSuccessToast("登录成功");
             router.push("/");
         } else {

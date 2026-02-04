@@ -20,8 +20,22 @@ export function getUserInfo(id) {
     return request.get(`/app/user/${id}`);
 }
 
+import { setUserInfo, getUserInfo as getStoreUserInfo, clearUserInfo } from '@/store/user';
+
 export function getCurrentUser() {
-    return request.get('/app/user/me');
+    const cachedUser = getStoreUserInfo();
+    if (cachedUser) {
+        return Promise.resolve({ data: cachedUser });
+    }
+    return request.get('/app/user/me').then(res => {
+        if (res.data) { // Assuming res.data is the user object, adjust based on actual response structure
+            setUserInfo(res.data);
+        }
+        return res;
+    }).catch(err => {
+        clearUserInfo();
+        throw err;
+    });
 }
 
 export function getUserStats(userId) {

@@ -107,6 +107,26 @@ const routes = [
         name: 'SetPassword',
         component: () => import('@/views/user/auth/SetPassword.vue')
     },
+    {
+        path: '/user/wallet',
+        name: 'UserWallet',
+        component: () => import('@/views/user/wallet/Index.vue')
+    },
+    {
+        path: '/user/points',
+        name: 'UserPoints',
+        component: () => import('@/views/user/points/Index.vue')
+    },
+    {
+        path: '/user/points/detail',
+        name: 'UserPointsDetail',
+        component: () => import('@/views/user/points/Detail.vue')
+    },
+    {
+        path: '/user/points/lottery',
+        name: 'UserPointsLottery',
+        component: () => import('@/views/user/points/Lottery.vue')
+    },
 
     // Shop Module
     {

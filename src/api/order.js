@@ -1,26 +1,26 @@
 import request from '@/utils/request';
 
 export function getOrderList(params) {
-    return request.get('/app/order/voucher-order/of/me', { params });
+    return request.get('/app/order/of/me', { params });
 }
 
 export function createOrder(data) {
-    return request.post('/app/order/voucher-order', data);
+    return request.post('/app/order', data);
 }
 
 export function getOrderDetail(orderId) {
-    return request.get(`/app/order/voucher-order/getOrderById/${orderId}`);
+    return request.get(`/app/order/getOrderById/${orderId}`);
 }
 
 export function payOrder(orderId) {
-    return request.post(`/app/order/voucher-order/pay/${orderId}`);
+    return request.post(`/app/order/pay/${orderId}`);
 }
 
 
 export function cancelOrder(orderId) {
-    return request.post(`/app/order/voucher-order/cancel/${orderId}`);
+    return request.post(`/app/order/cancel/${orderId}`);
 }
 
 export function refundOrder(orderId) {
-    return request.post(`/app/order/voucher-order/refund/${orderId}`);
+    return request.post(`/app/order/refund/${orderId}`);
 }

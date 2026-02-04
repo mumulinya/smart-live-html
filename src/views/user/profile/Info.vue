@@ -101,6 +101,16 @@
                    <van-icon name="orders-o" size="24" color="#333" style="margin-bottom: 6px;" />
                </template>
             </van-grid-item>
+            <van-grid-item text="钱包" @click="toWallet">
+               <template #icon>
+                   <van-icon name="balance-o" size="24" color="#333" style="margin-bottom: 6px;" />
+               </template>
+            </van-grid-item>
+            <van-grid-item text="积分" @click="toPoints">
+               <template #icon>
+                   <van-icon name="points" size="24" color="#333" style="margin-bottom: 6px;" />
+               </template>
+            </van-grid-item>
              <van-grid-item text="我的收藏" @click="toCollections">
                <template #icon>
                    <van-icon name="star-o" size="24" color="#333" style="margin-bottom: 6px;" />
@@ -437,6 +447,12 @@ export default {
      },
      toOrders() {
         this.$router.push('/order/list'); 
+     },
+     toWallet() {
+        this.$router.push('/user/wallet');
+     },
+     toPoints() {
+        this.$router.push('/user/points');
      },
      toCollections() {
           this.$router.push('/user/star');
