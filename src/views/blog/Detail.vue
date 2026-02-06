@@ -695,9 +695,8 @@ export default {
              const roots = processedList.filter(c => !c.answerId || c.answerId === 0 || c.answerId === '0');
 
              this.comments = roots.slice(0, 3);
-             this.onDataLoaded();
           }).catch(err => {
-             this.onDataLoaded();
+             console.error('Failed to load comments:', err);
           });
       },
       // ... (existing helper methods if needed) ...

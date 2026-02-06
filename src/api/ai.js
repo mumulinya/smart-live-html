@@ -24,8 +24,8 @@ export function sendMessage(data) {
 export function sendMessageStream(data, onMessage, onError, onComplete) {
     const baseURL = import.meta.env.VITE_API_BASE_URL || '/app-dev-api';
     // URL construction for GET request
-    // Backend expects: message, sessionId, x, y, contextMode
-    let url = `${baseURL}/app/ai/chat?sessionId=${data.sessionId}&message=${encodeURIComponent(data.content)}`;
+    // Backend expects: message, sessionId, x, y, contextMode, userName, region
+    let url = `${baseURL}/app/ai/message/chat?sessionId=${data.sessionId}&message=${encodeURIComponent(data.content)}`;
 
     // 添加可选参数
     if (data.contextMode !== undefined) {
@@ -37,6 +37,16 @@ export function sendMessageStream(data, onMessage, onError, onComplete) {
         url += `&x=${data.longitude}&y=${data.latitude}`;
     }
 
+    // 添加用户名参数
+    if (data.userName) {
+        url += `&userName=${encodeURIComponent(data.userName)}`;
+    }
+
+    // 添加区域参数
+    if (data.region) {
+        url += `&region=${encodeURIComponent(data.region)}`;
+    }
+
     // 使用 fetch 替代 EventSource，以兼容非标准 SSE 格式的流式输出
     // 模拟 EventSource 的返回对象，以便前端可以调用 close()
     const controller = new AbortController();
@@ -44,11 +54,15 @@ export function sendMessageStream(data, onMessage, onError, onComplete) {
         close: () => controller.abort()
     };
 
+    // 获取token
+    const token = localStorage.getItem('token');
+
     fetch(url, {
         method: 'GET',
         signal: controller.signal,
         headers: {
-            'Accept': 'text/event-stream, text/plain, */*'
+            'Accept': 'text/event-stream, text/plain, */*',
+            'authorization': token || ''
         }
     }).then(async response => {
         if (!response.ok) throw new Error(response.statusText);
@@ -63,7 +77,31 @@ export function sendMessageStream(data, onMessage, onError, onComplete) {
 
                 const chunk = decoder.decode(value, { stream: true });
                 if (chunk) {
-                    onMessage && onMessage({ content: chunk });
+                    // 解析 SSE 格式，去掉 "data:" 前缀
+                    const lines = chunk.split('\n');
+                    for (const line of lines) {
+                        // 跳过注释行
+                        if (line.startsWith(':')) continue;
+
+                        // 空行在 SSE 中表示事件结束，保留为换行
+                        if (!line.trim()) {
+                            continue;
+                        }
+
+                        // 去掉 "data:" 前缀
+                        let content = line;
+                        if (line.startsWith('data:')) {
+                            content = line.substring(5); // 去掉 "data:" (5个字符)
+                        }
+
+                        // 跳过 [DONE] 标记
+                        if (content.trim() === '[DONE]') continue;
+
+                        if (content) {
+                            // 每个 data 块后添加换行，保持格式
+                            onMessage && onMessage({ content: content + '\n' });
+                        }
+                    }
                 }
             }
             onComplete && onComplete();
@@ -194,4 +232,15 @@ export function voiceToText(formData) {
  */
 export function getSessionStats() {
     return request.get('/app/ai/session/stats');
+}
+
+/**
+ * 搜索用户的AI会话列表
+ * @param {Object} params - 查询参数
+ * @param {string} params.keyword - 搜索关键词
+ * @param {number} params.current - 当前页码
+ * @returns {Promise}
+ */
+export function searchSession(params) {
+    return request.get('/app/ai/session/search', { params });
 }

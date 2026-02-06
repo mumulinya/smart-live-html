@@ -188,7 +188,7 @@
                          <!-- Seckill Vouchers -->
                          <div v-if="seckillVouchers.length > 0" class="seckill-wrapper">
                              <div class="voucher-category-title seckill">限时秒杀券</div>
-                             <div class="voucher-card-v2 seckill" v-for="v in seckillVouchers" :key="v.id" @click="toShopDetail(v)">
+                             <div class="voucher-card-v2 seckill" v-for="v in seckillVouchers" :key="v.id" @click="toVoucherDetail(v)">
                                  <!-- Card Header -->
                                  <div class="voucher-card-header">
                                     <div class="voucher-title-row">
@@ -237,7 +237,7 @@
                          <!-- Normal Vouchers -->
                          <div v-if="normalVouchers.length > 0">
                              <div class="voucher-category-title normal">普通代金券</div>
-                             <div class="voucher-card-v2 normal" v-for="v in normalVouchers" :key="v.id" @click="toShopDetail(v)">
+                             <div class="voucher-card-v2 normal" v-for="v in normalVouchers" :key="v.id" @click="toVoucherDetail(v)">
                                  <!-- Card Header -->
                                  <div class="voucher-card-header">
                                     <div class="voucher-title-row">
@@ -498,6 +498,29 @@ export default {
     this.loadShopTypes();
     this.reGetLocation();
     this.loadHotSearch();
+
+    // Restore state from URL
+    const q = this.$route.query;
+    if (q.k) this.keyword = q.k;
+    if (q.tab) this.activeTab = q.tab;
+
+    // Restore Shop Filters
+    if (q.st) this.selectedShopType = Number(q.st);
+    if (q.sd) this.selectedDistance = q.sd;
+    if (q.ss) this.selectedScore = q.ss;
+
+    // Restore Voucher Filters
+    if (q.vt !== undefined) this.selectedVoucherType = Number(q.vt);
+    if (q.vs !== undefined) this.selectedStatus = Number(q.vs);
+    if (q.vst) this.selectedVoucherShopType = Number(q.vst);
+
+    // Restore Blog Filters
+    if (q.bt) this.selectedBlogType = Number(q.bt);
+
+    // If state restored, trigger search
+    if (this.keyword || this.hasSelectedFilters || this.activeTab !== 'shop') {
+        this.doSearch();
+    }
   },
   mounted() {
     // window.addEventListener('scroll', this.onScroll);
@@ -676,6 +699,20 @@ export default {
     },
     // Main Search
     doSearch(isLoadMore = false) {
+       // Update URL with current state
+       const query = {
+           k: this.keyword || undefined,
+           tab: this.activeTab,
+           st: this.selectedShopType || undefined,
+           sd: this.selectedDistance || undefined,
+           ss: this.selectedScore || undefined,
+           vt: this.selectedVoucherType !== null ? this.selectedVoucherType : undefined,
+           vs: this.selectedStatus !== null ? this.selectedStatus : undefined,
+           vst: this.selectedVoucherShopType || undefined,
+           bt: this.selectedBlogType || undefined
+       };
+       this.$router.replace({ query }).catch(() => {});
+
        // if (!this.keyword && !this.hasSelectedFilters) { ... }
       if (this.keyword && !isLoadMore) {
           this.saveHistory(this.keyword);
@@ -983,12 +1020,8 @@ export default {
     toShopDetail(shop) {
       this.$router.push({ path: "/shop/detail", query: { id: shop.id } });
     },
-    toShopDetail(shop) {
-       // Handle both Shop object and Voucher object (which has shopId)
-       const id = shop.shopId || shop.id;
-       if(id) {
-           this.$router.push("/shop/detail?id=" + id);
-       }
+    toVoucherDetail(v) {
+      this.$router.push({ path: "/voucher/detail", query: { id: v.id } });
     },
     toBlogDetail(b) {
       this.$router.push({

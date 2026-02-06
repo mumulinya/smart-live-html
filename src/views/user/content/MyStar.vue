@@ -1,12 +1,13 @@
 <script setup>
-import { ref, watch, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, watch, onMounted, onActivated } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import { starList } from '@/api/interaction';
 import { getCurrentUser } from '@/api/user';
 import { fileURL } from '@/utils/request';
 import PageLayout from '@/components/PageLayout/PageLayout.vue';
 
 const router = useRouter();
+const route = useRoute();
 const activeTab = ref(0);
 const list = ref([]);
 const loading = ref(false);
@@ -14,6 +15,7 @@ const finished = ref(false);
 const current = ref(1);
 const size = 10;
 const userId = ref(null);
+const initialized = ref(false);
 
 const onClickLeft = () => history.back();
 
@@ -110,6 +112,8 @@ const onLoad = async () => {
 };
 
 const handleTabChange = () => {
+    // 保存 tab 状态到路由查询参数
+    router.replace({ query: { ...route.query, tab: activeTab.value } });
     list.value = [];
     current.value = 1;
     finished.value = false;
@@ -242,11 +246,27 @@ const handleBtnClick = (item) => {
 
 
 onMounted(() => {
+    // 从路由查询参数恢复 tab 状态
+    const tabFromQuery = route.query.tab;
+    if (tabFromQuery !== undefined) {
+        activeTab.value = parseInt(tabFromQuery) || 0;
+    }
+    initialized.value = true;
     initUser();
 });
 
+// 使用 onActivated 处理 keep-alive 缓存的情况
+onActivated(() => {
+    const tabFromQuery = route.query.tab;
+    if (tabFromQuery !== undefined && parseInt(tabFromQuery) !== activeTab.value) {
+        activeTab.value = parseInt(tabFromQuery) || 0;
+    }
+});
+
 watch(activeTab, () => {
-  handleTabChange();
+    if (initialized.value) {
+        handleTabChange();
+    }
 });
 </script>
 

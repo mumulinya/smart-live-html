@@ -396,8 +396,16 @@ export default {
         this.$router.push('/user/login');
         return;
      }
+
+     // 从路由参数恢复 tab
+     const tab = this.$route.query.tab;
+     if (tab && ['note', 'collection', 'likes', 'feed'].includes(tab)) {
+         this.activeTab = tab;
+     }
+
      this.queryUser();
-     this.loadTabData('note');
+     // 移除这里的直接调用，移到 queryUser 成功回调中
+     // this.loadTabData(this.activeTab);
   },
   mounted() {
       window.addEventListener('scroll', this.handleWindowScroll);
@@ -524,6 +532,8 @@ export default {
            if(this.user.icon) this.user.icon = this.$fileURL + this.user.icon;
             this.queryUserInfo();
             this.queryUserStats();
+            // 用户信息加载完成后，再加载当前 Tab 的数据
+            this.loadTabData(this.activeTab);
          }).catch(err => {
             console.error(err);
             this.$message.error("登录失效，请重新登录");
@@ -610,6 +620,8 @@ export default {
 
      // Tabs
      handleTabChange(name) {
+        // 保存 tab 状态到路由查询参数
+        this.$router.replace({ query: { ...this.$route.query, tab: name } });
         this.loadTabData(name);
      },
      handleTabClick(tab) {

@@ -121,6 +121,8 @@ export default {
   },
   watch: {
      activeTab() {
+         // 保存 tab 状态到路由查询参数
+         this.$router.replace({ query: { ...this.$route.query, status: this.activeTab } });
          this.queryOrders();
      }
   },

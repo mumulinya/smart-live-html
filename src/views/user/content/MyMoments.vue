@@ -34,18 +34,20 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, computed, onMounted } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import { getFeedList } from '@/api/interaction';
 import { fileURL } from '@/utils/request';
 import FeedItem from '@/components/FeedItem.vue';
 
 const router = useRouter();
+const route = useRoute();
 const list = ref([]);
 const loading = ref(false);
 const finished = ref(false);
 const refreshing = ref(false);
 const activeFilter = ref('ALL');
+const initialized = ref(false);
 
 const scrollParams = ref({
     lastId: 0,
@@ -256,9 +258,12 @@ const isFilterChanging = ref(false);
 const changeFilter = async (newFilter) => {
     if (activeFilter.value === newFilter) return;
     if (isFilterChanging.value) return; // Prevent rapid filter changes
-    
+
     activeFilter.value = newFilter;
     isFilterChanging.value = true;
+
+    // 保存 filter 状态到路由查询参数
+    router.replace({ query: { ...route.query, filter: newFilter } });
 
     // Reset List and Params
     list.value = [];
@@ -268,7 +273,7 @@ const changeFilter = async (newFilter) => {
 
     // Manually trigger load once
     await onLoad();
-    
+
     isFilterChanging.value = false;
 };
 
@@ -346,7 +351,15 @@ const formatSeckillTime = (timeStr) => {
 };
 
 // Initial load since immediate-check is false
-onLoad();
+onMounted(() => {
+    // 从路由查询参数恢复 filter 状态
+    const filterFromQuery = route.query.filter;
+    if (filterFromQuery && ['ALL', 'BLOG', 'SHOP_NEW', 'RESTOCK'].includes(filterFromQuery)) {
+        activeFilter.value = filterFromQuery;
+    }
+    initialized.value = true;
+    onLoad();
+});
 </script>
 
 <style scoped>

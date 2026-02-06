@@ -171,8 +171,17 @@ export default {
   },
   created() {
      this.typeName = this.$route.query.name || '';
-     this.params.typeId = this.$route.query.type || 0;
-     
+     this.params.typeId = parseInt(this.$route.query.type || 0);
+     this.selectedTypeId = this.params.typeId; // 同步选中状态
+
+     // Restore filters from Route
+     if (this.$route.query.distance) {
+         this.selectedDistance = this.$route.query.distance;
+     }
+     if (this.$route.query.score) {
+         this.selectedScore = this.$route.query.score;
+     }
+
      this.loadTypes();
      this.initLocation();
      this.loadUser();
@@ -226,17 +235,39 @@ export default {
          // Update title
          this.typeName = this.getShopTypeName(id);
          this.activeFilterTab = '';
+         this.updateRouteQuery();
          this.doSearch();
      },
      selectDistance(d) {
          this.selectedDistance = d.label === '全部' ? null : d.label;
          this.activeFilterTab = '';
+         this.updateRouteQuery();
          this.doSearch();
      },
      selectScore(s) {
          this.selectedScore = s.label === '全部' ? null : s.label;
          this.activeFilterTab = '';
+         this.updateRouteQuery();
          this.doSearch();
+     },
+     updateRouteQuery() {
+        // Remove 'name' from query as we rely on typeId to determine title
+        // Or update it to match current selection
+        const query = {
+            ...this.$route.query,
+            type: this.selectedTypeId || undefined,
+            distance: this.selectedDistance || undefined,
+            score: this.selectedScore || undefined
+        };
+
+        // Update name param if type is selected
+        if (this.selectedTypeId) {
+            query.name = this.getShopTypeName(this.selectedTypeId);
+        } else {
+            delete query.name;
+        }
+
+        this.$router.replace({ query });
      },
      sortAndQuery(sortBy) {
         // Deprecated, keeping structure if needed but logic is replaced

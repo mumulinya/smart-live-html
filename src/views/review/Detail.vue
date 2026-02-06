@@ -67,9 +67,28 @@
             </div>
         </div>
 
+        <!-- 消费项目（仅订单评价显示） -->
+        <div class="consume-item" v-if="review.sourceType === 4 && voucher">
+            <span class="consume-icon">🛒</span>
+            <span class="consume-text">消费项目：{{ voucher.actualValue }}元代金券（{{ voucher.title || '全场通用' }}）</span>
+        </div>
+
         <!-- Shop Link -->
+        <!-- 代金券卡片（订单评价 sourceType=4） -->
+        <div class="voucher-card" v-if="review.sourceType === 4 && voucher" @click="toVoucherDetail">
+             <div class="voucher-thumbnail">
+                <img :src="voucher.image ? (voucher.image.startsWith('http') ? voucher.image : imgPrefix + voucher.image) : defaultAvatar" @error="(e) => e.target.src = defaultAvatar">
+             </div>
+             <div class="voucher-info">
+                <div class="voucher-title">{{ voucher.payValue }}代{{ voucher.actualValue }}元{{ voucher.title || '代金券' }}</div>
+                <div class="voucher-shop">{{ voucher.shopName || review.shopName }}</div>
+             </div>
+             <button class="voucher-buy-btn" @click.stop="buyVoucher">去购买</button>
+        </div>
+
+        <!-- 商户卡片（普通评价） -->
         <!-- Shop Link (POI Card Style) -->
-        <div class="poi-card" v-if="review.shopId" @click="toShopDetail">
+        <div class="poi-card" v-else-if="review.shopId" @click="toShopDetail">
              <div class="poi-thumbnail">
                 <img :src="(review.shopImages && review.shopImages.length) ? review.shopImages[0] : defaultAvatar" @error="(e) => e.target.src = defaultAvatar">
              </div>
@@ -365,6 +384,7 @@ import { removeReview, getReview, likeReviewComment } from '@/api/reviews';
 import { getCurrentUser } from '@/api/user';
 import { uploadFile } from '@/api/common';
 import { fileURL } from '@/utils/request';
+import { getVoucherDetail } from '@/api/shop';
 import { showConfirmDialog } from 'vant';
 import '@/assets/css/blog-detail.css'; // Import blog-detail.css for shared styles
 
@@ -375,6 +395,7 @@ export default {
       return {
           defaultAvatar: 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png',
           review: null,
+          voucher: null,  // 代金券详情
           imgPrefix: fileURL,
           comments: [],
           // Preview
@@ -428,7 +449,7 @@ export default {
           getReview(id).then(res => {
               let data = res.data || res;
               if (data.data) data = data.data;
-              
+
               // Map API response to UI
               this.review = {
                   id: data.id,
@@ -438,18 +459,19 @@ export default {
                   date: this.formatDate(data.createTime),
                   rating: data.score || 5,
                   isFreeTrial: false,
-                  scores: { 
-                      taste: data.tasteScore || 5.0, 
-                      env: data.envScore || 5.0, 
-                      service: data.serviceScore || 5.0 
+                  scores: {
+                      taste: data.tasteScore || 5.0,
+                      env: data.envScore || 5.0,
+                      service: data.serviceScore || 5.0
                   },
                   content: data.content,
                   images: data.images ? data.images.split(',').map(url => url.startsWith('http') ? url : this.imgPrefix + (url.startsWith('/')?'':'/') + url) : [],
+                  sourceType: data.sourceType,  // 保存来源类型
+                  sourceId: data.sourceId,      // 保存原始 sourceId
                   shopId: data.sourceId,
                   shopName: data.sourceName || 'Unknown Shop',
                   shopImages: data.shopImages ? data.shopImages.split(',').map(url => url.startsWith('http') ? url : this.imgPrefix + (url.startsWith('/')?'':'/') + url) : [],
                   viewCount: data.viewCount || 0,
-                  likeCount: data.liked || 0,
                   likeCount: data.liked || 0,
                   collectCount: data.stared || 0,
                   isLike: data.isLike || false,
@@ -458,10 +480,33 @@ export default {
                   avgScore: data.avgScore || data.shopScore || 4.7,
                   avgPrice: data.avgPrice || data.shopPrice || 188
               };
-              
+
+              // 如果是代金券评价，加载代金券详情
+              if (data.sourceType === 4 && data.sourceId) {
+                  this.loadVoucherDetail(data.sourceId);
+              }
+
               // Load comments/replies
               this.loadComments(id);
           });
+      },
+      async loadVoucherDetail(voucherId) {
+          try {
+              const res = await getVoucherDetail(voucherId);
+              if (res && res.data) {
+                  this.voucher = res.data;
+              }
+          } catch (e) {
+              console.error('加载代金券详情失败', e);
+          }
+      },
+      toVoucherDetail() {
+          if (this.voucher && this.voucher.id) {
+              this.$router.push({ path: '/voucher/detail', query: { id: this.voucher.id } });
+          }
+      },
+      buyVoucher() {
+          this.toVoucherDetail();
       },
       loadComments(id) {
           // Increase size to fetch more comments for client-side nesting
@@ -886,6 +931,83 @@ export default {
 
 <style scoped>
 /* Inherit standard page wrapper styles */
+
+/* 消费项目样式 */
+.consume-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    background: #fafafa;
+    border-radius: 6px;
+    margin: 12px 15px;
+}
+.consume-icon {
+    margin-right: 8px;
+}
+.consume-text {
+    font-size: 13px;
+    color: #666;
+}
+
+/* 代金券卡片样式 */
+.voucher-card {
+    display: flex;
+    align-items: center;
+    background: white;
+    border: 1px solid #f0f0f0;
+    border-radius: 8px;
+    padding: 12px;
+    margin: 15px 15px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    cursor: pointer;
+}
+.voucher-thumbnail {
+    width: 60px;
+    height: 60px;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-right: 12px;
+    flex-shrink: 0;
+    background: #fff5f5;
+}
+.voucher-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.voucher-info {
+    flex: 1;
+    overflow: hidden;
+}
+.voucher-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.voucher-shop {
+    font-size: 13px;
+    color: #999;
+}
+.voucher-buy-btn {
+    padding: 6px 14px;
+    background: linear-gradient(135deg, #ff6b6b, #ee5a5a);
+    color: white;
+    border: none;
+    border-radius: 16px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    flex-shrink: 0;
+    margin-left: 10px;
+}
+.voucher-buy-btn:active {
+    opacity: 0.9;
+}
+
 /* POI Card (Shop) */
 .poi-card {
     display: flex;

@@ -38,15 +38,15 @@ export function addSearchHistory(params) {
 // Actually, to be safe against the snippet provided: "@GetMapping("/history") ... @PathVariable" is invalid Spring mapping.
 // It most likely is @RequestParam.
 export function getSearchHistory(params) {
-    return request.get('/app/es/search/history', { params });
+    return request.get('/app/search/history', { params });
 }
 
 // Clear Search History (DELETE)
 export function clearSearchHistory(params) {
-    return request.delete('/app/es/search/history', { params });
+    return request.delete('/app/search/history', { params });
 }
 
 // Record Search (POST) - For Hot Search Stats
 export function recordSearch(keyword) {
-    return request.post('/app/es/search/record', null, { params: { keyword } });
+    return request.post('/app/search/record', null, { params: { keyword } });
 }

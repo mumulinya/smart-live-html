@@ -39,7 +39,8 @@ const routes = [
         path: '/user/profile',
         name: 'UserProfile',
         alias: ['/info', '/user/info'],
-        component: () => import('@/views/user/profile/Info.vue')
+        component: () => import('@/views/user/profile/Info.vue'),
+        meta: { keepAlive: true }
     },
     {
         path: '/user/profile/:id',
@@ -95,7 +96,8 @@ const routes = [
     {
         path: '/user/moments',
         name: 'MyMoments',
-        component: () => import('@/views/user/content/MyMoments.vue')
+        component: () => import('@/views/user/content/MyMoments.vue'),
+        meta: { keepAlive: true }
     },
     {
         path: '/user/password/update',

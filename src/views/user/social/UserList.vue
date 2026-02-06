@@ -136,25 +136,38 @@ export default {
     },
     async queryUser() {
       try {
-          const me = await getCurrentUser();
-          const myId = me.data ? me.data.id : null;
-          this.currentUserId = myId;
-          
+          let myId = null;
+          // 尝试获取当前登录用户，未登录时不影响后续逻辑
+          try {
+              const me = await getCurrentUser();
+              myId = me.data ? me.data.id : null;
+              this.currentUserId = myId;
+          } catch (e) {
+              // 用户未登录，继续执行
+              console.log('用户未登录');
+          }
+
           let targetId = this.targetUserId;
           if (!targetId || targetId == myId) {
+              // 未登录且没有targetId时，无法显示数据
+              if (!myId) {
+                  this.loading = false;
+                  return;
+              }
               this.isMe = true;
-              this.user = me.data || {};
+              const meRes = await getCurrentUser();
+              this.user = meRes.data || {};
               const statsRes = await getUserStats(myId);
               this.stats = statsRes.data || {};
           } else {
               this.isMe = false;
               const otherRes = await getUserInfo(targetId);
               this.user = otherRes.data || {};
-              
+
               const statsRes = await getUserStats(targetId);
               this.stats = statsRes.data || {};
           }
-          
+
           this.resetList();
       } catch(e) {
           console.error(e);

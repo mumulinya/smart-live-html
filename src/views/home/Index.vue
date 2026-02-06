@@ -284,6 +284,8 @@ export default {
        isSwiping: false,
       swipeThreshold: 80,
       maxVerticalTravel: 50,
+
+      pendingCategoryId: null // Add this to track pending tab restore
     }
   },
   computed: {
@@ -294,30 +296,34 @@ export default {
   created() {
     this.queryTypes();
     this.initLocation();
-    
-    // Restore active tab from session storage
-    let savedCategory = sessionStorage.getItem('home_active_category');
-    
+
+    // Restore active tab from route query parameter
+    let savedCategory = this.$route.query.tab;
+
     // Safety check: if saved as 'follow' but no token, switch to hot
     if (savedCategory === 'follow' && !this.token) {
         savedCategory = 'hot';
     }
 
     if (savedCategory) {
-      // Small delay to ensure tabs are mounted if needed, though activeCategory binding should handle it
-      this.activeCategory = savedCategory;
       if (savedCategory === 'follow') {
+        this.activeCategory = 'follow';
         this.queryFollowedFeeds();
       } else if (savedCategory === 'hot') {
+        this.activeCategory = 'hot';
         this.queryHotBlogsScroll();
       } else {
-        this.queryBlogsByCategory(savedCategory);
+        // It's a dynamic category ID.
+        // We cannot set activeCategory yet because types are not loaded.
+        // If we set it now, van-tabs will reset it to first tab because ID not found in items.
+        this.pendingCategoryId = savedCategory;
+        // Do NOT load default data here, wait for types.
       }
     } else {
       // Default to follow if logged in, else hot
       this.activeCategory = this.token ? 'follow' : 'hot';
       if (this.activeCategory === 'follow') {
-        this.queryFollowedFeeds(); 
+        this.queryFollowedFeeds();
       } else {
         this.queryHotBlogsScroll();
       }
@@ -396,6 +402,25 @@ export default {
          
          this.types = data || [];
          this.categories = this.generateCategoriesFromTypes(this.types);
+
+         this.$nextTick(() => {
+             // Resume pending category if any
+             if (this.pendingCategoryId) {
+                 // Check if pending ID exists in loaded categories
+                 const exists = this.categories.some(c => c.id === this.pendingCategoryId);
+                 if (exists) {
+                     this.activeCategory = this.pendingCategoryId;
+                     this.queryBlogsByCategory(this.pendingCategoryId);
+                 } else {
+                     // Fallback if ID invalid
+                     this.activeCategory = this.token ? 'follow' : 'hot';
+                     if (this.activeCategory === 'follow') this.queryFollowedFeeds();
+                     else this.queryHotBlogsScroll();
+                 }
+                 this.pendingCategoryId = null;
+             }
+         });
+
          this.onDataLoaded();
       }).catch(err => {
          console.error(err);
@@ -603,7 +628,8 @@ export default {
          }
        },
        onTabChange(name) {
-         sessionStorage.setItem('home_active_category', name);
+         // 保存 tab 状态到路由查询参数
+         this.$router.replace({ query: { ...this.$route.query, tab: name } });
          // Force reload data for new category (van-tabs already updated v-model)
          if (name === 'follow') {
            this.followBlogs = [];
