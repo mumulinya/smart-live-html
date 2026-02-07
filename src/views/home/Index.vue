@@ -320,13 +320,9 @@ export default {
         // Do NOT load default data here, wait for types.
       }
     } else {
-      // Default to follow if logged in, else hot
-      this.activeCategory = this.token ? 'follow' : 'hot';
-      if (this.activeCategory === 'follow') {
-        this.queryFollowedFeeds();
-      } else {
-        this.queryHotBlogsScroll();
-      }
+      // Default to hot for all users
+      this.activeCategory = 'hot';
+      this.queryHotBlogsScroll();
     }
   },
   activated() {

@@ -13,15 +13,17 @@ export function sendMessage(data) {
 }
 
 /**
- * 流式发送消息给AI助手（SSE）
+ * 流式发送消息给AI助手（SSE）- 支持事件分流
  * @param {Object} data - 消息数据
  * @param {string} data.sessionId - 会话ID
  * @param {string} data.content - 消息内容
- * @param {Function} onMessage - 接收消息回调
+ * @param {Function} onMessage - 接收普通消息回调 (data) => void
  * @param {Function} onError - 错误回调
  * @param {Function} onComplete - 完成回调
+ * @param {Function} onStatus - 状态更新回调 (statusText) => void
+ * @param {Function} onCardRender - 卡片渲染回调 (cardData) => void
  */
-export function sendMessageStream(data, onMessage, onError, onComplete) {
+export function sendMessageStream(data, onMessage, onError, onComplete, onStatus, onCardRender) {
     const baseURL = import.meta.env.VITE_API_BASE_URL || '/app-dev-api';
     // URL construction for GET request
     // Backend expects: message, sessionId, x, y, contextMode, userName, region
@@ -69,41 +71,93 @@ export function sendMessageStream(data, onMessage, onError, onComplete) {
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
+        let buffer = '';
 
         try {
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
 
-                const chunk = decoder.decode(value, { stream: true });
-                if (chunk) {
-                    // 解析 SSE 格式，去掉 "data:" 前缀
-                    const lines = chunk.split('\n');
+                buffer += decoder.decode(value, { stream: true });
+
+                // SSE 规范以双换行分隔事件
+                const events = buffer.split('\n\n');
+                buffer = events.pop(); // 保留未完成的部分
+
+                for (const eventBlock of events) {
+                    if (!eventBlock.trim()) continue;
+
+                    // 解析 event: xxx 和 data: xxx
+                    const lines = eventBlock.split('\n');
+                    let eventType = 'message'; // 默认事件类型
+                    let eventData = '';
+
                     for (const line of lines) {
                         // 跳过注释行
                         if (line.startsWith(':')) continue;
 
-                        // 空行在 SSE 中表示事件结束，保留为换行
-                        if (!line.trim()) {
-                            continue;
+                        if (line.startsWith('event:')) {
+                            eventType = line.substring(6).trim();
+                        } else if (line.startsWith('data:')) {
+                            const rawData = line.substring(5);
+                            // 跳过 [DONE] 标记
+                            if (rawData.trim() === '[DONE]') continue;
+
+                            // SSE 规范：如果有多行 data，用换行符连接
+                            if (eventData) {
+                                eventData += '\n' + rawData;
+                            } else {
+                                eventData += rawData;
+                            }
                         }
+                    }
 
-                        // 去掉 "data:" 前缀
-                        let content = line;
-                        if (line.startsWith('data:')) {
-                            content = line.substring(5); // 去掉 "data:" (5个字符)
-                        }
-
-                        // 跳过 [DONE] 标记
-                        if (content.trim() === '[DONE]') continue;
-
-                        if (content) {
-                            // 每个 data 块后添加换行，保持格式
-                            onMessage && onMessage({ content: content + '\n' });
+                    if (eventData) {
+                        // 根据事件类型分流处理
+                        switch (eventType) {
+                            case 'message':
+                                // 普通闲聊：追加文字（打字机效果）
+                                // 注意：这里不再添加换行符，让前端更精确控制显示
+                                onMessage && onMessage({ content: eventData });
+                                break;
+                            case 'status':
+                                // 状态更新：显示 "正在搜索..." 等
+                                onStatus && onStatus(eventData);
+                                break;
+                            case 'card_render':
+                                // 推荐结果：解析 JSON 并渲染卡片
+                                try {
+                                    const cardResult = JSON.parse(eventData);
+                                    onCardRender && onCardRender(cardResult);
+                                } catch (e) {
+                                    console.error('card_render JSON解析失败:', e, eventData);
+                                }
+                                break;
+                            default:
+                                // 兼容旧格式：没有event标识的直接当作message处理
+                                onMessage && onMessage({ content: eventData + '\n' });
                         }
                     }
                 }
             }
+
+            // 处理剩余的buffer（兼容旧格式，没有双换行分隔的情况）
+            if (buffer.trim()) {
+                const lines = buffer.split('\n');
+                for (const line of lines) {
+                    if (line.startsWith(':') || !line.trim()) continue;
+
+                    let content = line;
+                    if (line.startsWith('data:')) {
+                        content = line.substring(5);
+                    }
+
+                    if (content.trim() && content.trim() !== '[DONE]') {
+                        onMessage && onMessage({ content: content + '\n' });
+                    }
+                }
+            }
+
             onComplete && onComplete();
         } catch (e) {
             console.error('流读取中断:', e);

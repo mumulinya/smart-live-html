@@ -53,7 +53,7 @@
                 <div class="chat-title">{{ item.title }}</div>
                 <div class="chat-time">{{ formatTime(item.updateTime || item.createTime) }}</div>
               </div>
-              <i class="el-icon-delete" @click.stop="deleteHistory(item.id)"></i>
+              <el-icon class="delete-icon" @click.stop="deleteHistory(item.id)"><Delete /></el-icon>
             </div>
             <div v-if="isLoadingMore" class="loading-more">
               <i class="el-icon-loading"></i>
@@ -107,7 +107,7 @@
 
 
     <!-- Chat Body -->
-    <div class="chat-body" ref="scrollRef" @scroll="handleMessageScroll">
+    <div class="chat-body" ref="scrollRef">
       <!-- Empty State -->
       <div v-if="messages.length === 0" class="empty-state">
          <div class="welcome-visual">
@@ -145,11 +145,25 @@
       </div>
 
       <!-- Messages -->
-      <div v-else class="message-list">
-         <div v-if="isLoadingMoreMessages" class="loading-more-messages">
-            <i class="el-icon-loading"></i>
-            <span>加载中...</span>
+      <template v-else>
+        <div class="top-sentinel" ref="topSentinel"></div>
+
+        <div class="message-list">
+
+           <!-- 点击加载更多 -->
+           <div v-if="messages.length > 0 && !noMoreMessages" class="load-more-manual">
+             <button class="load-more-btn" :disabled="isLoadingMoreMessages" @click="loadMoreMessages">
+               <i v-if="isLoadingMoreMessages" class="el-icon-loading"></i>
+               <span v-else>点击加载更多</span>
+             </button>
+           </div>
+
+           <!-- 加载中提示 -->
+           <div v-if="isLoadingMoreMessages" class="loading-more-messages">
+              <i class="el-icon-loading"></i>
+              <span>加载中...</span>
          </div>
+
          <div v-if="noMoreMessages && messages.length > 0" class="no-more-messages">
             没有更多消息了
          </div>
@@ -169,14 +183,71 @@
                         <span class="dot"></span>
                      </span>
                   </div>
+                  <!-- 状态提示（正在搜索等） -->
+                  <div v-else-if="msg.role === 'ai' && msg.status" class="status-loading">
+                     <i class="el-icon-loading"></i>
+                     <span>{{ msg.status }}</span>
+                  </div>
                   <!-- AI 回复内容 -->
-                  <div v-else-if="msg.role === 'ai'" v-html="renderMd(msg.content)" class="markdown-body"></div>
+                  <div v-else-if="msg.role === 'ai'" v-html="renderMd(msg.displayContent || msg.content)" class="markdown-body"></div>
                   <!-- 用户消息 -->
                   <div v-else>{{ msg.content }}</div>
                </div>
+
+               <!-- 店铺卡片列表 - 横向滑动，内置推荐理由与动作 -->
+               <div v-if="msg.role === 'ai' && msg.shopList && msg.shopList.length > 0" class="shop-card-list carousel">
+                  <div v-for="(shop, idx) in msg.shopList" :key="shop.id" class="shop-card" @click="goToShopDetail(shop)">
+                     <div class="shop-img-wrapper">
+                        <img :src="getShopImage(shop)" class="shop-img" @error="onImgError" loading="lazy" />
+                        <div class="pill img-pill">推荐</div>
+                        <div class="card-index-badge">{{ idx + 1 }} / {{ msg.shopList.length }}</div>
+                     </div>
+                     <div class="shop-info">
+                        <div class="shop-header-row">
+                          <h4 class="shop-name">{{ shop.name }}</h4>
+                          <div class="rate-box">
+                             <i class="el-icon-star-on"></i>
+                             <span class="score-val">{{ shop.score || '0.0' }}</span>
+                          </div>
+                        </div>
+
+                        <p v-if="shop.aiSuggestion" class="shop-reason">{{ shop.aiSuggestion }}</p>
+
+                        <div class="shop-stat-row">
+                           <span class="sold-count" v-if="shop.sold">月售 {{ shop.sold }}</span>
+                           <span class="stat-divider" v-if="shop.sold && shop.avgPrice">|</span>
+                           <span class="price-per" v-if="shop.avgPrice">¥{{ shop.avgPrice }}/人</span>
+                           <span class="distance-tag" v-if="shop.distanceText">{{ shop.distanceText }}</span>
+                        </div>
+
+                        <div class="shop-loc-row">
+                           <span class="shop-cate">{{ shop.categoryName || '美食' }}</span>
+                           <span class="loc-divider">|</span>
+                           <span class="shop-area">{{ shop.area || (shop.address ? shop.address.substring(0, 8) + '...' : '附近') }}</span>
+                        </div>
+
+                        <div class="shop-open-row" v-if="shop.openHours">
+                           <i class="el-icon-time"></i>
+                           <span>营业时间 {{ shop.openHours }}</span>
+                        </div>
+
+                        <div class="shop-tags-row" v-if="shop.tags && shop.tags.length">
+                           <span class="tag-item pill" v-for="(tag, tIdx) in shop.tags.slice(0, 3)" :key="tIdx">{{ tag }}</span>
+                        </div>
+
+                        <div class="shop-actions">
+                           <button class="ghost-btn primary" @click.stop="goToMap(shop)">去这里</button>
+                           <button class="ghost-btn" @click.stop="doCollect(shop)">收藏</button>
+                        </div>
+                     </div>
+                  </div>
+               </div>
             </div>
          </div>
+         <!-- 底部锚点 -->
+         <div ref="bottomRef" class="scroll-anchor"></div>
       </div>
+      </template>
     </div>
 
     <!-- Input Area -->
@@ -217,6 +288,9 @@ import {
   getSuggestions,
   searchSession
 } from '@/api/ai';
+import { Delete } from '@element-plus/icons-vue';
+import { showConfirmDialog } from 'vant';
+import 'vant/es/dialog/style';
 import { getCurrentUser } from '@/api/user';
 import { locationUtil } from '@/utils/location';
 import { fileURL } from '@/utils/request';
@@ -233,6 +307,8 @@ const md = new MarkdownIt({
 
 const inputText = ref('');
 const scrollRef = ref(null);
+const bottomRef = ref(null); // 底部锚点引用
+const topSentinel = ref(null); // 顶部哨兵引用
 const messages = ref([]);
 const currentSessionId = ref(null);
 const isSending = ref(false);
@@ -378,6 +454,14 @@ watch(theme, (val) => {
 const handleSend = async () => {
   if (!inputText.value.trim() || isSending.value) return;
 
+  // 检查登录状态
+  const token = localStorage.getItem('token');
+  if (!token) {
+    ElMessage.warning('请先登录后再使用AI助手');
+    router.push('/user/login');
+    return;
+  }
+
   // 立即锁定，防止并发请求
   isSending.value = true;
 
@@ -440,10 +524,10 @@ const handleSend = async () => {
   }
 
   // 添加AI消息占位符（思考中状态）
-  messages.value.push({ role: 'ai', content: '', thinking: true });
+  messages.value.push({ role: 'ai', content: '', thinking: true, status: null, shopList: [] });
   const aiMessageIndex = messages.value.length - 1;
 
-  // 使用流式API
+  // 使用流式API - 支持事件分流
   try {
     currentEventSource.value = sendMessageStream(
       {
@@ -455,27 +539,86 @@ const handleSend = async () => {
         userName: userName,
         region: location && location.region ? location.region.district || location.region.city : null
       },
-      // onMessage: 接收每个消息片段
+      // onMessage: 接收普通消息片段（打字机效果）
       (data) => {
+        // 如果后端返回401错误，直接跳登录
+        if (data?.code === 401) {
+          ElMessage.warning('登录状态已过期，请重新登录');
+          router.push('/user/login');
+          isSending.value = false;
+          return;
+        }
+        // 部分后端可能把错误包在 content 里
+        if (typeof data?.content === 'string') {
+          try {
+            const maybeErr = JSON.parse(data.content);
+            if (maybeErr && maybeErr.code === 401) {
+              ElMessage.warning('登录状态已过期，请重新登录');
+              router.push('/user/login');
+              isSending.value = false;
+              return;
+            }
+          } catch (e) {
+            // ignore json parse errors
+          }
+        }
         if (data.content) {
-          // 收到第一条消息时，取消思考状态
+          // 收到第一条消息时，取消思考状态和status状态
           if (messages.value[aiMessageIndex].thinking) {
             messages.value[aiMessageIndex].thinking = false;
           }
+          messages.value[aiMessageIndex].status = null;
+
+          // 累积原始内容
           messages.value[aiMessageIndex].content += data.content;
+
+          // 使用统一的解析函数处理流式内容
+          const parsed = parseMessageContent(messages.value[aiMessageIndex].content);
+
+          messages.value[aiMessageIndex].displayContent = parsed.displayContent;
+          if (parsed.shopList && parsed.shopList.length > 0) {
+            messages.value[aiMessageIndex].shopList = parsed.shopList;
+          }
+
           scrollToBottom();
         }
       },
       // onError: 错误处理
       (error) => {
         console.error('消息发送失败:', error);
-        ElMessage.error('消息发送失败，请重试');
+        const errCode = error?.code || error?.status || error?.response?.status;
+        if (errCode === 401) {
+          ElMessage.warning('登录状态已过期，请重新登录');
+          router.push('/user/login');
+        } else {
+          ElMessage.error('消息发送失败，请重试');
+        }
         isSending.value = false;
       },
       // onComplete: 完成回调
       () => {
         isSending.value = false;
         currentEventSource.value = null;
+      },
+      // onStatus: 状态更新回调（正在搜索...）
+      (statusText) => {
+        messages.value[aiMessageIndex].thinking = false;
+        messages.value[aiMessageIndex].status = statusText;
+        scrollToBottom();
+      },
+      // onCardRender: 卡片渲染回调（店铺推荐结果）
+      (cardData) => {
+        messages.value[aiMessageIndex].thinking = false;
+        messages.value[aiMessageIndex].status = null;
+        // 设置推荐语
+        if (cardData.replyText) {
+          messages.value[aiMessageIndex].content = cardData.replyText;
+        }
+        // 设置店铺列表
+        if (cardData.recommendations && cardData.recommendations.length > 0) {
+          messages.value[aiMessageIndex].shopList = cardData.recommendations;
+        }
+        scrollToBottom();
       }
     );
   } catch (error) {
@@ -499,6 +642,14 @@ const refreshSuggestions = () => {
 
 // 创建新会话
 const createSession = async () => {
+  // 检查登录状态
+  const token = localStorage.getItem('token');
+  if (!token) {
+    ElMessage.warning('请先登录后再使用AI助手');
+    router.push('/user/login');
+    return;
+  }
+
   try {
     // 停止当前流式传输
     if (currentEventSource.value) {
@@ -626,6 +777,13 @@ const formatTime = (timestamp) => {
 
 // 加载历史会话列表
 const loadHistoryList = async () => {
+  // 检查登录状态
+  const token = localStorage.getItem('token');
+  if (!token) {
+    rawHistoryList.value = [];
+    return;
+  }
+
   try {
     isLoadingHistory.value = true;
     historyCurrent.value = 1;
@@ -682,6 +840,112 @@ const handleHistoryScroll = (e) => {
   }
 };
 
+// 解析消息内容，提取JSON数据
+const parseMessageContent = (content) => {
+  if (!content) return { displayContent: '', shopList: [] };
+
+  let displayContent = content;
+  let shopList = [];
+
+  try {
+    // 1. 尝试清洗数据，移除 ```json 标记
+    // 注意：流式传输中，开头可能是 ```json\n{...
+    let cleanContent = content;
+    if (content.includes('```json')) {
+      cleanContent = content.replace(/```json\s*/, '').replace(/```$/, '');
+    }
+
+    // 2. 尝试提取 replyText
+    // 策略：找到 "replyText": " 开始的位置
+    const replyKey = '"replyText"';
+    const replyIndex = cleanContent.indexOf(replyKey);
+
+    if (replyIndex !== -1) {
+      // 找到冒号
+      const colonIndex = cleanContent.indexOf(':', replyIndex);
+      // 找到起始引号，冒号后面第一个非空白字符应该是引号
+      let quoteStartIndex = -1;
+      for (let i = colonIndex + 1; i < cleanContent.length; i++) {
+        const char = cleanContent[i];
+        if (char === '"') {
+          quoteStartIndex = i;
+          break;
+        } else if (!/\s/.test(char)) {
+          // 如果遇到非空白且非引号，说明格式不对
+          break;
+        }
+      }
+
+      if (quoteStartIndex !== -1) {
+        let extractedText = '';
+        // 尝试找到下一个字段的开始，作为当前字段的结束边界
+        // 下一个字段通常是 "recommendations"
+        const nextFieldKey = '"recommendations"';
+        const nextFieldIndex = cleanContent.indexOf(nextFieldKey, quoteStartIndex);
+
+        if (nextFieldIndex !== -1) {
+          // 如果找到了下一个字段，说明 replyText 已经传完了
+          // 往前找结束引号（忽略逗号和空白）
+          const quoteEndIndex = cleanContent.lastIndexOf('"', nextFieldIndex);
+          if (quoteEndIndex > quoteStartIndex) {
+            extractedText = cleanContent.substring(quoteStartIndex + 1, quoteEndIndex);
+          }
+        } else {
+          // 如果没找到下一个字段，说明还在传输中
+          // 直接取到末尾，或者尝试找结束引号
+          let rawText = cleanContent.substring(quoteStartIndex + 1);
+
+          // 尝试去掉末尾可能的未闭合符号
+          // 常见的流结尾可能是: ",  或者 "  或者只是内容
+          if (rawText.endsWith('",')) {
+             rawText = rawText.slice(0, -2);
+          } else if (rawText.endsWith('"')) {
+             rawText = rawText.slice(0, -1);
+          }
+
+          extractedText = rawText;
+        }
+
+        // 处理转义字符
+        try {
+          // 补全引号尝试 JSON.parse，处理 \n \" 等转义
+          displayContent = JSON.parse(`"${extractedText}"`);
+        } catch (e) {
+          // 解析失败降级处理：手动处理常见转义
+          // 替换 \\n 为换行，\\" 为 "
+          displayContent = extractedText
+            .replace(/\\n/g, '\n')
+            .replace(/\\"/g, '"')
+            .replace(/\\\\/g, '\\');
+        }
+      }
+    } else {
+      // 没找到 replyText，检查是不是只有 ```json 前缀
+      if (content.trim().startsWith('```json')) {
+         const idx = content.indexOf('```json');
+         // 如果只有前缀，显示为空，避免显示 ```json
+         displayContent = idx > 0 ? content.substring(0, idx) : '';
+      }
+    }
+
+    // 3. 尝试提取 recommendations
+    // 只有当存在闭合的数组结构时才解析
+    const recMatch = cleanContent.match(/"recommendations"\s*:\s*(\[[\s\S]*\])/);
+    if (recMatch) {
+      try {
+         shopList = JSON.parse(recMatch[1]);
+      } catch (e) {
+         // 数组还没传完
+      }
+    }
+
+  } catch (err) {
+    console.error('Message parsing error', err);
+  }
+
+  return { displayContent, shopList };
+};
+
 // 加载指定会话
 const loadSession = async (item) => {
   try {
@@ -703,10 +967,18 @@ const loadSession = async (item) => {
 
     if (res.success || res.code === 200) {
       const messageList = Array.isArray(res.data) ? res.data : (res.data.list || res.data.records || []);
-      messages.value = messageList.map(msg => ({
-        role: msg.role === 'USER' || msg.role === 'user' ? 'user' : 'ai',
-        content: msg.content
-      }));
+      messages.value = messageList.map(msg => {
+        const role = msg.role === 'USER' || msg.role === 'user' ? 'user' : 'ai';
+        // 如果是AI消息，尝试解析内容
+        const parsed = role === 'ai' ? parseMessageContent(msg.content) : { displayContent: msg.content, shopList: [] };
+
+        return {
+          role,
+          content: msg.content,
+          displayContent: parsed.displayContent,
+          shopList: parsed.shopList
+        };
+      });
       if (messageList.length < 10) {
         noMoreMessages.value = true;
       }
@@ -738,12 +1010,32 @@ const loadMoreMessages = async () => {
       if (messageList.length === 0) {
         noMoreMessages.value = true;
       } else {
+        // 记录当前的滚动高度，用于加载后保持位置
+        const scrollContainer = scrollRef.value;
+        const oldScrollHeight = scrollContainer ? scrollContainer.scrollHeight : 0;
+
         // 旧消息插入到前面
-        const oldMessages = messageList.map(msg => ({
-          role: msg.role === 'USER' || msg.role === 'user' ? 'user' : 'ai',
-          content: msg.content
-        }));
+        const oldMessages = messageList.map(msg => {
+          const role = msg.role === 'USER' || msg.role === 'user' ? 'user' : 'ai';
+          const parsed = role === 'ai' ? parseMessageContent(msg.content) : { displayContent: msg.content, shopList: [] };
+
+          return {
+            role,
+            content: msg.content,
+            displayContent: parsed.displayContent,
+            shopList: parsed.shopList
+          };
+        });
         messages.value = [...oldMessages, ...messages.value];
+
+        // 保持滚动位置
+        nextTick(() => {
+          if (scrollContainer) {
+            const newScrollHeight = scrollContainer.scrollHeight;
+            scrollContainer.scrollTop = newScrollHeight - oldScrollHeight;
+          }
+        });
+
         if (messageList.length < 10) {
           noMoreMessages.value = true;
         }
@@ -757,25 +1049,17 @@ const loadMoreMessages = async () => {
   }
 };
 
-// 处理消息列表滚动（向上滚动加载更多）
-const handleMessageScroll = (e) => {
-  const { scrollTop } = e.target;
-  if (scrollTop < 50 && messages.value.length > 0) {
-    loadMoreMessages();
-  }
-};
-
 // 删除历史会话
 const deleteHistory = async (id) => {
   try {
-    await ElMessageBox.confirm('确定要删除这个会话吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
+    await showConfirmDialog({
+      title: '提示',
+      message: '确定要删除这个会话吗？',
+      confirmButtonColor: '#ef4444', // 使用红色强调删除操作
     });
-    
+
     const res = await deleteSessionAPI(id);
-    if (res.code === 200) {
+    if (res.code === 200 || res.success) {
       ElMessage.success('删除成功');
       // 从列表中移除
       rawHistoryList.value = rawHistoryList.value.filter(item => item.id !== id && item.sessionId !== id);
@@ -799,24 +1083,85 @@ const deleteHistory = async (id) => {
 // 滚动到底部
 const scrollToBottom = () => {
   nextTick(() => {
-    if (scrollRef.value) {
-       scrollRef.value.scrollTop = scrollRef.value.scrollHeight;
+    if (bottomRef.value) {
+      bottomRef.value.scrollIntoView({ behavior: 'smooth' });
+    } else if (scrollRef.value) {
+      scrollRef.value.scrollTop = scrollRef.value.scrollHeight;
     }
   });
 };
 
-// 组件挂载时初始化
+// 获取店铺图片
+const getShopImage = (shop) => {
+  if (shop.images) {
+    return shop.images.startsWith('http') ? shop.images : fileURL + shop.images;
+  }
+  if (shop.image) {
+    return shop.image.startsWith('http') ? shop.image : fileURL + shop.image;
+  }
+  return 'https://img.alicdn.com/imgextra/i1/O1CN01fplaceholder.png_400x400.jpg';
+};
+
+const onImgError = (e) => {
+  e.target.src = 'https://img.alicdn.com/imgextra/i1/O1CN01fplaceholder.png_400x400.jpg';
+};
+
+// 跳转到店铺详情
+const goToShopDetail = (shop) => {
+  router.push({
+    path: '/shop/detail',
+    query: { id: shop.id }
+  });
+};
+
+// 导航到店铺
+const goToMap = (shop) => {
+  if (shop.x && shop.y) {
+    const center = `${shop.x},${shop.y}`;
+    router.push({
+      path: '/map',
+      query: {
+        center,
+        shopId: shop.id
+      }
+    });
+  } else {
+    ElMessage.warning('暂无位置信息');
+  }
+};
+
+// 收藏店铺
+const doCollect = (shop) => {
+  ElMessage.info('收藏功能开发中');
+  console.log('收藏店铺:', shop.id);
+};
+
+
 // 组件挂载时初始化
 onMounted(() => {
   scrollToBottom();
   checkLoginStatus();
   document.addEventListener('fullscreenchange', handleFullscreenChange);
-  
+
   // Auto send if query exists
   if (route.query.q) {
      inputText.value = route.query.q;
      handleSend();
   }
+});
+
+// 当消息数量从 0 变为有数据时，再次绑定哨兵，确保上滑能触发
+watch(
+  () => messages.value.length,
+  (len) => {
+    if (len > 0) {
+      // no-op for manual load mode
+    }
+  }
+);
+
+onUnmounted(() => {
+  document.removeEventListener('fullscreenchange', handleFullscreenChange);
 });
 </script>
 
@@ -1247,7 +1592,7 @@ textarea:disabled {
   padding: 30px;
   padding-top: 90px;
   padding-bottom: 120px;
-  scroll-behavior: smooth;
+  /* 移除全局平滑滚动，由 JS 控制特定场景的动画，避免影响历史记录加载的位置恢复 */
 }
 
 .empty-state {
@@ -1427,6 +1772,33 @@ textarea:disabled {
   margin: 0 auto;
 }
 
+.load-more-manual {
+  text-align: center;
+  margin-bottom: 12px;
+}
+.load-more-btn {
+  padding: 8px 16px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #333;
+  transition: all 0.2s;
+}
+.load-more-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.load-more-btn:not(:disabled):hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.top-sentinel {
+  height: 1px;
+  width: 100%;
+}
+
 .loading-more-messages,
 .no-more-messages {
   text-align: center;
@@ -1548,6 +1920,243 @@ textarea:disabled {
     transform: scale(1);
     opacity: 1;
   }
+}
+
+/* 状态加载提示 */
+.status-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #6b7280;
+  font-size: 14px;
+  font-style: italic;
+}
+.status-loading i {
+  animation: rotate 1s linear infinite;
+}
+
+/* 店铺卡片列表 */
+.shop-card-list {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 6px 4px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+}
+.shop-card-list.carousel::-webkit-scrollbar {
+  height: 6px;
+}
+.shop-card-list.carousel::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 999px;
+}
+.shop-card {
+  scroll-snap-align: start;
+  min-width: 240px;
+  max-width: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid #f0f0f0;
+  border-radius: 14px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.shop-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.1);
+}
+
+/* 图片 */
+.shop-img-wrapper {
+  position: relative;
+  width: 100%;
+  height: 140px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #eef2ff, #f5f7fb);
+}
+.shop-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.img-pill {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: rgba(255, 255, 255, 0.85);
+  color: #ef4444;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+.card-index-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(17, 24, 39, 0.75);
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  backdrop-filter: blur(4px);
+}
+
+/* 信息 */
+.shop-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.shop-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.shop-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.rate-box {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #f59e0b;
+  font-weight: 700;
+  background: #fff7ed;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 13px;
+}
+.rate-box i {
+  font-size: 14px;
+}
+.shop-reason {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #4b5563;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+.shop-stat-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #6b7280;
+}
+.stat-divider {
+  color: #d1d5db;
+}
+.price-per {
+  color: #111827;
+  font-weight: 600;
+}
+.distance-tag {
+  margin-left: auto;
+  background: #eef2ff;
+  color: #4f46e5;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+}
+.shop-loc-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #9ca3af;
+}
+.shop-area {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.shop-open-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #6b7280;
+}
+.shop-open-row i {
+  font-size: 14px;
+  color: #4b5563;
+}
+.shop-tags-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: #fff1f2;
+  color: #e11d48;
+  border: 1px solid #fecdd3;
+}
+.ghost-btn {
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #374151;
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.ghost-btn.primary {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  border: none;
+  box-shadow: 0 6px 14px rgba(99, 102, 241, 0.25);
+}
+.ghost-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
+}
+.shop-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+/* 深色模式适配 */
+.dark-theme .shop-card {
+  background: #242424;
+  border-color: #333;
+}
+.dark-theme .shop-name {
+  color: #e5e7eb;
+}
+.dark-theme .price-per {
+  color: #d1d5db;
+}
+.dark-theme .tag-item {
+  background: rgba(255, 107, 107, 0.1);
+  border-color: rgba(255, 107, 107, 0.2);
 }
 
 /* Markdown样式优化 */

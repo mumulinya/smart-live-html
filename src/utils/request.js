@@ -39,8 +39,11 @@ service.interceptors.response.use(
     // console.log(response); // Debug
     const res = response.data;
 
-    // 401: Not logged in
+    // 401: Not logged in or token expired
     if (res.code == 401) {
+      // 清除过期的token
+      localStorage.removeItem('token');
+      localStorage.removeItem('userInfo');
       setTimeout(() => {
         router.push("/user/login");
       }, 200);
@@ -56,6 +59,9 @@ service.interceptors.response.use(
   error => {
     console.log('err' + error);
     if (error.response && error.response.status === 401) {
+      // 清除过期的token
+      localStorage.removeItem('token');
+      localStorage.removeItem('userInfo');
       setTimeout(() => {
         router.push("/user/login");
       }, 200);
