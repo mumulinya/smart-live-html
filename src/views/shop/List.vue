@@ -186,6 +186,37 @@ export default {
      this.initLocation();
      this.loadUser();
   },
+  activated() {
+     // Keep-alive hook: sync state from URL if changed
+     const q = this.$route.query;
+     let changed = false;
+
+     // Sync Type
+     const typeId = parseInt(q.type || 0);
+     if (typeId !== this.selectedTypeId) {
+         this.selectedTypeId = typeId;
+         this.typeName = this.getShopTypeName(typeId);
+         changed = true;
+     }
+
+     // Sync Distance (Label)
+     const dist = q.distance || null;
+     if (dist !== this.selectedDistance) {
+         this.selectedDistance = dist;
+         changed = true;
+     }
+
+     // Sync Score (Label)
+     const score = q.score || null;
+     if (score !== this.selectedScore) {
+         this.selectedScore = score;
+         changed = true;
+     }
+
+     if (changed) {
+         this.doSearch();
+     }
+  },
   methods: {
      goBack() {
         if(this.isSearchMode) {
@@ -225,7 +256,10 @@ export default {
      getShopTypeName(id) {
          if(!id) return '全部分类';
          const t = this.shopTypeList.find(i => i.id === id);
-         return t ? t.name : '全部分类';
+         if (t) return t.name;
+         // Fallback: 如果列表未加载或找不到，优先使用 URL 参数中的 name
+         if (id === this.selectedTypeId && this.typeName) return this.typeName;
+         return '全部分类';
      },
      toggleFilterTab(tab) {
          this.activeFilterTab = this.activeFilterTab === tab ? '' : tab;
@@ -448,8 +482,8 @@ export default {
 .input-icon { position: absolute; left: 10px; color: #999; font-size: 14px; }
 .clear-icon { position: absolute; right: 10px; color: #ccc; font-size: 14px; cursor: pointer; }
 
-.header-actions { min-width: 40px; display: flex; justify-content: center; }
-.header-search-btn { font-size: 14px; color: #333; cursor: pointer; white-space: nowrap; }
+.header-actions { min-width: 50px; display: flex; justify-content: flex-end; padding-right: 12px; }
+.header-search-btn { font-size: 15px; color: #333; cursor: pointer; white-space: nowrap; padding: 0 5px; }
 .header-search-btn i { font-size: 20px; }
 
 /* Sort Bar */

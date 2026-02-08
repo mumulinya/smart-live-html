@@ -1,4 +1,7 @@
 <script setup>
+defineOptions({
+  name: 'MyStar'
+});
 import { ref, watch, onMounted, onActivated } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { starList } from '@/api/interaction';

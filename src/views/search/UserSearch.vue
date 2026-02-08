@@ -264,6 +264,25 @@ export default {
      if(this.userId) {
          this.loadHistory();
      }
+
+     // Restore from URL
+     const q = this.$route.query;
+     if (q.scope) this.activeScope = q.scope;
+     if (q.subScope) this.activeSubScope = q.subScope;
+     if (q.k) {
+         this.keyword = q.k;
+         this.onSearch();
+     }
+  },
+  activated() {
+     const q = this.$route.query;
+     if (q.scope && q.scope !== this.activeScope) {
+         this.changeScope(q.scope);
+     }
+     if (q.k !== undefined && q.k !== this.keyword) {
+         this.keyword = q.k;
+         this.onSearch();
+     }
   },
   methods: {
     getScopeName() {
@@ -304,6 +323,15 @@ export default {
         else if(scope === 'shop') this.activeSubScope = 'collection'; // Default for shop
         else if(scope === 'voucher') this.activeSubScope = 'collection';
 
+        // Sync URL
+        this.$router.replace({
+            query: {
+                ...this.$route.query,
+                scope: this.activeScope,
+                subScope: this.activeSubScope
+            }
+        });
+
         if(this.keyword) {
             this.onSearch();
         }
@@ -311,12 +339,30 @@ export default {
     changeSubScope(sub) {
         if(this.activeSubScope === sub) return;
         this.activeSubScope = sub;
+
+        // Sync URL
+        this.$router.replace({
+            query: {
+                ...this.$route.query,
+                subScope: this.activeSubScope
+            }
+        });
+
         if(this.keyword) {
             this.onSearch();
         }
     },
     onSearch() {
         if(!this.keyword.trim()) return;
+
+        // Sync URL keyword
+        this.$router.replace({
+            query: {
+                ...this.$route.query,
+                k: this.keyword
+            }
+        });
+
         this.results = [];
         this.current = 1;
         this.finished = false;

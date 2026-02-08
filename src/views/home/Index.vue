@@ -250,10 +250,10 @@ export default {
       locationSuccess: false,
       usingCachedLocation: false,
       showLocationStatus: false,
-      currentCity: '杭州',
+      currentCity: '佛山',
       userLocation: {
-        x: 120.149993,
-        y: 30.334229,
+        x: 113.121416,
+        y: 23.021548,
         region: {}
       },
       isRequesting: false,
@@ -264,8 +264,9 @@ export default {
       token: localStorage.getItem("token") || '',
       showMoreCategories: false,
       showLocationModal: false,
-      hotCities: ['杭州','上海','北京','深圳','广州','成都','南京','武汉','西安'],
+      hotCities: ['佛山','上海','北京','深圳','广州','成都','南京','武汉','西安'],
       cityCoordinates: {
+        '佛山': { x: 113.121416, y: 23.021548 },
         '杭州': { x: 120.15507, y: 30.274085 },
         '上海': { x: 121.473701, y: 31.230416 },
         '北京': { x: 116.407526, y: 39.90403 },
@@ -352,6 +353,22 @@ export default {
             this.queryHotBlogsScroll();
         } else {
             this.queryBlogsByCategory(this.activeCategory);
+        }
+    }
+
+    // Keep-alive hook: sync tab from URL if changed (e.g. deep link)
+    const tab = this.$route.query.tab;
+    if (tab && tab !== this.activeCategory) {
+        // Check validity
+        let isValid = (tab === 'follow' && this.token) || tab === 'hot';
+        if (!isValid && this.categories.some(c => c.id === tab)) isValid = true;
+
+        if (isValid) {
+            this.activeCategory = tab;
+            // Reload data for the new tab
+            if (tab === 'follow') this.queryFollowedFeeds();
+            else if (tab === 'hot') this.queryHotBlogsScroll();
+            else this.queryBlogsByCategory(tab);
         }
     }
   },

@@ -248,15 +248,18 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+defineOptions({
+  name: 'Drafts'
+});
+import { ref, computed, watch, onMounted, onActivated } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { showToast, showDialog, showConfirmDialog } from 'vant'
 import { addReview, getUserReviewList, removeReview, updateReview } from '@/api/reviews'
 import { saveBlog, getMyBlogs, updateBlog } from '@/api/blog'
 import { getCurrentUser } from '@/api/user'
 import { fileURL } from '@/utils/request'
 
-const router = useRouter()
+const route = useRoute()
 
 const activeTab = ref(0)
 const isMultiSelect = ref(false)
@@ -285,11 +288,26 @@ const allSelected = computed({
 })
 
 // 监听tab切换，清空选中状态
-watch(activeTab, () => {
+watch(activeTab, (newVal) => {
   selectedIds.value = []
+  // Sync URL
+  router.replace({ query: { ...route.query, tab: newVal } })
 })
 
-// 草稿数据
+// 组件挂载时加载草稿
+onMounted(() => {
+  if (route.query.tab !== undefined) {
+      activeTab.value = Number(route.query.tab) || 0
+  }
+  loadDrafts()
+})
+
+// Keep-alive activated hook
+onActivated(() => {
+   if (route.query.tab !== undefined && Number(route.query.tab) !== activeTab.value) {
+       activeTab.value = Number(route.query.tab) || 0
+   }
+})
 const reviewDraftsData = ref([])
 const noteDraftsData = ref([])
 const userId = ref(null)

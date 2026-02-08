@@ -407,6 +407,14 @@ export default {
      // 移除这里的直接调用，移到 queryUser 成功回调中
      // this.loadTabData(this.activeTab);
   },
+  activated() {
+     // Keep-alive hook: sync tab from URL if changed (e.g. deep link)
+     const tab = this.$route.query.tab;
+     if (tab && tab !== this.activeTab && ['note', 'collection', 'likes', 'feed'].includes(tab)) {
+         this.activeTab = tab;
+         this.loadTabData(tab);
+     }
+  },
   mounted() {
       window.addEventListener('scroll', this.handleWindowScroll);
   },

@@ -27,8 +27,7 @@
              <!-- Header: Time & Status -->
              <div class="card-header">
                 <div class="header-left">
-                   <i class="el-icon-tickets blue-icon"></i>
-                   <span class="order-time-text">订单号: {{order.id}}</span>
+                   <span class="order-time-text" style="font-weight: 500;">{{ formatTime(order.createTime) }}</span>
                 </div>
                 <!-- Status Badge -->
                 <div class="status-badge" :class="getStatusClass(order.status)">
@@ -107,6 +106,7 @@
 <script>
 import { getOrderList, cancelOrder, refundOrder } from '@/api/order';
 import PageLayout from '@/components/PageLayout/PageLayout.vue';
+import dayjs from 'dayjs';
 
 export default {
   name: 'OrderList',
@@ -120,10 +120,16 @@ export default {
     }
   },
   watch: {
-     activeTab() {
+     activeTab(val) {
          // 保存 tab 状态到路由查询参数
-         this.$router.replace({ query: { ...this.$route.query, status: this.activeTab } });
+         this.$router.replace({ query: { ...this.$route.query, status: val } });
          this.queryOrders();
+     }
+  },
+  activated() {
+     // Keep-alive hook: sync tab from URL if changed (e.g. deep link)
+     if (this.$route.query.status && String(this.$route.query.status) !== this.activeTab) {
+         this.activeTab = String(this.$route.query.status);
      }
   },
   created() {
@@ -278,6 +284,10 @@ export default {
         if(p === undefined || p === null || isNaN(p)) return '0.00';
         return Number(p).toFixed(2);
      },
+     formatTime(t) {
+        if (!t) return '';
+        return dayjs(t).format('YYYY-MM-DD HH:mm:ss');
+     },
      getOrderStatusText(status) {
         const statusMap = {
           '1': '待支付',
@@ -365,10 +375,10 @@ export default {
     transition: all 0.3s; 
     border: 1px solid transparent; 
 }
-.tab-item.active { 
-    background: linear-gradient(90deg, #7F7FD5, #86A8E7); 
-    color: white; 
-    box-shadow: 0 2px 8px rgba(127, 127, 213, 0.4); 
+.tab-item.active {
+    background: linear-gradient(90deg, #FF6600, #FF4400);
+    color: white;
+    box-shadow: 0 2px 8px rgba(255, 68, 0, 0.3);
     font-weight: 500;
 }
 .total-stats { 

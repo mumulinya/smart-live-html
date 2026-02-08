@@ -12,8 +12,10 @@ export function getShopDetail(id) {
     return request.get(`/app/shop/${id}`);
 }
 
-export function searchShopsByName(name) {
-    return request.get('/app/shop/of/name', { params: { name } });
+export function searchShopsByName(name, area) {
+    const params = { name };
+    if (area) params.area = area;
+    return request.get('/app/shop/of/name', { params });
 }
 
 export function getShopVouchers(shopId) {

@@ -167,6 +167,13 @@ export default {
       }
       this.getUserAndLoad();
   },
+  activated() {
+      // Keep-alive hook: sync tab from URL if changed (e.g. deep link)
+      const tab = this.$route.query.tab;
+      if (tab && tab !== this.activeHeaderTab && (tab === 'pending' || tab === 'reviewed')) {
+          this.activeHeaderTab = tab;
+      }
+  },
   methods: {
       switchTab(tab) {
           this.activeHeaderTab = tab;

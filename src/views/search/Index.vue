@@ -522,6 +522,21 @@ export default {
         this.doSearch();
     }
   },
+  activated() {
+    // Keep-alive hook: sync tab from URL if changed (e.g. deep link)
+    const tab = this.$route.query.tab;
+    if (tab && tab !== this.activeTab && ['shop', 'voucher', 'blog', 'user'].includes(tab)) {
+        this.activeTab = tab;
+        this.doSearch();
+    }
+
+    // Sync keyword if changed
+    const k = this.$route.query.k;
+    if (k !== undefined && k !== this.keyword) {
+        this.keyword = k;
+        this.doSearch();
+    }
+  },
   mounted() {
     // window.addEventListener('scroll', this.onScroll);
   },

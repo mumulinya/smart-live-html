@@ -203,6 +203,7 @@ export default {
               this.userSessionList = list.map(s => ({
                  ...s,
                  avatar: s.avatar ? this.$fileURL + s.avatar : '',
+                 lastMessage: this.formatLastMessage(s.lastMessage),
                  translateX: 0,
                  isPinned: s.pin || s.isPinned || false
               }));
@@ -210,6 +211,15 @@ export default {
            .finally(() => {
               this.loading = false;
            });
+     },
+     formatLastMessage(msg) {
+        if (!msg) return '';
+        // 简单判断：如果是图片路径（包含特定路径特征或后缀），显示为[图片]
+        // 也可以让后端返回 messageType，这里先做前端兼容
+        if (msg.match(/\.(jpg|png|jpeg|gif|webp)$/i) || msg.includes('/smart-live/') || msg.includes('/2026/') || msg.includes('blob:')) {
+            return '[图片]';
+        }
+        return msg;
      },
      formatTime(time) {
         if(!time) return '';

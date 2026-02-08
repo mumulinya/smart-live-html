@@ -144,7 +144,9 @@
 </template>
 
 <script setup>
-
+defineOptions({
+  name: 'MyFollow'
+});
 
 import { ref, watch, onMounted, onActivated } from 'vue';
 import { useRouter, useRoute } from 'vue-router';

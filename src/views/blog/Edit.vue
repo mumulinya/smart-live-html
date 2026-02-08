@@ -2,7 +2,7 @@
   <div class="blog-edit-page">
     <div class="edit-page-header">
       <div class="header-left" @click="goBack">取消</div>
-      <div class="header-title">发笔记</div>
+      <div class="header-title">{{ editMode ? '编辑笔记' : '发笔记' }}</div>
       <div class="header-right">
         <button class="publish-btn" @click="submitBlog" :disabled="!canSubmit" :class="{ 'submitting': isSubmitting }">
           <span v-if="!isSubmitting">{{ (editMode && !isDraft) ? '保存' : '发布' }}</span>
@@ -53,7 +53,7 @@
 
         <!-- Footer Actions -->
         <div class="footer-action">
-            <div class="draft-btn" @click="saveDraft">
+            <div class="draft-btn" @click="saveDraft" v-if="!editMode">
                 <i class="el-icon-document"></i>
                 <span>存草稿</span>
             </div>
@@ -63,7 +63,7 @@
         </div>
     </div>
 
-    <div class="mask" v-show="showDialog" @click="showDialog=false"></div>
+    <div class="mask" v-show="showDialog || showCityDialog" @click="closeAllDialogs"></div>
 
     <transition name="el-zoom-in-bottom">
       <div class="shop-dialog" v-show="showDialog">
@@ -72,7 +72,7 @@
            <i class="el-icon-close" @click="showDialog=false"></i>
         </div>
         <div class="search-bar">
-          <div class="city-select">杭州 <i class="el-icon-arrow-down"></i></div>
+          <div class="city-select" @click="showCityDialog=true">{{ currentArea }} <i class="el-icon-arrow-down"></i></div>
           <div class="search-input">
             <i class="el-icon-search" @click="queryShops"></i>
             <input v-model="shopName" type="text" placeholder="搜索商户名称" @keyup.enter="queryShops">
@@ -92,6 +92,18 @@
             <div class="shop-name">{{s.name}}</div>
             <div>{{s.area || '未知区域'}}</div>
           </div>
+        </div>
+      </div>
+    </transition>
+
+    <transition name="el-zoom-in-bottom">
+      <div class="shop-dialog" v-show="showCityDialog" style="height: auto; max-height: 50vh;">
+        <div class="shop-dialog-header">
+           <span>选择城市</span>
+           <i class="el-icon-close" @click="showCityDialog=false"></i>
+        </div>
+        <div class="city-grid-box">
+           <div class="city-grid-item" v-for="city in hotCities" :key="city" @click="selectCity(city)">{{city}}</div>
         </div>
       </div>
     </transition>
@@ -117,6 +129,7 @@ import { uploadFile, deleteFile } from "@/api/common";
 import { saveBlog, getBlogDetail, updateBlog } from "@/api/blog";
 import { searchShopsByName, getShopDetail } from "@/api/shop";
 import { getCurrentUser } from "@/api/user";
+import { locationUtil } from "@/utils/location";
 
 export default {
   name: "BlogEdit",
@@ -141,11 +154,37 @@ export default {
       // Edit mode
       editMode: false,
       blogId: null,
-      isDraft: false
+      isDraft: false,
+      originalData: null, // Store original data for comparison
+      currentArea: '佛山', // 默认为佛山，实际可从定位或缓存获取
+      showCityDialog: false,
+      hotCities: ['佛山','上海','北京','深圳','广州','成都','南京','武汉','西安','杭州']
     };
   },
   created() {
+    // 优先使用 locationUtil 获取定位 (false = 优先读缓存，这样能共享首页手动切换后的城市)
+    locationUtil.getLocation(false).then(loc => {
+        if (loc && loc.region) {
+             let city = loc.region.city || loc.region.province;
+             if (city && typeof city === 'string') {
+                 if (city.endsWith('市')) city = city.slice(0, -1);
+                 this.currentArea = city;
+             }
+        }
+    }).catch(e => {
+        console.log('定位获取失败，使用默认值:', e);
+        this.currentArea = '佛山';
+    });
+
+    // 支持通过 URL 参数强制指定区域 (用于测试: ?area=深圳)
+    if (this.$route.query.area) {
+        this.currentArea = this.$route.query.area;
+    }
+
     this.checkLogin();
+    // queryShops 会依赖 currentArea，所以放在 nextTick 或者等待定位返回后调用更严谨，
+    // 但为了响应速度，先用默认值/缓存值查一次，定位变了再查一次也可以。
+    // 这里为了简单，先直接查。
     this.queryShops();
     
     // Check if editing existing blog
@@ -156,9 +195,21 @@ export default {
       this.blogId = id;
       this.isDraft = draft === 'true';
       this.loadBlogData(id);
+    } else {
+      this.$nextTick(() => {
+        this.originalData = this.getSnapshot();
+      });
     }
   },
   methods: {
+    getSnapshot() {
+      return JSON.stringify({
+        title: this.params.title,
+        content: this.params.content,
+        images: this.serverFilePaths ? this.serverFilePaths.join(',') : '',
+        shopId: this.selectedShop ? (this.selectedShop.id || '') : ''
+      });
+    },
     checkLogin() {
       // Assuming route guard handles this, but double check
       getCurrentUser().catch(() => {
@@ -181,7 +232,7 @@ export default {
     },
     queryShops() {
       this.shopLoading = true;
-      searchShopsByName(this.shopName)
+      searchShopsByName(this.shopName, this.currentArea)
         .then((res) => {
           // Handle different response structures
           let list = res;
@@ -201,6 +252,17 @@ export default {
     selectShop(s) {
       this.selectedShop = s;
       this.showDialog = false;
+    },
+    selectCity(city) {
+      this.currentArea = city;
+      sessionStorage.setItem('userLocation', city);
+      this.showCityDialog = false;
+      this.shopName = ''; // 切换城市后清空搜索词
+      this.queryShops(); // 重新查询该城市的商户
+    },
+    closeAllDialogs() {
+      this.showDialog = false;
+      this.showCityDialog = false;
     },
     submitBlog() {
       if (!this.canSubmit) return;
@@ -264,9 +326,12 @@ export default {
             let shop = shopRes;
             if (shopRes && shopRes.data) shop = shopRes.data;
             this.selectedShop = shop;
+            this.originalData = this.getSnapshot();
           });
+        } else {
+            this.originalData = this.getSnapshot();
         }
-        
+
         this.checkSubmitStatus();
       }).catch(() => {
         this.$message.error('加载笔记失败');
@@ -346,10 +411,11 @@ export default {
       this.checkSubmitStatus();
     },
     goBack() {
-      if (this.params.title || this.params.content || this.fileList.length > 0) {
+      const currentSnapshot = this.getSnapshot();
+      if (this.originalData && currentSnapshot !== this.originalData) {
           this.showExitDialog = true;
       } else {
-        this.$router.go(-1);
+          this.$router.go(-1);
       }
     },
     confirmExit() {
@@ -657,10 +723,30 @@ export default {
   border-bottom: 1px solid #f9f9f9;
 }
 .shop-name { font-weight: bold; margin-bottom: 4px; font-size: 15px; }
-.empty-shop { 
-  padding: 50px; 
-  text-align: center; 
-  color: #bdbdbd; 
+.empty-shop {
+  padding: 50px;
+  text-align: center;
+  color: #bdbdbd;
+}
+
+/* City Selection Grid */
+.city-grid-box {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    padding: 20px;
+}
+.city-grid-item {
+    background: #f5f5f5;
+    padding: 10px 0;
+    text-align: center;
+    border-radius: 4px;
+    font-size: 14px;
+    color: #333;
+    cursor: pointer;
+}
+.city-grid-item:active {
+    background: #e8e8e8;
 }
 
 /* iOS Alert Styles */

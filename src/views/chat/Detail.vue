@@ -1,9 +1,9 @@
 <template>
   <div class="chat-detail-page">
     <div class="header">
-      <div class="header-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
+      <div class="header-back-btn" @click="goBack"><van-icon name="arrow-left" size="24" /></div>
       <div class="header-title">{{contactName}}</div>
-      <div class="header-more-btn" @click="goToChatInfo"><i class="el-icon-more"></i></div>
+      <div class="header-more-btn" @click="goToChatInfo"><van-icon name="ellipsis" size="24" /></div>
     </div>
 
     <div class="connection-status" :class="wsStatus" v-if="showConnectionStatus">
@@ -42,15 +42,17 @@
              </div>
 
              <div class="message-content">
-                <div v-if="!msg.isSystem" class="message" :class="{'message-left': !msg.isSelf, 'message-right': msg.isSelf}">
-                   {{msg.content}}
+                <div v-if="!msg.isSystem" class="message" :class="{'message-left': !msg.isSelf, 'message-right': msg.isSelf, 'message-image': msg.messageType === 1}">
+                   <span v-if="!msg.messageType || msg.messageType === 0">{{msg.content}}</span>
+                   <img v-else-if="msg.messageType === 1" :src="msg.content" class="msg-img" @click="previewImage(msg.content)">
+                   <span v-else>[未知消息类型]</span>
                 </div>
                 <!-- Status outside bubble -->
                 <div v-if="msg.isSelf && !msg.isSystem" class="message-status-outer">
                    <span v-if="msg.status==='sending'" class="status-sending">发送中</span>
                    <span v-else-if="msg.status==='failed'" class="status-failed">失败</span>
-                   <span v-else-if="msg.dbStatus===1" class="status-read">已读</span>
-                   <span v-else-if="msg.dbStatus===2" class="status-delivered">已送达</span>
+                   <span v-else-if="Number(msg.status)===1" class="status-read">已读</span>
+                   <span v-else class="status-unread">未读</span>
                 </div>
                 <div v-if="msg.isSystem" class="system-message">{{msg.content}}</div>
              </div>
@@ -131,6 +133,8 @@ import FootBar from '@/components/FootBar.vue';
 import { wsManager } from '@/utils/websocket';
 import { getCurrentUser } from '@/api/user';
 import { getChatSession, getMessageList, getUserSessions } from '@/api/chat';
+import { uploadFile } from "@/api/common";
+import { showImagePreview } from 'vant'; // Use showImagePreview for Vue 3/Vant 4
 
 export default {
   name: 'ChatDetail',
@@ -205,6 +209,38 @@ export default {
      this.targetDate = this.$route.query.targetDate || null;
      this.queryLoginUser();
   },
+  activated() {
+     const newSessionId = this.$route.query.sessionId;
+     if (newSessionId && String(newSessionId) !== String(this.sessionId)) {
+         // 切换会话：清理旧资源
+         if (this.sessionId) {
+             wsManager.unregisterCallback('private-chat-' + this.sessionId);
+         }
+
+         // 重置状态
+         this.sessionId = newSessionId;
+         this.targetDate = this.$route.query.targetDate || null;
+         this.messages = [];
+         this.contactName = '加载中...';
+         this.contactAvatar = '';
+
+         // 重新加载
+         this.queryLoginUser();
+     } else {
+         // 同一会话：恢复活跃状态
+         this.setCurrentActiveSession();
+         // 重新注册回调防止丢失（如果ws重连过）
+         if (this.sessionId) {
+             wsManager.registerCallback('private-chat-' + this.sessionId, this.handleWebSocketMessage);
+         }
+     }
+  },
+  deactivated() {
+     // 离开页面时更新活跃会话状态
+     if(wsManager.getWebSocket() && wsManager.getWebSocket().isConnected) {
+        wsManager.sendMessage('UPDATE_ACTIVE_SESSION', { sessionId: null });
+     }
+  },
   mounted() {
      this.setupIntersectionObserver();
   },
@@ -239,7 +275,9 @@ export default {
      queryLoginUser() {
         getCurrentUser().then(res => {
            this.user = res.data || res;
-           if(this.user.icon) this.user.icon = this.$fileURL + this.user.icon;
+           if(this.user.icon && !this.user.icon.startsWith('http')) {
+               this.user.icon = this.$fileURL + this.user.icon;
+           }
            this.initWebSocket();
            this.getChatSession();
         }).catch(() => {
@@ -522,12 +560,37 @@ export default {
 
      processMessage(msg) {
         const fromId = msg.fromUid || msg.fromUserId;
+        let msgType = Number(msg.messageType || 0);
+        let content = msg.content || '';
+
+        // 智能修正：如果类型是文本(0)，但内容看起来像图片路径，则强制改为图片类型(1)
+        if (msgType === 0 && content) {
+            const lower = content.toLowerCase();
+            if (lower.endsWith('.jpg') || lower.endsWith('.png') || lower.endsWith('.jpeg') || lower.endsWith('.gif') || lower.endsWith('.webp')) {
+                msgType = 1;
+            }
+        }
+
+        // Fix image URL if needed
+        if (msgType === 1 && content) {
+            const isFullUrl = content.startsWith('http') || content.startsWith('blob:') || content.startsWith('data:');
+            if (!isFullUrl) {
+                const prefix = this.$fileURL || '';
+                // 只要不以 http 开头，都尝试拼接
+                if (!content.startsWith(prefix) && !content.startsWith('http')) {
+                     content = prefix + content;
+                }
+            }
+        }
+
         return {
            ...msg,
+           content,
+           messageType: msgType,
            fromUid: fromId,
-           isSelf: fromId === this.user.id,
-           status: 'sent',
-           dbStatus: msg.status
+           isSelf: fromId === this.user.id
+           // status: 'sent', // 删除此行，保留后端原始 status
+           // dbStatus: msg.status // 删除此行
         };
      },
      addMessageToUI(data) {
@@ -535,9 +598,6 @@ export default {
         // 这里为了简单，如果不是历史模式，或者已经在底部，则追加
         const msg = this.processMessage(data);
         if(!this.messages.find(m => m.id === msg.id)) {
-           // 如果是历史模式，可能不需要实时追加到视图中，除非用户滚动到底部
-           // 但为了兼容，先追加。如果不想破坏历史查看体验，可以暂存。
-           // 用户需求未明确，维持原状：追加并滚动到底部（如果需要）
            this.messages.push(msg);
            if (!this.isHistoryMode) {
                this.scrollToBottom();
@@ -546,14 +606,9 @@ export default {
      },
      sendMessage() {
         if(this.isSendDisabled) return;
-        
-        // 如果在历史模式发送消息，应该回到最新？或者允许发送？
-        // 通常发送消息后应该看到自己的消息，所以最好切换回最新模式，或者追加到底部
+
         if (this.isHistoryMode) {
-            this.resetToLatest(); // 发送消息强制回到最新，这是一种常见做法
-            // 或者：this.isHistoryMode = false; this.noMoreNew = true; ...
-            // 但为了简单，先不强制重置，只是追加。
-            // 还是强制重置比较好，逻辑清晰。
+            this.resetToLatest();
         }
 
         const content = this.messageInput.trim();
@@ -562,6 +617,7 @@ export default {
            id: tempId,
            tempId: tempId,
            content,
+           messageType: 0, // Text
            createTime: new Date().toISOString(),
            isSelf: true,
            status: 'sending',
@@ -573,8 +629,9 @@ export default {
         this.isSending = true;
 
         const sent = wsManager.sendMessage('CHAT_MESSAGE', {
-           sessionId: parseInt(this.sessionId) || this.sessionId, 
+           sessionId: parseInt(this.sessionId) || this.sessionId,
            content,
+           messageType: 0,
            toUserId: this.toUserId,
            tempId
         });
@@ -583,7 +640,41 @@ export default {
            msg.status = 'failed';
            this.isSending = false;
         }
-        setTimeout(() => this.isSending = false, 500); 
+        setTimeout(() => this.isSending = false, 500);
+     },
+     sendImageMessage(url, tempId) {
+        const sent = wsManager.sendMessage('CHAT_MESSAGE', {
+           sessionId: parseInt(this.sessionId) || this.sessionId,
+           content: url,
+           messageType: 1, // Image
+           toUserId: this.toUserId,
+           tempId
+        });
+
+        if(!sent) {
+           const msg = this.messages.find(m => m.tempId === tempId);
+           if(msg) msg.status = 'failed';
+        }
+     },
+     previewImage(currentUrl) {
+        if (!currentUrl) return;
+
+        // 收集所有图片消息
+        const images = this.messages
+            .filter(m => m.messageType === 1 && m.content)
+            .map(m => m.content);
+
+        // 找到当前点击图片的索引
+        const index = images.indexOf(currentUrl);
+
+        console.log('Preview image:', currentUrl, 'Index:', index, 'Total:', images.length);
+
+        showImagePreview({
+            images: images,
+            startPosition: index !== -1 ? index : 0,
+            closeable: true,
+            loop: false // 是否循环播放，可按需开启
+        });
      },
      handleMessageSent(data) {
         const idx = this.messages.findIndex(m => m.tempId === data.tempId);
@@ -605,7 +696,7 @@ export default {
         });
      },
      formatGroupTime(timeStr) {
-        return timeStr; 
+        return timeStr;
      },
      getGroupTime(timeStr) {
         const d = new Date(timeStr);
@@ -640,9 +731,60 @@ export default {
      },
      onImageSelected(e) {
         const file = e.target.files[0];
-        if (file) {
-           this.$message.info('图片上传功能开发中: ' + file.name);
+        if (!file) return;
+
+        if (file.size > 5 * 1024 * 1024) {
+            this.$message.warning('图片大小不能超过5MB');
+            return;
         }
+
+        // Preview immediately
+        const tempUrl = URL.createObjectURL(file);
+        const tempId = 'temp_img_' + Date.now();
+
+        if (this.isHistoryMode) {
+            this.resetToLatest();
+        }
+
+        const msg = {
+           id: tempId,
+           tempId: tempId,
+           content: tempUrl,
+           messageType: 1, // Image
+           createTime: new Date().toISOString(),
+           isSelf: true,
+           status: 'sending',
+           sessionId: this.sessionId
+        };
+        this.messages.push(msg);
+        this.scrollToBottom();
+        this.showMorePanel = false;
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        uploadFile(formData).then(res => {
+            let path = res.data || res;
+            if (path && typeof path === 'string') {
+                 // 如果返回的是完整URL，截取相对路径
+                 const prefix = this.$fileURL || '';
+                 if (prefix && path.startsWith(prefix)) {
+                     path = path.substring(prefix.length);
+                 } else if (path.startsWith('http')) {
+                     // 如果前缀匹配不上但还是http开头（可能是不同域名配置），尝试保留相对路径部分
+                     // 假设结构是 /smart-live/...
+                     const match = path.match(/(\/smart-live\/.*)/) || path.match(/(\/20\d{2}\/.*)/);
+                     if (match) path = match[1];
+                 }
+
+                 this.sendImageMessage(path, tempId);
+            }
+        }).catch(err => {
+            console.error(err);
+            msg.status = 'failed';
+            this.$message.error('图片发送失败');
+        });
+
         e.target.value = '';
      },
      insertEmoji(emoji) {
@@ -683,7 +825,25 @@ export default {
 .message-left { background: white; border-top-left-radius: 4px; }
 .message-right { background: #95EC69; border-top-right-radius: 4px; }
 
+/* 图片消息样式覆盖 */
+.message-image {
+    background: transparent !important;
+    padding: 0 !important;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
 /* Status outside bubble */
+/* 样式优化：限制图片大小 */
+.msg-img {
+    max-width: 150px;
+    max-height: 150px;
+    border-radius: 4px;
+    cursor: zoom-in;
+    display: block;
+    object-fit: cover;
+}
+
 .message-status-outer { font-size: 11px; color: #999; margin-top: 4px; text-align: right; }
 .message-status-outer .status-sending { color: #999; }
 .message-status-outer .status-failed { color: #F56C6C; }
