@@ -141,10 +141,14 @@ export default {
           oldPassword: this.form.oldPassword,
           newPassword: this.form.newPassword
         });
-        this.$message.success('密码修改成功');
-        setTimeout(() => {
-          this.goBack();
-        }, 1000);
+        this.$message({
+          type: 'success',
+          message: '密码修改成功',
+          duration: 1000,
+          onClose: () => {
+            this.goBack();
+          }
+        });
       } catch (err) {
         // err 可能是字符串(来自 request 拦截器)或 Error 对象
         const msg = typeof err === 'string' ? err : (err.response?.data?.errorMsg || err.response?.data?.message || err.message || '修改失败');

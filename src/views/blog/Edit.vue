@@ -281,10 +281,14 @@ export default {
         data.id = this.blogId;
         updateBlog(data)
           .then(() => {
-            this.$message.success('修改成功！');
-            setTimeout(() => {
-              this.$router.push('/user/profile');
-            }, 1000);
+            this.$message({
+              type: 'success',
+              message: '修改成功！',
+              duration: 1000,
+              onClose: () => {
+                this.$router.push('/user/profile');
+              }
+            });
           })
           .catch(err => {
             this.$message.error(err.response?.data?.message || '修改失败，请重试');
@@ -293,10 +297,14 @@ export default {
       } else {
         saveBlog(data)
           .then(() => {
-            this.$message.success('发布成功！');
-            setTimeout(() => {
-              this.$router.push('/user/profile');
-            }, 1000);
+            this.$message({
+              type: 'success',
+              message: '发布成功！',
+              duration: 1000,
+              onClose: () => {
+                this.$router.push('/user/profile');
+              }
+            });
           })
           .catch(err => {
             this.$message.error(err.response?.data?.message || '发布失败，请重试');

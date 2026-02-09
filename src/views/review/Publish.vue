@@ -353,19 +353,27 @@ export default {
           if (this.isEdit) {
               params.id = this.id;
               updateReview(params).then(() => {
-                  this.$message.success('修改成功');
-                  setTimeout(() => {
-                      this.$router.go(-1);
-                  }, 1000);
+                  this.$message({
+                      type: 'success',
+                      message: '修改成功',
+                      duration: 1000,
+                      onClose: () => {
+                          this.$router.go(-1);
+                      }
+                  });
               }).finally(() => {
                   this.submitting = false;
               });
           } else {
               addReview(params).then(() => {
-                  this.$message.success('发布成功');
-                  setTimeout(() => {
-                      this.$router.go(-1);
-                  }, 1000);
+                  this.$message({
+                      type: 'success',
+                      message: '发布成功',
+                      duration: 1000,
+                      onClose: () => {
+                          this.$router.go(-1);
+                      }
+                  });
               }).finally(() => {
                   this.submitting = false;
               });

@@ -114,10 +114,14 @@ export default {
         await setPassword({
           password: this.form.newPassword
         });
-        this.$message.success('密码设置成功');
-        setTimeout(() => {
-          this.goBack();
-        }, 1000);
+        this.$message({
+          type: 'success',
+          message: '密码设置成功',
+          duration: 1000,
+          onClose: () => {
+            this.goBack();
+          }
+        });
       } catch (err) {
         // err 可能是字符串(来自 request 拦截器)或 Error 对象
         const msg = typeof err === 'string' ? err : (err.response?.data?.errorMsg || err.response?.data?.message || err.message || '设置失败');

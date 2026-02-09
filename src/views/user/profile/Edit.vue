@@ -606,10 +606,14 @@ export default {
     },
     handleSaveAll() {
        // Currently items save immediately, so this button acts as "Done"
-       this.$message.success("保存成功");
-       setTimeout(() => {
-           this.goBack();
-       }, 500);
+       this.$message({
+           type: 'success',
+           message: '保存成功',
+           duration: 1000,
+           onClose: () => {
+               this.goBack();
+           }
+       });
     },
     goToUpdatePassword() {
        this.$router.push('/user/password/update');
