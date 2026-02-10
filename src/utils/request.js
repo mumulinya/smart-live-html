@@ -7,6 +7,7 @@ export const minioPort = "9000";
 export const filePrefix = "/smart-live";
 export const fileURL = minioURL + ":" + minioPort + filePrefix;
 
+export const webSocketURL = "localhost";
 // Base configuration
 const service = axios.create({
   baseURL: '/app-dev-api', // Proxy target will handle this

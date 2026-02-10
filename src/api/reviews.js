@@ -5,7 +5,7 @@ export function getReviewList(params) {
 }
 
 export function addReview(data) {
-    // status: 0=发布, 1=草稿
+    // status: 0=发布, 3=草稿
     return request.post('/app/interaction/review/addReview', data);
 }
 

@@ -86,6 +86,7 @@ import { ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
 import { showToast, showSuccessToast, showFailToast } from 'vant';
 import { login, sendCode, appLoginByPassword, getCurrentUser } from '@/api/user';
+import { wsManager } from '@/utils/websocket';
 import Vcode from "vue3-puzzle-vcode";
 
 const router = useRouter();
@@ -201,6 +202,7 @@ const performLogin = async () => {
         if (token) {
             localStorage.setItem("token", token);
             await getCurrentUser(); // Prefetch and cache user info
+            wsManager.init(token); // Init WebSocket globally
             showSuccessToast("登录成功");
             router.push("/");
         } else {

@@ -332,7 +332,7 @@ const loadDrafts = () => {
 const loadReviewDrafts = () => {
     getUserReviewList({
         userId: userId.value, 
-        status: 1,
+        status: 3,
         current: 1,
         size: 100
     }).then(res => {
@@ -346,7 +346,7 @@ const loadReviewDrafts = () => {
 
 const loadNoteDrafts = () => {
     getMyBlogs({
-        status: 1,
+        status: 3,
         current: 1,
         size: 100
     }).then(res => {

@@ -248,7 +248,9 @@ export default {
      if (this.observer) {
        this.observer.disconnect();
      }
-     wsManager.unregisterCallback('private-chat-' + this.sessionId);
+     if (this.wsCallback) {
+        wsManager.unregisterCallback('private-chat-' + this.sessionId);
+     }
      if(wsManager.getWebSocket() && wsManager.getWebSocket().isConnected) {
         wsManager.sendMessage('UPDATE_ACTIVE_SESSION', { sessionId: null });
      }
@@ -287,13 +289,27 @@ export default {
      initWebSocket() {
         const token = localStorage.getItem("token");
         if(token) {
-           const ws = wsManager.init(token);
-           ws.onConnectionChange(this.handleConnectionChange);
-           wsManager.registerCallback('private-chat-' + this.sessionId, this.handleWebSocketMessage);
-           if(ws.isConnected) {
+           // Ensure WS is connected (global instance)
+           const ws = wsManager.getWebSocket();
+           if (!ws || !ws.isConnected) {
+               wsManager.init(token);
+           }
+
+           // Always register/update callback for current instance
+           // Use an arrow function wrapper to ensure 'this' is always correct context
+           this.wsCallback = (msg) => this.handleWebSocketMessage(msg);
+           wsManager.registerCallback('private-chat-' + this.sessionId, this.wsCallback);
+
+           // Update local status immediately
+           if(ws && ws.isConnected) {
               this.wsStatus = 'connected';
               this.setCurrentActiveSession();
            }
+
+           // Listen for connection changes
+           // Note: This might stack listeners if not careful, but component is not cached now.
+           // Better to use a specific named listener if manager supports it, or just rely on global state.
+           // For now, let's keep it simple.
         }
      },
      handleConnectionChange(status) {
@@ -309,14 +325,25 @@ export default {
         wsManager.sendMessage('UPDATE_ACTIVE_SESSION', { sessionId: this.sessionId });
      },
      handleWebSocketMessage(message) {
+        console.log('📩 Detail.vue收到WS消息:', message);
         if(message.type === 'NEW_MESSAGE') {
+           // Loose equality check for ID (string vs number)
            if(message.data.sessionId == this.sessionId) {
               this.addMessageToUI(message.data);
+           } else {
+              console.log('⚠️ 消息sessionId不匹配:', message.data.sessionId, '当前:', this.sessionId);
            }
         } else if (message.type === 'MESSAGE_SENT') {
            this.handleMessageSent(message.data);
         } else if (message.type === 'MESSAGE_STATUS_UPDATE') {
            this.handleMessageStatusUpdate(message.data);
+        } else if (message.type === 'ERROR') {
+           this.$message.error('发送失败: ' + (message.data.msg || '未知错误'));
+           // Mark latest sending message as failed
+           const sendingMsg = this.messages.slice().reverse().find(m => m.status === 'sending');
+           if (sendingMsg) {
+               sendingMsg.status = 'failed';
+           }
         }
      },
      handleMessageStatusUpdate(data) {
@@ -594,18 +621,32 @@ export default {
         };
      },
      addMessageToUI(data) {
-        // 如果在历史模式下查看旧消息，收到新消息可能暂时不跳到底部，或者提示有新消息
-        // 这里为了简单，如果不是历史模式，或者已经在底部，则追加
+        console.log('⚡ 准备添加消息到UI:', data);
         const msg = this.processMessage(data);
-        if(!this.messages.find(m => m.id === msg.id)) {
+
+        // Fix: If backend returns ID 0, do not use it for deduplication
+        let exists = false;
+        if (msg.id != 0 && msg.id != '0') {
+            exists = this.messages.find(m => m.id === msg.id);
+        }
+
+        if(!exists) {
+           console.log('✅ 消息不存在，Pushing:', msg);
            this.messages.push(msg);
            if (!this.isHistoryMode) {
-               this.scrollToBottom();
+               this.$nextTick(() => {
+                   this.scrollToBottom();
+               });
            }
+        } else {
+           console.log('🚫 消息已存在，跳过:', msg.id);
         }
      },
      sendMessage() {
-        if(this.isSendDisabled) return;
+        if(this.isSendDisabled) {
+            console.log('Send disabled:', this.messageInput, this.isSending, this.wsStatus);
+            return;
+        }
 
         if (this.isHistoryMode) {
             this.resetToLatest();
@@ -623,13 +664,18 @@ export default {
            status: 'sending',
            sessionId: this.sessionId
         };
+
+        // Critical: Ensure Vue reactivity detects the change
         this.messages.push(msg);
-        this.scrollToBottom();
+        this.$nextTick(() => {
+            this.scrollToBottom();
+        });
+
         this.messageInput = '';
         this.isSending = true;
 
         const sent = wsManager.sendMessage('CHAT_MESSAGE', {
-           sessionId: parseInt(this.sessionId) || this.sessionId,
+           sessionId: parseInt(this.sessionId) || this.sessionId, // Ensure ID format matches backend expectation
            content,
            messageType: 0,
            toUserId: this.toUserId,
@@ -637,9 +683,11 @@ export default {
         });
 
         if(!sent) {
-           msg.status = 'failed';
+           const target = this.messages.find(m => m.tempId === tempId);
+           if (target) target.status = 'failed';
            this.isSending = false;
         }
+        // Auto reset sending status just in case
         setTimeout(() => this.isSending = false, 500);
      },
      sendImageMessage(url, tempId) {

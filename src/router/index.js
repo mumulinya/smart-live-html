@@ -188,6 +188,11 @@ const routes = [
         component: () => import('@/views/chat/ChatInfo.vue')
     },
     {
+        path: '/chat/system',
+        name: 'SystemNotice',
+        component: () => import('@/views/chat/SystemNotice.vue')
+    },
+    {
         path: '/chat/history-calendar',
         name: 'ChatHistoryCalendar',
         component: () => import('@/views/chat/ChatHistoryCalendar.vue')

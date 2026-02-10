@@ -141,6 +141,7 @@
 <script>
 import { addReview, updateReview, getReview } from '@/api/reviews';
 import { getShopDetail } from '@/api/shop';
+import { getOrderDetail } from '@/api/order';
 import { uploadFile } from '@/api/common';
 
 import { fileURL } from '@/utils/request';
@@ -155,6 +156,7 @@ export default {
       shopId: null,
       orderId: null,
       voucherId: null,
+      sourceId: null,
       sourceType: 2, // Default to shop
 
       shopName: '',
@@ -184,13 +186,16 @@ export default {
     }
   },
   created() {
-      const { edit, id, shopId, orderId, voucherId } = this.$route.query;
+      const { edit, id, shopId, orderId, voucherId, sourceId, sourceType } = this.$route.query;
       this.shopId = shopId;
       this.orderId = orderId;
       this.voucherId = voucherId;
-      
+      this.sourceId = sourceId;
+
       // Determine implicit source type
-      if (this.voucherId || this.orderId) {
+      if (sourceType) {
+          this.sourceType = Number(sourceType);
+      } else if (this.voucherId || this.orderId) {
           this.sourceType = 4;
       } else {
           this.sourceType = 2;
@@ -206,6 +211,8 @@ export default {
           this.isEdit = true;
           this.id = id;
           this.loadReview(id);
+      } else if (orderId) {
+          this.loadOrder(orderId);
       } else if (shopId) {
           this.loadShop(shopId);
       }
@@ -240,6 +247,28 @@ export default {
           getShopDetail(shopId).then(res => {
              const data = res.data || res;
              if(data) this.shopName = data.name;
+          });
+      },
+      loadOrder(orderId) {
+          getOrderDetail(orderId).then(res => {
+              const data = res.data || res;
+              if (data) {
+                  // Use sourceId from order if available
+                  if (data.sourceId) this.sourceId = data.sourceId;
+
+                  // Use sourceType from order if available, otherwise default to 4 (if not already set via param)
+                  if (data.type) {
+                      // Assuming order type might correspond to review source type logic in future
+                      // For now, if order exists, we already default to 4 in created()
+                      // But if we want to be dynamic:
+                      // this.sourceType = data.type;
+                  }
+
+                  if (data.shopId) {
+                      this.shopId = data.shopId;
+                      this.loadShop(this.shopId);
+                  }
+              }
           });
       },
       loadReview(id) {
@@ -335,7 +364,7 @@ export default {
           }).join(',');
 
           const params = {
-              sourceId: this.sourceType === 4 ? (this.voucherId || 0) : this.shopId,
+              sourceId: this.sourceId || this.shopId,
               shopId: this.shopId,
               sourceType: this.sourceType,
               content: this.content,
@@ -395,7 +424,7 @@ export default {
 
           // 调用API保存到服务器，status=1表示草稿
           const params = {
-              sourceId: this.sourceType === 4 ? (this.voucherId || 0) : (this.shopId || 0),
+              sourceId: this.sourceId || this.shopId,
               shopId: this.shopId || 0,
               sourceType: this.sourceType,
               content: this.content || '',
@@ -412,7 +441,7 @@ export default {
               isAnonymous: this.isAnonymous,
               orderId: this.orderId || 0,
               userId: this.userId,
-              status: 1  // 1=草稿
+              status: 3  // 3=草稿
           };
 
           // 如果是编辑模式，传递草稿ID用于更新

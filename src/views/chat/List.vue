@@ -36,7 +36,10 @@
              @click="toChat(chat.sessionId, $event)"
           >
              <div class="avatar-container">
-                <img :src="chat.avatar || '/imgs/icons/default-icon.png'" class="chat-avatar">
+                <div v-if="chat.isSystem" class="system-avatar-box">
+                    <i class="el-icon-bell"></i>
+                </div>
+                <img v-else :src="chat.avatar || '/imgs/icons/default-icon.png'" class="chat-avatar">
                 <div class="unread-badge" v-if="chat.unread > 0">{{chat.unread}}</div>
              </div>
              <div class="chat-info">
@@ -47,7 +50,7 @@
              </div>
              <div class="chat-time">{{formatTime(chat.lastTime)}}</div>
           </div>
-          <div class="action-buttons">
+          <div class="action-buttons" v-if="!chat.isSystem">
              <div class="action-btn pin-btn" @click.stop="togglePin(chat)">
                 <i :class="chat.isPinned ? 'el-icon-bottom' : 'el-icon-top'"></i>
                 <span>{{chat.isPinned ? '取消置顶' : '置顶'}}</span>
@@ -89,6 +92,7 @@ import PageLayout from '@/components/PageLayout/PageLayout.vue';
 import { wsManager } from '@/utils/websocket';
 import { getCurrentUser } from '@/api/user';
 import { getUserSessions, deleteUserSession, togglePinUserSession } from '@/api/chat';
+import { chatStore } from '@/store/chat';
 
 export default {
   name: 'ChatList',
@@ -136,6 +140,13 @@ export default {
         if (this.isDragging) {
            return;
         }
+
+        // Handle System Chat
+        if (sessionId === 'SYSTEM') {
+            this.$router.push('/chat/system');
+            return;
+        }
+
         const chat = this.userSessionList.find(c => c.sessionId === sessionId);
         if (chat && chat.translateX && chat.translateX < 0) {
            chat.translateX = 0;
@@ -190,6 +201,7 @@ export default {
            session.lastTime = new Date();
            if(data.fromUid !== this.user.id) {
               session.unread = (session.unread || 0) + 1;
+              chatStore.incrementUnread(1);
            }
         } else {
            this.loadUserSessions();
@@ -200,13 +212,34 @@ export default {
         getUserSessions({ userId: this.user.id, current: 1 })
            .then(res => {
               const list = res.data || [];
-              this.userSessionList = list.map(s => ({
+              const sessions = list.map(s => ({
                  ...s,
                  avatar: s.avatar ? this.$fileURL + s.avatar : '',
                  lastMessage: this.formatLastMessage(s.lastMessage),
                  translateX: 0,
                  isPinned: s.pin || s.isPinned || false
               }));
+
+              // 构造系统消息会话
+              const systemSession = {
+                  id: 'SYSTEM',
+                  sessionId: 'SYSTEM',
+                  nickname: '系统消息',
+                  avatar: '/imgs/icons/notification.png', // 您可以使用本地图标或网络图标
+                  lastMessage: '欢迎来到智评生活',
+                  lastTime: new Date(), // 或取系统通知接口的最新时间
+                  unread: 0,
+                  isPinned: true, // 强制置顶
+                  translateX: 0,
+                  isSystem: true // 标记为系统会话
+              };
+
+              // 将系统消息加入列表（置顶会由 sortedSessionList 处理，但这里先放进去）
+              this.userSessionList = [systemSession, ...sessions];
+
+              // Calculate total unread
+              const total = sessions.reduce((sum, s) => sum + (s.unread || 0), 0);
+              chatStore.setUnread(total);
            })
            .finally(() => {
               this.loading = false;
@@ -386,6 +419,12 @@ export default {
 .chat-item.pinned:active { background: #efefef; }
 
 .avatar-container { position: relative; margin-right: 12px; flex-shrink: 0; }
+.system-avatar-box {
+    width: 48px; height: 48px; border-radius: 8px;
+    background: linear-gradient(135deg, #ff9966, #ff5e62);
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 24px;
+}
 .chat-avatar { width: 48px; height: 48px; border-radius: 8px; object-fit: cover; }
 .unread-badge { 
    position: absolute; 

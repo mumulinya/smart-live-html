@@ -12,16 +12,18 @@
       </div>
       <div class="foot-text">地图</div>
     </div>
-    
+
     <div class="foot-center" @click="toPage(0)">
       <div class="add-btn">
         <i class="el-icon-plus"></i>
       </div>
     </div>
-    
+
     <div class="foot-item" :class="{active: activeBtn === 3}" @click="toPage(3)">
       <div class="foot-icon">
-        <i :class="activeBtn === 3 ? 'el-icon-chat-round' : 'el-icon-chat-dot-round'"></i>
+        <van-badge :content="chatStore.totalUnread || null" max="99" :offset="[5, -5]">
+            <i :class="activeBtn === 3 ? 'el-icon-chat-round' : 'el-icon-chat-dot-round'"></i>
+        </van-badge>
       </div>
       <div class="foot-text">消息</div>
     </div>
@@ -35,6 +37,8 @@
 </template>
 
 <script>
+import { chatStore } from '@/store/chat';
+
 export default {
   name: 'FootBar',
   props: {
@@ -42,6 +46,9 @@ export default {
       type: Number,
       default: 1
     }
+  },
+  setup() {
+      return { chatStore };
   },
   methods: {
     toPage(i) {

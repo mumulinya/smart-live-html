@@ -1,3 +1,5 @@
+import { minioURL } from '@/utils/request';
+
 export class ChatWebSocket {
     constructor() {
         this.ws = null;
@@ -10,7 +12,11 @@ export class ChatWebSocket {
         this.messageCallbacks = [];
         this.connectionCallbacks = [];
         this.authCallbacks = [];
-        this.wsUrl = 'ws://localhost:8888/ws'; // In real app, might want to make this configurable
+
+        let ip = 'localhost';
+        this.wsUrl = `ws://${ip}:8888/ws`;
+        this.heartbeatTimer = null;
+        this.heartbeatInterval = 30000; // 30 seconds heartbeat
     }
 
     connect(token) {
@@ -31,6 +37,7 @@ export class ChatWebSocket {
                 this.reconnectAttempts = 0;
                 this.notifyConnectionCallbacks('connected');
                 this.sendAuthMessage();
+                this.startHeartbeat();
             };
 
             this.ws.onmessage = (event) => {
@@ -46,6 +53,7 @@ export class ChatWebSocket {
                 console.log('🔌 WebSocket closed:', event.code, event.reason);
                 this.isConnected = false;
                 this.isAuthenticated = false;
+                this.stopHeartbeat();
                 this.notifyConnectionCallbacks('disconnected');
                 this.notifyAuthCallbacks('disconnected');
                 this.tryReconnect();
@@ -58,6 +66,27 @@ export class ChatWebSocket {
 
         } catch (error) {
             console.error('Failed to create WebSocket connection:', error);
+        }
+    }
+
+    startHeartbeat() {
+        this.stopHeartbeat();
+        this.heartbeatTimer = setInterval(() => {
+            if (this.ws && this.isConnected) {
+                // Send PING message
+                const pingMessage = {
+                    type: 'PING',
+                    timestamp: Date.now()
+                };
+                this.ws.send(JSON.stringify(pingMessage));
+            }
+        }, this.heartbeatInterval);
+    }
+
+    stopHeartbeat() {
+        if (this.heartbeatTimer) {
+            clearInterval(this.heartbeatTimer);
+            this.heartbeatTimer = null;
         }
     }
 
@@ -94,6 +123,10 @@ export class ChatWebSocket {
             case 'PONG':
                 console.log('❤️ Pong');
                 break;
+            case 'ERROR':
+                console.error('❌ Server returned ERROR:', message.data);
+                this.notifyMessageCallbacks(message); // Forward to UI to handle
+                break;
             default:
                 console.log('Unknown message type:', message.type);
         }
@@ -117,6 +150,7 @@ export class ChatWebSocket {
         }
         this.isConnected = false;
         this.isAuthenticated = false;
+        this.stopHeartbeat();
         if (this.reconnectTimer) {
             clearTimeout(this.reconnectTimer);
         }

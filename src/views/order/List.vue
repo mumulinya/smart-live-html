@@ -344,9 +344,7 @@ export default {
         this.$router.push({
             name: 'ReviewPublish',
             query: {
-                shopId: order.shopId || 1, 
-                orderId: order.id,
-                shopName: order.shopName
+                orderId: order.id
             }
         });
      }

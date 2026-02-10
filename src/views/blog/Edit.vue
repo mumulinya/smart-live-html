@@ -442,7 +442,7 @@ export default {
             content: this.params.content,
             images: this.serverFilePaths.join(","),
             shopId: this.selectedShop.id,
-            status: 1  // 1=草稿
+            status: 3  // 3=草稿
         };
         
         // If editing existing blog/draft
