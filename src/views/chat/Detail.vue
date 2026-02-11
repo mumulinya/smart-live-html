@@ -351,19 +351,20 @@ export default {
            const sessionId = data.sessionId;
            const newStatus = data.status;
            this.messages.forEach(msg => {
-              if (msg.isSelf && msg.sessionId == sessionId && msg.dbStatus !== newStatus) {
-                 msg.dbStatus = newStatus;
+              if (msg.isSelf && msg.sessionId == sessionId && msg.status !== newStatus) {
+                 msg.status = newStatus;
               }
            });
-        } else if (data.type === 'MESSAGE_READ') {
-           const messageId = data.messageId;
-           const newStatus = data.status;
-           const msg = this.messages.find(m => m.id == messageId);
-           if (msg) {
-              msg.dbStatus = newStatus;
-           }
-        }
-     },
+         } else if (data.type === 'MESSAGE_READ') {
+            const messageId = this.normalizeId(data.messageId);
+            const newStatus = data.status;
+            this.messages.forEach(m => {
+               if (m.id == messageId) {
+                  m.status = newStatus;
+               }
+            });
+         }
+      },
      
      // 核心加载逻辑重构
      getChatSession() {
@@ -473,11 +474,11 @@ export default {
         this.loadingOld = true;
         
         // 确保使用当前最小ID
-        const currentMinId = this.minId; 
-        
-        const params = { 
-            sessionId: this.sessionId, 
-            anchorId: currentMinId, 
+        const currentMinId = this.minId;
+
+        const params = {
+            sessionId: this.sessionId,
+            anchorId: Number(currentMinId) || currentMinId,
             direction: 'old'
         };
         
@@ -488,7 +489,7 @@ export default {
              if (list.length > 0) {
                  const newMessages = list.map(this.processMessage);
                  // 过滤
-                 const uniqueMessages = newMessages.filter(m => !this.messages.some(ex => ex.id === m.id));
+                 const uniqueMessages = newMessages.filter(m => !this.messages.some(ex => ex.id == m.id));
                  
                  if (uniqueMessages.length > 0) {
                      // 拼接并强制重新排序
@@ -517,9 +518,9 @@ export default {
         
         // 确保使用当前最大ID
         const currentMaxId = this.maxId;
-        const params = { 
-            sessionId: this.sessionId, 
-            anchorId: currentMaxId, 
+        const params = {
+            sessionId: this.sessionId,
+            anchorId: Number(currentMaxId) || currentMaxId,
             direction: 'new',
             current: 1 // 兼容参数
         };
@@ -531,7 +532,7 @@ export default {
              if (list.length > 0) {
                  const newMessages = list.map(this.processMessage);
                  // 过滤
-                 const uniqueMessages = newMessages.filter(m => !this.messages.some(ex => ex.id === m.id));
+                 const uniqueMessages = newMessages.filter(m => !this.messages.some(ex => ex.id == m.id));
                  
                  if (uniqueMessages.length > 0) {
                      // 拼接并强制重新排序
@@ -585,10 +586,15 @@ export default {
         }
      },
 
+     normalizeId(value) {
+         if (value === null || value === undefined) return value;
+         return String(value);
+     },
      processMessage(msg) {
         const fromId = msg.fromUid || msg.fromUserId;
         let msgType = Number(msg.messageType || 0);
         let content = msg.content || '';
+        const processedId = this.normalizeId(msg.id ?? msg.messageId);
 
         // 智能修正：如果类型是文本(0)，但内容看起来像图片路径，则强制改为图片类型(1)
         if (msgType === 0 && content) {
@@ -612,6 +618,7 @@ export default {
 
         return {
            ...msg,
+           id: processedId,
            content,
            messageType: msgType,
            fromUid: fromId,
@@ -627,7 +634,32 @@ export default {
         // Fix: If backend returns ID 0, do not use it for deduplication
         let exists = false;
         if (msg.id != 0 && msg.id != '0') {
-            exists = this.messages.find(m => m.id === msg.id);
+            exists = this.messages.find(m => m.id == msg.id);
+        }
+
+        // Fix: 如果是自己发的消息，后端通过NEW_MESSAGE推回来时，
+        // 临时消息(tempId)还在，会导致重复。检查是否有pending的临时消息
+        if (!exists && msg.isSelf) {
+            const pendingTemp = this.messages.find(m => m.tempId && m.status === 'sending');
+            if (pendingTemp) {
+                console.log('🔄 自己发的消息回推，更新临时消息:', pendingTemp.tempId, '->', msg.id);
+                pendingTemp.id = msg.id;
+                pendingTemp.status = msg.status || 'sent';
+                pendingTemp.tempId = undefined;
+                return;
+            }
+
+            // 兜底：tempId 对不上时，用内容+类型+发送中状态匹配，避免遗漏
+            const pendingSameContent = this.messages.find(m =>
+                m.isSelf && m.status === 'sending' && m.content === msg.content && m.messageType === msg.messageType
+            );
+            if (pendingSameContent) {
+                console.log('🔄 自己发的消息回推(内容匹配兜底)，更新临时消息:', pendingSameContent.id, '->', msg.id);
+                pendingSameContent.id = msg.id;
+                pendingSameContent.status = msg.status || 'sent';
+                pendingSameContent.tempId = undefined;
+                return;
+            }
         }
 
         if(!exists) {
@@ -724,16 +756,47 @@ export default {
             loop: false // 是否循环播放，可按需开启
         });
      },
-     handleMessageSent(data) {
-        const idx = this.messages.findIndex(m => m.tempId === data.tempId);
-        if(idx !== -1) {
-           const exists = this.messages.find(m => m.id === data.messageId);
-           if (exists) {
-               this.messages.splice(idx, 1);
+      handleMessageSent(data) {
+         const idx = this.messages.findIndex(m => m.tempId === data.tempId);
+         if(idx !== -1) {
+            const normalizedId = this.normalizeId(data.messageId);
+            // 如果后端暂时返回 0/空的 messageId，等待后续 NEW_MESSAGE，再用 tempId 对齐
+            if (!normalizedId || normalizedId === '0') {
+               this.messages[idx].status = 'sending';
+               return;
+            }
+
+            const exists = this.messages.find(m => m.id == normalizedId);
+            if (exists) {
+                this.messages.splice(idx, 1);
+            } else {
+                this.messages[idx].id = normalizedId;
+                this.messages[idx].status = 'sent';
+                this.messages[idx].tempId = undefined;
+            }
+         } else {
+           // 兜底：如果找不到 tempId，对齐最近的发送中消息
+           const fallbackIdxFromEnd = this.messages.slice().reverse().findIndex(m => m.isSelf && m.status === 'sending');
+           if (fallbackIdxFromEnd !== -1) {
+               const realIdx = this.messages.length - 1 - fallbackIdxFromEnd;
+               const normalizedId = this.normalizeId(data.messageId);
+               const exists = this.messages.find(m => m.id == normalizedId);
+               if (exists && exists !== this.messages[realIdx]) {
+                   this.messages.splice(realIdx, 1);
+               } else {
+                   this.messages[realIdx].id = normalizedId;
+                   this.messages[realIdx].status = 'sent';
+                   this.messages[realIdx].tempId = undefined;
+               }
            } else {
-               this.messages[idx].id = data.messageId;
-               this.messages[idx].status = 'sent';
-               this.messages[idx].tempId = undefined;
+               // 最终兜底：如果列表里已经有相同 id，直接标记为已发送；否则补一条
+               const normalizedId = this.normalizeId(data.messageId);
+               const exists = this.messages.find(m => m.id == normalizedId);
+               if (exists) {
+                   exists.status = 'sent';
+               } else {
+                   this.messages.push(this.processMessage({ ...data, id: normalizedId, status: 'sent', fromUid: this.user.id }));
+               }
            }
         }
      },
