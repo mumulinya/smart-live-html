@@ -93,6 +93,7 @@ import { wsManager } from '@/utils/websocket';
 import { getCurrentUser } from '@/api/user';
 import { getUserSessions, deleteUserSession, togglePinUserSession } from '@/api/chat';
 import { chatStore } from '@/store/chat';
+import { addSystemNotice, getLatestSystemNotice, getSystemUnreadCount } from '@/utils/systemNotice';
 
 export default {
   name: 'ChatList',
@@ -113,7 +114,7 @@ export default {
        currentChat: null,
        deleteDialogVisible: false,
        deleteTargetChat: null
-    }
+    };
   },
   computed: {
      sortedSessionList() {
@@ -134,14 +135,13 @@ export default {
   },
   methods: {
      search() {
-        this.$message.info("搜索功能开发中");
+        this.$message.info('搜索功能开发中');
      },
-     toChat(sessionId, e) {
+     toChat(sessionId) {
         if (this.isDragging) {
            return;
         }
 
-        // Handle System Chat
         if (sessionId === 'SYSTEM') {
             this.$router.push('/chat/system');
             return;
@@ -153,9 +153,9 @@ export default {
            this.currentSwipeId = null;
            return;
         }
-        this.userSessionList.forEach(chat => {
-           if (chat.translateX && chat.translateX < 0) {
-              chat.translateX = 0;
+        this.userSessionList.forEach(item => {
+           if (item.translateX && item.translateX < 0) {
+              item.translateX = 0;
            }
         });
         this.currentSwipeId = null;
@@ -171,41 +171,75 @@ export default {
         });
      },
      initWebSocket() {
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem('token');
         if(token) {
            const ws = wsManager.init(token);
            ws.onConnectionChange(this.handleConnectionChange);
-           
+
            wsManager.registerCallback('chat-list', (message) => {
-              if(message.type === 'NEW_MESSAGE') {
+              if (message.type === 'NEW_MESSAGE') {
                  this.handleNewMessage(message.data);
+              } else if (message.type === 'SYSTEM_MESSAGE') {
+                 this.handleSystemMessage(message.data);
               }
            });
-           
-           if(ws.isConnected) this.wsStatus = 'connected';
+
+           if (ws.isConnected) this.wsStatus = 'connected';
         }
      },
      handleConnectionChange(status) {
         this.wsStatus = status;
         this.connectionStatusText = status === 'connected' ? '已连接' : '连接断开';
         this.showConnectionStatus = status !== 'connected';
-        if(status === 'connected') {
-           setTimeout(() => this.showConnectionStatus = false, 2000);
+        if (status === 'connected') {
+           setTimeout(() => {
+              this.showConnectionStatus = false;
+           }, 2000);
         }
      },
      handleNewMessage(data) {
         const idx = this.userSessionList.findIndex(s => s.sessionId == data.sessionId);
-        if(idx !== -1) {
+        if (idx !== -1) {
            const session = this.userSessionList[idx];
-           session.lastMessage = data.content;
+           session.lastMessage = this.formatLastMessage(data.content || '');
            session.lastTime = new Date();
-           if(data.fromUid !== this.user.id) {
+           if (data.fromUid !== this.user.id) {
               session.unread = (session.unread || 0) + 1;
-              chatStore.incrementUnread(1);
            }
         } else {
            this.loadUserSessions();
         }
+     },
+     handleSystemMessage(data) {
+        if (!data) return;
+
+        const notice = addSystemNotice(data);
+        const systemSession = this.userSessionList.find(s => s.sessionId === 'SYSTEM');
+        if (!systemSession) {
+            this.loadUserSessions();
+            return;
+        }
+
+        systemSession.lastMessage = notice.title || notice.content || '系统通知';
+        systemSession.lastTime = notice.createdAt || new Date().toISOString();
+        systemSession.unread = getSystemUnreadCount();
+        chatStore.setSystemUnread(systemSession.unread || 0);
+     },
+     buildSystemSession() {
+        const latest = getLatestSystemNotice();
+        const unread = getSystemUnreadCount();
+        return {
+            id: 'SYSTEM',
+            sessionId: 'SYSTEM',
+            nickname: '系统消息',
+            avatar: '/imgs/icons/notification.png',
+            lastMessage: latest ? (latest.title || latest.content || '系统通知') : '欢迎来到智评生活',
+            lastTime: latest ? latest.createdAt : null,
+            unread,
+            isPinned: true,
+            translateX: 0,
+            isSystem: true
+        };
      },
      loadUserSessions() {
         this.loading = true;
@@ -220,26 +254,12 @@ export default {
                  isPinned: s.pin || s.isPinned || false
               }));
 
-              // 构造系统消息会话
-              const systemSession = {
-                  id: 'SYSTEM',
-                  sessionId: 'SYSTEM',
-                  nickname: '系统消息',
-                  avatar: '/imgs/icons/notification.png', // 您可以使用本地图标或网络图标
-                  lastMessage: '欢迎来到智评生活',
-                  lastTime: new Date(), // 或取系统通知接口的最新时间
-                  unread: 0,
-                  isPinned: true, // 强制置顶
-                  translateX: 0,
-                  isSystem: true // 标记为系统会话
-              };
-
-              // 将系统消息加入列表（置顶会由 sortedSessionList 处理，但这里先放进去）
+              const systemSession = this.buildSystemSession();
               this.userSessionList = [systemSession, ...sessions];
 
-              // Calculate total unread
               const total = sessions.reduce((sum, s) => sum + (s.unread || 0), 0);
               chatStore.setUnread(total);
+              chatStore.setSystemUnread(systemSession.unread || 0);
            })
            .finally(() => {
               this.loading = false;
@@ -247,8 +267,6 @@ export default {
      },
      formatLastMessage(msg) {
         if (!msg) return '';
-        // 简单判断：如果是图片路径（包含特定路径特征或后缀），显示为[图片]
-        // 也可以让后端返回 messageType，这里先做前端兼容
         if (msg.match(/\.(jpg|png|jpeg|gif|webp)$/i) || msg.includes('/smart-live/') || msg.includes('/2026/') || msg.includes('blob:')) {
             return '[图片]';
         }
@@ -257,7 +275,10 @@ export default {
      formatTime(time) {
         if(!time) return '';
         const d = new Date(time);
-        return `${d.getMonth()+1}-${d.getDate()} ${d.getHours()}:${d.getMinutes()}`;
+        if (Number.isNaN(d.getTime())) return '';
+        const hh = `${d.getHours()}`.padStart(2, '0');
+        const mm = `${d.getMinutes()}`.padStart(2, '0');
+        return `${d.getMonth()+1}-${d.getDate()} ${hh}:${mm}`;
      },
      handleStart(e, chat) {
         if (e.target.closest('.action-btn')) {
@@ -375,7 +396,7 @@ export default {
         }
      }
   }
-}
+};
 </script>
 
 <style scoped>
@@ -581,3 +602,4 @@ export default {
    color: #576b95;
 }
 </style>
+

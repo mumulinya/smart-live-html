@@ -1,27 +1,42 @@
 <script setup>
 import GlobalAIEntry from '@/components/GlobalAIEntry.vue';
-import { onMounted, onUnmounted } from 'vue';
+import { onMounted, onUnmounted, ref } from 'vue';
+import router from '@/router';
 import { wsManager } from '@/utils/websocket';
 import { chatStore } from '@/store/chat';
 import { getCurrentUser } from '@/api/user';
 import { getUserSessions } from '@/api/chat';
+import { AUTH_CHANGED_EVENT } from '@/utils/auth-event';
+import { getSystemNoticeUnreadCount, resolveSystemNoticeUnreadCount } from '@/api/systemNotice';
+import { addSystemNotice, getSystemUnreadCount } from '@/utils/systemNotice';
+
+let currentUserId = null;
+const keepAliveVersion = ref(0);
+
+try {
+    const cachedUser = localStorage.getItem('userInfo');
+    if (cachedUser) {
+        currentUserId = JSON.parse(cachedUser)?.id ?? null;
+    }
+} catch (e) {
+    console.error('Failed to parse cached user info', e);
+}
 
 onMounted(() => {
+  // Register once so it can work even when token is written after App mounted.
+  wsManager.registerCallback('global-app-listener', handleGlobalMessage);
+  window.addEventListener(AUTH_CHANGED_EVENT, handleAuthChanged);
+
   const token = localStorage.getItem('token');
   if (token) {
-    // 1. Init WebSocket
     wsManager.init(token);
-
-    // 2. Init Unread Count
     initUnreadCount();
-
-    // 3. Register Global Message Listener
-    wsManager.registerCallback('global-app-listener', handleGlobalMessage);
   }
 });
 
 onUnmounted(() => {
     wsManager.unregisterCallback('global-app-listener');
+    window.removeEventListener(AUTH_CHANGED_EVENT, handleAuthChanged);
 });
 
 const initUnreadCount = async () => {
@@ -29,31 +44,80 @@ const initUnreadCount = async () => {
         const userRes = await getCurrentUser();
         const userId = userRes.data?.id || userRes.id;
         if (userId) {
+            currentUserId = userId;
             const res = await getUserSessions({ userId: userId, current: 1, size: 100 });
             const list = res.data || [];
-            // Calculate total unread
             const total = list.reduce((sum, s) => sum + (s.unread || 0), 0);
             chatStore.setUnread(total);
         }
+        await initSystemUnreadCount();
     } catch (e) {
         console.error('Failed to init unread count', e);
     }
 };
 
+const initSystemUnreadCount = async () => {
+    let unread = null;
+    try {
+        const res = await getSystemNoticeUnreadCount();
+        unread = resolveSystemNoticeUnreadCount(res);
+    } catch (error) {
+        // Fallback to local cache when unread-count API is unavailable.
+    }
+    chatStore.setSystemUnread(unread ?? getSystemUnreadCount());
+};
+
+const isSameId = (a, b) => {
+    if (a === null || a === undefined || b === null || b === undefined) return false;
+    return String(a) === String(b);
+};
+
+const isCurrentSessionOpen = (sessionId) => {
+    const route = router.currentRoute.value;
+    if (!route) return false;
+    if (route.path !== '/chat/detail') return false;
+    return isSameId(route.query?.sessionId, sessionId);
+};
+
+const isSystemNoticeOpen = () => {
+    const route = router.currentRoute.value;
+    if (!route) return false;
+    return route.path === '/chat/system';
+};
+
 const handleGlobalMessage = (message) => {
+    if (!message?.type || !message?.data) return;
+
     if (message.type === 'NEW_MESSAGE') {
-        // Increment global unread count
-        // Note: You might want to check if the message is from self, but usually NEW_MESSAGE is incoming.
-        // Also check if we are currently in the chat detail of this sender (optional, but good for UX)
-        // For simplicity, just increment. ChatDetail will mark it as read when viewed.
+        const fromUid = message.data.fromUid ?? message.data.fromUserId;
+        if (isSameId(fromUid, currentUserId)) return;
+        if (isCurrentSessionOpen(message.data.sessionId)) return;
+
         chatStore.incrementUnread(1);
+        return;
+    }
+
+    if (message.type === 'SYSTEM_MESSAGE') {
+        addSystemNotice(message.data, { defaultRead: isSystemNoticeOpen() });
+        chatStore.setSystemUnread(getSystemUnreadCount());
+    }
+};
+
+const handleAuthChanged = (event) => {
+    keepAliveVersion.value += 1;
+    if (event?.detail?.action === 'logout') {
+        currentUserId = null;
+        chatStore.setUnread(0);
+        chatStore.setSystemUnread(0);
+    } else if (event?.detail?.action === 'login') {
+        initSystemUnreadCount();
     }
 };
 </script>
 
 <template>
   <router-view v-slot="{ Component }">
-    <keep-alive include="OrderList,MyStar,MyFollow,Drafts,ListPage,MyReviews,UserInfo,HomeIndex,SearchIndex,UserSearch,ShopList">
+    <keep-alive :key="keepAliveVersion" include="OrderList,MyStar,MyFollow,Drafts,ListPage,MyReviews,UserInfo,HomeIndex,SearchIndex,UserSearch,ShopList">
       <component :is="Component" />
     </keep-alive>
   </router-view>

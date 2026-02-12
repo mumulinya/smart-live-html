@@ -1,5 +1,6 @@
 import axios from 'axios';
 import router from '@/router'; // Import router for redirects
+import { emitAuthChanged } from '@/utils/auth-event';
 
 // Environment variables or constants
 export const minioURL = "http://192.168.182.20";
@@ -45,6 +46,7 @@ service.interceptors.response.use(
       // 清除过期的token
       localStorage.removeItem('token');
       localStorage.removeItem('userInfo');
+      emitAuthChanged('logout');
       setTimeout(() => {
         router.push("/user/login");
       }, 200);
@@ -63,6 +65,7 @@ service.interceptors.response.use(
       // 清除过期的token
       localStorage.removeItem('token');
       localStorage.removeItem('userInfo');
+      emitAuthChanged('logout');
       setTimeout(() => {
         router.push("/user/login");
       }, 200);

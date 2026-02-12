@@ -1,4 +1,5 @@
 import { reactive } from 'vue';
+import { emitAuthChanged } from '@/utils/auth-event';
 
 const userState = reactive({
     userInfo: null,
@@ -29,6 +30,7 @@ export function clearUserInfo() {
     userState.token = '';
     localStorage.removeItem('userInfo');
     localStorage.removeItem('token');
+    emitAuthChanged('logout');
 }
 
 export function setToken(token) {

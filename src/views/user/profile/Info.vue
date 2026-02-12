@@ -300,6 +300,7 @@ import { likeBlog, likeRecord, starList } from '@/api/interaction';
 import { filePrefix } from '@/utils/request';
 import { locationUtil } from '@/utils/location';
 import { updateBackgroundImage } from '@/api/user'; // Import new API
+import { emitAuthChanged } from '@/utils/auth-event';
 
 import PageLayout from '@/components/PageLayout/PageLayout.vue';
 
@@ -455,6 +456,7 @@ export default {
         if (item.name === '退出登录') {
             localStorage.removeItem("token");
             localStorage.removeItem("userInfo");
+            emitAuthChanged('logout');
             this.$router.push('/user/login');
         }
      },
@@ -532,6 +534,7 @@ export default {
            if (!userData || !userData.id) {
               this.$message.error("登录已失效，请重新登录");
               localStorage.removeItem("token");
+              emitAuthChanged('logout');
               this.$router.push("/user/login");
               return;
            }
@@ -546,6 +549,7 @@ export default {
             console.error(err);
             this.$message.error("登录失效，请重新登录");
             localStorage.removeItem("token");
+            emitAuthChanged('logout');
             this.$router.push("/user/login");
          }).finally(() => {
             this.pageLoading = false;

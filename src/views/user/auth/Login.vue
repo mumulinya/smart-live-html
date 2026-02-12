@@ -86,7 +86,12 @@ import { ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
 import { showToast, showSuccessToast, showFailToast } from 'vant';
 import { login, sendCode, appLoginByPassword, getCurrentUser } from '@/api/user';
+import { getUserSessions } from '@/api/chat';
+import { getSystemNoticeUnreadCount, resolveSystemNoticeUnreadCount } from '@/api/systemNotice';
+import { chatStore } from '@/store/chat';
 import { wsManager } from '@/utils/websocket';
+import { emitAuthChanged } from '@/utils/auth-event';
+import { getSystemUnreadCount } from '@/utils/systemNotice';
 import Vcode from "vue3-puzzle-vcode";
 
 const router = useRouter();
@@ -187,6 +192,28 @@ const onSliderSuccess = () => {
   performLogin();
 };
 
+const initUnreadCount = async (currentUserRes) => {
+    const userId = currentUserRes?.data?.id || currentUserRes?.id;
+    if (!userId) {
+        chatStore.setUnread(0);
+        chatStore.setSystemUnread(0);
+        return;
+    }
+
+    const sessionRes = await getUserSessions({ userId, current: 1, size: 100 });
+    const sessionList = sessionRes.data || [];
+    const totalUnread = sessionList.reduce((sum, session) => sum + (session.unread || 0), 0);
+    chatStore.setUnread(totalUnread);
+    let systemUnread = null;
+    try {
+        const unreadRes = await getSystemNoticeUnreadCount();
+        systemUnread = resolveSystemNoticeUnreadCount(unreadRes);
+    } catch (error) {
+        // Fallback to local cache when unread-count API is unavailable.
+    }
+    chatStore.setSystemUnread(systemUnread ?? getSystemUnreadCount());
+};
+
 const performLogin = async () => {
     loading.value = true;
     try {
@@ -201,8 +228,16 @@ const performLogin = async () => {
         const token = res.data || res;
         if (token) {
             localStorage.setItem("token", token);
-            await getCurrentUser(); // Prefetch and cache user info
+            const currentUserRes = await getCurrentUser(); // Prefetch and cache user info
+            try {
+                await initUnreadCount(currentUserRes);
+            } catch (e) {
+                console.error('Failed to init unread count after login', e);
+                chatStore.setUnread(0);
+                chatStore.setSystemUnread(0);
+            }
             wsManager.init(token); // Init WebSocket globally
+            emitAuthChanged('login');
             showSuccessToast("登录成功");
             router.push("/");
         } else {
