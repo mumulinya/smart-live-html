@@ -1,4 +1,4 @@
-import { minioURL } from '@/utils/request';
+import { webSocketURL } from '@/utils/request';
 
 export class ChatWebSocket {
     constructor() {
@@ -14,12 +14,16 @@ export class ChatWebSocket {
         this.connectionCallbacks = [];
         this.authCallbacks = [];
 
-        let ip = 'localhost';
-        if (minioURL) {
-            // Keep compatibility with existing env import.
-            ip = 'localhost';
+        const explicitWsUrl = String(import.meta.env.VITE_WS_URL || '').trim();
+        if (explicitWsUrl) {
+            this.wsUrl = explicitWsUrl;
+        } else {
+            const hostOrUrl = String(webSocketURL || 'localhost').trim();
+            const protocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss' : 'ws';
+            this.wsUrl = /^wss?:\/\//i.test(hostOrUrl)
+                ? hostOrUrl
+                : `${protocol}://${hostOrUrl}:8888/ws`;
         }
-        this.wsUrl = `ws://${ip}:8888/ws`;
         this.heartbeatTimer = null;
         this.heartbeatInterval = 30000;
         this.manuallyClosedSockets = new WeakSet();

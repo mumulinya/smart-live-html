@@ -260,6 +260,7 @@ import { getCurrentUser } from '@/api/user'
 import { fileURL } from '@/utils/request'
 
 const route = useRoute()
+const router = useRouter()
 
 const activeTab = ref(0)
 const isMultiSelect = ref(false)

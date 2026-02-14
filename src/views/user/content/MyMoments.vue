@@ -131,24 +131,49 @@ const onLoad = async () => {
         // Store minTime for pagination
         const pageSize = 5;
 
-        // Simple mapping if backend doesn't return dataType string (Optional safeguard)
-        const mappedItems = newItems.map(item => {
-            // Map fields to match template expectations
-            // Template uses: userAvatar, userName, time, cover, title, likes, comments
-            // API returns: icon, name, createTime, images, title, liked, comments
+        // Normalize and map feed data for UI:
+        // supports both old flat payload and new payload with detail in `item.data`.
+        const mappedItems = newItems.map((rawItem, index) => {
+            const detail = rawItem?.data && typeof rawItem.data === 'object' && !Array.isArray(rawItem.data)
+                ? rawItem.data
+                : null;
+            const sourcePublishTime =
+                rawItem?.publishTime ||
+                rawItem?.createTime ||
+                detail?.publishTime ||
+                detail?.createTime ||
+                '';
+            const item = detail ? { ...rawItem, ...detail } : { ...rawItem };
 
+            // Keep outer time fields when nested `data` has null/empty time.
+            item.publishTime = item.publishTime || sourcePublishTime;
+            item.createTime = item.createTime || rawItem?.createTime || detail?.createTime || '';
+
+            // Keep unique render key even when multiple events point to one same voucher/blog id.
+            if (!item._uid) {
+                item._uid = rawItem.id || `${item.dataType || 'feed'}-${item.publishTime || item.time || ''}-${index}`;
+            }
+
+            // Map fields to match template expectations
             item.userAvatar = item.userAvatar || item.icon || '/imgs/icons/default-icon.png';
             if (item.userAvatar && !item.userAvatar.startsWith('http') && !item.userAvatar.startsWith('/imgs')) {
                 item.userAvatar = fileURL + item.userAvatar;
             }
 
+            if (item.shopLogo && !item.shopLogo.startsWith('http')) {
+                item.shopLogo = fileURL + item.shopLogo;
+            }
+
             item.userName = item.userName || item.name || '匿名用户';
-            item.time = item.time || item.createTime || '';
+            item.time = item.time || item.publishTime || item.createTime || sourcePublishTime || '';
             
             // Map cover image
             let rawImg = item.cover || item.img;
             if (!rawImg && item.images) {
-                rawImg = item.images.split(',')[0];
+                rawImg = Array.isArray(item.images) ? item.images[0] : item.images.split(',')[0];
+            }
+            if (!rawImg && item.shopImages) {
+                rawImg = Array.isArray(item.shopImages) ? item.shopImages[0] : item.shopImages.split(',')[0];
             }
             
             if (rawImg) {
@@ -168,14 +193,14 @@ const onLoad = async () => {
             if (item.dataType) {
                 // Convert lowercase dataType to uppercase for template matching
                 const typeMap = {
-                    'blog': 'BLOG',
-                    'shop_new': 'SHOP_NEW',
-                    'restock': 'RESTOCK',
-                    'voucher': 'SHOP_NEW'  // voucher type maps to SHOP_NEW or RESTOCK based on action
+                    blog: 'BLOG',
+                    shop_new: 'SHOP_NEW',
+                    restock: 'RESTOCK',
+                    voucher: 'SHOP_NEW'  // voucher type maps to SHOP_NEW or RESTOCK based on action
                 };
                 
                 // Handle voucher type with action field
-                if (item.dataType.toLowerCase() === 'voucher') {
+                if (String(item.dataType).toLowerCase() === 'voucher') {
                     if (item.action === 'restock') {
                         item.dataType = 'RESTOCK';
                     } else {
@@ -183,7 +208,7 @@ const onLoad = async () => {
                         item.dataType = 'SHOP_NEW';
                     }
                 } else {
-                    item.dataType = typeMap[item.dataType.toLowerCase()] || item.dataType.toUpperCase();
+                    item.dataType = typeMap[String(item.dataType).toLowerCase()] || String(item.dataType).toUpperCase();
                 }
             } else {
                 // If dataType is missing, infer from other fields
@@ -209,7 +234,7 @@ const onLoad = async () => {
                 item.voucherName = item.voucherName || item.title;
                 // productType: 0 = 团购, 1 = 代金券 (based on API's type field)
                 // Template expects: productType === 1 ? '代金券' : '团购'
-                // API type: 0 = 代金券, 1 = 秒杀券, etc.
+                // API type: 0 = 代金券, 1 = 秒杀券 etc.
                 // Need to map: if type === 0 or no type, it's 代金券 (set productType = 1)
                 if (item.productType === undefined) {
                     // API type 0 = 代金券, type 1 = 秒杀券 (also a voucher type)

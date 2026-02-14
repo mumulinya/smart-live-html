@@ -26,7 +26,7 @@ export function sendMessage(data) {
 export function sendMessageStream(data, onMessage, onError, onComplete, onStatus, onCardRender) {
     const baseURL = import.meta.env.VITE_API_BASE_URL || '/app-dev-api';
     // URL construction for GET request
-    // Backend expects: message, sessionId, x, y, contextMode, userName, region
+    // Backend expects: message, sessionId, x, y, contextMode, userId, region
     let url = `${baseURL}/app/ai/message/chat?sessionId=${data.sessionId}&message=${encodeURIComponent(data.content)}`;
 
     // 添加可选参数
@@ -39,9 +39,9 @@ export function sendMessageStream(data, onMessage, onError, onComplete, onStatus
         url += `&x=${data.longitude}&y=${data.latitude}`;
     }
 
-    // 添加用户名参数
-    if (data.userName) {
-        url += `&userName=${encodeURIComponent(data.userName)}`;
+    // 添加用户ID参数
+    if (data.userId !== undefined && data.userId !== null && data.userId !== '') {
+        url += `&userId=${encodeURIComponent(data.userId)}`;
     }
 
     // 添加区域参数

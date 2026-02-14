@@ -2,16 +2,23 @@ import axios from 'axios';
 import router from '@/router'; // Import router for redirects
 import { emitAuthChanged } from '@/utils/auth-event';
 
-// Environment variables or constants
-export const minioURL = "http://192.168.182.20";
-export const minioPort = "9000";
-export const filePrefix = "/smart-live";
-export const fileURL = minioURL + ":" + minioPort + filePrefix;
+// Environment variables (with safe defaults for local development)
+const DEFAULT_MINIO_URL = 'http://127.0.0.1';
+const DEFAULT_MINIO_PORT = '9000';
+const DEFAULT_FILE_PREFIX = '/smart-live';
 
-export const webSocketURL = "localhost";
+export const minioURL = import.meta.env.VITE_MINIO_URL || DEFAULT_MINIO_URL;
+export const minioPort = String(import.meta.env.VITE_MINIO_PORT || DEFAULT_MINIO_PORT);
+export const filePrefix = import.meta.env.VITE_FILE_PREFIX || DEFAULT_FILE_PREFIX;
+export const fileURL =
+  import.meta.env.VITE_FILE_URL ||
+  `${minioURL}${minioPort ? `:${minioPort}` : ''}${filePrefix}`;
+
+export const webSocketURL = import.meta.env.VITE_WS_HOST || 'localhost';
+const apiBaseURL = import.meta.env.VITE_API_BASE_URL || '/app-dev-api';
 // Base configuration
 const service = axios.create({
-  baseURL: '/app-dev-api', // Proxy target will handle this
+  baseURL: apiBaseURL,
   timeout: 5000
 });
 

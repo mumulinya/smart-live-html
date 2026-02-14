@@ -15,7 +15,7 @@
             <p>暂无评论，快来发表第一条评论吧～</p>
          </div>
 
-         <div class="comment-box" v-for="c in comments" :key="c.id">
+         <div class="comment-box" v-for="c in comments" :key="c.id" :data-comment-id="String(c.id)">
             <div class="comment-icon" @click.stop="toUserDetail(c.userId)">
                <img :src="c.userIcon || '/imgs/icons/default-icon.png'">
             </div>
@@ -62,7 +62,7 @@
 
                    <!-- Reply List -->
                    <template v-if="c.showReplies">
-                      <div class="reply-item" v-for="r in c.replies" :key="r.id">
+                      <div class="reply-item" v-for="r in c.replies" :key="r.id" :data-reply-id="String(r.id)">
                           <div class="reply-avatar" @click.stop="toUserDetail(r.userId)">
                              <img :src="r.userIcon || r.icon || '/imgs/icons/default-icon.png'" alt="">
                           </div>
@@ -203,13 +203,21 @@ export default {
       
       // Reply
       showCommentPublish: false,
-      replyToComment: null
+      replyToComment: null,
+      focusReplyId: '',
+      focusCommentId: '',
+      focusRootId: '',
+      focusDone: false,
+      focusSearching: false
     }
   },
   created() {
-    const { id, type } = this.$route.query;
+    const { id, type, focusReplyId, focusCommentId, focusRootId } = this.$route.query;
     this.sourceId = id;
     this.sourceType = type || 3; // Default to blog? Or check logic.
+    this.focusReplyId = focusReplyId ? String(focusReplyId) : '';
+    this.focusCommentId = focusCommentId ? String(focusCommentId) : '';
+    this.focusRootId = focusRootId ? String(focusRootId) : '';
     // 1: User?, 2: Shop, 3: Blog. usually.
     
     this.queryUser();
@@ -230,16 +238,16 @@ export default {
           if(this.user.icon) this.user.icon = this.$fileURL + this.user.icon;
        }).catch(()=>{});
     },
-     loadComments() {
-       if(this.loading || this.noMore) return;
-       this.loading = true;
-       const api = this.sourceType == 2 ? getReviewList : getComments;
-       const params = { sourceId: this.sourceId, sourceType: this.sourceType, current: this.current };
-       if (this.sourceType == 2) params.status = 0;
-       api(params).then(res => {
-          let list = [];
-          if (Array.isArray(res)) list = res;
-          else if (res && Array.isArray(res.list)) list = res.list;
+	    loadComments() {
+	       if(this.loading || this.noMore) return Promise.resolve();
+	       this.loading = true;
+	       const api = this.sourceType == 2 ? getReviewList : getComments;
+	       const params = { sourceId: this.sourceId, sourceType: this.sourceType, current: this.current };
+	       if (this.sourceType == 2) params.status = 0;
+	       return api(params).then(res => {
+	          let list = [];
+	          if (Array.isArray(res)) list = res;
+	          else if (res && Array.isArray(res.list)) list = res.list;
           else if (res && Array.isArray(res.data)) list = res.data;
           else if (res && res.data && Array.isArray(res.data.list)) list = res.data.list;
           else if (res && res.data && Array.isArray(res.data.records)) list = res.data.records;
@@ -267,14 +275,17 @@ export default {
              }
              
              // Prevent infinite scroll if returned less than page size (assuming 10)
-             if (list.length < 10) {
-                 this.noMore = true;
-             } else {
-                 this.current++;
-             }
-          }
-       }).finally(() => this.loading = false);
-    },
+	             if (list.length < 10) {
+	                 this.noMore = true;
+	             } else {
+	                 this.current++;
+	             }
+	          }
+	       }).finally(() => {
+            this.loading = false;
+            this.tryFocusTarget();
+         });
+	    },
     
     toggleReplies(comment) {
         if (!comment.showReplies) {
@@ -297,11 +308,11 @@ export default {
         }
     },
     
-    fetchReplies(comment) {
-        getComments({ 
-            sourceId: comment.id, 
-            sourceType: 5, 
-            current: comment.replyPage || 1, 
+	    fetchReplies(comment) {
+	        return getComments({ 
+	            sourceId: comment.id, 
+	            sourceType: 5, 
+	            current: comment.replyPage || 1, 
             size: 10 
         }).then(res => {
             let list = [];
@@ -333,12 +344,130 @@ export default {
                         comment.comments = comment.replies.length;
                     }
                 }
-            }
-        });
-    },
+	            }
+	        });
+	    },
+	    normalizeId(value) {
+        if (value === undefined || value === null || value === '') return '';
+        return String(value);
+      },
+      isSameId(a, b) {
+        const left = this.normalizeId(a);
+        const right = this.normalizeId(b);
+        if (!left || !right) return false;
+        return left === right;
+      },
+      hasFocusTarget() {
+        return Boolean(this.focusReplyId || this.focusCommentId || this.focusRootId);
+      },
+      replyMatchesFocus(reply) {
+        if (!this.hasFocusTarget() || !reply) return false;
+        const rid = this.normalizeId(reply.id);
+        const rSourceId = this.normalizeId(reply.sourceId);
+        const rAnswerId = this.normalizeId(reply.answerId);
+        const focusReplyId = this.normalizeId(this.focusReplyId);
+        const focusCommentId = this.normalizeId(this.focusCommentId);
 
-    // Publish
-    async handleImageUpload(e) {
+        if (focusReplyId && (rid === focusReplyId || rSourceId === focusReplyId || rAnswerId === focusReplyId)) {
+          return true;
+        }
+        if (focusCommentId && (rid === focusCommentId || rSourceId === focusCommentId || rAnswerId === focusCommentId)) {
+          return true;
+        }
+        return false;
+      },
+      findLoadedFocusRoot() {
+        const direct = this.comments.find((c) =>
+          this.isSameId(c.id, this.focusRootId) ||
+          this.isSameId(c.id, this.focusCommentId) ||
+          this.isSameId(c.id, this.focusReplyId)
+        );
+        if (direct) return direct;
+        return this.comments.find((c) => Array.isArray(c.replies) && c.replies.some((r) => this.replyMatchesFocus(r))) || null;
+      },
+      findFocusReplyInRoot(comment) {
+        if (!comment || !Array.isArray(comment.replies)) return null;
+        return comment.replies.find((r) => this.replyMatchesFocus(r)) || null;
+      },
+      async ensureRepliesLoadedForFocus(comment) {
+        if (!comment) return;
+        comment.showReplies = true;
+        if (!Array.isArray(comment.replies)) comment.replies = [];
+        if (comment.replies.length === 0) {
+          comment.replyPage = 1;
+          await this.fetchReplies(comment);
+        }
+
+        let guard = 0;
+        while (
+          !this.findFocusReplyInRoot(comment) &&
+          comment.replies.length < Number(comment.comments || 0) &&
+          guard < 5
+        ) {
+          comment.replyPage = (comment.replyPage || 1) + 1;
+          await this.fetchReplies(comment);
+          guard++;
+        }
+      },
+      scrollToCommentElement(el) {
+        if (!el) return;
+        const container = this.$el?.querySelector('.scroll-container');
+        if (!container) return;
+        const containerRect = container.getBoundingClientRect();
+        const elRect = el.getBoundingClientRect();
+        const top = elRect.top - containerRect.top + container.scrollTop - 80;
+        container.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+      },
+      highlightCommentElement(el) {
+        if (!el) return;
+        el.classList.add('focus-flash');
+        setTimeout(() => {
+          el.classList.remove('focus-flash');
+        }, 1800);
+      },
+      async tryFocusTarget() {
+        if (this.focusDone || this.focusSearching || !this.hasFocusTarget()) return;
+        this.focusSearching = true;
+        try {
+          let root = this.findLoadedFocusRoot();
+          let guard = 0;
+          while (!root && !this.noMore && guard < 5) {
+            await this.loadComments();
+            root = this.findLoadedFocusRoot();
+            guard++;
+          }
+
+          if (!root && this.comments.length > 0) {
+            for (const comment of this.comments) {
+              await this.ensureRepliesLoadedForFocus(comment);
+              if (this.findFocusReplyInRoot(comment)) {
+                root = comment;
+                break;
+              }
+            }
+          }
+
+          if (!root) return;
+
+          await this.ensureRepliesLoadedForFocus(root);
+          const targetReply = this.findFocusReplyInRoot(root);
+          this.$nextTick(() => {
+            const selector = targetReply
+              ? `[data-reply-id="${this.normalizeId(targetReply.id)}"]`
+              : `[data-comment-id="${this.normalizeId(root.id)}"]`;
+            const targetEl = this.$el?.querySelector(selector);
+            if (!targetEl) return;
+            this.scrollToCommentElement(targetEl);
+            this.highlightCommentElement(targetEl);
+            this.focusDone = true;
+          });
+        } finally {
+          this.focusSearching = false;
+        }
+      },
+
+	    // Publish
+	    async handleImageUpload(e) {
         const files = e.target.files;
         for(let file of files) {
            const formData = new FormData();
@@ -512,6 +641,7 @@ export default {
 .toolbar-icon:hover { color: #333; }
 /* List */
 .comment-box { display: flex; padding: 15px; background: white; border-bottom: 1px solid #f1f1f1; }
+.focus-flash { animation: focusFlash 1.8s ease; }
 .comment-icon { width: 36px; height: 36px; border-radius: 50%; overflow: hidden; margin-right: 12px; flex-shrink: 0; }
 .comment-icon img { width: 100%; height: 100%; object-fit: cover; }
 .comment-info { flex: 1; }
@@ -565,4 +695,13 @@ export default {
 
 /* Adjust scroll container to account for bottom bar */
 .scroll-container { padding-bottom: 80px !important; }
+
+@keyframes focusFlash {
+  0% {
+    background-color: rgba(255, 183, 77, 0.35);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
 </style>

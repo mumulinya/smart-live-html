@@ -1,13 +1,13 @@
 <template>
   <PageLayout :loading="isSending && messages.length === 0" skeleton-type="detail" class="ai-container">
-    <!-- Header -->
+    <!-- 头部 -->
     <div class="ai-header">
       <div class="header-left">
         <i class="el-icon-s-fold menu-btn" @click="toggleSidebar"></i>
       </div>
       <div class="header-center">
-        <span class="header-logo-icon">✦</span>
-        <span class="logo-text">{{ sessionTitle || '只因智能助手' }}</span>
+        <span class="header-logo-icon">AI</span>
+        <span class="logo-text">{{ sessionTitle || '智能助手' }}</span>
       </div>
       <div class="header-right">
         <div class="tools">
@@ -67,7 +67,7 @@
       </div>
     </div>
 
-    <!-- Settings Panel -->
+    <!-- 设置面板 -->
     <div class="settings-panel" v-if="settingsVisible">
       <div class="settings-header">
         <span>AI设置</span>
@@ -106,9 +106,9 @@
     </div>
 
 
-    <!-- Chat Body -->
+    <!-- 聊天主体 -->
     <div class="chat-body" ref="scrollRef">
-      <!-- Empty State -->
+      <!-- 空状态 -->
       <div v-if="messages.length === 0" class="empty-state">
          <div class="welcome-visual">
             <div class="mascot-wrapper">
@@ -119,38 +119,38 @@
                <div class="hi-bubble">Hi</div>
             </div>
          </div>
-         <h3 class="welcome-title">Hello, 我是小只因!</h3>
+         <h3 class="welcome-title">Hello，我是智能助手</h3>
          <p class="welcome-desc">我是您的智能生活助手，我可以帮您查询附近的热门店铺<br>搜索超值代金券服务，还能直接为您下单特惠优惠券，让生活更省心</p>
          
-         <div class="suggestion-area">
-            <div class="s-header">
-               <span class="s-header-text">试试这样问我:</span>
-               <span class="refresh-btn" @click="refreshSuggestions"><i class="el-icon-refresh-right"></i> 换一换</span>
-            </div>
-            <div class="suggestion-list">
-               <div class="suggestion-card" @click="quickAsk('帮我找附近评分最高的火锅店')">
-                  <div class="card-icon"><i class="el-icon-search"></i></div>
-                  <span class="card-text">帮我找附近评分最高的火锅店</span>
-               </div>
-               <div class="suggestion-card" @click="quickAsk('查询附近的可用代金券')">
-                  <div class="card-icon"><i class="el-icon-search"></i></div>
-                  <span class="card-text">查询附近的可用代金券</span>
-               </div>
-               <div class="suggestion-card" @click="quickAsk('帮我下单一张首选基础套餐卷')">
-                  <div class="card-icon"><i class="el-icon-search"></i></div>
-                  <span class="card-text">帮我下单一张首选基础套餐卷</span>
-               </div>
-            </div>
-         </div>
+	         <div class="suggestion-area">
+	            <div class="s-header">
+	               <span class="s-header-text">试试这样问我:</span>
+	               <span class="refresh-btn" :class="{ disabled: isSending }" @click="refreshSuggestions"><i class="el-icon-refresh-right"></i> 换一换</span>
+	            </div>
+	            <div class="suggestion-list">
+	               <div class="suggestion-card" :class="{ disabled: isSending }" @click="quickAsk('帮我找附近评分最高的火锅店')">
+	                  <div class="card-icon"><i class="el-icon-search"></i></div>
+	                  <span class="card-text">帮我找附近评分最高的火锅店</span>
+	               </div>
+	               <div class="suggestion-card" :class="{ disabled: isSending }" @click="quickAsk('查询附近的可用代金券')">
+	                  <div class="card-icon"><i class="el-icon-search"></i></div>
+	                  <span class="card-text">查询附近的可用代金券</span>
+	               </div>
+	               <div class="suggestion-card" :class="{ disabled: isSending }" @click="quickAsk('帮我下一单首选基础套餐券')">
+	                  <div class="card-icon"><i class="el-icon-search"></i></div>
+	                  <span class="card-text">帮我下一单首选基础套餐券</span>
+	               </div>
+	            </div>
+	         </div>
       </div>
 
-      <!-- Messages -->
+      <!-- 消息列表 -->
       <template v-else>
         <div class="top-sentinel" ref="topSentinel"></div>
 
         <div class="message-list">
 
-           <!-- 点击加载更多 -->
+           <!-- 手动加载更多 -->
            <div v-if="messages.length > 0 && !noMoreMessages" class="load-more-manual">
              <button class="load-more-btn" :disabled="isLoadingMoreMessages" @click="loadMoreMessages">
                <i v-if="isLoadingMoreMessages" class="el-icon-loading"></i>
@@ -158,7 +158,7 @@
              </button>
            </div>
 
-           <!-- 加载中提示 -->
+           <!-- 加载提示 -->
            <div v-if="isLoadingMoreMessages" class="loading-more-messages">
               <i class="el-icon-loading"></i>
               <span>加载中...</span>
@@ -173,73 +173,157 @@
                <img v-else src="@/assets/ai-avatar.jpg" />
             </div>
             <div class="content-wrapper">
-               <div class="message-bubble">
-                  <!-- 思考中状态 -->
-                  <div v-if="msg.role === 'ai' && msg.thinking" class="thinking-indicator">
-                     <span class="thinking-text">正在思考</span>
-                     <span class="thinking-dots">
-                        <span class="dot"></span>
-                        <span class="dot"></span>
-                        <span class="dot"></span>
-                     </span>
-                  </div>
-                  <!-- 状态提示（正在搜索等） -->
-                  <div v-else-if="msg.role === 'ai' && msg.status" class="status-loading">
-                     <i class="el-icon-loading"></i>
-                     <span>{{ msg.status }}</span>
-                  </div>
-                  <!-- AI 回复内容 -->
-                  <div v-else-if="msg.role === 'ai'" v-html="renderMd(msg.displayContent || msg.content)" class="markdown-body"></div>
-                  <!-- 用户消息 -->
-                  <div v-else>{{ msg.content }}</div>
-               </div>
+	               <div class="message-bubble">
+	                  <template v-if="msg.role === 'ai'">
+	                     <!-- AI 回复内容 -->
+	                     <div
+	                       v-if="hasAiRenderableContent(msg)"
+	                       v-html="renderMd(msg.displayContent || msg.content)"
+	                       class="markdown-body"
+	                     ></div>
+	                     <!-- 状态提示（如“正在搜索”） -->
+	                     <div v-else-if="msg.status" class="status-loading">
+	                        <i class="el-icon-loading"></i>
+	                        <span>{{ msg.status }}</span>
+	                     </div>
+	                     <!-- 思考状态 -->
+	                     <div v-else class="thinking-indicator">
+	                        <span class="thinking-text">正在思考</span>
+	                        <span class="thinking-dots">
+	                           <span class="dot"></span>
+	                           <span class="dot"></span>
+	                           <span class="dot"></span>
+	                        </span>
+	                     </div>
+	                     <!-- 流式回复中提示：已有内容也持续展示 -->
+	                     <div v-if="isAiMessageStreaming(msg, idx) && hasAiRenderableContent(msg)" class="ai-streaming-tip">
+	                        <i class="el-icon-loading"></i>
+	                        <span>{{ msg.status || '正在持续生成中...' }}</span>
+	                     </div>
+	                  </template>
+	                  <!-- 用户消息 -->
+	                  <div v-else>{{ msg.content }}</div>
+	               </div>
 
-               <!-- 店铺卡片列表 - 横向滑动，内置推荐理由与动作 -->
-               <div v-if="msg.role === 'ai' && msg.shopList && msg.shopList.length > 0" class="shop-card-list carousel">
-                  <div v-for="(shop, idx) in msg.shopList" :key="shop.id" class="shop-card" @click="goToShopDetail(shop)">
-                     <div class="shop-img-wrapper">
-                        <img :src="getShopImage(shop)" class="shop-img" @error="onImgError" loading="lazy" />
+               <!-- 推荐卡片列表 -->
+               <div
+                 v-if="msg.role === 'ai' && msg.shopList && msg.shopList.length > 0"
+                 class="shop-card-list carousel"
+               >
+                  <div
+                    v-for="(item, idx) in getDisplayRecommendations(msg.shopList)"
+                    :key="`${item.type || 'shop'}-${item.id || idx}`"
+                    class="shop-card"
+                    :class="{ 'voucher-card': isVoucherRecommendation(item) }"
+                    @click="handleRecommendationClick(item)"
+                  >
+	                    <template v-if="isVoucherRecommendation(item)">
+	                      <div class="voucher-card-v2" :class="{ seckill: isVoucherSeckill(item), normal: !isVoucherSeckill(item) }">
+	                        <div class="voucher-header-section">
+	                          <div class="voucher-recommend-pill">推荐</div>
+	                          <div v-if="getVoucherRecommendationTotal(msg.shopList) > 1" class="voucher-order-badge">
+	                            {{ idx + 1 }} / {{ getVoucherRecommendationTotal(msg.shopList) }}
+	                          </div>
+	                          <template v-if="isVoucherSeckill(item)">
+	                            <div class="voucher-title-row">
+	                              <span class="voucher-title">{{ item.title || `${item.actualValue || '--'}元代金券` }}</span>
+	                              <span class="voucher-flash-tag"><i class="el-icon-time"></i> 限时抢</span>
+	                            </div>
+	                            <div class="voucher-shop-row" v-if="item.shopName">
+	                              <span class="shop-label">适用商铺：</span>
+	                              <span class="shop-name-text">{{ item.shopName }}</span>
+	                            </div>
+	                            <div class="voucher-time-row" v-if="item.beginTime || item.endTime">
+	                              <i class="el-icon-time"></i>
+	                              <span>{{ formatSeckillTimeRange(item.beginTime, item.endTime) }}</span>
+	                            </div>
+	                          </template>
+	                          <template v-else>
+	                            <div class="voucher-title-row">
+	                              <span class="voucher-title">{{ item.title || `${item.actualValue || '--'}元代金券` }}</span>
+	                            </div>
+	                            <div class="voucher-subtitle-row">{{ item.subTitle || '周一至周日均可使用' }}</div>
+	                            <div class="voucher-time-row normal">
+	                              <i class="el-icon-time"></i>
+	                              <span>{{ item.subTitle || '周一至周日均可使用' }}</span>
+	                            </div>
+	                          </template>
+	                          <div class="voucher-validity-row" v-if="getVoucherValidityText(item)">
+	                            {{ getVoucherValidityText(item) }}
+	                          </div>
+	                          <p v-if="item.aiSuggestion" class="voucher-ai-suggestion">{{ item.aiSuggestion }}</p>
+	                        </div>
+	                        <div class="voucher-price-section" :class="{ seckill: isVoucherSeckill(item) }">
+	                          <div class="price-main">
+	                            <div class="price-row">
+	                              <span class="currency">¥</span>
+	                              <span class="price-value">{{ formatVoucherAmount(item.payValue) }}</span>
+	                            </div>
+	                            <div class="price-sub-row">
+	                              <span class="orig-price">¥{{ formatVoucherAmount(item.actualValue) }}</span>
+	                              <span class="discount-badge" v-if="getVoucherDiscountText(item)">{{ getVoucherDiscountText(item) }}</span>
+	                            </div>
+	                            <div class="progress-row">
+	                              <span class="sold-text">已售{{ getVoucherSoldPercent(item) }}%</span>
+	                              <div class="progress-bar">
+	                                <div class="progress-fill" :style="{ width: `${getVoucherSoldPercent(item)}%` }"></div>
+	                              </div>
+	                            </div>
+	                          </div>
+	                          <div class="voucher-action-group">
+	                            <button class="voucher-buy-btn" :disabled="isVoucherPurchaseDisabled(item)" @click.stop="handleVoucherPurchase(item)">
+	                              {{ getVoucherActionText(item) }}
+	                            </button>
+	                            <div class="voucher-stock">剩{{ item.stock ?? 0 }}张</div>
+	                          </div>
+	                        </div>
+	                      </div>
+	                    </template>
+
+                    <template v-else>
+                      <div class="shop-img-wrapper">
+                        <img :src="getShopImage(item)" class="shop-img" @error="onImgError" loading="lazy" />
                         <div class="pill img-pill">推荐</div>
                         <div class="card-index-badge">{{ idx + 1 }} / {{ msg.shopList.length }}</div>
-                     </div>
-                     <div class="shop-info">
+                      </div>
+                      <div class="shop-info">
                         <div class="shop-header-row">
-                          <h4 class="shop-name">{{ shop.name }}</h4>
+                          <h4 class="shop-name">{{ item.name }}</h4>
                           <div class="rate-box">
-                             <i class="el-icon-star-on"></i>
-                             <span class="score-val">{{ shop.score || '0.0' }}</span>
+                            <i class="el-icon-star-on"></i>
+                            <span class="score-val">{{ item.score || '0.0' }}</span>
                           </div>
                         </div>
 
-                        <p v-if="shop.aiSuggestion" class="shop-reason">{{ shop.aiSuggestion }}</p>
+                        <p v-if="item.aiSuggestion" class="shop-reason">{{ item.aiSuggestion }}</p>
 
                         <div class="shop-stat-row">
-                           <span class="sold-count" v-if="shop.sold">月售 {{ shop.sold }}</span>
-                           <span class="stat-divider" v-if="shop.sold && shop.avgPrice">|</span>
-                           <span class="price-per" v-if="shop.avgPrice">¥{{ shop.avgPrice }}/人</span>
-                           <span class="distance-tag" v-if="shop.distanceText">{{ shop.distanceText }}</span>
+                          <span class="sold-count" v-if="item.sold">月售 {{ item.sold }}</span>
+                          <span class="stat-divider" v-if="item.sold && item.avgPrice">|</span>
+                          <span class="price-per" v-if="item.avgPrice">￥{{ item.avgPrice }}/人</span>
+                          <span class="distance-tag" v-if="item.distanceText">{{ item.distanceText }}</span>
                         </div>
 
                         <div class="shop-loc-row">
-                           <span class="shop-cate">{{ shop.categoryName || '美食' }}</span>
-                           <span class="loc-divider">|</span>
-                           <span class="shop-area">{{ shop.area || (shop.address ? shop.address.substring(0, 8) + '...' : '附近') }}</span>
+                          <span class="shop-cate">{{ item.categoryName || '美食' }}</span>
+                          <span class="loc-divider">|</span>
+                          <span class="shop-area">{{ item.area || (item.address ? item.address.substring(0, 8) + '...' : '附近') }}</span>
                         </div>
 
-                        <div class="shop-open-row" v-if="shop.openHours">
-                           <i class="el-icon-time"></i>
-                           <span>营业时间 {{ shop.openHours }}</span>
+                        <div class="shop-open-row" v-if="item.openHours">
+                          <i class="el-icon-time"></i>
+                          <span>营业时间 {{ item.openHours }}</span>
                         </div>
 
-                        <div class="shop-tags-row" v-if="shop.tags && shop.tags.length">
-                           <span class="tag-item pill" v-for="(tag, tIdx) in shop.tags.slice(0, 3)" :key="tIdx">{{ tag }}</span>
+                        <div class="shop-tags-row" v-if="item.tags && item.tags.length">
+                          <span class="tag-item pill" v-for="(tag, tIdx) in item.tags.slice(0, 3)" :key="tIdx">{{ tag }}</span>
                         </div>
 
-                        <div class="shop-actions">
-                           <button class="ghost-btn primary" @click.stop="goToMap(shop)">去这里</button>
-                           <button class="ghost-btn" @click.stop="doCollect(shop)">收藏</button>
-                        </div>
-                     </div>
+	                        <div class="shop-actions">
+	                          <button class="ghost-btn primary" @click.stop="goToMap(item)">去这里</button>
+	                        </div>
+	                      </div>
+	                    </template>
                   </div>
                </div>
             </div>
@@ -250,7 +334,7 @@
       </template>
     </div>
 
-    <!-- Input Area -->
+    <!-- 输入区 -->
     <div class="footer-input">
        <div class="input-container">
           <textarea 
@@ -292,6 +376,7 @@ import { Delete } from '@element-plus/icons-vue';
 import { showConfirmDialog } from 'vant';
 import 'vant/es/dialog/style';
 import { getCurrentUser } from '@/api/user';
+import { buyVoucherAPI, seckillVoucherAPI } from '@/api/shop';
 import { locationUtil } from '@/utils/location';
 import { fileURL } from '@/utils/request';
 import PageLayout from '@/components/PageLayout/PageLayout.vue';
@@ -391,7 +476,7 @@ const checkLoginStatus = async () => {
           return;
         }
       }
-      // 本地没有则从API获取
+      // 本地没有则从 API 获取
       const res = await getCurrentUser();
       const userData = res.data;
       if ((res.success || res.code === 200) && userData && userData.icon) {
@@ -424,16 +509,27 @@ const renderMd = (text) => {
   return md.render(text || '');
 };
 
+const hasAiRenderableContent = (msg) => {
+  const raw = msg?.displayContent ?? msg?.content ?? '';
+  if (typeof raw === 'string') return raw.trim().length > 0;
+  return !!raw;
+};
+
+const isAiMessageStreaming = (msg, idx) => {
+  if (!msg || msg.role !== 'ai') return false;
+  return isSending.value && idx === messages.value.length - 1;
+};
+
 // 处理键盘事件
 const handleKeyDown = (e) => {
   if (sendKey.value === 'enter') {
-    // Enter发送，Shift+Enter换行
+    // Enter 发送，Shift+Enter 换行
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
   } else {
-    // Ctrl+Enter发送，Enter换行
+    // Ctrl+Enter 发送，Enter 换行
     if (e.key === 'Enter' && e.ctrlKey) {
       e.preventDefault();
       handleSend();
@@ -462,7 +558,7 @@ const handleSend = async () => {
     return;
   }
 
-  // 立即锁定，防止并发请求
+  // 立即加锁，防止并发请求
   isSending.value = true;
 
   const userMessage = inputText.value.trim();
@@ -472,12 +568,12 @@ const handleSend = async () => {
   messages.value.push({ role: 'user', content: userMessage });
   scrollToBottom();
 
-  // 设置当前话题（取消息前8个字）
+  // 设置当前话题（取消息前 8 个字）
   if (!currentTopic.value) {
     currentTopic.value = userMessage.substring(0, 8) + (userMessage.length > 8 ? '...' : '');
   }
 
-  // 如果没有会话ID，先创建会话
+// 如果没有会话 ID，先创建会话
   if (!currentSessionId.value) {
     try {
       const res = await createSessionAPI({ title: userMessage.substring(0, 20) });
@@ -503,31 +599,33 @@ const handleSend = async () => {
     }
   }
 
-  // 获取位置信息
+// 获取位置信息
   let location = null;
   try {
      location = await locationUtil.getLocation();
   } catch (e) {
-     console.error('获取位置失败', e);
+     console.error('获取位置信息失败', e);
   }
 
-  // 获取用户信息
-  let userName = '';
+// 获取用户信息
+  let userId = '';
   try {
     const userInfoStr = localStorage.getItem('userInfo');
     if (userInfoStr) {
       const userInfo = JSON.parse(userInfoStr);
-      userName = userInfo.nickName || userInfo.name || '';
+      if (userInfo?.id !== undefined && userInfo?.id !== null && userInfo?.id !== '') {
+        userId = String(userInfo.id);
+      }
     }
   } catch (e) {
     console.error('获取用户信息失败', e);
   }
 
-  // 添加AI消息占位符（思考中状态）
+  // 添加 AI 消息占位（思考中状态）
   messages.value.push({ role: 'ai', content: '', thinking: true, status: null, shopList: [] });
   const aiMessageIndex = messages.value.length - 1;
 
-  // 使用流式API - 支持事件分流
+// 使用流式 API，支持事件分流
   try {
     currentEventSource.value = sendMessageStream(
       {
@@ -536,19 +634,17 @@ const handleSend = async () => {
         contextMode: contextMode.value,
         latitude: location ? location.y : null,
         longitude: location ? location.x : null,
-        userName: userName,
+        userId: userId,
         region: location && location.region ? location.region.district || location.region.city : null
-      },
-      // onMessage: 接收普通消息片段（打字机效果）
+      },      // 消息片段回调（打字机效果）
       (data) => {
-        // 如果后端返回401错误，直接跳登录
         if (data?.code === 401) {
           ElMessage.warning('登录状态已过期，请重新登录');
           router.push('/user/login');
           isSending.value = false;
           return;
         }
-        // 部分后端可能把错误包在 content 里
+
         if (typeof data?.content === 'string') {
           try {
             const maybeErr = JSON.parse(data.content);
@@ -559,20 +655,17 @@ const handleSend = async () => {
               return;
             }
           } catch (e) {
-            // ignore json parse errors
+            // 忽略 JSON 解析错误
           }
         }
+
         if (data.content) {
-          // 收到第一条消息时，取消思考状态和status状态
           if (messages.value[aiMessageIndex].thinking) {
             messages.value[aiMessageIndex].thinking = false;
           }
           messages.value[aiMessageIndex].status = null;
 
-          // 累积原始内容
           messages.value[aiMessageIndex].content += data.content;
-
-          // 使用统一的解析函数处理流式内容
           const parsed = parseMessageContent(messages.value[aiMessageIndex].content);
 
           messages.value[aiMessageIndex].displayContent = parsed.displayContent;
@@ -583,9 +676,9 @@ const handleSend = async () => {
           scrollToBottom();
         }
       },
-      // onError: 错误处理
+      // 错误处理回调
       (error) => {
-        console.error('消息发送失败:', error);
+        console.error('消息发送失败', error);
         const errCode = error?.code || error?.status || error?.response?.status;
         if (errCode === 401) {
           ElMessage.warning('登录状态已过期，请重新登录');
@@ -595,49 +688,62 @@ const handleSend = async () => {
         }
         isSending.value = false;
       },
-      // onComplete: 完成回调
+      // 完成回调
       () => {
         isSending.value = false;
         currentEventSource.value = null;
       },
-      // onStatus: 状态更新回调（正在搜索...）
+      // 状态更新回调（如“正在搜索”）
       (statusText) => {
         messages.value[aiMessageIndex].thinking = false;
         messages.value[aiMessageIndex].status = statusText;
         scrollToBottom();
       },
-      // onCardRender: 卡片渲染回调（店铺推荐结果）
+      // 卡片渲染回调（推荐结果）
       (cardData) => {
         messages.value[aiMessageIndex].thinking = false;
         messages.value[aiMessageIndex].status = null;
-        // 设置推荐语
-        if (cardData.replyText) {
-          messages.value[aiMessageIndex].content = cardData.replyText;
+        const payload = cardData && typeof cardData === 'object' ? cardData : {};
+        const replyText = payload.replyText ?? payload.data?.replyText ?? '';
+        const recommendationType = payload.type ?? payload.data?.type ?? '';
+        const recommendationList = Array.isArray(payload.recommendations)
+          ? payload.recommendations
+          : Array.isArray(payload.data?.recommendations)
+            ? payload.data.recommendations
+            : Array.isArray(cardData)
+              ? cardData
+              : [];
+
+        if (replyText) {
+          messages.value[aiMessageIndex].content = replyText;
+          messages.value[aiMessageIndex].displayContent = replyText;
         }
-        // 设置店铺列表
-        if (cardData.recommendations && cardData.recommendations.length > 0) {
-          messages.value[aiMessageIndex].shopList = cardData.recommendations;
-        }
+        messages.value[aiMessageIndex].shopList = normalizeRecommendations(
+          recommendationList,
+          recommendationType
+        );
         scrollToBottom();
       }
     );
   } catch (error) {
-    console.error('发送消息异常:', error);
-    ElMessage.error('发送消息失败');
+    console.error('发送消息异常', error);
+    ElMessage.error('消息发送失败，请重试');
     isSending.value = false;
   }
 };
 
 // 快捷提问
 const quickAsk = (text) => {
+  if (isSending.value) return;
   inputText.value = text;
   handleSend();
 };
 
 // 刷新建议
 const refreshSuggestions = () => {
+  if (isSending.value) return;
   ElMessage.info('正在刷新建议...');
-  // TODO: 可以调用 API 获取新的建议
+  // 待办：可调用 API 获取新的建议
 };
 
 // 创建新会话
@@ -759,17 +865,19 @@ watch(searchText, (val) => {
 const formatTime = (timestamp) => {
   if (!timestamp) return '';
   const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return '';
+
   const now = new Date();
   const diff = now - date;
   const minutes = Math.floor(diff / 60000);
   const hours = Math.floor(diff / 3600000);
   const days = Math.floor(diff / 86400000);
-  
+
   if (minutes < 1) return '刚刚';
   if (minutes < 60) return `${minutes}分钟前`;
   if (hours < 24) return `${hours}小时前`;
   if (days < 7) return `${days}天前`;
-  
+
   const month = date.getMonth() + 1;
   const day = date.getDate();
   return `${month}月${day}日`;
@@ -840,7 +948,71 @@ const handleHistoryScroll = (e) => {
   }
 };
 
-// 解析消息内容，提取JSON数据
+const toValidVoucherType = (value) => {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return -1;
+  if (num === 0 || num === 1) return num;
+  return -1;
+};
+
+const normalizeRecommendationItem = (item, fallbackType = '') => {
+  if (!item || typeof item !== 'object') return item;
+
+  const normalized = { ...item };
+  const originalType = normalized.type;
+  const rawType = String(originalType ?? fallbackType ?? '').trim().toLowerCase();
+
+  const inferredVoucherType = toValidVoucherType(normalized.voucherType);
+  const inferredTypeFromOrigin = toValidVoucherType(originalType);
+  if (inferredVoucherType === -1 && inferredTypeFromOrigin !== -1) {
+    normalized.voucherType = inferredTypeFromOrigin;
+  }
+
+  const hasVoucherSignals = [
+    normalized.shopId,
+    normalized.payValue,
+    normalized.actualValue,
+    normalized.voucherType,
+    normalized.beginTime,
+    normalized.endTime
+  ].some((v) => v !== undefined && v !== null && v !== '');
+
+  const hasShopSignals = [
+    normalized.name,
+    normalized.images,
+    normalized.image,
+    normalized.avgPrice,
+    normalized.score,
+    normalized.x,
+    normalized.y
+  ].some((v) => v !== undefined && v !== null && v !== '');
+
+  if (rawType === 'voucher' || rawType === 'shop') {
+    normalized.type = rawType;
+  } else if (hasVoucherSignals) {
+    normalized.type = 'voucher';
+  } else if (hasShopSignals) {
+    normalized.type = 'shop';
+  }
+
+  return normalized;
+};
+
+const normalizeRecommendations = (list, fallbackType = '') => {
+  if (!Array.isArray(list)) return [];
+  return list
+    .map((item) => normalizeRecommendationItem(item, fallbackType))
+    .filter(Boolean);
+};
+
+const extractRecommendationTypeFromContent = (content) => {
+  if (!content) return '';
+  const match = content.match(/"type"\s*:\s*"([^"]+)"/);
+  if (!match) return '';
+  return String(match[1]).trim().toLowerCase();
+};
+
+// 解析消息内容并提取 JSON 数据
 const parseMessageContent = (content) => {
   if (!content) return { displayContent: '', shopList: [] };
 
@@ -856,14 +1028,14 @@ const parseMessageContent = (content) => {
     }
 
     // 2. 尝试提取 replyText
-    // 策略：找到 "replyText": " 开始的位置
+    // 策略：找到 "replyText": " 的起始位置
     const replyKey = '"replyText"';
     const replyIndex = cleanContent.indexOf(replyKey);
 
     if (replyIndex !== -1) {
       // 找到冒号
       const colonIndex = cleanContent.indexOf(':', replyIndex);
-      // 找到起始引号，冒号后面第一个非空白字符应该是引号
+      // 找到起始引号，冒号后第一个非空白字符应为引号
       let quoteStartIndex = -1;
       for (let i = colonIndex + 1; i < cleanContent.length; i++) {
         const char = cleanContent[i];
@@ -878,25 +1050,25 @@ const parseMessageContent = (content) => {
 
       if (quoteStartIndex !== -1) {
         let extractedText = '';
-        // 尝试找到下一个字段的开始，作为当前字段的结束边界
+        // 尝试找到下一个字段的开始，作为当前字段结束边界
         // 下一个字段通常是 "recommendations"
         const nextFieldKey = '"recommendations"';
         const nextFieldIndex = cleanContent.indexOf(nextFieldKey, quoteStartIndex);
 
         if (nextFieldIndex !== -1) {
-          // 如果找到了下一个字段，说明 replyText 已经传完了
-          // 往前找结束引号（忽略逗号和空白）
+          // 找到下一个字段说明 replyText 已传完
+          // 向前找结束引号（忽略逗号和空白）
           const quoteEndIndex = cleanContent.lastIndexOf('"', nextFieldIndex);
           if (quoteEndIndex > quoteStartIndex) {
             extractedText = cleanContent.substring(quoteStartIndex + 1, quoteEndIndex);
           }
         } else {
-          // 如果没找到下一个字段，说明还在传输中
-          // 直接取到末尾，或者尝试找结束引号
+          // 未找到下一个字段说明仍在传输中
+          // 直接取到末尾，或尝试寻找结束引号
           let rawText = cleanContent.substring(quoteStartIndex + 1);
 
-          // 尝试去掉末尾可能的未闭合符号
-          // 常见的流结尾可能是: ",  或者 "  或者只是内容
+          // 尝试去掉末尾可能未闭合符号
+          // 常见流式结尾可能是 ", 或 " 或仅内容
           if (rawText.endsWith('",')) {
              rawText = rawText.slice(0, -2);
           } else if (rawText.endsWith('"')) {
@@ -911,7 +1083,7 @@ const parseMessageContent = (content) => {
           // 补全引号尝试 JSON.parse，处理 \n \" 等转义
           displayContent = JSON.parse(`"${extractedText}"`);
         } catch (e) {
-          // 解析失败降级处理：手动处理常见转义
+          // 解析失败降级：手动处理常见转义
           // 替换 \\n 为换行，\\" 为 "
           displayContent = extractedText
             .replace(/\\n/g, '\n')
@@ -920,22 +1092,23 @@ const parseMessageContent = (content) => {
         }
       }
     } else {
-      // 没找到 replyText，检查是不是只有 ```json 前缀
+      // 未找到 replyText，检查是否只有 ```json 前缀
       if (content.trim().startsWith('```json')) {
          const idx = content.indexOf('```json');
-         // 如果只有前缀，显示为空，避免显示 ```json
+         // 只有前缀时显示为空，避免显示 ```json
          displayContent = idx > 0 ? content.substring(0, idx) : '';
       }
     }
 
     // 3. 尝试提取 recommendations
-    // 只有当存在闭合的数组结构时才解析
+    // 仅在数组结构闭合时解析
     const recMatch = cleanContent.match(/"recommendations"\s*:\s*(\[[\s\S]*\])/);
     if (recMatch) {
       try {
-         shopList = JSON.parse(recMatch[1]);
+         const fallbackType = extractRecommendationTypeFromContent(cleanContent);
+         shopList = normalizeRecommendations(JSON.parse(recMatch[1]), fallbackType);
       } catch (e) {
-         // 数组还没传完
+         // 数组还未传完
       }
     }
 
@@ -969,7 +1142,7 @@ const loadSession = async (item) => {
       const messageList = Array.isArray(res.data) ? res.data : (res.data.list || res.data.records || []);
       messages.value = messageList.map(msg => {
         const role = msg.role === 'USER' || msg.role === 'user' ? 'user' : 'ai';
-        // 如果是AI消息，尝试解析内容
+        // 如果是 AI 消息，尝试解析内容
         const parsed = role === 'ai' ? parseMessageContent(msg.content) : { displayContent: msg.content, shopList: [] };
 
         return {
@@ -1010,7 +1183,7 @@ const loadMoreMessages = async () => {
       if (messageList.length === 0) {
         noMoreMessages.value = true;
       } else {
-        // 记录当前的滚动高度，用于加载后保持位置
+        // 记录当前滚动高度，用于加载后保持位置
         const scrollContainer = scrollRef.value;
         const oldScrollHeight = scrollContainer ? scrollContainer.scrollHeight : 0;
 
@@ -1106,6 +1279,286 @@ const onImgError = (e) => {
   e.target.src = 'https://img.alicdn.com/imgextra/i1/O1CN01fplaceholder.png_400x400.jpg';
 };
 
+const isVoucherRecommendation = (item) => {
+  if (!item) return false;
+  const normalizedType = String(item.type || '').toLowerCase();
+  if (normalizedType === 'voucher') return true;
+  if (normalizedType === 'shop') return false;
+
+  const hasVoucherSignals = [
+    item.shopId,
+    item.payValue,
+    item.actualValue,
+    item.voucherType,
+    item.beginTime,
+    item.endTime,
+    item.title,
+    item.shopName
+  ].some((v) => v !== undefined && v !== null && v !== '');
+
+  const hasShopSignals = [item.name, item.images, item.image, item.avgPrice, item.score].some(
+    (v) => v !== undefined && v !== null && v !== ''
+  );
+
+  if (hasVoucherSignals && !hasShopSignals) return true;
+  if (hasShopSignals && !hasVoucherSignals) return false;
+  return hasVoucherSignals;
+};
+
+const isVoucherList = (list) => {
+  return Array.isArray(list) && list.length > 0 && list.every((item) => isVoucherRecommendation(item));
+};
+
+const getVoucherRecommendationTotal = (list) => {
+  return isVoucherList(list) ? list.length : 0;
+};
+
+const handleRecommendationClick = (item) => {
+  if (!item) return;
+  if (isVoucherRecommendation(item)) {
+    goToVoucherDetail(item);
+    return;
+  }
+  if (item.id) {
+    goToShopDetail(item);
+  }
+};
+
+const formatVoucherAmount = (value) => {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return value || '--';
+  return num % 1 === 0 ? String(num) : num.toFixed(2).replace(/\.0+$|0+$/g, '');
+};
+
+const getVoucherBusinessType = (voucher) => {
+  if (!voucher || typeof voucher !== 'object') return -1;
+  const candidates = [voucher.type, voucher.voucherType, voucher?.voucher?.type];
+  for (const value of candidates) {
+    const normalized = toValidVoucherType(value);
+    if (normalized !== -1) return normalized;
+  }
+  return -1;
+};
+
+const getDisplayRecommendations = (list) => {
+  if (!Array.isArray(list) || list.length < 2) return list || [];
+  const allVoucher = list.every((item) => isVoucherRecommendation(item));
+  if (!allVoucher) return list;
+
+  const normalList = [];
+  const seckillList = [];
+  const unknownList = [];
+  list.forEach((item) => {
+    const voucherType = getVoucherBusinessType(item);
+    if (voucherType === 0) {
+      normalList.push(item);
+      return;
+    }
+    if (voucherType === 1) {
+      seckillList.push(item);
+      return;
+    }
+    unknownList.push(item);
+  });
+  return [...normalList, ...seckillList, ...unknownList];
+};
+
+const isVoucherSeckill = (voucher) => getVoucherBusinessType(voucher) === 1;
+
+const formatVoucherDate = (value) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return String(value).replace('T', ' ');
+  }
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  const h = String(date.getHours()).padStart(2, '0');
+  const min = String(date.getMinutes()).padStart(2, '0');
+  return `${y}-${m}-${d} ${h}:${min}`;
+};
+
+const parseTime = (value) => {
+  if (!value) return 0;
+  const timestamp = new Date(value).getTime();
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+};
+
+const formatSeckillTimeRange = (beginTime, endTime) => {
+  const formatPoint = (value) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    const h = String(date.getHours()).padStart(2, '0');
+    const min = String(date.getMinutes()).padStart(2, '0');
+    return `${m}.${d} ${h}:${min}`;
+  };
+
+  const begin = beginTime ? formatPoint(beginTime) : '';
+  const end = endTime ? formatPoint(endTime) : '';
+  if (begin && end) return `${begin} - ${end}`;
+  if (begin) return `${begin} 开始`;
+  if (end) return `${end} 结束`;
+  return '时间以活动页为准';
+};
+
+const getVoucherValidityText = (voucher) => {
+  const validityType = Number(voucher?.validityType);
+  if (validityType === 1) {
+    const start = formatVoucherDate(voucher?.useStartTime || voucher?.useBeginTime);
+    const end = formatVoucherDate(voucher?.useEndTime);
+    if (start && end) {
+      return `${start.slice(0, 10)} 至 ${end.slice(0, 10)} 有效`;
+    }
+  }
+
+  const validDays = Number(voucher?.validDays);
+  if (Number.isFinite(validDays) && validDays > 0) {
+    return `领取/购买后 ${validDays} 天内有效`;
+  }
+  return '领取/购买后 7 天内有效';
+};
+
+const getVoucherSoldPercent = (voucher) => {
+  const rawPercent = Number(voucher?.soldPercent);
+  if (Number.isFinite(rawPercent)) {
+    return Math.min(100, Math.max(0, Math.round(rawPercent)));
+  }
+
+  const sold = Number(voucher?.sold);
+  const stock = Number(voucher?.stock);
+  const soldValue = Number.isFinite(sold) ? sold : 0;
+  const stockValue = Number.isFinite(stock) ? stock : 0;
+  const total = soldValue + stockValue;
+  if (total <= 0) return 0;
+  return Math.min(100, Math.max(0, Math.round((soldValue / total) * 100)));
+};
+
+const getVoucherDiscountText = (voucher) => {
+  const payValue = Number(voucher?.payValue);
+  const actualValue = Number(voucher?.actualValue);
+  if (!Number.isFinite(payValue) || !Number.isFinite(actualValue) || actualValue <= 0) {
+    return '';
+  }
+  return `${((payValue / actualValue) * 10).toFixed(1)}折`;
+};
+
+const isVoucherPurchaseDisabled = (voucher) => {
+  if (!voucher?.id) return true;
+
+  const stock = Number(voucher?.stock);
+  if (Number.isFinite(stock) && stock <= 0) return true;
+
+  if (!isVoucherSeckill(voucher)) return false;
+  const now = Date.now();
+  const begin = parseTime(voucher?.beginTime);
+  const end = parseTime(voucher?.endTime);
+  if (begin && now < begin) return true;
+  if (end && now > end) return true;
+  return false;
+};
+
+const getVoucherActionText = (voucher) => {
+  const isSeckillVoucher = isVoucherSeckill(voucher);
+  const stock = Number(voucher?.stock);
+  if (Number.isFinite(stock) && stock <= 0) {
+    return isSeckillVoucher ? '已抢光' : '已售罄';
+  }
+
+  if (!isSeckillVoucher) return '立即抢购';
+  const now = Date.now();
+  const begin = parseTime(voucher?.beginTime);
+  const end = parseTime(voucher?.endTime);
+  if (begin && now < begin) return '待开始';
+  if (end && now > end) return '已结束';
+  return '立即抢购';
+};
+
+const goToVoucherDetail = (voucher) => {
+  if (!voucher?.id) return;
+  router.push({
+    path: '/voucher/detail',
+    query: { id: voucher.id }
+  });
+};
+
+const extractOrderId = (result) => {
+  const payload = result?.data ?? result;
+  const candidates = [
+    payload?.orderId,
+    payload?.id,
+    payload?.data?.orderId,
+    payload?.data?.id,
+    payload?.data,
+    payload
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' || typeof candidate === 'number') {
+      return candidate;
+    }
+  }
+  return '';
+};
+
+const handleVoucherPurchase = async (voucher) => {
+  if (!voucher?.id) {
+    ElMessage.warning('代金券信息不完整');
+    return;
+  }
+
+  const token = localStorage.getItem('token');
+  if (!token) {
+    ElMessage.warning('请先登录后再购买');
+    router.push('/user/login');
+    return;
+  }
+
+  const voucherType = getVoucherBusinessType(voucher);
+  const isSeckill = voucherType === 1;
+  const stock = Number(voucher.stock);
+  if (Number.isFinite(stock) && stock <= 0) {
+    ElMessage.warning(isSeckill ? '已抢光' : '库存不足');
+    return;
+  }
+
+  if (isSeckill) {
+    const now = Date.now();
+    const begin = parseTime(voucher.beginTime);
+    const end = parseTime(voucher.endTime);
+    if (begin && now < begin) {
+      ElMessage.warning('秒杀未开始');
+      return;
+    }
+    if (end && now > end) {
+      ElMessage.warning('秒杀已结束');
+      return;
+    }
+  }
+
+  try {
+    const api = isSeckill ? seckillVoucherAPI : buyVoucherAPI;
+    const res = await api(voucher.id);
+    const orderId = extractOrderId(res);
+    ElMessage.success(isSeckill ? '秒杀成功' : '购买成功');
+    if (orderId) {
+      router.push({ path: '/order/detail', query: { id: orderId } });
+    } else {
+      router.push('/order/list');
+    }
+  } catch (error) {
+    console.error('购买代金券失败:', error);
+    const rawMsg = error?.msg || error?.message || error?.response?.data?.message || '';
+    const msg = String(rawMsg);
+    if (msg.includes('库存') || msg.toLowerCase().includes('stock')) {
+      ElMessage.warning(isSeckill ? '已抢光' : '库存不足');
+      return;
+    }
+    ElMessage.error(msg || (isSeckill ? '秒杀失败，请稍后重试' : '购买失败，请稍后重试'));
+  }
+};
+
 // 跳转到店铺详情
 const goToShopDetail = (shop) => {
   router.push({
@@ -1130,32 +1583,25 @@ const goToMap = (shop) => {
   }
 };
 
-// 收藏店铺
-const doCollect = (shop) => {
-  ElMessage.info('收藏功能开发中');
-  console.log('收藏店铺:', shop.id);
-};
-
-
 // 组件挂载时初始化
 onMounted(() => {
   scrollToBottom();
   checkLoginStatus();
   document.addEventListener('fullscreenchange', handleFullscreenChange);
 
-  // Auto send if query exists
+  // 如果 URL 带 query，自动发送
   if (route.query.q) {
      inputText.value = route.query.q;
      handleSend();
   }
 });
 
-// 当消息数量从 0 变为有数据时，再次绑定哨兵，确保上滑能触发
+// 当消息数量从 0 变为有数据时重新绑定哨兵，确保上滑可触发
 watch(
   () => messages.value.length,
   (len) => {
     if (len > 0) {
-      // no-op for manual load mode
+      // 手动加载模式无需处理
     }
   }
 );
@@ -1592,7 +2038,7 @@ textarea:disabled {
   padding: 30px;
   padding-top: 90px;
   padding-bottom: 120px;
-  /* 移除全局平滑滚动，由 JS 控制特定场景的动画，避免影响历史记录加载的位置恢复 */
+  /* 移除全局平滑滚动，由 JS 控制特定场景动画，避免影响历史记录加载位置恢复 */
 }
 
 .empty-state {
@@ -1604,7 +2050,7 @@ textarea:disabled {
 .welcome-visual {
   margin-bottom: 24px;
 }
-/* 吉祥物包装器 */
+/* 吉祥物容器 */
 .mascot-wrapper {
   position: relative;
   display: inline-block;
@@ -1723,6 +2169,11 @@ textarea:disabled {
 .refresh-btn:hover i {
   transform: rotate(180deg);
 }
+.refresh-btn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
 /* 建议卡片列表 */
 .suggestion-list {
   display: flex;
@@ -1745,6 +2196,13 @@ textarea:disabled {
   border-color: #9ca3af;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   transform: translateY(-2px);
+}
+.suggestion-card.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+  transform: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
 }
 .card-icon {
   width: 40px;
@@ -1857,6 +2315,9 @@ textarea:disabled {
 .content-wrapper {
   max-width: 80%;
 }
+.message-row.ai .content-wrapper {
+  max-width: 92%;
+}
 .message-bubble {
   padding: 14px 18px;
   border-radius: 18px;
@@ -1934,23 +2395,34 @@ textarea:disabled {
 .status-loading i {
   animation: rotate 1s linear infinite;
 }
+.ai-streaming-tip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #9ca3af;
+}
+.ai-streaming-tip i {
+  font-size: 12px;
+  animation: rotate 1s linear infinite;
+}
 
-/* 店铺卡片列表 */
+/* 推荐卡片列表 */
 .shop-card-list {
   display: flex;
   flex-direction: row;
   gap: 12px;
   margin-top: 12px;
-  padding: 6px 4px;
+  padding: 6px 4px 14px;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 .shop-card-list.carousel::-webkit-scrollbar {
-  height: 6px;
-}
-.shop-card-list.carousel::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.1);
-  border-radius: 999px;
+  display: none;
+  height: 0;
 }
 .shop-card {
   scroll-snap-align: start;
@@ -1969,6 +2441,225 @@ textarea:disabled {
 .shop-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.1);
+}
+.voucher-card {
+  min-width: 286px;
+  max-width: 320px;
+  padding: 0;
+  gap: 0;
+  border-radius: 14px;
+  overflow: hidden;
+  border-color: #f0f0f0;
+  background: #fff;
+}
+.voucher-card-v2 {
+  width: 100%;
+  background: #fff;
+}
+.voucher-header-section {
+  position: relative;
+  padding: 38px 14px 10px;
+  background: #fff;
+}
+.voucher-recommend-pill {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  font-size: 11px;
+  color: #ef4444;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(239, 68, 68, 0.24);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+.voucher-order-badge {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  font-size: 11px;
+  color: #fff;
+  background: rgba(17, 24, 39, 0.65);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.voucher-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.voucher-title {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.25;
+  font-weight: 700;
+  color: #303133;
+}
+.voucher-flash-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  color: #fff;
+  background: linear-gradient(135deg, #ff5a76, #ff2f5a);
+  white-space: nowrap;
+}
+.voucher-shop-row {
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+.voucher-shop-row .shop-label {
+  color: #909399;
+}
+.voucher-shop-row .shop-name-text {
+  color: #303133;
+}
+.voucher-subtitle-row {
+  font-size: 13px;
+  color: #606266;
+  margin-bottom: 4px;
+}
+.voucher-time-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+  font-size: 13px;
+  color: #ff5a5f;
+}
+.voucher-time-row.normal {
+  color: #ff9000;
+}
+.voucher-validity-row {
+  margin-top: 2px;
+  font-size: 13px;
+  color: #909399;
+}
+.voucher-ai-suggestion {
+  margin: 6px 0 0;
+  padding: 6px 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #4b5563;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  white-space: normal;
+  word-break: break-word;
+}
+.voucher-price-section {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px;
+  color: #fff;
+  background: linear-gradient(90deg, #ffa940 0%, #f6bd62 100%);
+}
+.voucher-price-section.seckill {
+  background: linear-gradient(90deg, #f56c9d 0%, #f39ab2 100%);
+}
+.price-main {
+  flex: 1;
+  min-width: 0;
+}
+.price-row {
+  display: flex;
+  align-items: flex-end;
+  margin-bottom: 2px;
+  line-height: 1;
+}
+.price-row .currency {
+  font-size: 22px;
+  font-weight: 600;
+  padding-bottom: 6px;
+}
+.price-row .price-value {
+  font-size: 52px;
+  font-weight: 700;
+  line-height: 0.95;
+  font-family: 'DIN Alternate', 'DIN Condensed', 'Helvetica Neue', Arial, sans-serif;
+}
+.price-sub-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.price-sub-row .orig-price {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.85);
+  text-decoration: line-through;
+}
+.price-sub-row .discount-badge {
+  padding: 2px 6px;
+  font-size: 12px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.25);
+}
+.progress-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.progress-row .sold-text {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.95);
+}
+.progress-row .progress-bar {
+  width: 100%;
+  max-width: 100%;
+  height: 7px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.35);
+}
+.progress-row .progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: #fff;
+}
+.voucher-action-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  min-width: 92px;
+}
+.voucher-buy-btn {
+  border: none;
+  background: #fff;
+  color: #ff5000;
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.voucher-price-section.seckill .voucher-buy-btn {
+  color: #ff3f70;
+}
+.voucher-buy-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
+}
+.voucher-buy-btn:disabled {
+  background: rgba(255, 255, 255, 0.62);
+  color: #909399;
+  box-shadow: none;
+  cursor: not-allowed;
+  transform: none;
+}
+.voucher-stock {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.92);
+  white-space: nowrap;
 }
 
 /* 图片 */
@@ -2151,6 +2842,34 @@ textarea:disabled {
 .dark-theme .shop-name {
   color: #e5e7eb;
 }
+.dark-theme .voucher-card {
+  background: #2a2a2a;
+  border-color: #3f3f46;
+}
+.dark-theme .voucher-header-section {
+  background: #2a2a2a;
+}
+.dark-theme .voucher-title {
+  color: #f3f4f6;
+}
+.dark-theme .voucher-recommend-pill {
+  background: rgba(39, 39, 42, 0.95);
+  border-color: rgba(244, 63, 94, 0.35);
+  color: #fb7185;
+}
+.dark-theme .voucher-shop-row .shop-label,
+.dark-theme .voucher-validity-row,
+.dark-theme .voucher-subtitle-row {
+  color: #a1a1aa;
+}
+.dark-theme .voucher-shop-row .shop-name-text {
+  color: #e4e4e7;
+}
+.dark-theme .voucher-ai-suggestion {
+  background: #1f2937;
+  border-color: #374151;
+  color: #d1d5db;
+}
 .dark-theme .price-per {
   color: #d1d5db;
 }
@@ -2158,8 +2877,14 @@ textarea:disabled {
   background: rgba(255, 107, 107, 0.1);
   border-color: rgba(255, 107, 107, 0.2);
 }
+.dark-theme .voucher-buy-btn {
+  color: #fb8c00;
+}
+.dark-theme .voucher-price-section.seckill .voucher-buy-btn {
+  color: #f43f5e;
+}
 
-/* Markdown样式优化 */
+/* Markdown 样式优化 */
 .markdown-body {
   font-size: var(--ai-font-size, 15px);
 }
@@ -2452,7 +3177,7 @@ textarea:disabled {
   border-color: #333;
 }
 
-/* Markdown内容深色 */
+/* Markdown 内容深色 */
 .dark-theme .message-bubble h1,
 .dark-theme .message-bubble h2,
 .dark-theme .message-bubble h3,
@@ -2529,4 +3254,3 @@ textarea:disabled {
 }
 
 </style>
-

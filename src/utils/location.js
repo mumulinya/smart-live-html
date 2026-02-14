@@ -2,6 +2,7 @@
 const STORAGE_KEY = 'user_location';
 const STORAGE_TIME_KEY = 'user_location_time';
 const EXPIRE_TIME = 24 * 60 * 60 * 1000; // 24 hours
+const AMAP_KEY = import.meta.env.VITE_AMAP_KEY || '60bdbf9b9cf98025c397ee43e8c25871';
 
 // GPS -> GCJ02 (Simple approximation from shop-list.html)
 function transformWGS84ToGCJ02(lng, lat) {
@@ -83,7 +84,7 @@ export const locationUtil = {
     async getRegionInfo(lng, lat) {
         try {
             const response = await fetch(
-                `https://restapi.amap.com/v3/geocode/regeo?key=60bdbf9b9cf98025c397ee43e8c25871&location=${lng},${lat}`
+                `https://restapi.amap.com/v3/geocode/regeo?key=${AMAP_KEY}&location=${lng},${lat}`
             );
             const data = await response.json();
             if (data.status === '1' && data.regeocode) {

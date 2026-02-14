@@ -10,8 +10,8 @@
 
     <!-- Tab 切换 -->
     <div class="login-tabs">
-      <div class="tab-item" :class="{ active: !isPasswordMode }" @click="isPasswordMode = false">验证码登录</div>
-      <div class="tab-item" :class="{ active: isPasswordMode }" @click="isPasswordMode = true">密码登录</div>
+      <div class="tab-item" :class="{ active: !isPasswordMode }" @click="switchLoginMode(false)">验证码登录</div>
+      <div class="tab-item" :class="{ active: isPasswordMode }" @click="switchLoginMode(true)">密码登录</div>
     </div>
 
     <div class="login-form">
@@ -22,6 +22,7 @@
         :border="false"
         type="tel"
         maxlength="11"
+        @keyup.enter="handleLogin"
       >
         <template #left-icon>
           <van-icon name="phone-o" size="20" color="#666"/>
@@ -36,6 +37,7 @@
         :border="false"
         type="digit"
         maxlength="6"
+        @keyup.enter="handleLogin"
       >
         <template #left-icon>
           <van-icon name="shield-o" size="20" color="#666"/>
@@ -53,10 +55,19 @@
         placeholder="请输入密码" 
         class="custom-input mt-4"
         :border="false"
-        type="password"
+        :type="showPassword ? 'text' : 'password'"
+        @keyup.enter="handleLogin"
       >
         <template #left-icon>
           <van-icon name="lock" size="20" color="#666"/>
+        </template>
+        <template #right-icon>
+          <van-icon
+            :name="showPassword ? 'eye-o' : 'closed-eye'"
+            size="20"
+            color="#666"
+            @click.stop="showPassword = !showPassword"
+          />
         </template>
       </van-field>
 
@@ -103,12 +114,14 @@ const form = reactive({
     password: ''
 });
 
-const isPasswordMode = ref(false); 
+const isPasswordMode = ref(false);
+const showPassword = ref(false);
 
-const toggleMode = () => {
-  isPasswordMode.value = !isPasswordMode.value;
+const switchLoginMode = (passwordMode) => {
+  isPasswordMode.value = Boolean(passwordMode);
   form.code = '';
   form.password = '';
+  showPassword.value = false;
 };
 
 const agree = ref(false);

@@ -216,6 +216,58 @@ export default {
     resolvePath(item) {
       return buildSystemNoticePath(item);
     },
+    resolveSourceTargetPath(item) {
+      const extra = item?.extraData && typeof item.extraData === 'object' ? item.extraData : {};
+      const rawSourceType =
+        extra?.sourceType ??
+        extra?.source_type ??
+        item?.sourceType ??
+        item?.source_type ??
+        0;
+      let sourceType = Number(rawSourceType);
+      if (!Number.isFinite(sourceType)) {
+        const typeText = String(rawSourceType || '').toLowerCase();
+        if (typeText === 'blog') sourceType = 3;
+        else if (typeText === 'voucher') sourceType = 4;
+        else if (typeText === 'shop') sourceType = 2;
+        else if (typeText === 'review') sourceType = 7;
+        else if (typeText === 'comment') sourceType = 5;
+      }
+
+      const sourceId = [
+        extra?.sourceId,
+        extra?.source_id,
+        extra?.targetId,
+        extra?.target_id,
+        extra?.blogId,
+        extra?.blog_id,
+        extra?.shopId,
+        extra?.shop_id,
+        extra?.voucherId,
+        extra?.voucher_id,
+        item?.sourceId,
+        item?.source_id,
+        item?.targetId,
+        item?.target_id
+      ].find((value) => this.hasNoticeValue(value));
+
+      if (!this.hasNoticeValue(sourceId)) return '';
+      const id = String(sourceId);
+
+      if (sourceType === 3) return `/blog/detail?id=${id}`;
+      if (sourceType === 4) return `/voucher/detail?id=${id}`;
+      if (sourceType === 2) return `/shop/detail?id=${id}`;
+      if (sourceType === 7) return `/review/detail?id=${id}`;
+      if (sourceType === 5) return `/comment/list?id=${id}&type=5`;
+      return '';
+    },
+    resolveNoticeOpenPath(item) {
+      if (item?.reviewView?.targetPath) return item.reviewView.targetPath;
+      if (item?.noteView?.targetPath) return item.noteView.targetPath;
+      const sourcePath = this.resolveSourceTargetPath(item);
+      if (sourcePath) return sourcePath;
+      return this.resolvePath(item);
+    },
     hasNoticeValue(value) {
       if (value === undefined || value === null) return false;
       if (Array.isArray(value)) return value.length > 0;
@@ -326,23 +378,7 @@ export default {
           extra.sourceType ??
           (sourceType === 5 ? 5 : 0)
       );
-      const targetId =
-        extra.targetId ??
-        item.targetId ??
-        extra.targetSourceId ??
-        item.targetSourceId ??
-        extra.id ??
-        item.id ??
-        extra.commentId ??
-        item.commentId ??
-        extra.answerId ??
-        item.answerId ??
-        extra.sourceId ??
-        item.sourceId ??
-        extra.parentId ??
-        extra.shopId ??
-        extra.voucherId ??
-        null;
+      const targetId = this.resolveReviewTargetId(targetType, item, extra);
       const targetTitle = extra.targetTitle ?? item.targetTitle ?? extra.sourceName ?? item.sourceName ?? '';
       const reviewContent = extra.content ?? item.content ?? '';
       const reviewImages = this.resolveNoticeImages(extra.images || item.images, 9);
@@ -350,7 +386,7 @@ export default {
       const overall = this.formatReviewScore(extra.score ?? item.score);
       const isCommentNotice = sourceType === 5 || [3, 5, 7].includes(targetType);
       const showScore = !isCommentNotice && Boolean(overall);
-      const targetPath = this.buildReviewTargetPath(targetType, targetId) || this.resolvePath(item);
+      const targetPath = this.buildReviewTargetPath(targetType, targetId, item, extra) || this.resolvePath(item);
 
       return {
         showScore,
@@ -358,6 +394,7 @@ export default {
         contentLabel: isCommentNotice ? '评论内容' : '评价内容',
         content: reviewContent ? String(reviewContent) : '',
         images: reviewImages,
+        targetType,
         targetTitle: targetTitle ? String(targetTitle) : '',
         targetTypeText: this.formatReviewTargetType(targetType),
         targetIcon: this.formatReviewTargetIcon(targetType),
@@ -380,15 +417,173 @@ export default {
       if (targetType === 5) return '💬';
       return '🔗';
     },
-    buildReviewTargetPath(targetType, targetId) {
-      if (!this.hasNoticeValue(targetId)) return '';
-      const id = String(targetId);
+    buildReviewTargetPath(targetType, targetId, item, extra) {
+      if (!this.hasNoticeValue(targetId) && targetType !== 5) return '';
+      const id = this.hasNoticeValue(targetId) ? String(targetId) : '';
       if (targetType === 2) return `/shop/detail?id=${id}`;
       if (targetType === 4) return `/voucher/detail?id=${id}`;
-      if (targetType === 3) return `/comment/list?id=${id}&type=3`;
+      if (targetType === 3) return `/blog/detail?id=${id}`;
       if (targetType === 7) return `/comment/list?id=${id}&type=7`;
-      if (targetType === 5) return `/comment/list?id=${id}&type=5`;
+      if (targetType === 5) {
+        const replyPath = this.buildReplyCommentTargetPath(item, extra, targetId);
+        if (replyPath) return replyPath;
+        return this.hasNoticeValue(targetId) ? `/comment/list?id=${id}&type=5` : '';
+      }
       return '';
+    },
+    buildReplyCommentTargetPath(item, extra, replyIdCandidate) {
+      const pick = (...values) => values.find((value) => this.hasNoticeValue(value));
+      const pickBaseType = (...values) => {
+        for (const value of values) {
+          const num = Number(value);
+          if ([2, 3, 4].includes(num)) return num;
+        }
+        return 0;
+      };
+      const baseType = pickBaseType(
+        extra?.sourceType,
+        extra?.source_type,
+        extra?.targetSourceType,
+        extra?.target_source_type,
+        item?.targetSourceType,
+        item?.target_source_type,
+        item?.sourceType,
+        item?.source_type
+      );
+      const baseId = pick(
+        extra?.sourceId,
+        extra?.source_id,
+        extra?.targetSourceId,
+        extra?.target_source_id,
+        extra?.parentId,
+        extra?.parent_id,
+        item?.targetSourceId,
+        item?.target_source_id,
+        item?.sourceId,
+        item?.source_id,
+        item?.parentId,
+        item?.parent_id
+      );
+
+      if (!this.hasNoticeValue(baseId) || ![2, 3, 4].includes(baseType)) return '';
+
+      const focusReplyId = pick(
+        extra?.replyId,
+        extra?.reply_id,
+        extra?.commentId,
+        extra?.comment_id,
+        item?.commentId,
+        item?.comment_id,
+        extra?.id,
+        item?.id,
+        item?.targetId,
+        item?.target_id,
+        extra?.targetId,
+        extra?.target_id,
+        replyIdCandidate
+      );
+      const focusCommentId = pick(
+        extra?.answerId,
+        extra?.answer_id,
+        item?.answerId,
+        item?.answer_id,
+        extra?.parentCommentId,
+        extra?.parent_comment_id,
+        extra?.sourceCommentId,
+        extra?.source_comment_id
+      );
+      const focusRootId = pick(extra?.rootId, extra?.root_id, extra?.topId, extra?.top_id);
+
+      const query = [
+        `id=${encodeURIComponent(String(baseId))}`,
+        `type=${encodeURIComponent(String(baseType))}`
+      ];
+      if (this.hasNoticeValue(focusReplyId)) {
+        query.push(`focusReplyId=${encodeURIComponent(String(focusReplyId))}`);
+      }
+      if (this.hasNoticeValue(focusCommentId)) {
+        query.push(`focusCommentId=${encodeURIComponent(String(focusCommentId))}`);
+      }
+      if (this.hasNoticeValue(focusRootId)) {
+        query.push(`focusRootId=${encodeURIComponent(String(focusRootId))}`);
+      }
+      return `/comment/list?${query.join('&')}`;
+    },
+    resolveReviewTargetId(targetType, item, extra) {
+      const getFirstValid = (...values) =>
+        values.find((value) => this.hasNoticeValue(value));
+
+      // 评论审核场景下，优先跳转到被评论的目标（博客/店铺/代金券），
+      // 避免 sourceId/commentId 被误用为目标 id。
+      if (targetType === 3) {
+        return getFirstValid(
+          extra.blogId,
+          item.blogId,
+          extra.targetId,
+          item.targetId,
+          extra.targetSourceId,
+          item.targetSourceId,
+          extra.parentId,
+          item.parentId,
+          extra.sourceId,
+          item.sourceId,
+          extra.id,
+          item.id
+        ) ?? null;
+      }
+      if (targetType === 4) {
+        return getFirstValid(
+          extra.voucherId,
+          item.voucherId,
+          extra.targetId,
+          item.targetId,
+          extra.targetSourceId,
+          item.targetSourceId,
+          extra.parentId,
+          item.parentId,
+          extra.sourceId,
+          item.sourceId,
+          extra.id,
+          item.id
+        ) ?? null;
+      }
+      if (targetType === 2) {
+        return getFirstValid(
+          extra.shopId,
+          item.shopId,
+          extra.targetId,
+          item.targetId,
+          extra.targetSourceId,
+          item.targetSourceId,
+          extra.parentId,
+          item.parentId,
+          extra.sourceId,
+          item.sourceId,
+          extra.id,
+          item.id
+        ) ?? null;
+      }
+
+      return getFirstValid(
+        extra.targetId,
+        item.targetId,
+        extra.targetSourceId,
+        item.targetSourceId,
+        extra.id,
+        item.id,
+        extra.commentId,
+        item.commentId,
+        extra.answerId,
+        item.answerId,
+        extra.sourceId,
+        item.sourceId,
+        extra.parentId,
+        item.parentId,
+        extra.shopId,
+        item.shopId,
+        extra.voucherId,
+        item.voucherId
+      ) ?? null;
     },
     formatVoucherAmount(value) {
       const num = Number(value);
@@ -470,13 +665,13 @@ export default {
       });
     },
     async openReviewTarget(item) {
-      const path = item?.reviewView?.targetPath || this.resolvePath(item);
+      const path = this.resolveNoticeOpenPath(item);
       if (!path) return;
       await this.markRead(item);
       this.$router.push(path);
     },
     async openNoteTarget(item) {
-      const path = item?.noteView?.targetPath || this.resolvePath(item);
+      const path = this.resolveNoticeOpenPath(item);
       if (!path) return;
       await this.markRead(item);
       this.$router.push(path);
@@ -505,7 +700,7 @@ export default {
     },
     async openNotice(item) {
       await this.markRead(item);
-      const path = this.resolvePath(item);
+      const path = this.resolveNoticeOpenPath(item);
       if (path) {
         this.$router.push(path);
       }
