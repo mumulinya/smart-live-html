@@ -136,13 +136,12 @@
                       <div class="voucher-sold-info">
                          已售{{v.sold || 0}}张
                       </div>
-                      <div class="voucher-progress-bar">
-                         <div class="progress-fill" :style="{width: getStockPercent(v) + '%'}"></div>
+                  <div class="voucher-sold-info">
+                         已售{{v.sold || 0}}张
                       </div>
                    </div>
                    <div class="voucher-action-section">
                       <button class="voucher-buy-btn" @click.stop="doBuy(v)">立即抢购</button>
-                      <div class="voucher-stock">剩{{v.stock}}张</div>
                    </div>
                 </div>
              </div>

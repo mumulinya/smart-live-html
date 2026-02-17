@@ -115,6 +115,31 @@ const routes = [
         component: () => import('@/views/user/wallet/Index.vue')
     },
     {
+        path: '/user/wallet/recharge',
+        name: 'UserWalletRecharge',
+        component: () => import('@/views/user/wallet/Recharge.vue')
+    },
+    {
+        path: '/user/wallet/bill',
+        name: 'UserWalletBill',
+        component: () => import('@/views/user/wallet/Bill.vue')
+    },
+    {
+        path: '/user/wallet/payment-record',
+        name: 'PaymentRecord',
+        component: () => import('@/views/user/wallet/PaymentRecord.vue')
+    },
+    {
+        path: '/pay/checkout',
+        name: 'PayCheckout',
+        component: () => import('@/views/pay/Checkout.vue')
+    },
+    {
+        path: '/pay/result',
+        name: 'PayResult',
+        component: () => import('@/views/pay/Result.vue')
+    },
+    {
         path: '/user/points',
         name: 'UserPoints',
         component: () => import('@/views/user/points/Index.vue')

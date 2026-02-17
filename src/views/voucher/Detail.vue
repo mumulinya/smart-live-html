@@ -209,14 +209,8 @@ const btnStatus = computed(() => {
     }
 
     // 2. Normal Voucher Logic
-    if (info.value.stock < 1) {
-         return {
-            text: info.value.isFollow ? '已设置缺货提醒' : '缺货提醒',
-            disabled: false,
-            type: 'collect',
-            action: handleFollow
-        };
-    }
+    // Ordinary vouchers have no stock limit, so we skip the stock check here.
+
     
     return {
         text: '¥' + (info.value.payValue || '') + ' 立即抢购',

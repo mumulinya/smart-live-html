@@ -120,7 +120,7 @@
 </template>
 
 <script>
-import { cancelOrder, refundOrder, getOrderDetail, payOrder } from '@/api/order';
+import { cancelOrder, refundOrder, getOrderDetail } from '@/api/order';
 
 import PageLayout from '@/components/PageLayout/PageLayout.vue';
 
@@ -255,22 +255,18 @@ export default {
      showQrCode() {
         this.qrVisible = true;
      },
-     toPay() {
-        if(!this.orderId) return;
-        this.loading = true;
-        payOrder(this.orderId).then(() => {
-           this.$message.success('支付成功');
-           this.order.status = 2; 
-           this.order.payTime = new Date().toISOString(); 
-           // Clear timer if paid
-           if(this.timer) clearInterval(this.timer);
-        }).catch(err => {
-           console.error(err);
-           this.$message.error('支付失败: ' + (err.msg || '请稍后重试'));
-        }).finally(() => {
-           this.loading = false;
-        });
-     },
+      toPay() {
+         if(!this.orderId) return;
+         this.$router.push({
+            path: '/pay/checkout',
+            query: {
+               bizType: 'order',
+               bizId: this.orderId,
+               amount: this.order.payValue || this.order.price || this.order.amount || this.order.totalAmount || this.order.payAmount,
+               title: this.order.title || '订单支付'
+            }
+         });
+      },
      doCancel() {
         this.$confirm('确定要取消订单吗?', '提示', { type: 'warning' }).then(() => {
            cancelOrder(this.orderId).then(() => {

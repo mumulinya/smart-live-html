@@ -321,9 +321,18 @@ export default {
         sessionStorage.setItem('currentOrder', JSON.stringify(order));
         this.$router.push({ path: '/order/detail', query: { id: order.id } });
      },
-     toPay(order) {
-        this.$message.success('跳转支付...');
-     },
+      toPay(order) {
+         if(!order || !order.id) return;
+         this.$router.push({
+            path: '/pay/checkout',
+            query: {
+               bizType: 'order',
+               bizId: order.id,
+               amount: order.payValue || order.price || order.amount || order.totalAmount || order.payAmount,
+               title: order.title || '订单支付'
+            }
+         });
+      },
      cancelOrder(order) {
         this.$confirm('确定要取消订单吗?', '提示', { type: 'warning' }).then(() => {
            cancelOrder(order.id).then(res => {

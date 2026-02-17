@@ -21,39 +21,31 @@
         <div class="balance-amount">¥{{ formatBalance(wallet.balance) }}</div>
       </div>
 
-      <div class="action-card">
+        <div class="action-card">
         <van-grid clickable :column-num="4" :border="false">
-          <van-grid-item text="充值" @click="showComingSoon('充值')">
+          <van-grid-item text="充值" to="/user/wallet/recharge">
             <template #icon>
               <van-icon name="gold-coin-o" size="22" color="#ff8a00" style="margin-bottom: 6px;" />
             </template>
           </van-grid-item>
-          <van-grid-item text="提现" @click="showComingSoon('提现')">
-            <template #icon>
-              <van-icon name="cash-o" size="22" color="#00b578" style="margin-bottom: 6px;" />
-            </template>
-          </van-grid-item>
-          <van-grid-item text="账单" @click="showComingSoon('账单')">
+          <van-grid-item text="账单" to="/user/wallet/bill">
             <template #icon>
               <van-icon name="records" size="22" color="#2f86f6" style="margin-bottom: 6px;" />
             </template>
           </van-grid-item>
-          <van-grid-item text="银行卡" @click="showComingSoon('银行卡')">
+          <van-grid-item text="支付明细" to="/user/wallet/payment-record">
             <template #icon>
-              <van-icon name="card" size="22" color="#6f5bff" style="margin-bottom: 6px;" />
+              <van-icon name="balance-list-o" size="22" color="#673ab7" style="margin-bottom: 6px;" />
             </template>
           </van-grid-item>
         </van-grid>
       </div>
 
       <div class="transactions-card">
-        <div class="section-title">交易明细</div>
-        <van-tabs v-model:active="activeTab" animated swipeable color="#ff6600" line-width="28">
-          <van-tab title="全部" name="all" />
-          <van-tab title="收入" name="in" />
-          <van-tab title="支出" name="out" />
-        </van-tabs>
-
+        <div class="section-title">
+            <span>最近交易</span>
+            <span class="view-all" @click="$router.push('/user/wallet/bill')">全部 <van-icon name="arrow" /></span>
+        </div>
         <div class="transactions-list">
           <div v-if="filteredTransactions.length === 0" class="empty-state">
             <van-icon name="records-o" class="empty-icon" />
@@ -88,6 +80,7 @@
 
 <script>
 import PageLayout from '@/components/PageLayout/PageLayout.vue';
+import { getWalletInfo, getWalletTransactionList } from '@/api/wallet';
 
 export default {
   name: 'UserWallet',
@@ -98,82 +91,69 @@ export default {
       showAmount: false,
       activeTab: 'all',
       wallet: {
-        balance: 3821.58
+        balance: 0.00,
+        frozenBalance: 0.00
       },
-      transactions: [
-        {
-          id: 1,
-          title: '订单返现',
-          time: '2026-02-03 18:30',
-          amount: 15.6,
-          type: 'in',
-          status: 'success'
-        },
-        {
-          id: 2,
-          title: '余额充值',
-          time: '2026-02-01 10:12',
-          amount: 200,
-          type: 'in',
-          status: 'success'
-        },
-        {
-          id: 3,
-          title: '订单支付',
-          time: '2026-01-29 13:50',
-          amount: 68.5,
-          type: 'out',
-          status: 'success'
-        },
-        {
-          id: 4,
-          title: '提现申请',
-          time: '2026-01-27 09:22',
-          amount: 300,
-          type: 'out',
-          status: 'pending'
-        },
-        {
-          id: 5,
-          title: '退款入账',
-          time: '2026-01-25 16:05',
-          amount: 39.9,
-          type: 'in',
-          status: 'success'
-        },
-        {
-          id: 6,
-          title: '银行卡扣款失败',
-          time: '2026-01-23 11:40',
-          amount: 120,
-          type: 'out',
-          status: 'failed'
-        },
-        {
-          id: 7,
-          title: '代金券退回',
-          time: '2026-01-20 19:05',
-          amount: 10,
-          type: 'in',
-          status: 'success'
-        }
-      ]
+      transactions: [],
+      page: 1,
+      pageSize: 20,
+      finished: false,
+      loading: false
     };
   },
   computed: {
+    // Filter on frontend for now if API supports 'all' but we want local filter or if API returns all
+    // But better to use API filter if available. My design says API supports 'type'.
+    // Let's use API filter for tab switch to be consistent with backend design.
+    // However, for simplicity and small data, fetching all and filtering locally is also fine?
+    // The design says: /transaction/list?type=all|in|out
+    // So we should re-fetch on tab change.
+    // But to match current structure, I'll fetch 'all' and if pagination is needed, handle it.
+    // For now, I'll just fetch latest 20 'all' records.
     filteredTransactions() {
-      if (this.activeTab === 'in') {
-        return this.transactions.filter(item => item.type === 'in');
-      }
-      if (this.activeTab === 'out') {
-        return this.transactions.filter(item => item.type === 'out');
-      }
-      return this.transactions;
+       return this.transactions;
     }
+  },
+  watch: {
+    activeTab() {
+        this.page = 1;
+        this.transactions = [];
+        this.fetchTransactions();
+    }
+  },
+  created() {
+    this.initData();
   },
   methods: {
     goBack() {
       this.$router.back();
+    },
+    async initData() {
+        this.pageLoading = true;
+        try {
+            await Promise.all([this.fetchWalletInfo(), this.fetchTransactions()]);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            this.pageLoading = false;
+        }
+    },
+    async fetchWalletInfo() {
+        const res = await getWalletInfo();
+        if (res.success) {
+            this.wallet = res.data;
+        }
+    },
+    async fetchTransactions() {
+        const params = {
+            page: 1,
+            pageSize: 5, // Only show recent 5 records
+            type: 'all' // Always show all types for preview
+        };
+        const res = await getWalletTransactionList(params);
+        if (res.success) {
+            this.transactions = res.data.records || [];
+        }
     },
     toggleAmount() {
       this.showAmount = !this.showAmount;
@@ -182,7 +162,7 @@ export default {
       this.$message.info(`${label}功能开发中`);
     },
     openTransaction() {
-      this.$message.info('详情功能开发中');
+      // this.$router.push(...)
     },
     formatMoney(val) {
       if (val === undefined || val === null || isNaN(val)) return '0.00';
@@ -194,11 +174,16 @@ export default {
     },
     formatAmount(item) {
       if (!this.showAmount) return '****';
-      const sign = item.type === 'in' ? '+' : '-';
+      const sign = item.type === 'in' || item.type === 1 || item.direction === 1 ? '+' : '-';
       return `${sign}¥${this.formatMoney(item.amount)}`;
     },
     getAmountClass(item) {
-      return item.type === 'in' ? 'amount-in' : 'amount-out';
+       // Backend Design: type 1,4,5 are income? No, `direction` field: 1-income, 2-expense
+       // But my mock transaction data used 'type': 'in'/'out'.
+       // Let's adapt to backend response which returns `type` ('in'/'out' string based on my doc example) 
+       // OR check `direction`.
+       // Doc example: "type": "in". So string is returned.
+       return item.type === 'in' ? 'amount-in' : 'amount-out';
     },
     getStatusText(status) {
       const map = {
@@ -206,7 +191,7 @@ export default {
         pending: '处理中',
         failed: '失败'
       };
-      return map[status] || '未知';
+      return map[status] || status;
     },
     getStatusClass(item) {
       if (item.status === 'success') return 'status-success';
@@ -270,6 +255,16 @@ export default {
   font-size: 15px;
   font-weight: 600;
   color: #333;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.view-all {
+    font-size: 12px;
+    font-weight: normal;
+    color: #999;
+    display: flex;
+    align-items: center;
 }
 .transactions-list {
   padding-bottom: 6px;

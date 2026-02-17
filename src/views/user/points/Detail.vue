@@ -53,6 +53,7 @@
 
 <script>
 import PageLayout from '@/components/PageLayout/PageLayout.vue';
+import { getPointsRecordList } from '@/api/points';
 
 export default {
   name: 'UserPointsDetail',
@@ -65,37 +66,9 @@ export default {
       loading: false,
       finished: false,
       page: 1,
-      pageSize: 6,
-      records: [],
-      allRecords: [
-        { id: 1, date: '2026-02-04 18:30', desc: '消费订单', value: 88, type: 'in' },
-        { id: 2, date: '2026-02-03 08:20', desc: '签到', value: 10, type: 'in' },
-        { id: 3, date: '2026-02-01 14:10', desc: '兑换优惠券', value: 200, type: 'out' },
-        { id: 4, date: '2026-01-30 10:05', desc: '评价晒单', value: 20, type: 'in' },
-        { id: 5, date: '2026-01-28 09:50', desc: '积分抽奖', value: 50, type: 'out' },
-        { id: 6, date: '2026-01-27 12:00', desc: '邀请好友', value: 60, type: 'in' },
-        { id: 7, date: '2026-01-25 20:15', desc: '兑换免邮券', value: 120, type: 'out' },
-        { id: 8, date: '2026-01-22 16:40', desc: '签到', value: 10, type: 'in' },
-        { id: 9, date: '2026-01-20 11:05', desc: '消费订单', value: 66, type: 'in' },
-        { id: 10, date: '2026-01-18 09:22', desc: '积分抽奖', value: 50, type: 'out' },
-        { id: 11, date: '2026-01-16 13:40', desc: '评价晒单', value: 20, type: 'in' },
-        { id: 12, date: '2026-01-14 18:05', desc: '兑换优惠券', value: 150, type: 'out' },
-        { id: 13, date: '2026-01-12 10:30', desc: '邀请好友', value: 80, type: 'in' },
-        { id: 14, date: '2026-01-10 09:10', desc: '签到', value: 10, type: 'in' },
-        { id: 15, date: '2026-01-08 19:45', desc: '兑换礼包', value: 300, type: 'out' }
-      ]
+      pageSize: 10,
+      records: []
     };
-  },
-  computed: {
-    filteredSource() {
-      if (this.activeTab === 'in') {
-        return this.allRecords.filter(item => item.type === 'in');
-      }
-      if (this.activeTab === 'out') {
-        return this.allRecords.filter(item => item.type === 'out');
-      }
-      return this.allRecords;
-    }
   },
   methods: {
     goBack() {
@@ -109,38 +82,67 @@ export default {
     },
     resetAndLoad(isRefresh = false) {
       this.page = 1;
-      this.records = [];
       this.finished = false;
       this.loading = true;
-      if (isRefresh) this.refreshing = true;
+      if (isRefresh) {
+        this.refreshing = true;
+        this.records = []; // Clear immediately on refresh
+      }
       this.onLoad();
     },
-    onLoad() {
-      const source = this.filteredSource;
-      const start = (this.page - 1) * this.pageSize;
-      const end = start + this.pageSize;
-      const nextList = source.slice(start, end);
+    async onLoad() {
+      if (this.refreshing) {
+          // If refreshing, we might have cleared records, but if not, logic is same.
+      }
+      
+      try {
+        const params = {
+          page: this.page,
+          pageSize: this.pageSize,
+          type: this.activeTab
+        };
+        const res = await getPointsRecordList(params);
+        if (res.success) {
+          const newRecords = res.data.records || [];
+          if (this.page === 1) {
+            this.records = newRecords;
+          } else {
+            this.records = this.records.concat(newRecords);
+          }
+          
+          this.loading = false;
+          this.refreshing = false;
 
-      setTimeout(() => {
-        this.records = this.records.concat(nextList);
-        this.loading = false;
-        this.refreshing = false;
-
-        if (end >= source.length) {
-          this.finished = true;
+          if (this.records.length >= res.data.total) { // Or check newRecords.length < pageSize
+            this.finished = true;
+          } else {
+            this.page += 1;
+          }
         } else {
-          this.page += 1;
+           this.loading = false;
+           this.finished = true;
         }
-      }, 300);
+      } catch (error) {
+        console.error('Fetch points records failed', error);
+        this.loading = false;
+        this.finished = true;
+      }
     },
     formatAmount(item) {
-      const sign = item.type === 'in' ? '+' : '-';
-      return `${sign}${item.value}`;
+      // Backend might return signed value or we handle it here. 
+      // Assumption: backend returns absolute value and type.
+      const sign = item.type === 'in' || item.type === 1 ? '+' : '-';
+      return `${sign}${item.value || item.amount}`; 
+      // Compatible with 'value' (mock) or 'amount' (db) if map happens in backend or here.
+      // Based on API doc: data.records item has `value`.
     }
   },
   mounted() {
-    this.loading = true;
-    this.onLoad();
+    // Initial load handled by van-list or manual call? 
+    // van-list with v-model:loading="loading" will trigger load if not enough content.
+    // But safely we can call it if list is empty.
+    // Because immediate-check is true by default for van-list, it might auto trigger.
+    // Let's rely on van-list immediate check or set it manually.
   }
 };
 </script>

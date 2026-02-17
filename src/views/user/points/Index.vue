@@ -37,9 +37,9 @@
           <div class="points-value">{{ formatDisplay(pointsBalance) }} 分</div>
         </div>
         <div class="points-actions">
-          <div class="action-item" @click="showComingSoon('签到')">
+          <div class="action-item" :class="{ 'signed-in': signedIn }" @click="handleSignIn">
             <van-icon name="calendar-o" size="20" />
-            <span>签到</span>
+            <span>{{ signedIn ? `已签(连签${consecutiveDays}天)` : '签到' }}</span>
           </div>
           <div class="action-item" @click="showComingSoon('任务中心')">
             <van-icon name="todo-list-o" size="20" />
@@ -96,6 +96,8 @@
 
 <script>
 import PageLayout from '@/components/PageLayout/PageLayout.vue';
+import { getPointsInfo, signIn } from '@/api/points';
+import { showToast } from 'vant';
 
 export default {
   name: 'UserPoints',
@@ -103,33 +105,19 @@ export default {
   data() {
     return {
       pageLoading: false,
-      showAmount: false,
-      levelName: '金卡',
-      pointsBalance: 2458,
-      nextLevelNeed: 1542,
-      benefits: [
-        { title: '95折券 x3', desc: '本月可用' },
-        { title: '免邮额度 +20元', desc: '满减叠加' },
-        { title: '优先购资格', desc: '限量商品' }
-      ],
-      pointsList: [
-        { id: 1, date: '2026-02-04', desc: '消费订单', value: 88, type: 'in' },
-        { id: 2, date: '2026-02-03', desc: '签到', value: 10, type: 'in' },
-        { id: 3, date: '2026-02-01', desc: '兑换优惠券', value: 200, type: 'out' },
-        { id: 4, date: '2026-01-29', desc: '评价晒单', value: 20, type: 'in' },
-        { id: 5, date: '2026-01-27', desc: '积分抽奖', value: 50, type: 'out' }
-      ]
+      showAmount: true,
+      levelName: '--',
+      pointsBalance: 0,
+      nextLevelNeed: 0,
+      progressPercent: 0,
+      signedIn: false,
+      consecutiveDays: 0,
+      benefits: [],
+      previewList: [] // We'll keep this empty or fetch a few records if needed, but for now specific API doesn't return list in info
     };
   },
-  computed: {
-    progressPercent() {
-      const total = this.pointsBalance + this.nextLevelNeed;
-      if (!total) return 0;
-      return Math.min(100, Math.round((this.pointsBalance / total) * 100));
-    },
-    previewList() {
-      return this.pointsList.slice(0, 3);
-    }
+  created() {
+    this.fetchData();
   },
   methods: {
     goBack() {
@@ -145,7 +133,52 @@ export default {
       this.$router.push('/user/points/lottery');
     },
     showComingSoon(label) {
+      if (label === '签到') {
+        this.handleSignIn();
+        return;
+      }
       this.$message.info(`${label}功能开发中`);
+    },
+    async fetchData() {
+      this.pageLoading = true;
+      try {
+        const res = await getPointsInfo();
+        if (res.success) {
+          const data = res.data;
+          this.pointsBalance = data.balance;
+          this.levelName = data.levelName;
+          this.nextLevelNeed = data.nextLevelNeed;
+          this.progressPercent = data.progressPercent;
+          this.benefits = data.benefits || [];
+          this.signedIn = data.signedIn;
+          this.consecutiveDays = data.consecutiveDays || 0;
+        }
+      } catch (error) {
+        console.error('Fetch points info failed', error);
+      } finally {
+        this.pageLoading = false;
+      }
+    },
+    async handleSignIn() {
+      if (this.signedIn) {
+        this.$message.warning('今日已签到');
+        return;
+      }
+      try {
+        const res = await signIn();
+        if (res.success) {
+          showToast({
+            message: `签到成功 +${res.data.points}积分`,
+            type: 'success'
+          });
+          // Refresh info to update balance and status
+          this.fetchData();
+        } else {
+            this.$message.error(res.message || '签到失败');
+        }
+      } catch (error) {
+         // Error handled by request interceptor or global handler
+      }
     },
     formatNumber(val) {
       if (val === undefined || val === null || isNaN(val)) return '0';

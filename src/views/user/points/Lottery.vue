@@ -44,6 +44,7 @@
 
 <script>
 import PageLayout from '@/components/PageLayout/PageLayout.vue';
+import { getPointsInfo, getLotteryConfig, drawLottery } from '@/api/points';
 
 export default {
   name: 'UserPointsLottery',
@@ -51,78 +52,134 @@ export default {
   data() {
     return {
       pageLoading: false,
-      pointsBalance: 2458,
+      pointsBalance: 0,
       costPerDraw: 50,
       isSpinning: false,
       currentIndex: 0,
       timer: null,
-      prizes: [
-        { name: '积分+88', type: 'points', value: 88, desc: '积分返还' },
-        { name: '95折券', type: 'coupon', value: 1, desc: '全场可用' },
-        { name: '免邮券', type: 'coupon', value: 1, desc: '限时有效' },
-        { name: '积分+20', type: 'points', value: 20, desc: '小额返还' },
-        { name: '礼品券', type: 'coupon', value: 1, desc: '指定商品' },
-        { name: '积分+50', type: 'points', value: 50, desc: '积分返还' },
-        { name: '优先购资格', type: 'coupon', value: 1, desc: '限量商品' },
-        { name: '积分+10', type: 'points', value: 10, desc: '保底奖励' }
-      ],
+      prizes: [], // Will be fetched from backend
       gridOrder: [0, 1, 2, 5, 8, 7, 6, 3]
     };
   },
   computed: {
     gridCells() {
+      // Ensure we have 8 prizes to fill the grid (3x3 with center button)
+      // If prizes are empty (loading), show placeholders or nothing
       const cells = new Array(9).fill(null);
-      this.gridOrder.forEach((cellIndex, i) => {
-        cells[cellIndex] = { ...this.prizes[i], type: 'prize' };
-      });
+      if (this.prizes.length >= 8) {
+          this.gridOrder.forEach((cellIndex, i) => {
+            cells[cellIndex] = { ...this.prizes[i], type: 'prize', originalIndex: i };
+          });
+      }
       cells[4] = { type: 'button' };
       return cells;
     }
+  },
+  created() {
+    this.initData();
   },
   methods: {
     goBack() {
       this.$router.back();
     },
+    async initData() {
+        this.pageLoading = true;
+        try {
+            await Promise.all([this.fetchBalance(), this.fetchConfig()]);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            this.pageLoading = false;
+        }
+    },
+    async fetchBalance() {
+        const res = await getPointsInfo();
+        if (res.success) {
+            this.pointsBalance = res.data.balance;
+        }
+    },
+    async fetchConfig() {
+        const res = await getLotteryConfig();
+        if (res.success) {
+            this.costPerDraw = res.data.costPerDraw;
+            this.prizes = res.data.prizes || [];
+        }
+    },
     cellClass(index, cell) {
-      const activeIndex = this.gridOrder[this.currentIndex];
+      if (!cell) return {};
+      const activeCellIndex = this.gridOrder[this.currentIndex];
+      // currentIndex is the index in the PRIZE list (0-7), not the grid cell index
+      // activeCellIndex converts prize list index to grid cell index
+      
       return {
-        active: cell.type === 'prize' && index === activeIndex,
+        active: cell.type === 'prize' && index === activeCellIndex,
         center: cell.type === 'button'
       };
     },
-    startLottery() {
+    async startLottery() {
       if (this.isSpinning) return;
       if (this.pointsBalance < this.costPerDraw) {
         this.$message.warning('积分不足，快去赚积分吧~');
         return;
       }
 
-      this.pointsBalance -= this.costPerDraw;
       this.isSpinning = true;
-
-      const targetIndex = Math.floor(Math.random() * this.prizes.length);
+      
+      try {
+          // call API to get result
+          const res = await drawLottery();
+          if (res.success) {
+              const prizeId = res.data.prizeId;
+              const prizeValue = res.data.prizeValue;
+              // Find index of the prize in our local list
+              const targetIndex = this.prizes.findIndex(p => p.id === prizeId);
+              
+              if (targetIndex !== -1) {
+                  this.pointsBalance -= this.costPerDraw; // deduc locally for instant feedback, though API handles it
+                  this.runAnimation(targetIndex, res.data);
+              } else {
+                  this.$message.error('奖品配置异常');
+                  this.isSpinning = false;
+              }
+          } else {
+              this.$message.error(res.message || '抽奖失败');
+              this.isSpinning = false;
+          }
+      } catch (error) {
+          this.$message.error('网络异常，请重试');
+          this.isSpinning = false;
+      }
+    },
+    runAnimation(targetIndex, prizeData) {
       const rounds = 3;
+      // currentIndex is 0-7
       const offset = (targetIndex - this.currentIndex + this.prizes.length) % this.prizes.length;
       const totalSteps = rounds * this.prizes.length + offset;
       let steps = 0;
+      let speed = 100;
 
-      this.timer = setInterval(() => {
-        this.currentIndex = (this.currentIndex + 1) % this.prizes.length;
-        steps += 1;
-        if (steps >= totalSteps) {
-          clearInterval(this.timer);
-          this.timer = null;
-          this.isSpinning = false;
-          this.handlePrize(targetIndex);
-        }
-      }, 90);
+      const step = () => {
+         this.currentIndex = (this.currentIndex + 1) % this.prizes.length;
+         steps++;
+
+         if (steps >= totalSteps) {
+             this.isSpinning = false;
+             this.handlePrize(prizeData);
+             // Refresh balance to ensure accuracy
+             this.fetchBalance();
+         } else {
+             // Simple easing: slow down at the end
+             if (totalSteps - steps < 5) {
+                 speed += 50;
+             }
+             this.timer = setTimeout(step, speed);
+         }
+      };
+      
+      this.timer = setTimeout(step, speed);
     },
-    handlePrize(targetIndex) {
-      const prize = this.prizes[targetIndex];
-      if (prize.type === 'points') {
-        this.pointsBalance += prize.value;
-      }
-      this.$message.success(`恭喜获得 ${prize.name}`);
+    handlePrize(prize) {
+      this.$message.success(`恭喜获得 ${prize.prizeName}`);
     },
     formatNumber(val) {
       if (val === undefined || val === null || isNaN(val)) return '0';
@@ -131,7 +188,7 @@ export default {
   },
   beforeUnmount() {
     if (this.timer) {
-      clearInterval(this.timer);
+      clearTimeout(this.timer);
     }
   }
 };

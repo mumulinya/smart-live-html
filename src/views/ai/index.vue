@@ -263,7 +263,7 @@
 	                              <span class="orig-price">¥{{ formatVoucherAmount(item.actualValue) }}</span>
 	                              <span class="discount-badge" v-if="getVoucherDiscountText(item)">{{ getVoucherDiscountText(item) }}</span>
 	                            </div>
-	                            <div class="progress-row">
+	                            <div class="progress-row" v-if="isVoucherSeckill(item)">
 	                              <span class="sold-text">已售{{ getVoucherSoldPercent(item) }}%</span>
 	                              <div class="progress-bar">
 	                                <div class="progress-fill" :style="{ width: `${getVoucherSoldPercent(item)}%` }"></div>
@@ -274,7 +274,7 @@
 	                            <button class="voucher-buy-btn" :disabled="isVoucherPurchaseDisabled(item)" @click.stop="handleVoucherPurchase(item)">
 	                              {{ getVoucherActionText(item) }}
 	                            </button>
-	                            <div class="voucher-stock">剩{{ item.stock ?? 0 }}张</div>
+	                            <div class="voucher-stock" v-if="isVoucherSeckill(item)">剩{{ item.stock ?? 0 }}张</div>
 	                          </div>
 	                        </div>
 	                      </div>
