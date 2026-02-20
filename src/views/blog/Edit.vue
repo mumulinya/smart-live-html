@@ -202,6 +202,13 @@ export default {
     }
   },
   methods: {
+    markUserProfileNoteCacheDirty() {
+      try {
+        sessionStorage.setItem('user_profile_note_cache_dirty', String(Date.now()));
+      } catch (e) {
+        console.error('Failed to mark user profile note cache dirty', e);
+      }
+    },
     getSnapshot() {
       return JSON.stringify({
         title: this.params.title,
@@ -281,6 +288,7 @@ export default {
         data.id = this.blogId;
         updateBlog(data)
           .then(() => {
+            this.markUserProfileNoteCacheDirty();
             this.$message({
               type: 'success',
               message: '修改成功！',
@@ -297,6 +305,7 @@ export default {
       } else {
         saveBlog(data)
           .then(() => {
+            this.markUserProfileNoteCacheDirty();
             this.$message({
               type: 'success',
               message: '发布成功！',

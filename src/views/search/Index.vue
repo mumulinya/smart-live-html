@@ -69,21 +69,21 @@
                  </div>
               </div>
               <!-- Voucher Type -->
-              <div v-if="activeFilterTab==='vType'" class="score-panel">
+              <div v-if="activeFilterTab==='pType'" class="score-panel">
                  <div class="score-options">
-                     <div class="score-option" :class="{active: selectedVoucherType===t.value}" v-for="t in voucherTypeOptions" :key="t.value" @click="selectVoucherType(t)">{{t.label}}</div>
+                     <div class="score-option" :class="{active: selectedProductType===t.value}" v-for="t in productTypeOptions" :key="t.value" @click="selectProductType(t)">{{t.label}}</div>
                  </div>
               </div>
-              <!-- Voucher Status -->
+              <!-- Product Status -->
               <div v-if="activeFilterTab==='status'" class="score-panel">
                  <div class="score-options">
                      <div class="score-option" :class="{active: selectedStatus===s.value}" v-for="s in statusOptions" :key="s.value" @click="selectStatus(s)">{{s.label}}</div>
                  </div>
               </div>
-              <!-- Voucher Shop Type -->
-              <div v-if="activeFilterTab==='vShopType'" class="shop-type-panel">
+              <!-- Product Shop Type -->
+              <div v-if="activeFilterTab==='pShopType'" class="shop-type-panel">
                  <div class="shop-type-grid">
-                    <div class="shop-type-item" :class="{active: selectedVoucherShopType===type.id}" v-for="type in shopTypes" :key="type.id" @click="selectVoucherShopType(type.id)">{{type.name}}</div>
+                     <div class="shop-type-item" :class="{active: selectedProductShopType===type.id}" v-for="type in shopTypes" :key="type.id" @click="selectProductShopType(type.id)">{{type.name}}</div>
                  </div>
               </div>
               <!-- Blog Type -->
@@ -155,127 +155,175 @@
             <!-- VOUCHER TAB -->
             <van-tab title="代金券" name="voucher">
                  <div class="tab-content">
-                     <!-- Voucher Filter Bar -->
-                     <div class="meituan-filter-bar">
-                         <div class="filter-item" :class="{active: activeFilterTab==='vType'}" @click="toggleFilterTab('vType')">
-                             <div class="filter-text">{{selectedVoucherType !== null ? getVoucherTypeName(selectedVoucherType) : '类型'}} <i class="el-icon-arrow-down"></i></div>
-                          </div>
-                          <div class="filter-item" :class="{active: activeFilterTab==='status'}" @click="toggleFilterTab('status')">
-                             <div class="filter-text">{{selectedStatus ? getStatusName(selectedStatus) : '状态'}} <i class="el-icon-arrow-down"></i></div>
-                          </div>
-                          <div class="filter-item" :class="{active: activeFilterTab==='vShopType'}" @click="toggleFilterTab('vShopType')">
-                             <div class="filter-text">{{selectedVoucherShopType ? getShopTypeName(selectedVoucherShopType) : '分类'}} <i class="el-icon-arrow-down"></i></div>
-                          </div>
+                      <!-- Product Filter Bar (Reused) -->
+                      <div class="meituan-filter-bar">
+                          <div class="filter-item" :class="{active: activeFilterTab==='pType'}" @click="toggleFilterTab('pType')">
+                              <div class="filter-text">{{selectedProductType !== null ? getProductTypeName(selectedProductType) : '类型'}} <i class="el-icon-arrow-down"></i></div>
+                           </div>
+                           <div class="filter-item" :class="{active: activeFilterTab==='status'}" @click="toggleFilterTab('status')">
+                              <div class="filter-text">{{selectedStatus ? getStatusName(selectedStatus) : '状态'}} <i class="el-icon-arrow-down"></i></div>
+                           </div>
+                           <div class="filter-item" :class="{active: activeFilterTab==='pShopType'}" @click="toggleFilterTab('pShopType')">
+                              <div class="filter-text">{{selectedProductShopType ? getShopTypeName(selectedProductShopType) : '分类'}} <i class="el-icon-arrow-down"></i></div>
+                           </div>
+                      </div>
+                      
+                      <!-- Selected Tags -->
+                     <div class="selected-filters" v-if="selectedProductType !== null || selectedStatus || selectedProductShopType">
+                           <div class="selected-filter-tag" v-if="selectedProductType !== null">{{getProductTypeName(selectedProductType)}} <span class="close" @click="selectedProductType=null;doSearch()">×</span></div>
+                           <div class="selected-filter-tag" v-if="selectedStatus">{{getStatusName(selectedStatus)}} <span class="close" @click="selectedStatus=null;doSearch()">×</span></div>
+                           <div class="selected-filter-tag" v-if="selectedProductShopType">{{getShopTypeName(selectedProductShopType)}} <span class="close" @click="selectedProductShopType=null;doSearch()">×</span></div>
+                           <div class="clear-all" @click="clearAllFilters">清除全部</div>
                      </div>
-                     
-                     <!-- Selected Tags -->
-                    <div class="selected-filters" v-if="selectedVoucherType !== null || selectedStatus || selectedVoucherShopType">
-                          <div class="selected-filter-tag" v-if="selectedVoucherType !== null">{{getVoucherTypeName(selectedVoucherType)}} <span class="close" @click="selectedVoucherType=null;doSearch()">×</span></div>
-                          <div class="selected-filter-tag" v-if="selectedStatus">{{getStatusName(selectedStatus)}} <span class="close" @click="selectedStatus=null;doSearch()">×</span></div>
-                          <div class="selected-filter-tag" v-if="selectedVoucherShopType">{{getShopTypeName(selectedVoucherShopType)}} <span class="close" @click="selectedVoucherShopType=null;doSearch()">×</span></div>
-                          <div class="clear-all" @click="clearAllFilters">清除全部</div>
-                    </div>
-                     
-                     <!-- Voucher Results -->
-                     <div v-if="isLoading" class="loading-box"><i class="el-icon-loading"></i> 加载中...</div>
-                     <div v-else>
-                         <div v-if="voucherList.length===0" class="empty-result">
-                            <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiByeD0iOCIgZmlsbD0iI0Y4RjlGQSIvPgo8cGF0aCBkPSJNNDAgNDJMMzIgMzRMMzQgMzJMNDAgMzhMNDYgMzJMNDggMzRMNDAgNDJaIiBmaWxsPSIjQzBDNEY0Ii8+CjxwYXRoIGQ9Ik00MCA0MkwzMiAzNEwzNCAzMkw0MCAzOEw0NiAzMkw0OCAzNEw0MCA0MloiIGZpbGw9IiNDMEM0RjQiLz4KPC9zdmc+Cg==">
-                            <p>暂无相关代金券</p>
-                            <span class="sub-text">换个关键词试试吧</span>
-                         </div>
-                         
-                         <!-- Seckill Vouchers -->
-                         <div v-if="seckillVouchers.length > 0" class="seckill-wrapper">
-                             <div class="voucher-category-title seckill">限时秒杀券</div>
-                             <div class="voucher-card-v2 seckill" v-for="v in seckillVouchers" :key="v.id" @click="toVoucherDetail(v)">
-                                 <!-- Card Header -->
-                                 <div class="voucher-card-header">
-                                    <div class="voucher-title-row">
-                                       <span class="voucher-title" v-html="v.title || (v.actualValue + '元代金券')"></span>
-                                       <span class="voucher-flash-tag"><i class="el-icon-time"></i> 限时抢</span>
-                                    </div>
-                                    <div class="voucher-shops" v-if="v.shopName">
-                                       <span class="shop-label">适用商铺：</span>
-                                       <span class="shop-names">{{v.shopName}}</span>
-                                    </div>
-                                    <div class="voucher-time" v-if="v.beginTime && v.endTime">
-                                       <i class="el-icon-time"></i> {{formatSeckillTime(v)}}
-                                    </div>
-                                    <div class="voucher-validity" v-if="getValidityText(v)">
-                                       <i class="el-icon-calendar"></i> {{getValidityText(v)}}
-                                    </div>
-                                 </div>
-                                 <!-- Card Body (Gradient) -->
-                                 <div class="voucher-card-body gradient-pink">
-                                    <div class="voucher-price-section">
-                                       <div class="voucher-current-price">
-                                          <span class="price-symbol">¥</span>
-                                          <span class="price-value">{{v.payValue}}</span>
-                                       </div>
-                                       <div class="voucher-original-info">
-                                          <span class="original-price">¥{{v.actualValue}}</span>
-                                          <span class="discount-badge">{{(v.payValue/v.actualValue*10).toFixed(1)}}折</span>
-                                       </div>
-                                       <div class="voucher-sold-info">
-                                          已售{{100 - getStockPercent(v)}}%
-                                       </div>
-                                       <div class="voucher-progress-bar">
-                                          <div class="progress-fill" :style="{width: (100 - getStockPercent(v)) + '%'}"></div>
-                                       </div>
-                                    </div>
-                                    <div class="voucher-action-section">
-                                       <button class="voucher-buy-btn pink-text" @click.stop="doSeckill(v)" :disabled="isNotBegin(v) || isEnd(v) || v.stock < 1">
-                                          {{ isEnd(v) ? '已结束' : (isNotBegin(v) ? '待开始' : (v.stock < 1 ? '已抢光' : '立即抢购')) }}
-                                       </button>
-                                       <div class="voucher-stock">剩{{v.stock}}张</div>
-                                    </div>
-                                 </div>
-                             </div>
-                         </div>
+                      
+                      <!-- Voucher Results -->
+                      <div v-if="isLoading" class="loading-box"><i class="el-icon-loading"></i> 加载中...</div>
+                      <div v-else>
+                          <div v-if="productList.length===0" class="empty-result">
+                             <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiByeD0iOCIgZmlsbD0iI0Y4RjlGQSIvPgo8cGF0aCBkPSJNNDAgNDJMMzIgMzRMMzQgMzJMNDAgMzhMNDYgMzJMNDggMzRMNDAgNDJaIiBmaWxsPSIjQzBDNEY0Ii8+CjxwYXRoIGQ9Ik00MCA0MkwzMiAzNEwzNCAzMkw0MCAzOEw0NiAzMkw0OCAzNEw0MCA0MloiIGZpbGw9IiNDMEM0RjQiLz4KPC9zdmc+Cg==">
+                             <p>暂无相关代金券</p>
+                             <span class="sub-text">换个关键词试试吧</span>
+                          </div>
+                          
+                          <!-- Seckill Products -->
+                          <div v-if="seckillProducts.length > 0" class="seckill-wrapper">
+                              <div class="voucher-category-title seckill">限时秒杀</div>
+                              <div class="voucher-card-v2 seckill" v-for="v in seckillProducts" :key="v.id" @click="toProductDetail(v)">
+                                  <!-- Card Header -->
+                                  <div class="voucher-card-header">
+                                     <div class="voucher-title-row">
+                                        <span class="voucher-title" v-html="v.name || (v.originalPrice + '元商品')"></span>
+                                        <span class="voucher-flash-tag"><i class="el-icon-time"></i> 限时抢</span>
+                                     </div>
+                                     <div class="voucher-shops" v-if="v.shopName">
+                                        <span class="shop-label">适用商铺：</span>
+                                        <span class="shop-names">{{v.shopName}}</span>
+                                     </div>
+                                     <div class="voucher-time" v-if="v.beginTime && v.endTime">
+                                        <i class="el-icon-time"></i> {{formatSeckillTime(v)}}
+                                     </div>
+                                     <div class="voucher-validity" v-if="getValidityText(v)">
+                                        <i class="el-icon-calendar"></i> {{getValidityText(v)}}
+                                     </div>
+                                  </div>
+                                  <!-- Card Body (Gradient) -->
+                                  <div class="voucher-card-body gradient-pink">
+                                     <div class="voucher-price-section">
+                                        <div class="voucher-current-price">
+                                           <span class="price-symbol">¥</span>
+                                           <span class="price-value">{{v.price}}</span>
+                                        </div>
+                                        <div class="voucher-original-info">
+                                           <span class="original-price">¥{{v.originalPrice}}</span>
+                                           <span class="discount-badge">{{(v.price/v.originalPrice*10).toFixed(1)}}折</span>
+                                        </div>
+                                        <div class="voucher-sold-info">
+                                           已售{{100 - getStockPercent(v)}}%
+                                        </div>
+                                        <div class="voucher-progress-bar">
+                                           <div class="progress-fill" :style="{width: (100 - getStockPercent(v)) + '%'}"></div>
+                                        </div>
+                                     </div>
+                                     <div class="voucher-action-section">
+                                        <button class="voucher-buy-btn pink-text" @click.stop="doSeckill(v)" :disabled="isNotBegin(v) || isEnd(v) || v.stock < 1">
+                                           {{ isEnd(v) ? '已结束' : (isNotBegin(v) ? '待开始' : (v.stock < 1 ? '已抢光' : '立即抢购')) }}
+                                        </button>
+                                        <div class="voucher-stock">剩{{v.stock}}张</div>
+                                     </div>
+                                  </div>
+                              </div>
+                          </div>
                     
-                         <!-- Normal Vouchers -->
-                         <div v-if="normalVouchers.length > 0">
-                             <div class="voucher-category-title normal">普通代金券</div>
-                             <div class="voucher-card-v2 normal" v-for="v in normalVouchers" :key="v.id" @click="toVoucherDetail(v)">
-                                 <!-- Card Header -->
-                                 <div class="voucher-card-header">
-                                    <div class="voucher-title-row">
-                                       <span class="voucher-title" v-html="v.title || (v.actualValue + '元代金券')"></span>
-                                    </div>
-                                    <div class="voucher-subtitle">
-                                       <span v-html="v.subTitle || '周一至周五均可使用'"></span>
-                                    </div>
-                                    <div class="voucher-usage-time">
-                                       <i class="el-icon-time"></i> <span v-html="v.subTitle || '周一至周五均可使用'"></span>
-                                    </div>
-                                    <div class="voucher-validity" v-if="getValidityText(v)">
-                                       <i class="el-icon-calendar"></i> {{getValidityText(v)}}
-                                    </div>
-                                 </div>
-                                 <!-- Card Body (Orange Gradient) -->
-                                 <div class="voucher-card-body gradient-orange">
-                                    <div class="voucher-price-section">
-                                       <div class="voucher-current-price">
-                                          <span class="price-symbol">¥</span>
-                                          <span class="price-value">{{v.payValue}}</span>
-                                       </div>
-                                       <div class="voucher-original-info">
-                                          <span class="original-price">¥{{v.actualValue}}</span>
-                                          <span class="discount-badge">{{(v.payValue/v.actualValue*10).toFixed(1)}}折</span>
-                                       </div>
-                                       <div class="voucher-sold-info">
-                                          已售{{100 - getStockPercent(v)}}%
-                                       </div>
-                                    </div>
-                                    <div class="voucher-action-section">
-                                       <button class="voucher-buy-btn" @click.stop="doBuy(v)">立即抢购</button>
-                                    </div>
-                                 </div>
-                             </div>
-                         </div>
+                          <!-- Normal Products -->
+                          <div v-if="normalProducts.length > 0">
+                              <div class="voucher-category-title normal">特惠代金券</div>
+                              <div class="voucher-card-v2 normal" v-for="v in normalProducts" :key="v.id" @click="toProductDetail(v)">
+                                  <!-- Card Header -->
+                                  <div class="voucher-card-header">
+                                     <div class="voucher-title-row">
+                                        <span class="voucher-title" v-html="v.name || (v.originalPrice + '元商品')"></span>
+                                     </div>
+                                     <div class="voucher-subtitle">
+                                        <span v-html="v.subTitle || '周一至周五均可使用'"></span>
+                                     </div>
+                                     <div class="voucher-usage-time">
+                                        <i class="el-icon-time"></i> <span v-html="v.subTitle || '周一至周五均可使用'"></span>
+                                     </div>
+                                     <div class="voucher-validity" v-if="getValidityText(v)">
+                                        <i class="el-icon-calendar"></i> {{getValidityText(v)}}
+                                     </div>
+                                  </div>
+                                  <!-- Card Body (Orange Gradient) -->
+                                  <div class="voucher-card-body gradient-orange">
+                                     <div class="voucher-price-section">
+                                        <div class="voucher-current-price">
+                                           <span class="price-symbol">¥</span>
+                                           <span class="price-value">{{v.price}}</span>
+                                        </div>
+                                        <div class="voucher-original-info">
+                                           <span class="original-price">¥{{v.originalPrice}}</span>
+                                           <span class="discount-badge">{{(v.price/v.originalPrice*10).toFixed(1)}}折</span>
+                                        </div>
+                                        <div class="voucher-sold-info">
+                                           已售{{100 - getStockPercent(v)}}%
+                                        </div>
+                                     </div>
+                                     <div class="voucher-action-section">
+                                        <button class="voucher-buy-btn" @click.stop="doBuy(v)">立即抢购</button>
+                                     </div>
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+            </van-tab>
+
+            <!-- GROUP TAB -->
+            <van-tab title="团购" name="group">
+                 <div class="tab-content">
+                      <!-- Product Filter Bar (Reused or Simplified) -->
+                      <div class="meituan-filter-bar">
+                           <div class="filter-item" :class="{active: activeFilterTab==='status'}" @click="toggleFilterTab('status')">
+                              <div class="filter-text">{{selectedStatus ? getStatusName(selectedStatus) : '状态'}} <i class="el-icon-arrow-down"></i></div>
+                           </div>
+                           <div class="filter-item" :class="{active: activeFilterTab==='pShopType'}" @click="toggleFilterTab('pShopType')">
+                              <div class="filter-text">{{selectedProductShopType ? getShopTypeName(selectedProductShopType) : '分类'}} <i class="el-icon-arrow-down"></i></div>
+                           </div>
+                      </div>
+                      
+                      <!-- Selected Tags -->
+                     <div class="selected-filters" v-if="selectedStatus || selectedProductShopType">
+                           <div class="selected-filter-tag" v-if="selectedStatus">{{getStatusName(selectedStatus)}} <span class="close" @click="selectedStatus=null;doSearch()">×</span></div>
+                           <div class="selected-filter-tag" v-if="selectedProductShopType">{{getShopTypeName(selectedProductShopType)}} <span class="close" @click="selectedProductShopType=null;doSearch()">×</span></div>
+                           <div class="clear-all" @click="clearAllFilters">清除全部</div>
                      </div>
-                 </div>
+                      
+                      <!-- Group Results -->
+                      <div v-if="isLoading" class="loading-box"><i class="el-icon-loading"></i> 加载中...</div>
+                      <div v-else>
+                          <div v-if="productList.length===0" class="empty-result">
+                             <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiByeD0iOCIgZmlsbD0iI0Y4RjlGQSIvPgo8cGF0aCBkPSJNNDAgNDJMMzIgMzRMMzQgMzJMNDAgMzhMNDYgMzJMNDggMzRMNDAgNDJaIiBmaWxsPSIjQzBDNEY0Ii8+CjxwYXRoIGQ9Ik00MCA0MkwzMiAzNEwzNCAzMkw0MCAzOEw0NiAzMkw0OCAzNEw0MCA0MloiIGZpbGw9IiNDMEM0RjQiLz4KPC9zdmc+Cg==">
+                             <p>暂无相关团购</p>
+                             <span class="sub-text">换个关键词试试吧</span>
+                          </div>
+                      
+                          <div class="shop-box" v-for="v in productList" :key="v.id" @click="toProductDetail(v)">
+                              <div class="shop-img">
+                                  <img :src="v.images || v.image || '/imgs/default-goods.png'" @error="e => e.target.src='/imgs/default-goods.png'">
+                              </div>
+                              <div class="shop-info">
+                                  <div class="shop-title" v-html="v.name"></div>
+                                  <div class="shop-rate">
+                                      <span class="shop-score" style="color:#ff5000; font-size: 16px;">¥{{ v.price }}</span>
+                                      <span class="shop-price" style="text-decoration: line-through; color:#999; font-size:12px">¥{{ v.originalPrice }}</span>
+                                  </div>
+                                  <div class="shop-area">
+                                      <span class="area-text">{{v.shopName || '通用'}}</span>
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
             </van-tab>
 
             <!-- BLOG TAB -->
@@ -364,22 +412,22 @@
 
 <script>
 import { getShopTypes } from "@/api/shop";
+import { likeBlog } from '@/api/interaction';
+import { followUserBoolean } from "@/api/interaction";
+import { getCurrentUser } from "@/api/user";
+import { locationUtil } from '@/utils/location';
 import {
   searchShops,
   searchBlogs,
   searchUsers,
-  searchVouchers,
+  searchProducts,
   getHotSearch,
   getSearchHistory,
   addSearchHistory,
   clearSearchHistory,
   recordSearch,
 } from "@/api/search";
-import { buyVoucherAPI, seckillVoucherAPI } from '@/api/shop';
-import { likeBlog } from '@/api/interaction';
-import { followUserBoolean } from "@/api/interaction";
-import { getCurrentUser } from "@/api/user";
-import { locationUtil } from '@/utils/location';
+
 
 import PageLayout from '@/components/PageLayout/PageLayout.vue';
 
@@ -395,7 +443,7 @@ export default {
       shopList: [],
       blogList: [],
       userList: [],
-      voucherList: [],
+      productList: [],
       
       isLoading: false,
       locationLoading: false,
@@ -411,7 +459,7 @@ export default {
       hotSearch: [],
 
       // Filters
-      activeFilterTab: "", // 'type', 'distance', 'score', 'vType', 'status', 'vShopType'
+      activeFilterTab: "", // 'type', 'distance', 'score', 'pType', 'status', 'pShopType'
       shopTypes: [],
       
       // Filter State
@@ -419,9 +467,9 @@ export default {
       selectedDistance: null,
       selectedScore: null,
       
-      selectedVoucherType: null,
+      selectedProductType: null,
       selectedStatus: null,
-      selectedVoucherShopType: null,
+      selectedProductShopType: null,
       
       selectedBlogType: null,
 
@@ -439,9 +487,9 @@ export default {
         { label: "3.5分以上", value: 35 },
         { label: "全部", value: 0 },
       ],
-      voucherTypeOptions: [
-         { label: "普通券", value: 0 },
-         { label: "秒杀券", value: 1 },
+      productTypeOptions: [
+         { label: "普通", value: 0 },
+         { label: "秒杀", value: 1 },
          { label: "全部", value: null } 
       ],
       statusOptions: [
@@ -469,20 +517,21 @@ export default {
         this.selectedShopType ||
         this.selectedDistance ||
         this.selectedScore ||
-        this.selectedVoucherType ||
+        this.selectedProductType ||
         this.selectedBlogType
       );
     },
-    seckillVouchers() {
-        return this.voucherList.filter(v => v.type == 1);
+    seckillProducts() {
+        return this.productList.filter(v => v.activityType == 1);
     },
-    normalVouchers() {
-        return this.voucherList.filter(v => v.type != 1);
+    normalProducts() {
+        return this.productList.filter(v => v.activityType != 1);
     },
     searchPlaceholder() {
         const placeholders = {
           shop: '搜索商铺名称...',
           voucher: '搜索代金券...',
+          group: '搜索团购...',
           blog: '搜索笔记...',
           user: '搜索用户...'
         };
@@ -505,10 +554,10 @@ export default {
     if (q.sd) this.selectedDistance = q.sd;
     if (q.ss) this.selectedScore = q.ss;
 
-    // Restore Voucher Filters
-    if (q.vt !== undefined) this.selectedVoucherType = Number(q.vt);
+    // Restore Product Filters
+    if (q.vt !== undefined) this.selectedProductType = Number(q.vt);
     if (q.vs !== undefined) this.selectedStatus = Number(q.vs);
-    if (q.vst) this.selectedVoucherShopType = Number(q.vst);
+    if (q.vst) this.selectedProductShopType = Number(q.vst);
 
     // Restore Blog Filters
     if (q.bt) this.selectedBlogType = Number(q.bt);
@@ -521,7 +570,7 @@ export default {
   activated() {
     // Keep-alive hook: sync tab from URL if changed (e.g. deep link)
     const tab = this.$route.query.tab;
-    if (tab && tab !== this.activeTab && ['shop', 'voucher', 'blog', 'user'].includes(tab)) {
+    if (tab && tab !== this.activeTab && ['shop', 'voucher', 'group', 'blog', 'user'].includes(tab)) {
         this.activeTab = tab;
         this.doSearch();
     }
@@ -626,8 +675,8 @@ export default {
         };
         return `${format(v.beginTime)} - ${format(v.endTime)}`;
     },
-    getVoucherTypeName(val) {
-        const t = this.voucherTypeOptions.find(t => t.value === val);
+    getProductTypeName(val) {
+        const t = this.productTypeOptions.find(t => t.value === val);
         return t ? t.label : "";
     },
     getValidityText(v) {
@@ -666,8 +715,8 @@ export default {
       this.activeFilterTab = "";
       this.doSearch();
     },
-    selectVoucherType(t) {
-        this.selectedVoucherType = t.label === "全部" ? null : t.value;
+    selectProductType(t) {
+        this.selectedProductType = t.label === "全部" ? null : t.value;
         this.activeFilterTab = "";
         this.doSearch();
     },
@@ -676,7 +725,7 @@ export default {
       this.selectedDistance = null;
       this.selectedScore = null;
       this.selectedScore = null;
-      this.selectedVoucherType = null;
+      this.selectedProductType = null;
       this.selectedBlogType = null;
       this.doSearch();
     },
@@ -698,8 +747,8 @@ export default {
         this.activeFilterTab = "";
         this.doSearch();
     },
-    selectVoucherShopType(id) {
-        this.selectedVoucherShopType = id;
+    selectProductShopType(id) {
+        this.selectedProductShopType = id;
         this.activeFilterTab = "";
         this.doSearch();
     },
@@ -717,9 +766,9 @@ export default {
            st: this.selectedShopType || undefined,
            sd: this.selectedDistance || undefined,
            ss: this.selectedScore || undefined,
-           vt: this.selectedVoucherType !== null ? this.selectedVoucherType : undefined,
+           vt: this.selectedProductType !== null ? this.selectedProductType : undefined,
            vs: this.selectedStatus !== null ? this.selectedStatus : undefined,
-           vst: this.selectedVoucherShopType || undefined,
+           vst: this.selectedProductShopType || undefined,
            bt: this.selectedBlogType || undefined
        };
        this.$router.replace({ query }).catch(() => {});
@@ -739,7 +788,7 @@ export default {
           this.shopList = [];
           this.blogList = [];
           this.userList = [];
-          this.voucherList = [];
+          this.productList = [];
       } else {
           this.loadingMore = true;
           this.page++;
@@ -780,7 +829,14 @@ export default {
               else if (res && res.data && Array.isArray(res.data.list)) list = res.data.list;
 
               list.forEach((s) => {
-                if (s.images) s.images = this.$fileURL + s.images.split(",")[0];
+                const rawImg = s.shopLogo || s.images;
+                if (rawImg) {
+                    if (rawImg.startsWith('http')) {
+                        s.images = rawImg;
+                    } else {
+                        s.images = this.$fileURL + rawImg.split(",")[0];
+                    }
+                }
               });
               
               if(isLoadMore) {
@@ -800,11 +856,11 @@ export default {
 
 
         
-        // VOUCHER
-        if (this.activeTab === "voucher") {
+        // PRODUCT
+        if (this.activeTab === "product") {
              const filters = {};
-             if(this.selectedVoucherShopType) filters.shopTypeId = this.selectedVoucherShopType;
-             if(this.selectedVoucherType !== null) filters.type = this.selectedVoucherType; // 0 or 1
+             if(this.selectedProductShopType) filters.shopTypeId = this.selectedProductShopType;
+             if(this.selectedProductType !== null) filters.type = this.selectedProductType; // 0 or 1
              if(this.selectedStatus !== null) filters.status = this.selectedStatus;
              
              const data = {
@@ -812,14 +868,15 @@ export default {
                  keyword: this.keyword,
                  lat: this.userLocation ? this.userLocation.y : undefined,
                  lon: this.userLocation ? this.userLocation.x : undefined,
-                 filters
+                 filters,
+                 category: null // Pass category to backend
              };
-             // Note: API for searchVouchers might differ, check if it accepts filters obj or flat.
+             // Note: API for searchProducts might differ, check if it accepts filters obj or flat.
              // Assuming similar structure or flattening if needed.
              // Actually backend might expect flat params for some. But standard pattern is object.
              
              promises.push(
-               searchVouchers(data).then(res => {
+               searchProducts(data).then(res => {
                    let list = [];
                   if(Array.isArray(res)) list = res;
                   else if(res && Array.isArray(res.list)) list = res.list;
@@ -829,7 +886,7 @@ export default {
                   else if(res && res.data && res.data.data && Array.isArray(res.data.data.list)) list = res.data.data.list;
                   else if(res && res.data && res.data.data && Array.isArray(res.data.data.records)) list = res.data.data.records;
                   
-                  this.voucherList = list || [];
+                  this.productList = list || [];
                   this.isLoading = false;
                }).catch(() => this.isLoading = false)
              );
@@ -926,23 +983,39 @@ export default {
         );
       }
 
-      // VOUCHER
-      if (this.activeTab === "voucher") {
+      // VOUCHER & GROUP
+      if (this.activeTab === "voucher" || this.activeTab === "group") {
         const filters = {};
-        if(this.selectedVoucherType !== null) filters.type = this.selectedVoucherType;
+        if(this.selectedProductType !== null) filters.type = this.selectedProductType;
         if(this.selectedStatus !== null) filters.status = this.selectedStatus;
-        if(this.selectedVoucherShopType !== null) filters.shopTypeId = this.selectedVoucherShopType;
+        if(this.selectedProductShopType !== null) filters.shopTypeId = this.selectedProductShopType;
         
+        // category: 1 for Voucher, 2 for Group
+        const category = this.activeTab === "voucher" ? 1 : 2;
+        filters.category = category;
+
         promises.push(
-          searchVouchers({ keyword: this.keyword, filters, ...pageParams }).then((res) => {
+          searchProducts({ keyword: this.keyword, filters, ...pageParams }).then((res) => {
              let list = [];
              if (Array.isArray(res)) list = res;
              else if (res && Array.isArray(res.list)) list = res.list;
              else if (res && res.data && Array.isArray(res.data.list)) list = res.data.list;
+             
+             list.forEach((v) => {
+                 const rawImg = v.shopLogo || v.images || v.image;
+                 if (rawImg) {
+                     if (rawImg.startsWith('http')) {
+                         v.images = rawImg;
+                     } else {
+                         v.images = this.$fileURL + rawImg.split(",")[0];
+                     }
+                 }
+             });
+
              if(isLoadMore) {
-                 this.voucherList = [...this.voucherList, ...list];
+                 this.productList = [...this.productList, ...list];
              } else {
-                 this.voucherList = list || [];
+                 this.productList = list || [];
                  this.isLoading = false;
              }
              this.loadingMore = false;
@@ -979,42 +1052,54 @@ export default {
          if(!v.endTime) return false;
          return new Date(v.endTime).getTime() < new Date().getTime();
     },
+
+
     doBuy(v) {
-         if(!localStorage.getItem("token")) {
-             this.$message.warning("请先登录");
-             setTimeout(() => {
-                location.href = "/login.html";
-             }, 200);
-             return;
-         }
-         
-         buyVoucherAPI(v.id).then(res => {
-             this.$message.success("抢购成功，订单ID: " + (res.data || res));
-         }).catch(err => {
-             this.$message.error(err.message || '抢购失败');
-         });
+         this.$router.push(`/product/detail?id=${v.id}`);
     },
     doSeckill(v) {
-         if(!localStorage.getItem("token")) {
-             this.$message.warning("请先登录");
-             setTimeout(() => {
-                location.href = "/login.html";
-             }, 200);
-             return;
-         }
-         if(this.isNotBegin(v)) return this.$message.warning("抢购未开始");
-         if(this.isEnd(v)) return this.$message.warning("抢购已结束");
-         if(v.stock < 1) return this.$message.warning("已抢光");
-         
-         seckillVoucherAPI(v.id).then(res => {
-             this.$message.success("秒杀成功，订单ID: " + (res.data || res));
-             v.stock--; 
-         }).catch(err => {
-             this.$message.error(err.message || '抢购失败');
-         });
+         this.$router.push(`/product/detail?id=${v.id}`);
+    },
+
+    resetToSearchHome() {
+      this.keyword = "";
+      this.activeTab = "shop";
+      this.activeFilterTab = "";
+
+      this.selectedShopType = null;
+      this.selectedDistance = null;
+      this.selectedScore = null;
+      this.selectedProductType = null;
+      this.selectedStatus = null;
+      this.selectedProductShopType = null;
+      this.selectedBlogType = null;
+
+      this.hasSearched = false;
+      this.isLoading = false;
+      this.loadingMore = false;
+      this.noMore = false;
+      this.page = 1;
+
+      this.shopList = [];
+      this.blogList = [];
+      this.userList = [];
+      this.productList = [];
+
+      this.$router.replace({ path: this.$route.path, query: {} }).catch(() => {});
     },
 
     goBack() {
+      const hasActiveSearchState = this.hasSearched
+        || !!this.keyword
+        || this.activeTab !== "shop"
+        || this.hasSelectedFilters
+        || this.selectedStatus !== null
+        || this.selectedProductShopType !== null;
+
+      if (hasActiveSearchState) {
+        this.resetToSearchHome();
+        return;
+      }
       this.$router.go(-1);
     },
     reGetLocation() {
@@ -1031,8 +1116,8 @@ export default {
     toShopDetail(shop) {
       this.$router.push({ path: "/shop/detail", query: { id: shop.id } });
     },
-    toVoucherDetail(v) {
-      this.$router.push({ path: "/voucher/detail", query: { id: v.id } });
+    toProductDetail(v) {
+      this.$router.push({ path: "/product/detail", query: { id: v.id } });
     },
     toBlogDetail(b) {
       this.$router.push({

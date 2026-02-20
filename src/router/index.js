@@ -191,9 +191,14 @@ const routes = [
         component: () => import('@/views/order/Detail.vue')
     },
     {
-        path: '/voucher/detail',
-        name: 'VoucherDetail',
-        component: () => import('@/views/voucher/Detail.vue')
+        path: '/product/detail',
+        name: 'ProductDetail',
+        component: () => import('@/views/product/Detail.vue')
+    },
+    {
+        path: '/deal/list',
+        name: 'DealList',
+        component: () => import('@/views/deal/Index.vue')
     },
 
     // Social (Chat/Comment) Module

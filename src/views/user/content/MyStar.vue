@@ -27,8 +27,7 @@ const getSourceType = (index) => {
   switch (index) {
     case 0: return 2; // Shop
     case 1: return 3; // Blog/Note
-    case 2: return 4; // Voucher
-    case 3: return 5; // Group Deal
+    case 2: return 4; // Goods (Voucher + Group)
     default: return 2;
   }
 };
@@ -82,6 +81,9 @@ const onLoad = async () => {
       current: current.value,
       size: size
     };
+
+    // removed productType logic as we now merge them
+    
     console.log('Fetching Collection:', params);
     
     loading.value = true; // Ensure loading is true before fetch
@@ -126,9 +128,18 @@ const handleTabChange = () => {
 
 const getFirstImage = (images) => {
     if(!images) return '/imgs/icons/default-icon.png';
-    const arr = images.split(',');
+    const arr = String(images).split(',');
     let url = arr[0];
     if (url && !url.startsWith('http')) {
+        return fileURL + url;
+    }
+    return url;
+};
+const getFirstShopImage = (images) => {
+    if(!images) return '/imgs/default-shop.png';
+    const arr = String(images).split(',');
+    let url = arr[0];
+    if (url && !url.startsWith('http') && !url.startsWith('/imgs')) {
         return fileURL + url;
     }
     return url;
@@ -165,8 +176,8 @@ const toShopDetail = (item) => {
     router.push({ path: '/shop/detail', query: { id: item.id || item.sourceId } });
 };
 
-const toVoucherDetail = (item) => {
-    router.push({ path: '/voucher/detail', query: { id: item.sourceId || item.id } });
+const toProductDetail = (item) => {
+    router.push({ path: '/product/detail', query: { id: item.sourceId || item.id } });
 };
 
 const getValidityText = (v) => {
@@ -201,7 +212,7 @@ const getSoldPercent = (item) => {
     return Math.round((sold / total) * 100);
 };
 
-const isSeckill = (item) => item.type === 1;
+const isSeckill = (item) => item.activityType === 1;
 
 const isSeckillStarted = (item) => {
     if(!item.beginTime) return false;
@@ -234,15 +245,15 @@ const getButtonState = (item) => {
 const handleBtnClick = (item) => {
     const state = getButtonState(item);
     if (state.action === 'buy') {
-        toVoucherDetail(item);
+        toProductDetail(item);
     } else if (state.action === 'remind') {
         // Simple navigate for now, or implement remind logic (need api)
         // User asked to "follow voucher detail page button settings" meaning Styles mostly?
         // Logic-wise, executing Remind needs similar methods.
         // For list view, jumping to detail is safer.
-        toVoucherDetail(item);
+        toProductDetail(item);
     } else {
-        toVoucherDetail(item);
+        toProductDetail(item);
     }
 };
 
@@ -295,7 +306,7 @@ watch(activeTab, () => {
              <div v-else class="list-content">
                 <div v-for="item in list" :key="item.id" class="shop-item" @click="toShopDetail(item)">
                     <div class="shop-img-box">
-                         <img :src="getFirstImage(item.image)" class="shop-cover" loading="lazy" @error="handleImgError">
+                         <img :src="getFirstShopImage(item.shopLogo || item.images || item.image)" class="shop-cover" loading="lazy" @error="$event.target.src='/imgs/default-shop.png'">
                     </div>
                     <div class="shop-main">
                          <div class="shop-title">{{ item.name || 'Unknown Shop' }}</div>
@@ -322,7 +333,7 @@ watch(activeTab, () => {
                     </div>
                     <div class="shop-side">
                          <div class="shop-price">¥{{ item.avgPrice || '0' }}/人</div>
-                         <div class="shop-distance">1.5km</div> <!-- Mock distance -->
+                         <div class="shop-distance">{{ item.distance ? (item.distance/1000).toFixed(1) + 'km' : '' }}</div>
                     </div>
                 </div>
              </div>
@@ -364,84 +375,75 @@ watch(activeTab, () => {
          </van-list>
       </van-tab>
 
-      <van-tab title="代金券">
+      <van-tab title="商品">
          <van-list
             v-model:loading="loading"
             :finished="finished"
             finished-text="没有更多了"
             @load="onLoad"
          >
-            <div v-if="list.length === 0 && !loading" class="empty-placeholder">暂无收藏代金券</div>
+            <div v-if="list.length === 0 && !loading" class="empty-placeholder">暂无收藏商品</div>
             <div v-else class="list-content">
-                 <div v-for="item in list" :key="item.id" class="voucher-card-v2" @click="toVoucherDetail(item)">
-                    <!-- 顶部信息区 (白色背景) -->
-                    <div class="voucher-header-section">
-                        <!-- 秒杀券顶部 -->
-                        <template v-if="item.type === 1">
-                            <div class="voucher-big-title">
-                                <span class="amount-highlight seckill-color">{{ item.actualValue }}</span>元代金券
-                                <span class="seckill-tag"><van-icon name="clock-o" size="10" />限时抢</span>
-                            </div>
-                            <div class="shop-name-row">适用商铺：{{ item.shopName || '通用' }}</div>
-                            <div class="time-row" v-if="item.beginTime && item.endTime">
-                                <van-icon name="clock-o" size="12" color="#FF2442" />
-                                <span>{{ formatSeckillTimeRange(item.beginTime, item.endTime) }}</span>
-                            </div>
-                        </template>
-                        <!-- 普通券顶部 -->
-                        <template v-else>
-                            <div class="voucher-big-title">
-                                <span class="amount-highlight">{{ item.actualValue }}</span>元代金券
-                            </div>
-                            <div class="shop-name-row normal">适用商铺：{{ item.shopName || '通用' }}</div>
-                            <div class="voucher-rule" v-if="item.subTitle">{{ item.subTitle }}</div>
-                            <div class="time-row normal" v-if="item.subTitle">
-                                <van-icon name="clock-o" size="12" color="#FF9000" />
-                                <span>{{ item.subTitle }}</span>
-                            </div>
-                        </template>
-                        <div class="validity-row" v-if="getValidityText(item)">{{ getValidityText(item) }}</div>
-                    </div>
-                    
-                    <!-- 底部价格区 (渐变背景) -->
-                    <div class="voucher-price-section" :class="{ seckill: item.type === 1 }">
-                        <div class="price-main">
-                            <div class="price-row">
-                                <span class="currency">¥</span>
-                                <span class="price-value">{{ item.payValue }}</span>
-                                <span class="orig-price">¥{{ item.actualValue }}</span>
-                                <span class="discount-badge" v-if="item.actualValue">
-                                    {{ ((item.payValue / item.actualValue) * 10).toFixed(1) }}折
-                                </span>
-                            </div>
-                            <div class="progress-row">
-                                <span class="sold-text">已售{{ getSoldPercent(item) }}%</span>
-                                <div class="progress-bar">
-                                    <div class="progress-fill" :style="{ width: getSoldPercent(item) + '%' }"></div>
+                 <div v-for="item in list" :key="item.id">
+                     <!-- Category 1: Voucher -->
+                     <div v-if="item.category == 1" class="voucher-card-v2" @click="toProductDetail(item)">
+                         <!-- 顶部信息区 (白色背景) -->
+                        <div class="voucher-header-section">
+                            <!-- 秒杀券顶部 -->
+                            <template v-if="item.activityType === 1">
+                                <div class="voucher-big-title">
+                                    <span class="amount-highlight seckill-color">{{ item.originalPrice }}</span>元
+                                    <span class="seckill-tag"><van-icon name="clock-o" size="10" />限时抢</span>
                                 </div>
-                                <span class="stock-text">剩{{ item.stock || 0 }}张</span>
+                                <div class="shop-name-row">适用商铺：{{ item.shopName || '通用' }}</div>
+                                <div class="time-row" v-if="item.beginTime && item.endTime">
+                                    <van-icon name="clock-o" size="12" color="#FF2442" />
+                                    <span>{{ formatSeckillTimeRange(item.beginTime, item.endTime) }}</span>
+                                </div>
+                            </template>
+                            <!-- 普通券顶部 -->
+                            <template v-else>
+                                <div class="voucher-big-title">
+                                    <span class="amount-highlight">{{ item.originalPrice }}</span>元
+                                </div>
+                                <div class="shop-name-row normal">适用商铺：{{ item.shopName || '通用' }}</div>
+                                <div class="voucher-rule" v-if="item.subTitle">{{ item.subTitle }}</div>
+                                <div class="time-row normal" v-if="item.subTitle">
+                                    <van-icon name="clock-o" size="12" color="#FF9000" />
+                                    <span>{{ item.subTitle }}</span>
+                                </div>
+                            </template>
+                            <div class="validity-row" v-if="getValidityText(item)">{{ getValidityText(item) }}</div>
+                        </div>
+                        
+                        <!-- 底部价格区 (渐变背景) -->
+                        <div class="voucher-price-section" :class="{ seckill: item.activityType === 1 }">
+                            <div class="price-main">
+                                <div class="price-row">
+                                    <span class="currency">¥</span>
+                                    <span class="price-value">{{ item.price }}</span>
+                                    <span class="orig-price">¥{{ item.originalPrice }}</span>
+                                    <span class="discount-badge" v-if="item.originalPrice">
+                                        {{ ((item.price / item.originalPrice) * 10).toFixed(1) }}折
+                                    </span>
+                                </div>
+                                <div class="progress-row">
+                                    <span class="sold-text">已售{{ getSoldPercent(item) }}%</span>
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" :style="{ width: getSoldPercent(item) + '%' }"></div>
+                                    </div>
+                                    <span class="stock-text">剩{{ item.stock || 0 }}张</span>
+                                </div>
+                            </div>
+                            <div class="action-btn" :class="getButtonState(item).class" @click.stop="handleBtnClick(item)">
+                                {{ getButtonState(item).text }}
                             </div>
                         </div>
-                        <div class="action-btn" :class="getButtonState(item).class" @click.stop="handleBtnClick(item)">
-                            {{ getButtonState(item).text }}
-                        </div>
-                    </div>
-                 </div>
-            </div>
-         </van-list>
-      </van-tab>
-
-      <van-tab title="团购">
-         <van-list
-            v-model:loading="loading"
-            :finished="finished"
-            finished-text="没有更多了"
-            @load="onLoad"
-         >
-            <div v-if="list.length === 0 && !loading" class="empty-placeholder">暂无收藏团购</div>
-            <div v-else class="list-content">
-                 <div v-for="item in list" :key="item.id" class="simple-item" @click="toVoucherDetail(item)">
-                    {{ item.title || 'Unknown Group Deal' }}
+                     </div>
+                     <!-- Category 2: Group -->
+                     <div v-else class="simple-item" @click="toProductDetail(item)">
+                        {{ item.title || 'Unknown Group Deal' }}
+                     </div>
                  </div>
             </div>
          </van-list>

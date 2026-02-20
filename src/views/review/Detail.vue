@@ -70,7 +70,7 @@
         <!-- 消费项目（仅订单评价显示） -->
         <div class="consume-item" v-if="review.sourceType === 4 && voucher">
             <span class="consume-icon">🛒</span>
-            <span class="consume-text">消费项目：{{ voucher.actualValue }}元代金券（{{ voucher.title || '全场通用' }}）</span>
+             <div class="consume-text">消费项目：{{ voucher.originalPrice }}元商品（{{ voucher.name || voucher.title || '全场通用' }}）</div>
         </div>
 
         <!-- Shop Link -->
@@ -80,7 +80,7 @@
                 <img :src="voucher.image ? (voucher.image.startsWith('http') ? voucher.image : imgPrefix + voucher.image) : defaultAvatar" @error="(e) => e.target.src = defaultAvatar">
              </div>
              <div class="voucher-info">
-                <div class="voucher-title">{{ voucher.payValue }}代{{ voucher.actualValue }}元{{ voucher.title || '代金券' }}</div>
+                <div class="voucher-title">{{ voucher.price }}代{{ voucher.originalPrice }}元{{ voucher.name || voucher.title || '商品' }}</div>
                 <div class="voucher-shop">{{ voucher.shopName || review.shopName }}</div>
              </div>
              <button class="voucher-buy-btn" @click.stop="buyVoucher">去购买</button>
@@ -212,51 +212,82 @@
             </div>
         </div>
 
-        <!-- Bottom Bar -->
-        <div class="bottom-bar">
-            <div class="input-fake" @click="checkLogin">说点什么吧~</div>
-            <div class="bar-actions">
-                <div class="bar-btn" @click="addLike">
-                    <svg viewBox="0 0 24 24" width="22" height="22">
-                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" :fill="review.isLike ? '#ff2442' : '#333'"></path>
-                    </svg>
-                    <span>{{ review.likeCount || '点赞' }}</span>
+        <!-- Sticky Bottom Bar (Same style as Blog Detail) -->
+        <div class="sticky-bottom-bar" :class="{ 'is-focused': isInputFocus }">
+            <div class="inline-input-container" v-show="isInputFocus">
+                <div class="inline-textarea-wrapper">
+                    <textarea
+                        ref="inlineTextarea"
+                        v-model="commentText"
+                        :placeholder="replyToComment ? ('回复 @' + (replyToComment.nickName || replyToComment.userName || '用户')) : '说点什么吧...'"
+                        :maxlength="500"
+                        rows="3"
+                        @focus="onInlineFocus"
+                    ></textarea>
                 </div>
-                <div class="bar-btn" @click="toggleCollect" :style="{color: review.isCollect ? '#FF9900' : '#333'}">
-                    <i :class="review.isCollect ? 'el-icon-star-on' : 'el-icon-star-off'"></i>
-                    <span>收藏{{review.collectCount || ''}}</span>
+                <div class="inline-images" v-if="selectedImages.length > 0">
+                    <div class="inline-image-item" v-for="(img, idx) in selectedImages" :key="idx">
+                        <img :src="img.url">
+                        <i class="el-icon-close" @click="removeImage(idx)"></i>
+                    </div>
+                    <div class="inline-image-add" @click="$refs.imageInput.click()" v-if="selectedImages.length < 9">
+                        <i class="el-icon-plus"></i>
+                    </div>
                 </div>
-                <!-- Also trigger comment on comment icon click -->
-                <div class="bar-btn" @click="checkLogin">
-                    <i class="el-icon-chat-round"></i>
-                    <span>评论</span>
+                <div class="inline-toolbar">
+                    <div class="inline-toolbar-left">
+                        <span class="toolbar-icon" @click="insertAt">@</span>
+                        <svg class="toolbar-icon pic-icon" @click="$refs.imageInput.click()" viewBox="0 0 1024 1024" width="22" height="22">
+                            <path d="M896 160H128c-35.2 0-64 28.8-64 64v576c0 35.2 28.8 64 64 64h768c35.2 0 64-28.8 64-64V224c0-35.2-28.8-64-64-64z m0 640H128V224h768v576z" fill="#666"></path>
+                            <path d="M320 512c53 0 96-43 96-96s-43-96-96-96-96 43-96 96 43 96 96 96z" fill="#666"></path>
+                            <path d="M896 736l-192-192-128 96-192-160-256 256v64h768z" fill="#666"></path>
+                        </svg>
+                        <input type="file" ref="imageInput" multiple accept="image/*" @change="handleImageUpload" style="display:none">
+                        <van-icon
+                            name="smile-o"
+                            class="emoji-icon emoji-toggle"
+                            :class="{ active: showEmojiPanel }"
+                            @click="toggleEmojiPanel"
+                        />
+                    </div>
+                    <div class="inline-toolbar-right">
+                        <el-button class="cancel-btn" size="small" round @click="closeInlineInput">取消</el-button>
+                        <el-button class="send-btn" type="primary" size="small" :disabled="!commentText.trim()" round @click="publishComment">发送</el-button>
+                    </div>
                 </div>
+                <div class="emoji-panel" v-show="showEmojiPanel">
+                    <div class="emoji-grid">
+                        <span class="emoji-item" v-for="emoji in emojis" :key="emoji" @click="insertEmoji(emoji)">{{emoji}}</span>
+                    </div>
                 </div>
             </div>
+
+            <div class="compact-bottom-bar" v-show="!isInputFocus">
+                <div class="compact-input-placeholder" @click="checkLogin">
+                    <i class="el-icon-edit"></i>
+                    <span>说点什么吧...</span>
+                </div>
+                <div class="compact-actions">
+                    <div class="action-item" @click="addLike">
+                        <svg viewBox="0 0 24 24" width="22" height="22">
+                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" :fill="review.isLike ? '#ff2442' : '#333'"></path>
+                        </svg>
+                        <span>{{ review.likeCount || 0 }}</span>
+                    </div>
+                    <div class="action-item" @click="toggleCollect">
+                        <i :class="review.isCollect ? 'el-icon-star-on active' : 'el-icon-star-off'"></i>
+                        <span>{{ review.collectCount || 0 }}</span>
+                    </div>
+                    <div class="action-item" @click="showReviewPopup = true; loadAllComments()">
+                        <i class="el-icon-chat-dot-round"></i>
+                        <span>{{ review.comments || comments.length || 0 }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
         </div>
     </div>
     <!-- End of Review Detail Page -->
-
-    <!-- Comment Input Popup -->
-    <div class="comment-pop-overlay" v-if="showCommentPublish" @click="closeCommentModal">
-        <div class="comment-pop-box" @click.stop>
-            <div class="pop-header">
-                <span class="pop-title">{{ replyToComment ? ('回复 @' + replyToComment.nickName) : '发表评论' }}</span>
-                <i class="el-icon-close pop-close" @click="closeCommentModal"></i>
-            </div>
-            <div class="pop-textarea">
-                <textarea 
-                    v-model="commentText" 
-                    placeholder="分享你此刻的想法..." 
-                    rows="3"
-                ></textarea>
-            </div>
-            <div class="pop-toolbar">
-                <div class="pop-toolbar-left"></div>
-                <el-button type="primary" size="small" :disabled="!commentText.trim()" @click="publishComment">发送</el-button>
-            </div>
-        </div>
-    </div>
 
     <!-- All Reviews Bottom Sheet Popup -->
     <div class="review-popup-overlay" v-if="showReviewPopup" @click="showReviewPopup = false">
@@ -359,9 +390,9 @@
              <div v-if="allCommentsNoMore && allComments.length > 0" class="no-more-reviews">没有更多评论了</div>
           </div>
           <!-- Bottom Input Bar in Popup -->
-          <div class="popup-bottom-bar" @click="checkLogin">
+          <div class="popup-bottom-bar" @click="writeCommentFromPopup">
              <div class="popup-input-placeholder">说点什么吧~</div>
-             <el-button type="primary" size="small" round>发布</el-button>
+             <el-button type="primary" size="small" round @click.stop="writeCommentFromPopup">发布</el-button>
           </div>
        </div>
     </div>
@@ -384,7 +415,7 @@ import { removeReview, getReview, likeReviewComment } from '@/api/reviews';
 import { getCurrentUser } from '@/api/user';
 import { uploadFile } from '@/api/common';
 import { fileURL } from '@/utils/request';
-import { getVoucherDetail } from '@/api/shop';
+import { getProductDetail } from '@/api/shop';
 import { showConfirmDialog } from 'vant';
 import '@/assets/css/blog-detail.css'; // Import blog-detail.css for shared styles
 
@@ -403,8 +434,22 @@ export default {
           previewImages: [],
           currentPreviewIndex: 0,
           // Comment Input
-          showCommentPublish: false,
+          isInputFocus: false,
+          showEmojiPanel: false,
           commentText: '',
+          selectedImages: [],
+          emojis: [
+              '\uD83D\uDE00', '\uD83D\uDE03', '\uD83D\uDE04', '\uD83D\uDE01', '\uD83D\uDE06',
+              '\uD83D\uDE05', '\uD83D\uDE02', '\uD83E\uDD23', '\uD83D\uDE0A', '\uD83D\uDE42',
+              '\uD83D\uDE09', '\uD83D\uDE0D', '\uD83E\uDD70', '\uD83D\uDE18', '\uD83D\uDE0B',
+              '\uD83D\uDE0E', '\uD83E\uDD29', '\uD83E\uDD14', '\uD83E\uDD2D', '\uD83D\uDE2E',
+              '\uD83D\uDE31', '\uD83D\uDE2D', '\uD83D\uDE22', '\uD83D\uDE24', '\uD83D\uDE21',
+              '\uD83E\uDD2C', '\uD83D\uDE37', '\uD83E\uDD22', '\uD83D\uDC4D', '\uD83D\uDC4E',
+              '\uD83D\uDC4F', '\uD83D\uDE4C', '\uD83D\uDE4F', '\uD83E\uDD1D', '\uD83D\uDC4C',
+              '\u2764\uFE0F', '\uD83E\uDDE1', '\uD83D\uDC9B', '\uD83D\uDC9A', '\uD83D\uDC99',
+              '\uD83D\uDC9C', '\uD83D\uDDA4', '\uD83D\uDC94', '\uD83D\uDD25', '\u2728',
+              '\uD83C\uDF1F', '\uD83C\uDF89', '\uD83C\uDF8A', '\uD83D\uDCAF', '\uD83D\uDE80'
+          ],
           user: {},
           replyToComment: null,
           showMenu: false, // For action menu
@@ -492,7 +537,7 @@ export default {
       },
       async loadVoucherDetail(voucherId) {
           try {
-              const res = await getVoucherDetail(voucherId);
+              const res = await getProductDetail(voucherId);
               if (res && res.data) {
                   this.voucher = res.data;
               }
@@ -502,7 +547,7 @@ export default {
       },
       toVoucherDetail() {
           if (this.voucher && this.voucher.id) {
-              this.$router.push({ path: '/voucher/detail', query: { id: this.voucher.id } });
+              this.$router.push({ path: '/product/detail', query: { id: this.voucher.id } });
           }
       },
       buyVoucher() {
@@ -651,6 +696,77 @@ export default {
               if (this.user.data) this.user = this.user.data;
           }).catch(() => {});
       },
+      openInlineInput() {
+          this.isInputFocus = true;
+          this.showEmojiPanel = false;
+          this.$nextTick(() => {
+              if (this.$refs.inlineTextarea) this.$refs.inlineTextarea.focus();
+          });
+      },
+      closeInlineInput() {
+          this.isInputFocus = false;
+          this.showEmojiPanel = false;
+          this.commentText = '';
+          this.selectedImages = [];
+          this.replyToComment = null;
+      },
+      onInlineFocus() {
+          this.isInputFocus = true;
+          this.showEmojiPanel = false;
+      },
+      toggleEmojiPanel() {
+          this.showEmojiPanel = !this.showEmojiPanel;
+          this.$nextTick(() => {
+              if (!this.$refs.inlineTextarea) return;
+              if (this.showEmojiPanel) this.$refs.inlineTextarea.blur();
+              else this.$refs.inlineTextarea.focus();
+          });
+      },
+      insertAt() {
+          this.commentText += '@';
+          if (this.$refs.inlineTextarea) this.$refs.inlineTextarea.focus();
+      },
+      insertEmoji(emoji) {
+          this.commentText += emoji;
+          if (!this.showEmojiPanel && this.$refs.inlineTextarea) {
+              this.$nextTick(() => {
+                  this.$refs.inlineTextarea.focus();
+              });
+          }
+      },
+      async handleImageUpload(e) {
+          const files = e.target.files;
+          if (!files || !files.length) return;
+          for (let file of files) {
+              const formData = new FormData();
+              formData.append("file", file);
+              let res = await uploadFile(formData);
+
+              let path = res;
+              if (res && typeof res === 'object' && res.data) path = res.data;
+              if (typeof path !== 'string') path = String(path);
+
+              const filePrefix = this.imgPrefix || '';
+              if (path.startsWith(filePrefix)) {
+                  path = path.substring(filePrefix.length);
+              }
+              if (path.startsWith('http')) {
+                  try {
+                      const urlObj = new URL(path);
+                      path = urlObj.pathname;
+                  } catch (error) {
+                      if (path.includes('/smart-live')) path = path.split('/smart-live')[1];
+                  }
+              }
+              if (path && !path.startsWith('/')) path = '/' + path;
+
+              this.selectedImages.push({ file, url: this.imgPrefix + path, rawUrl: path });
+          }
+          if (this.$refs.imageInput) this.$refs.imageInput.value = '';
+      },
+      removeImage(idx) {
+          this.selectedImages.splice(idx, 1);
+      },
       checkLogin() {
           if (!this.user || !this.user.id) {
               this.$message.warning("请先登录");
@@ -658,7 +774,7 @@ export default {
               return;
           }
           this.replyToComment = null; // Clear reply target when opening from main button
-          this.showCommentPublish = true;
+          this.openInlineInput();
       },
       handleReply(comment) {
           if (!this.user || !this.user.id) {
@@ -667,7 +783,8 @@ export default {
               return;
           }
           this.replyToComment = comment;
-          this.showCommentPublish = true;
+          this.commentText = '';
+          this.openInlineInput();
       },
       handleCommentDelete(comment) {
           showConfirmDialog({
@@ -791,11 +908,6 @@ export default {
               } 
           });
       },
-      closeCommentModal() {
-          this.showCommentPublish = false;
-          this.commentText = '';
-          this.replyToComment = null;
-      },
       publishComment() {
           if (!this.commentText.trim()) {
               this.$message.warning("请输入内容");
@@ -804,7 +916,8 @@ export default {
           const params = {
               sourceType: 7,
               content: this.commentText,
-              userId: this.user.id
+              userId: this.user.id,
+              images: this.selectedImages.map(i => i.rawUrl).join(',')
           };
           
           if (this.replyToComment) {
@@ -824,7 +937,7 @@ export default {
           
           addComment(params).then(() => {
               this.$message.success("评论成功");
-              this.closeCommentModal();
+              this.closeInlineInput();
               this.loadComments(this.review.id);
           });
       },
@@ -923,7 +1036,16 @@ export default {
           }
       },
       writeCommentFromPopup() {
-          this.checkLogin();
+          if (!this.user || !this.user.id) {
+              this.$message.warning("请先登录");
+              this.$router.push('/user/login');
+              return;
+          }
+          this.replyToComment = null;
+          this.commentText = '';
+          this.selectedImages = [];
+          this.showReviewPopup = false;
+          this.openInlineInput();
       }
   }
 }
@@ -1325,89 +1447,33 @@ export default {
     width: 100%;
 }
 
-/* Bottom Bar */
-.bottom-bar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 50px;
-    background: #fff;
-    border-top: 1px solid #f0f0f0;
-    display: flex;
-    align-items: center;
-    padding: 0 15px;
-    z-index: 100;
-}
-.input-fake {
-    flex: 1;
-    background: #f5f5f5;
-    color: #999;
-    padding: 8px 15px;
-    border-radius: 20px;
-    font-size: 13px;
-    margin-right: 15px;
-}
-.bar-actions {
-    display: flex;
-    gap: 20px;
-}
-.bar-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    color: #333;
-    font-size: 10px;
-}
-.bar-btn i {
-    font-size: 20px;
-    margin-bottom: 2px;
+.emoji-toggle.active {
+    color: #ff2442;
 }
 
-/* Comment Popup Styles */
-.comment-pop-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0,0,0,0.5);
-    z-index: 2000;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-}
-.comment-pop-box {
-    background: #fff;
-    border-radius: 12px 12px 0 0;
-    padding: 15px;
-    padding-bottom: 30px;
-}
-.pop-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-}
-.pop-title {
-    font-size: 16px;
-    font-weight: 600;
-    color: #333;
-}
-.pop-close {
-    font-size: 20px;
-    color: #999;
-}
-.pop-textarea textarea {
-    width: 100%;
-    border: none;
-    background: #f5f5f5;
+.emoji-panel {
+    margin-top: 10px;
+    background: #f7f8fa;
+    border: 1px solid #eceef2;
+    border-radius: 12px;
     padding: 10px;
-    border-radius: 8px;
-    font-size: 14px;
-    resize: none;
-    height: 100px;
-    outline: none;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.emoji-panel .emoji-grid {
+    grid-template-columns: repeat(8, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+}
+
+.emoji-panel .emoji-item {
+    font-size: 24px;
+    line-height: 1;
+    padding: 4px 0;
+}
+
+.emoji-panel .emoji-item:active {
+    transform: scale(1.12);
 }
 
 /* Override blog-detail.css for cleaner look */
@@ -1434,14 +1500,5 @@ export default {
 .reply-expand i {
     margin-left: 4px;
     font-size: 12px;
-}
-.pop-toolbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 15px;
-}
-.pop-toolbar-left {
-    flex: 1;
 }
 </style>

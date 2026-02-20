@@ -22,16 +22,21 @@ export function getUserInfo(id) {
 
 import { setUserInfo, getUserInfo as getStoreUserInfo, clearUserInfo } from '@/store/user';
 
+function cloneUser(user) {
+    if (!user || typeof user !== 'object') return user;
+    return { ...user };
+}
+
 export function getCurrentUser() {
     const cachedUser = getStoreUserInfo();
     if (cachedUser) {
-        return Promise.resolve({ data: cachedUser });
+        return Promise.resolve({ data: cloneUser(cachedUser) });
     }
     return request.get('/app/user/me').then(res => {
         if (res.data) { // Assuming res.data is the user object, adjust based on actual response structure
             setUserInfo(res.data);
         }
-        return res;
+        return { ...res, data: cloneUser(res.data) };
     }).catch(err => {
         clearUserInfo();
         throw err;

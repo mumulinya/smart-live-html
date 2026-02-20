@@ -229,16 +229,25 @@ const onLoad = async () => {
 
             // Map voucher/deal fields for SHOP_NEW and RESTOCK templates
             if (item.dataType === 'SHOP_NEW' || item.dataType === 'RESTOCK') {
-                item.price = item.price || item.payValue;
-                item.originalPrice = item.originalPrice || item.actualValue;
-                item.voucherName = item.voucherName || item.title;
-                // productType: 0 = 团购, 1 = 代金券 (based on API's type field)
-                // Template expects: productType === 1 ? '代金券' : '团购'
-                // API type: 0 = 代金券, 1 = 秒杀券 etc.
-                // Need to map: if type === 0 or no type, it's 代金券 (set productType = 1)
+                // Ensure price is decimal
+                if (item.price === undefined && item.payValue !== undefined) {
+                     item.price = (item.payValue / 100).toFixed(2);
+                }
+                if (item.originalPrice === undefined && item.actualValue !== undefined) {
+                     item.originalPrice = (item.actualValue / 100).toFixed(2);
+                }
+                
+                item.voucherName = item.voucherName || item.name || item.title;
+                
+                // Keep activityType if present, or map from type if it was product type (but item.type here is FeedType often)
+                // We rely on detail object having activityType
+                
                 if (item.productType === undefined) {
                     // API type 0 = 代金券, type 1 = 秒杀券 (also a voucher type)
-                    item.productType = (item.type === 0 || item.type === 1) ? 1 : 0;
+                    // If activityType is 1, it is Seckill (Voucher)
+                    // Check if we can distinguish "Group Deal" vs "Voucher"
+                    // Usually Group Deal has distinct structure or type
+                    item.productType = 1; // Default to Voucher for now as per previous logic
                 }
             }
 
@@ -310,7 +319,7 @@ const toBlog = (item) => {
 };
 
 const toVoucher = (item) => {
-    router.push(`/voucher/detail?id=${item.targetId || item.id}`);
+    router.push(`/product/detail?id=${item.targetId || item.id}`);
 };
 
 const handleItemClick = (item) => {

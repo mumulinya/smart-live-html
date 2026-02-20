@@ -87,7 +87,7 @@
     <!-- Tabs -->
     <!-- Sticky Tabs (Refactored to match Info.vue) -->
     <div class="sticky-tabs-container">
-        <van-tabs v-model:active="activeTab" sticky offset-top="64" swipeable animated @change="switchTab">
+        <van-tabs v-model:active="activeTab" sticky offset-top="64" @change="switchTab">
             <van-tab name="note">
                 <template #title>
                     <div class="tab-label">

@@ -120,7 +120,7 @@
             </div>
          </div>
          <h3 class="welcome-title">Hello，我是智能助手</h3>
-         <p class="welcome-desc">我是您的智能生活助手，我可以帮您查询附近的热门店铺<br>搜索超值代金券服务，还能直接为您下单特惠优惠券，让生活更省心</p>
+         <p class="welcome-desc">我是您的智能生活助手，我可以帮您查询附近的热门店铺<br>搜索超值商品服务，还能直接为您下单特惠商品，让生活更省心</p>
          
 	         <div class="suggestion-area">
 	            <div class="s-header">
@@ -132,9 +132,9 @@
 	                  <div class="card-icon"><i class="el-icon-search"></i></div>
 	                  <span class="card-text">帮我找附近评分最高的火锅店</span>
 	               </div>
-	               <div class="suggestion-card" :class="{ disabled: isSending }" @click="quickAsk('查询附近的可用代金券')">
+	               <div class="suggestion-card" :class="{ disabled: isSending }" @click="quickAsk('查询附近的可用商品')">
 	                  <div class="card-icon"><i class="el-icon-search"></i></div>
-	                  <span class="card-text">查询附近的可用代金券</span>
+	                  <span class="card-text">查询附近的可用商品</span>
 	               </div>
 	               <div class="suggestion-card" :class="{ disabled: isSending }" @click="quickAsk('帮我下一单首选基础套餐券')">
 	                  <div class="card-icon"><i class="el-icon-search"></i></div>
@@ -226,7 +226,7 @@
 	                          </div>
 	                          <template v-if="isVoucherSeckill(item)">
 	                            <div class="voucher-title-row">
-	                              <span class="voucher-title">{{ item.title || `${item.actualValue || '--'}元代金券` }}</span>
+	                              <span class="voucher-title">{{ item.name || item.title || `${item.originalPrice || item.actualValue/100 || '--'}元商品` }}</span>
 	                              <span class="voucher-flash-tag"><i class="el-icon-time"></i> 限时抢</span>
 	                            </div>
 	                            <div class="voucher-shop-row" v-if="item.shopName">
@@ -240,7 +240,7 @@
 	                          </template>
 	                          <template v-else>
 	                            <div class="voucher-title-row">
-	                              <span class="voucher-title">{{ item.title || `${item.actualValue || '--'}元代金券` }}</span>
+	                              <span class="voucher-title">{{ item.name || item.title || `${item.originalPrice || item.actualValue/100 || '--'}元商品` }}</span>
 	                            </div>
 	                            <div class="voucher-subtitle-row">{{ item.subTitle || '周一至周日均可使用' }}</div>
 	                            <div class="voucher-time-row normal">
@@ -257,10 +257,10 @@
 	                          <div class="price-main">
 	                            <div class="price-row">
 	                              <span class="currency">¥</span>
-	                              <span class="price-value">{{ formatVoucherAmount(item.payValue) }}</span>
+	                              <span class="price-value">{{ formatVoucherAmount(item.price || item.payValue) }}</span>
 	                            </div>
 	                            <div class="price-sub-row">
-	                              <span class="orig-price">¥{{ formatVoucherAmount(item.actualValue) }}</span>
+	                              <span class="orig-price">¥{{ formatVoucherAmount(item.originalPrice || item.actualValue) }}</span>
 	                              <span class="discount-badge" v-if="getVoucherDiscountText(item)">{{ getVoucherDiscountText(item) }}</span>
 	                            </div>
 	                            <div class="progress-row" v-if="isVoucherSeckill(item)">
@@ -376,7 +376,7 @@ import { Delete } from '@element-plus/icons-vue';
 import { showConfirmDialog } from 'vant';
 import 'vant/es/dialog/style';
 import { getCurrentUser } from '@/api/user';
-import { buyVoucherAPI, seckillVoucherAPI } from '@/api/shop';
+import { buyProductAPI, seckillProductAPI } from '@/api/shop';
 import { locationUtil } from '@/utils/location';
 import { fileURL } from '@/utils/request';
 import PageLayout from '@/components/PageLayout/PageLayout.vue';
@@ -1287,12 +1287,16 @@ const isVoucherRecommendation = (item) => {
 
   const hasVoucherSignals = [
     item.shopId,
+    item.price,
+    item.originalPrice,
     item.payValue,
     item.actualValue,
     item.voucherType,
+    item.activityType,
     item.beginTime,
     item.endTime,
     item.title,
+    item.name,
     item.shopName
   ].some((v) => v !== undefined && v !== null && v !== '');
 
@@ -1332,7 +1336,7 @@ const formatVoucherAmount = (value) => {
 
 const getVoucherBusinessType = (voucher) => {
   if (!voucher || typeof voucher !== 'object') return -1;
-  const candidates = [voucher.type, voucher.voucherType, voucher?.voucher?.type];
+  const candidates = [voucher.activityType, voucher.type, voucher.voucherType, voucher?.voucher?.type];
   for (const value of candidates) {
     const normalized = toValidVoucherType(value);
     if (normalized !== -1) return normalized;
@@ -1437,8 +1441,8 @@ const getVoucherSoldPercent = (voucher) => {
 };
 
 const getVoucherDiscountText = (voucher) => {
-  const payValue = Number(voucher?.payValue);
-  const actualValue = Number(voucher?.actualValue);
+  const payValue = Number(voucher?.price || voucher?.payValue);
+  const actualValue = Number(voucher?.originalPrice || voucher?.actualValue);
   if (!Number.isFinite(payValue) || !Number.isFinite(actualValue) || actualValue <= 0) {
     return '';
   }
@@ -1479,7 +1483,7 @@ const getVoucherActionText = (voucher) => {
 const goToVoucherDetail = (voucher) => {
   if (!voucher?.id) return;
   router.push({
-    path: '/voucher/detail',
+    path: '/product/detail',
     query: { id: voucher.id }
   });
 };
@@ -1504,7 +1508,7 @@ const extractOrderId = (result) => {
 
 const handleVoucherPurchase = async (voucher) => {
   if (!voucher?.id) {
-    ElMessage.warning('代金券信息不完整');
+    ElMessage.warning('商品信息不完整');
     return;
   }
 
@@ -1538,7 +1542,7 @@ const handleVoucherPurchase = async (voucher) => {
   }
 
   try {
-    const api = isSeckill ? seckillVoucherAPI : buyVoucherAPI;
+    const api = isSeckill ? seckillProductAPI : buyProductAPI;
     const res = await api(voucher.id);
     const orderId = extractOrderId(res);
     ElMessage.success(isSeckill ? '秒杀成功' : '购买成功');
@@ -1548,7 +1552,7 @@ const handleVoucherPurchase = async (voucher) => {
       router.push('/order/list');
     }
   } catch (error) {
-    console.error('购买代金券失败:', error);
+    console.error('购买商品失败:', error);
     const rawMsg = error?.msg || error?.message || error?.response?.data?.message || '';
     const msg = String(rawMsg);
     if (msg.includes('库存') || msg.toLowerCase().includes('stock')) {

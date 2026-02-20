@@ -15,9 +15,10 @@ export function searchUsers(params) {
     return request.get('/app/search/users', { params });
 }
 
-// Search Vouchers (POST)
-export function searchVouchers(data) {
-    return request.post('/app/search/vouchers', data);
+// Search Products (POST)
+export function searchProducts(data) {
+    // URL remains /search/vouchers for compatibility as per doc, but function name updated
+    return request.post('/app/search/products', data);
 }
 
 // Hot Search (GET)

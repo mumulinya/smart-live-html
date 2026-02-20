@@ -19,7 +19,7 @@ const apiBaseURL = import.meta.env.VITE_API_BASE_URL || '/app-dev-api';
 // Base configuration
 const service = axios.create({
   baseURL: apiBaseURL,
-  timeout: 5000
+  timeout: 30000 // Increased from 5000 to 30000 to prevent timeouts
 });
 
 // Request interceptor

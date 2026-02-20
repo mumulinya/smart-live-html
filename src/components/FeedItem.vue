@@ -41,8 +41,8 @@
       <!-- 底部互动栏 -->
       <div class="blog-footer">
         <span class="stat-item">
-          <van-icon name="like-o" size="18" />
-          <span class="stat-num">{{ item.likes || 0 }}</span>
+          <van-icon :name="item.isLike ? 'like' : 'like-o'" :color="item.isLike ? '#FF2442' : ''" size="18" />
+          <span class="stat-num" :style="{ color: item.isLike ? '#FF2442' : '' }">{{ item.liked || item.likes || 0 }}</span>
         </span>
         <span class="stat-item">
           <van-icon name="chat-o" size="18" />
@@ -85,10 +85,10 @@
          <div class="seckill-top">
             <div class="price-box">
                 <span class="symbol">¥</span>
-                <span class="amount">{{ item.price || item.payValue }}</span>
-                <span class="orig">¥{{ item.originalPrice || item.actualValue }}</span>
-                <span class="discount-tag" v-if="(item.price || item.payValue) && (item.originalPrice || item.actualValue)">
-                    {{ ((item.price || item.payValue) / (item.originalPrice || item.actualValue) * 10).toFixed(1) }}折
+                <span class="amount">{{ item.price }}</span>
+                <span class="orig">¥{{ item.originalPrice }}</span>
+                <span class="discount-tag" v-if="item.price && item.originalPrice">
+                    {{ (item.price / item.originalPrice * 10).toFixed(1) }}折
                 </span>
             </div>
             <div class="grab-btn" :class="{ disabled: buttonState.disabled }">
@@ -97,8 +97,8 @@
          </div>
          
          <div class="seckill-mid">
-             <span class="white-tag">代金券</span>
-             <span class="seckill-title">{{ item.voucherName || item.title }}</span>
+             <span class="white-tag">商品</span>
+             <span class="seckill-title">{{ item.voucherName || item.name || item.title }}</span>
          </div>
          
          <!-- 已售/剩余 进度条区域 -->
@@ -129,10 +129,10 @@
          <div class="seckill-top">
             <div class="price-box">
                 <span class="symbol">¥</span>
-                <span class="amount">{{ item.price || item.payValue }}</span>
-                <span class="orig">¥{{ item.originalPrice || item.actualValue }}</span>
-                <span class="discount-tag" v-if="(item.price || item.payValue) && (item.originalPrice || item.actualValue)">
-                    {{ ((item.price || item.payValue) / (item.originalPrice || item.actualValue) * 10).toFixed(1) }}折
+                <span class="amount">{{ item.price }}</span>
+                <span class="orig">¥{{ item.originalPrice }}</span>
+                <span class="discount-tag" v-if="item.price && item.originalPrice">
+                    {{ (item.price / item.originalPrice * 10).toFixed(1) }}折
                 </span>
             </div>
             <div class="grab-btn" :class="{ disabled: buttonState.disabled }">
@@ -141,8 +141,8 @@
          </div>
          
          <div class="seckill-mid">
-             <span class="white-tag">代金券</span>
-             <span class="seckill-title">{{ item.voucherName || item.title || (item.actualValue + '元代金券') }}</span>
+             <span class="white-tag">商品</span>
+             <span class="seckill-title">{{ item.voucherName || item.name || item.title || (item.originalPrice + '元商品') }}</span>
          </div>
          
          <!-- 已售/剩余 进度条区域 -->
@@ -256,7 +256,7 @@ const isVoucher = computed(() => {
 
 // 判断是否为秒杀 (Type=1)
 const isSeckill = computed(() => {
-    return props.item.type === 1 || props.item.subType === 'start';
+    return props.item.activityType === 1 || props.item.subType === 'start';
 });
 
 // 动作文案映射

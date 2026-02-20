@@ -64,11 +64,11 @@
 
        <!-- Voucher Info Section -->
        <div class="info-section">
-          <div class="section-title">优惠券信息</div>
+          <div class="section-title">商品信息</div>
           <div class="info-list">
              <div class="info-item">
-                <span class="label">券名称:</span>
-                <span class="value">{{order.title || '未知商品'}}</span>
+                <span class="label">商品名称:</span>
+                <span class="value">{{order.name || order.title || '未知商品'}}</span>
              </div>
              <div class="info-item">
                 <span class="label">副标题:</span>
@@ -76,11 +76,11 @@
              </div>
              <div class="info-item">
                 <span class="label">支付金额:</span>
-                <span class="value">￥{{formatPrice(order.payValue || order.price)}}</span>
+                <span class="value">￥{{formatPrice(order.price || order.payValue)}}</span>
              </div>
              <div class="info-item">
                 <span class="label">抵扣金额:</span>
-                <span class="value">￥{{formatPrice(order.actualValue || order.value)}}</span>
+                <span class="value">￥{{formatPrice(order.originalPrice || order.actualValue || order.value)}}</span>
              </div>
              <div class="info-item">
                 <span class="label">使用规则:</span>

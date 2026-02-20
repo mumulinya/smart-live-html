@@ -87,7 +87,11 @@ function extractVoucherLikeData(data = {}) {
     'shopName',
     'shopLogo',
     'shopImages',
-    'typeId'
+    'typeId',
+    'name',
+    'price',
+    'originalPrice',
+    'activityType'
   ];
 
   const picked = {};

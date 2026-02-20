@@ -33,7 +33,7 @@
                                  <div class="shop-name-row">{{order.shopName || '未知店铺'}}</div>
                                  <div class="product-desc-row">商品编号: {{order.voucherId || (order.id && order.id.length > 4 ? order.id.slice(-4) : order.id)}}</div>
                                  <div class="price-row">
-                                     <span class="price-val">¥{{formatPrice(order.payValue || order.price)}}</span>
+                                     <span class="price-val">¥{{formatPrice(order.price || order.payValue)}}</span>
                                      <span class="quantity">x1</span>
                                  </div>
                              </div>

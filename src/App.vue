@@ -103,6 +103,15 @@ const handleGlobalMessage = (message) => {
     }
 };
 
+const clearPageSessionCache = () => {
+    if (typeof window === 'undefined') return;
+    try {
+        sessionStorage.clear();
+    } catch (e) {
+        console.error('Failed to clear session storage cache', e);
+    }
+};
+
 const handleAuthChanged = (event) => {
     keepAliveVersion.value += 1;
     if (event?.detail?.action === 'logout') {
@@ -110,6 +119,7 @@ const handleAuthChanged = (event) => {
         chatStore.setUnread(0);
         chatStore.setSystemUnread(0);
     } else if (event?.detail?.action === 'login') {
+        clearPageSessionCache();
         initSystemUnreadCount();
     }
 };

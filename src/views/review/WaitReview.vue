@@ -27,14 +27,14 @@
                          <!-- Content -->
                          <div class="card-content" @click="toReview(order)">
                             <div class="product-title">
-                                {{order.title || '未知商品'}}
-                                <span class="seckill-tag" v-if="order.title && order.title.includes('秒杀')">秒杀</span>
+                                {{order.name || order.title || '未知商品'}}
+                                <span class="seckill-tag" v-if="(order.name || order.title) && (order.name || order.title).includes('秒杀')">秒杀</span>
                             </div>
                             <div class="info-row">
                                 <span class="shop-name">{{order.shopName}}</span>
                             </div>
                             <div class="price-row">
-                                <span class="price-val">¥{{formatPrice(order.payValue || order.price)}}</span>
+                                <span class="price-val">¥{{formatPrice(order.price || order.payValue)}}</span>
                             </div>
                          </div>
 

@@ -29,7 +29,7 @@
            <div class="shop-score-row">
                <van-rate :model-value="shop.score ? shop.score/10 : 0" readonly color="#FF9900" void-icon="star" void-color="#eee" size="12px" allow-half />
                <span class="score-val">{{shop.score ? (shop.score/10).toFixed(1) : 0}}</span>
-               <span class="comment-num">{{shop.comments}}条评价</span>
+               <span class="comment-num">{{shop.comments || comments.length || 0}}条评价</span>
            </div>
            
            <div class="shop-addr-row" @click="openMap">
@@ -52,25 +52,25 @@
     </div>
 
        <van-tabs v-model:active="activeTab" scrollspy sticky color="#ff2442" title-active-color="#ff2442" line-width="20px" offset-top="44">
-          <van-tab title="代金券">
-             <div id="voucher" class="section-block">
-          <div class="section-title">
-             <span class="icon-text text-orange">券</span> 
-             <span class="title-text">代金券</span>
+          <van-tab title="商品">
+          <div id="voucher" class="section-block" style="background: white; padding: 16px;">
+          <div class="section-title" style="margin-bottom: 16px;">
+             <span class="icon-text text-orange" style="background: linear-gradient(135deg, #FF9900, #FF5500); color: white; padding: 2px 6px; border-radius: 4px; font-size: 12px; margin-right: 6px; border: none;">购</span> 
+             <span class="title-text" style="font-weight: 600; font-size: 16px;">商品</span>
           </div>
-       <div class="voucher-list" v-if="vouchers.length>0">
+       <div class="voucher-list" v-if="products && products.length>0">
           
-          <!-- Seckill Vouchers -->
-          <template v-for="v in vouchers.filter(x => x.type === 1)" :key="'seckill-' + v.id">
-             <div class="voucher-card-v2 seckill" @click="toVoucherDetail(v)">
+          <!-- Seckill Products -->
+          <template v-for="v in products.filter(x => x && x.activityType === 1)" :key="'seckill-' + v.id">
+             <div class="voucher-card-v2 seckill" @click="goToProductDetail(v)">
                 <div class="voucher-card-header">
                    <div class="voucher-title-row">
-                      <span class="voucher-title">{{v.title || (v.actualValue + '元代金券')}}</span>
+                      <span class="voucher-title">{{v.name || (v.originalPrice + '元商品')}}</span>
                       <span class="voucher-flash-tag"><i class="el-icon-time"></i> 限时抢</span>
                    </div>
-                   <div class="voucher-shops" v-if="shop.name">
+                   <div class="voucher-shops" v-if="v.shopName || shop.name">
                       <span class="shop-label">适用商铺：</span>
-                      <span class="shop-names">{{shop.name}}</span>
+                      <span class="shop-names">{{v.shopName || shop.name}}</span>
                    </div>
                    <div class="voucher-time" v-if="v.beginTime && v.endTime">
                       <i class="el-icon-time"></i> {{formatSeckillTime(v)}}
@@ -83,11 +83,11 @@
                    <div class="voucher-price-section">
                       <div class="voucher-current-price">
                          <span class="price-symbol">¥</span>
-                         <span class="price-value">{{v.payValue}}</span>
+                         <span class="price-value">{{v.price}}</span>
                       </div>
                       <div class="voucher-original-info">
-                         <span class="original-price">¥{{v.actualValue}}</span>
-                         <span class="discount-badge">{{(v.payValue/v.actualValue*10).toFixed(1)}}折</span>
+                         <span class="original-price">¥{{v.originalPrice}}</span>
+                         <span class="discount-badge">{{(v.price/v.originalPrice*10).toFixed(1)}}折</span>
                       </div>
                       <div class="voucher-sold-info">
                          已售{{v.sold || 0}}张
@@ -106,12 +106,16 @@
              </div>
           </template>
           
-          <!-- Normal Vouchers -->
-          <template v-for="v in vouchers.filter(x => x.type !== 1)" :key="'normal-' + v.id">
-             <div class="voucher-card-v2 normal" @click="toVoucherDetail(v)">
+          <!-- Normal Products -->
+          <template v-for="v in products.filter(x => x && x.activityType !== 1)" :key="'normal-' + v.id">
+             <div class="voucher-card-v2 normal" @click="goToProductDetail(v)">
                 <div class="voucher-card-header">
                    <div class="voucher-title-row">
-                      <span class="voucher-title">{{v.title || (v.actualValue + '元代金券')}}</span>
+                      <span class="voucher-title">{{v.name || (v.originalPrice + '元商品')}}</span>
+                   </div>
+                   <div class="voucher-shops" v-if="v.shopName || shop.name">
+                      <span class="shop-label">适用商铺：</span>
+                      <span class="shop-names">{{v.shopName || shop.name}}</span>
                    </div>
                    <div class="voucher-subtitle">
                       <span>{{v.subTitle || '周一至周五均可使用'}}</span>
@@ -127,11 +131,11 @@
                    <div class="voucher-price-section">
                       <div class="voucher-current-price">
                          <span class="price-symbol">¥</span>
-                         <span class="price-value">{{v.payValue}}</span>
+                         <span class="price-value">{{v.price}}</span>
                       </div>
                       <div class="voucher-original-info">
-                         <span class="original-price">¥{{v.actualValue}}</span>
-                         <span class="discount-badge">{{(v.payValue/v.actualValue*10).toFixed(1)}}折</span>
+                         <span class="original-price">¥{{v.originalPrice}}</span>
+                         <span class="discount-badge">{{(v.price/v.originalPrice*10).toFixed(1)}}折</span>
                       </div>
                       <div class="voucher-sold-info">
                          已售{{v.sold || 0}}张
@@ -148,7 +152,7 @@
           </template>
        </div>
        <div class="voucher-list" v-else>
-           <div class="empty-tip">暂无优惠券</div>
+           <div class="empty-tip">暂无商品</div>
        </div>
        </div> <!-- End #voucher -->
           </van-tab>
@@ -159,10 +163,41 @@
        <!-- Group Buy Section -->
        <div id="groupbuy" class="section-block" style="background: white; padding: 16px;">
           <div class="section-title" style="margin-bottom: 16px;">
-             <span class="icon-text text-orange" style="background: #FFF5E2; color: #FF9900; padding: 2px 6px; border-radius: 4px; font-size: 12px; margin-right: 6px;">团</span>
+             <span class="icon-text text-orange" style="background: linear-gradient(135deg, #FF9900, #FF5500); color: white; padding: 2px 6px; border-radius: 4px; font-size: 12px; margin-right: 6px; border: none;">团</span>
              <span class="title-text" style="font-weight: 600; font-size: 16px;">团购套餐</span>
           </div>
-          <div class="empty-placeholder" style="padding: 20px 0; text-align: center; color: #999;">暂无团购套餐</div>
+          <div class="empty-placeholder" v-if="!groupBuyProducts || groupBuyProducts.length===0" style="padding: 20px 0; text-align: center; color: #999;">暂无团购套餐</div>
+          <div class="voucher-list" v-else>
+              <div class="voucher-card-v2 normal" v-for="v in groupBuyProducts.filter(x => x)" :key="v.id" @click="goToProductDetail(v)">
+                 <div class="voucher-card-header">
+                    <div class="voucher-title-row">
+                       <span class="voucher-title">{{v.name || ((v.originalPrice || 0) + '元套餐')}}</span>
+                    </div>
+                    <div class="voucher-shops" v-if="v.shopName || shop.name">
+                       <span class="shop-label">适用商铺：</span>
+                       <span class="shop-names">{{v.shopName || shop.name}}</span>
+                    </div>
+                    <div class="voucher-subtitle">
+                       <span>{{v.subTitle || '超值团购套餐'}}</span>
+                    </div>
+                 </div>
+                 <div class="voucher-card-body gradient-orange">
+                    <div class="voucher-price-section">
+                       <div class="voucher-current-price">
+                          <span class="price-symbol">¥</span>
+                          <span class="price-value">{{v.price}}</span>
+                       </div>
+                       <div class="voucher-original-info">
+                          <span class="original-price">¥{{v.originalPrice || 0}}</span>
+                          <span class="discount-badge" v-if="v.originalPrice">{{(v.price/v.originalPrice*10).toFixed(1)}}折</span>
+                       </div>
+                    </div>
+                    <div class="voucher-action-section">
+                       <button class="voucher-buy-btn" @click.stop="doBuy(v)">立即抢购</button>
+                    </div>
+                 </div>
+              </div>
+          </div>
        </div>
        
        <div class="shop-divider"></div>
@@ -197,7 +232,7 @@
              <div class="comment-icon" @click.stop="toUserDetail(c.userId)">
                 <img :src="c.userIcon || '/imgs/icons/default-icon.png'">
              </div>
-             <div class="comment-info">
+             <div class="comment-info" @click="toReviewDetail(c)">
                 <div class="comment-user" @click.stop="toUserDetail(c.userId)">
                    {{c.nickName || '匿名用户'}} <span>Lv{{c.userLevel || 1}}</span>
                 </div>
@@ -205,7 +240,7 @@
                    <el-rate :model-value="c.rating" disabled size="small"></el-rate>
                    <span class="score">{{c.rating}}分</span>
                 </div>
-                <div class="comment-content" @click="toReviewDetail(c)">{{c.content}}</div>
+                <div class="comment-content">{{c.content}}</div>
                 <div class="comment-images" v-if="c.images && c.images.length">
                    <img v-for="(img, idx) in c.images" :key="idx" :src="img" @click.stop="previewImage(c.images, idx)">
                 </div>
@@ -334,9 +369,9 @@
              <span>电话</span>
           </div>
        </div>
-       <div class="foot-right">
-          <div class="foot-main-btn" @click="writeComment">写评价</div>
-       </div>
+          <div class="foot-main-btn" @click="writeComment">
+             <i class="el-icon-edit" style="margin-right: 4px; font-size: 16px;"></i> 写评价
+          </div>
     </div>
     
      <div class="image-preview" v-if="showPreview" @click="closePreview">
@@ -410,7 +445,7 @@
                <div class="comment-icon" @click.stop="toUserDetail(c.userId)">
                   <img :src="c.userIcon || '/imgs/icons/default-icon.png'">
                </div>
-               <div class="comment-info">
+               <div class="comment-info" @click="toReviewDetail(c)">
                   <div class="comment-user" @click.stop="toUserDetail(c.userId)">
                      {{c.nickName || '匿名用户'}} <span>Lv{{c.userLevel || 1}}</span>
                   </div>
@@ -418,7 +453,7 @@
                      <el-rate :model-value="c.rating" disabled size="small"></el-rate>
                      <span class="score">{{c.rating}}分</span>
                   </div>
-                  <div class="comment-content" @click="toReviewDetail(c)">{{c.content}}</div>
+                  <div class="comment-content">{{c.content}}</div>
                   <div class="comment-images" v-if="c.images && c.images.length">
                      <img v-for="(img, idx) in c.images" :key="idx" :src="img" @click.stop="previewImage(c.images, idx)">
                   </div>
@@ -503,11 +538,6 @@
             <div v-if="allCommentsLoading" class="loading-more">加载中...</div>
             <div v-if="allCommentsNoMore && allComments.length > 0" class="no-more-reviews">没有更多评论了</div>
          </div>
-         <!-- Bottom Input Bar in Popup -->
-         <div class="popup-bottom-bar" @click="writeCommentFromPopup">
-            <div class="popup-input-placeholder">发条评论，和大家一起讨论</div>
-            <el-button type="primary" size="small" round>发布</el-button>
-         </div>
       </div>
    </div>
 
@@ -515,7 +545,7 @@
 </template>
 
 <script>
-import { getShopDetail, getShopVouchers, buyVoucherAPI, seckillVoucherAPI } from '@/api/shop';
+import { getShopDetail, getShopProducts } from '@/api/shop';
 
 import { isStar, toggleStar, getComments, likeComment, addComment, removeComment, isFollowed, followUser } from '@/api/interaction';
 import { getReviewList, likeReviewComment } from '@/api/reviews';
@@ -534,7 +564,8 @@ export default {
        isLoading: true,
        shop: {},
        gallery: [],
-       vouchers: [],
+       products: [],
+       groupBuyProducts: [], // For Category 2
        comments: [],
        // isStared now comes from shop.isStared (API response)
        starAnimating: false,
@@ -602,22 +633,33 @@ export default {
            
            if(data) {
               this.shop = data;
-              // Parse images
-              if(this.shop.images) {
-                 const rawImgs = this.shop.images.split(',');
-                 this.gallery = rawImgs.map(img => {
-                     if(img.startsWith('http')) return img;
-                     return this.fileURL + img;
-                 });
-                 if (!this.shop.cover && this.gallery.length > 0) {
-                     this.shop.cover = this.gallery[0];
-                 }
-              }
-              
-              // Ensure cover has prefix if it exists and is relative
-              if (this.shop.cover && !this.shop.cover.startsWith('http')) {
-                  this.shop.cover = this.fileURL + this.shop.cover;
-              }
+               // Parse images
+               if(this.shop.images) {
+                  const rawImgs = this.shop.images.split(',');
+                  this.gallery = rawImgs.map(img => {
+                      if(img.startsWith('http')) return img;
+                      return this.fileURL + img;
+                  });
+               }
+               
+               // Set shopLogo as cover if available
+               if (this.shop.shopLogo) {
+                   this.shop.cover = this.shop.shopLogo;
+                   if(!this.shop.cover.startsWith('http')) {
+                       this.shop.cover = this.fileURL + this.shop.cover;
+                   }
+                   // Optionally prepend to gallery if wanted, but cover is usually enough for the fallback
+                   if (!this.gallery.includes(this.shop.cover)) {
+                       this.gallery.unshift(this.shop.cover);
+                   }
+               } else if (!this.shop.cover && this.gallery.length > 0) {
+                   this.shop.cover = this.gallery[0];
+               }
+               
+               // Ensure cover has prefix if it exists and is relative
+               if (this.shop.cover && !this.shop.cover.startsWith('http')) {
+                   this.shop.cover = this.fileURL + this.shop.cover;
+               }
                // isStared and isFollowed come from shop data directly
             }
            this.onDataLoaded();
@@ -626,20 +668,32 @@ export default {
            this.onDataLoaded();
         });
         
-        // 2. Vouchers
-         getShopVouchers(id).then(res => {
+        // 2. Fetch Products (Category 1: Voucher/Product)
+        getShopProducts({ shopId: id, category: 1 }).then(res => {
             let data = res;
             if(res && res.data) data = res.data;
-            // Sort: Seckill vouchers (type === 1) first
-            this.vouchers = (data || []).sort((a, b) => {
-               if(a.type === 1 && b.type !== 1) return -1;
-               if(a.type !== 1 && b.type === 1) return 1;
+            let list = Array.isArray(data) ? data : [];
+            this.products = list.sort((a, b) => {
+               // Sort seckill (activityType=1) first
+               if(a.activityType === 1 && b.activityType !== 1) return -1;
+               if(a.activityType !== 1 && b.activityType === 1) return 1;
                return 0;
             });
             this.onDataLoaded();
         }).catch(err => {
-           console.error("Voucher fetch error", err);
-           this.onDataLoaded();
+            console.error("Product fetch error", err);
+            this.onDataLoaded();
+        });
+
+        // 3. Fetch Group Buy Products (Category 2)
+        getShopProducts({ shopId: id, category: 2 }).then(res => {
+            let data = res;
+            if(res && res.data) data = res.data;
+            this.groupBuyProducts = Array.isArray(data) ? data : [];
+            this.onDataLoaded();
+        }).catch(err => {
+            console.error("GroupBuy fetch error", err);
+            this.onDataLoaded();
         });
         
         getReviewList({ sourceId: id, sourceType: 2, current: 1, status: 0 }).then(res => {
@@ -770,7 +824,7 @@ export default {
          },
      onDataLoaded() {
         this.dataLoadedCount++;
-        if(this.dataLoadedCount >= 3) {
+        if(this.dataLoadedCount >= 4) {
            this.isLoading = false;
         }
      },
@@ -943,43 +997,17 @@ export default {
          return Math.round((v.stock / v.totalStock) * 100);
       },
       toVoucherDetail(v) {
-        this.$router.push({ path: '/voucher/detail', query: { id: v.id } });
+        this.$router.push({ path: '/product/detail', query: { id: v.id } });
+     },
+
+     goToProductDetail(v) {
+        this.$router.push({ path: '/product/detail', query: { id: v.id } });
      },
      doBuy(v) {
-        if(!localStorage.getItem('token')) return this.$router.push('/user/login');
-        
-        buyVoucherAPI(v.id).then(res => {
-            this.$message.success("抢购成功，订单ID: " + (res.data || res));
-        }).catch(err => {
-            console.error(err);
-            let msg = "抢购失败";
-            if (typeof err === 'string') msg = err;
-            else if (err && err.errorMsg) msg = err.errorMsg;
-            else if (err && err.response && err.response.data && err.response.data.errorMsg) msg = err.response.data.errorMsg;
-            else if (err && err.message) msg = err.message;
-            
-            this.$message.error(msg);
-        });
+        this.$router.push({ path: '/product/detail', query: { id: v.id } });
      },
      doSeckill(v) {
-        if(!localStorage.getItem('token')) return this.$router.push('/user/login');
-        if(this.isNotBegin(v)) return this.$message.warning("抢购未开始");
-        if(this.isEnd(v)) return this.$message.warning("抢购已结束");
-        if(v.stock < 1) return this.$message.warning("已抢光");
-        
-        seckillVoucherAPI(v.id).then(res => {
-            this.$message.success("秒杀成功，订单ID: " + (res.data || res));
-            v.stock--; // Simple optimist update
-        }).catch(err => {
-            console.error(err);
-            let msg = "抢购失败";
-            if (typeof err === 'string') msg = err;
-            else if (err && err.errorMsg) msg = err.errorMsg;
-            else if (err && err.response && err.response.data && err.response.data.errorMsg) msg = err.response.data.errorMsg;
-            else if (err && err.message) msg = err.message;
-            
-            this.$message.error(msg);
-        });
+        this.$router.push({ path: '/product/detail', query: { id: v.id } });
      },
      handleCommentLike(c, isReview = false) {
         if(!this.user.id) return this.$router.push('/user/login');
@@ -1029,16 +1057,8 @@ export default {
            this.$message.warning("请先登录");
            return this.$router.push('/user/login');
         }
-        this.replyToComment = null;
-        this.commentText = '';
-        this.commentRating = 5;
-        this.selectedImages = [];
-        this.showCommentPublish = true;
-        this.$nextTick(() => {
-           if(this.$refs.commentTextarea) {
-              this.$refs.commentTextarea.focus();
-           }
-        });
+        // Redirect to review publish page
+        this.$router.push({ path: '/review/publish', query: { shopId: this.shop.id } });
      },
      // Image Upload
      async handleImageUpload(e) {
@@ -1164,6 +1184,7 @@ export default {
             } else {
                const processed = list.filter(c => !c.isAIGenerated).map(c => ({
                   ...c,
+                  rating: c.score || c.rating || 0,
                   userIcon: c.userIcon ? (c.userIcon.startsWith('http') ? c.userIcon : this.fileURL + c.userIcon) : '',
                   images: c.images ? c.images.split(',').filter(x=>x).map(i => i.startsWith('http') ? i : this.fileURL + i) : [],
                   clickedLike: false,
@@ -1512,7 +1533,7 @@ export default {
 .time-more { font-size: 12px; color: #999; }
 
 /* Vouchers */
-.voucher-list { background: white; padding: 16px; }
+.voucher-list { background: white; }
 .section-title { font-size: 16px; font-weight: 700; margin-bottom: 15px; display: flex; align-items: center; }
 .icon-text { background: linear-gradient(90deg, #FF6B00, #FF9000); color: white; padding: 1px 4px; border-radius: 4px; font-size: 11px; margin-right: 6px; }
 
@@ -1580,19 +1601,41 @@ export default {
 
 .view-all { text-align: center; padding: 12px 0; color: #666; font-size: 14px; border-top: 1px solid #f5f5f5; cursor: pointer; }
 
-/* Foot Bar - Local Service Style */
-.foot-bar { height: 60px; background: white; border-top: 1px solid #f5f5f5; display: flex; align-items: center; padding: 0 16px; padding-bottom: env(safe-area-inset-bottom); box-shadow: 0 -2px 10px rgba(0,0,0,0.02); z-index: 100; position: fixed; bottom: 0; left: 0; right: 0; }
+/* Foot Bar - Apple/Modern Style */
+.foot-bar { 
+    height: 56px; 
+    background: rgba(255, 255, 255, 0.96); 
+    backdrop-filter: blur(10px); 
+    border-top: 0.5px solid rgba(0,0,0,0.05); 
+    display: flex; align-items: center; 
+    padding: 0 16px; 
+    padding-bottom: env(safe-area-inset-bottom); 
+    z-index: 100; 
+    position: fixed; bottom: 0; left: 0; right: 0; 
+}
 
-.foot-left { display: flex; align-items: center; gap: 24px; margin-right: 20px; flex-shrink: 0; }
-.foot-icon-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; color: #333; gap: 3px; cursor: pointer; min-width: 32px; }
-.foot-icon-btn i { font-size: 22px; color: #333; transition: all 0.2s; }
-.foot-icon-btn.active i { color: #FF9900; }
-.foot-icon-btn.active span { color: #FF9900; }
-.foot-icon-btn:active i { transform: scale(0.9); }
+.foot-left { display: flex; align-items: center; gap: 24px; margin-right: 16px; flex-shrink: 0; }
+.foot-icon-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: #666; gap: 2px; cursor: pointer; min-width: 36px; }
+.foot-icon-btn i { font-size: 20px; color: #333; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.2s; }
+.foot-icon-btn.active i { color: #ff2442; }
+.foot-icon-btn.active span { color: #ff2442; }
+.foot-icon-btn:active i { transform: scale(0.8); }
 
 .foot-right { flex: 1; display: flex; align-items: center; }
-.foot-main-btn { width: 100%; height: 40px; background: linear-gradient(135deg, #FF9900, #FF5500); border-radius: 20px; color: white; font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 10px rgba(255, 107, 0, 0.3); transition: all 0.2s; }
-.foot-main-btn:active { transform: scale(0.98); box-shadow: 0 2px 5px rgba(255, 107, 0, 0.2); }
+.foot-main-btn {
+    width: 100%; 
+    height: 40px; 
+    background: linear-gradient(135deg, #ff4d4f, #ff2442); 
+    border-radius: 20px; 
+    color: white; 
+    font-size: 15px; 
+    font-weight: 600; 
+    display: flex; align-items: center; justify-content: center; 
+    cursor: pointer; 
+    box-shadow: 0 4px 12px rgba(255, 36, 66, 0.3); 
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.foot-main-btn:active { transform: scale(0.96); box-shadow: 0 2px 6px rgba(255, 36, 66, 0.2); }
 
 /* Preview Overlay */
 .image-preview { position: fixed; inset: 0; background: black; z-index: 1000; display: flex; flex-direction: column; justify-content: center; }
@@ -1680,10 +1723,6 @@ export default {
 .empty-reviews i { font-size: 48px; margin-bottom: 12px; color: #ddd; }
 .loading-more { text-align: center; padding: 15px; color: #999; font-size: 13px; }
 .no-more-reviews { text-align: center; padding: 15px; color: #ccc; font-size: 12px; }
-
-/* Popup Bottom Input Bar */
-.popup-bottom-bar { display: flex; align-items: center; padding: 12px 16px; border-top: 1px solid #f0f0f0; background: white; flex-shrink: 0; gap: 12px; }
-.popup-input-placeholder { flex: 1; background: #f5f5f5; padding: 10px 16px; border-radius: 20px; color: #999; font-size: 14px; }
 
 /* Ensure comment modal is above review popup */
 .comment-pop-overlay { z-index: 1100 !important; }

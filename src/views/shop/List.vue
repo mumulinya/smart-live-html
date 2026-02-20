@@ -70,7 +70,7 @@
           <div class="shop-card" v-for="s in shops" :key="s.id" @click="toDetail(s.id)">
               <!-- Image with Fallback -->
               <div class="shop-card-img">
-                  <img :src="s.images" v-if="s.images && !s.imageError" @error="s.imageError = true" alt="">
+                  <img :src="s.shopLogo || s.images" v-if="(s.shopLogo || s.images) && !s.imageError" @error="s.imageError = true" alt="">
                   <div class="img-placeholder" v-else>
                       <i class="el-icon-goods"></i>
                   </div>
@@ -376,9 +376,14 @@ export default {
              else if (res && Array.isArray(res.list)) list = res.list;
              else if (res && res.data && Array.isArray(res.data.list)) list = res.data.list;
              
-             // Process images
+             // Process images and logos
              list.forEach(s => {
-                 if(s.images) s.images = this.$fileURL + s.images.split(',')[0];
+                 if(s.shopLogo && !s.shopLogo.startsWith('http')) {
+                     s.shopLogo = this.$fileURL + s.shopLogo.split(',')[0];
+                 }
+                 if(s.images && !s.images.startsWith('http')) {
+                     s.images = this.$fileURL + s.images.split(',')[0];
+                 }
              });
              this.shops = list;
              
@@ -430,7 +435,12 @@ export default {
               this.noMore = true;
            } else {
               list.forEach(s => {
-                  if(s.images) s.images = (this.$fileURL || '') + s.images.split(',')[0];
+                  if(s.shopLogo && !s.shopLogo.startsWith('http')) {
+                      s.shopLogo = this.$fileURL + s.shopLogo.split(',')[0];
+                  }
+                  if(s.images && !s.images.startsWith('http')) {
+                      s.images = (this.$fileURL || '') + s.images.split(',')[0];
+                  }
               });
               this.shops = this.shops.concat(list);
               this.params.current++;

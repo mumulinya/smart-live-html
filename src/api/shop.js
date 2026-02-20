@@ -18,18 +18,21 @@ export function searchShopsByName(name, area) {
     return request.get('/app/shop/of/name', { params });
 }
 
-export function getShopVouchers(shopId) {
-    return request.get(`/app/marketing/voucher/list/${shopId}`);
+export function getShopProducts(params) {
+    return request.get('/app/product/listByShop', { params });
 }
 
-export function getVoucherDetail(id) {
-    return request.get(`/app/marketing/voucher/getVoucherById/${id}`);
+export function getProductDetail(id) {
+    return request.get(`/app/product/getProductById/${id}`);
 }
 
-export function buyVoucherAPI(voucherId) {
-    return request.post(`/app/marketing/voucher/buy/${voucherId}`);
+export function buyProductAPI(productId) {
+    // Assuming the buy endpoint follows the pattern or generic order creation
+    // The doc didn't specify a new buy endpoint, but typically it would be /product/product/buy/{id} or similar
+    // For now, I'll update the prefix to product
+    return request.post(`/app/product/purchase/${productId}`);
 }
 
-export function seckillVoucherAPI(voucherId) {
-    return request.post(`/app/marketing/voucher/seckill/${voucherId}`);
+export function seckillProductAPI(productId) {
+    return request.post(`/app/product/purchase/${productId}`);
 }

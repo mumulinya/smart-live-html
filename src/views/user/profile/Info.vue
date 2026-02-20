@@ -95,45 +95,85 @@
     <!-- Service Bar (Horizontal Scroll if needed, or fixed 4) -->
     <!-- Service Bar (Grid) -->
     <div class="service-bar-container">
-        <van-grid clickable :column-num="4" :border="false">
-            <van-grid-item text="我的订单" @click="toOrders">
+        <van-grid clickable :column-num="4" :border="false" class="custom-grid">
+            <van-grid-item @click="toOrders">
                <template #icon>
-                   <van-icon name="orders-o" size="24" color="#333" style="margin-bottom: 6px;" />
+                   <div class="service-icon-wrapper bg-blue">
+                       <van-icon name="orders-o" size="24" color="#409EFF" />
+                   </div>
+               </template>
+               <template #text>
+                   <span class="service-text">我的订单</span>
                </template>
             </van-grid-item>
-            <van-grid-item text="钱包" @click="toWallet">
+            <van-grid-item @click="toWallet">
                <template #icon>
-                   <van-icon name="balance-o" size="24" color="#333" style="margin-bottom: 6px;" />
+                   <div class="service-icon-wrapper bg-orange">
+                       <van-icon name="balance-o" size="24" color="#ff9900" />
+                   </div>
+               </template>
+               <template #text>
+                   <span class="service-text">钱包</span>
                </template>
             </van-grid-item>
-            <van-grid-item text="积分" @click="toPoints">
+            <van-grid-item @click="toPoints">
                <template #icon>
-                   <van-icon name="points" size="24" color="#333" style="margin-bottom: 6px;" />
+                   <div class="service-icon-wrapper bg-green">
+                       <van-icon name="points" size="24" color="#67C23A" />
+                   </div>
+               </template>
+               <template #text>
+                   <span class="service-text">积分</span>
                </template>
             </van-grid-item>
-             <van-grid-item text="我的收藏" @click="toCollections">
+             <van-grid-item @click="toCollections">
                <template #icon>
-                   <van-icon name="star-o" size="24" color="#333" style="margin-bottom: 6px;" />
+                   <div class="service-icon-wrapper bg-red">
+                       <van-icon name="star-o" size="24" color="#ff2442" />
+                   </div>
+               </template>
+               <template #text>
+                   <span class="service-text">我的收藏</span>
                </template>
             </van-grid-item>
-             <van-grid-item text="我的评价" @click="toReviews">
+             <van-grid-item @click="toReviews">
                <template #icon>
-                   <van-icon name="comment-o" size="24" color="#333" style="margin-bottom: 6px;" />
+                   <div class="service-icon-wrapper bg-purple">
+                       <van-icon name="comment-o" size="24" color="#8e44ad" />
+                   </div>
+               </template>
+               <template #text>
+                   <span class="service-text">我的评价</span>
                </template>
             </van-grid-item>
-             <van-grid-item text="我的关注" @click="toMyFollow">
+             <van-grid-item @click="toMyFollow">
                <template #icon>
-                    <van-icon name="friends-o" size="24" color="#333" style="margin-bottom: 6px;" />
+                    <div class="service-icon-wrapper bg-cyan">
+                        <van-icon name="friends-o" size="24" color="#00bcd4" />
+                    </div>
+               </template>
+               <template #text>
+                   <span class="service-text">我的关注</span>
                </template>
             </van-grid-item>
-             <van-grid-item text="我的动态" @click="$router.push('/user/moments')">
+             <van-grid-item @click="$router.push('/user/moments')">
                <template #icon>
-                    <van-icon name="clock-o" size="24" color="#333" style="margin-bottom: 6px;" />
+                    <div class="service-icon-wrapper bg-pink">
+                        <van-icon name="clock-o" size="24" color="#FF4081" />
+                    </div>
+               </template>
+               <template #text>
+                   <span class="service-text">我的动态</span>
                </template>
             </van-grid-item>
-            <van-grid-item text="草稿箱" @click="toDrafts">
+            <van-grid-item @click="toDrafts">
                <template #icon>
-                    <van-icon name="description-o" size="24" color="#333" style="margin-bottom: 6px;" />
+                    <div class="service-icon-wrapper bg-grayblue">
+                        <van-icon name="description-o" size="24" color="#607D8B" />
+                    </div>
+               </template>
+               <template #text>
+                   <span class="service-text">草稿箱</span>
                </template>
             </van-grid-item>
         </van-grid>
@@ -141,7 +181,7 @@
 
     <!-- Sticky Tabs -->
     <div class="sticky-tabs-container">
-        <van-tabs v-model:active="activeTab" sticky offset-top="50" swipeable animated @change="handleTabChange">
+        <van-tabs v-model:active="activeTab" sticky offset-top="50" @change="handleTabChange">
             <van-tab title="笔记" name="note">
                 <template #title>
                     <div class="tab-label">
@@ -615,6 +655,31 @@ export default {
               this.isExpanded = true;
            }
            this.coverHeight = 120;
+       }
+       
+       // Horizontal Swipe (Tab Switch)
+       const touchEndX = e.changedTouches[0].clientX;
+       const touchEndY = e.changedTouches[0].clientY;
+       
+       const xDiff = this.touchStartX - touchEndX;
+       const yDiff = this.touchStartY - touchEndY;
+       
+       // Verify it's primarily a horizontal swipe
+       if (Math.abs(xDiff) > 50 && Math.abs(xDiff) > Math.abs(yDiff)) {
+           const currentIndex = this.tabOrder.indexOf(this.activeTab);
+           if (xDiff > 0) {
+               // Next
+               if (currentIndex < this.tabOrder.length - 1) {
+                   this.activeTab = this.tabOrder[currentIndex + 1];
+                   this.handleTabChange(this.activeTab);
+               }
+           } else {
+               // Prev
+               if (currentIndex > 0) {
+                   this.activeTab = this.tabOrder[currentIndex - 1];
+                   this.handleTabChange(this.activeTab);
+               }
+           }
        }
     },
      queryUserInfo() {
@@ -1183,60 +1248,74 @@ export default {
     gap: 6px;
 }
 .waterfall-item {
-    background: #fff;
-    border-radius: 4px;
+    background: white;
+    border-radius: 8px;
     overflow: hidden;
-    break-inside: avoid;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+    cursor: pointer;
 }
 .card-img-box {
     width: 100%;
-    min-height: 100px;
-    background: #f0f0f0;
 }
 .work-cover {
     width: 100%;
-    height: auto;
     display: block;
 }
+.pinned-tag {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: linear-gradient(135deg, #ff4d4f, #ff2442);
+    color: white;
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    z-index: 10;
+}
 .card-info {
-    padding: 8px;
+    padding: 8px 10px 12px;
 }
 .card-title {
-    font-size: 15px;
+    font-size: 15px; /* Increased from 14px */
     color: #333;
-    margin-bottom: 8px;
     line-height: 1.4;
+    margin-bottom: 8px;
+
     display: -webkit-box;
-    -webkit-line-clamp: 2; /* Required for line-clamp */
-    line-clamp: 2;
     -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 .card-bottom {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    font-size: 12px;
-    color: #999;
+    justify-content: space-between;
 }
 .card-user {
     display: flex;
     align-items: center;
-    max-width: 65%;
+    overflow: hidden;
 }
 .card-avatar {
-    width: 20px;
-    height: 20px;
+    width: 20px; /* Increased from 16px */
+    height: 20px; /* Increased from 16px */
     border-radius: 50%;
     margin-right: 4px;
+    flex-shrink: 0;
 }
 .card-name {
+    font-size: 12px; /* Increased from 10px */
+    color: #999;
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
+    max-width: 80px;
 }
 .card-likes {
+    font-size: 12px; /* Increased from 10px */
+    color: #999;
     display: flex;
     align-items: center;
 }
@@ -1346,5 +1425,53 @@ export default {
     font-size: 14px;
     color: #999;
 }
+/* ============ Service Grid UI ============ */
+.service-bar-container {
+    margin: 15px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+    overflow: hidden; /* Ensure grid items don't bleed out of rounded corners */
+}
+
+/* Base custom grid inner padding override */
+.custom-grid :deep(.van-grid-item__content) {
+    padding: 16px 8px;
+    background-color: transparent;
+}
+
+/* Wrapper for the icons */
+.service-icon-wrapper {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+    transition: transform 0.2s ease;
+}
+
+/* Active touch state */
+.custom-grid :deep(.van-grid-item__content:active) .service-icon-wrapper {
+    transform: scale(0.92);
+}
+
+.service-text {
+    font-size: 13px;
+    color: #333;
+    font-weight: 500;
+}
+
+/* Colors for specific functions */
+.bg-blue { background-color: rgba(64, 158, 255, 0.1); }
+.bg-orange { background-color: rgba(255, 153, 0, 0.1); }
+.bg-green { background-color: rgba(103, 194, 58, 0.1); }
+.bg-red { background-color: rgba(255, 36, 66, 0.1); }
+.bg-purple { background-color: rgba(142, 68, 173, 0.1); }
+.bg-cyan { background-color: rgba(0, 188, 212, 0.1); }
+.bg-pink { background-color: rgba(255, 64, 129, 0.1); }
+.bg-grayblue { background-color: rgba(96, 125, 139, 0.1); }
+
 </style>
 

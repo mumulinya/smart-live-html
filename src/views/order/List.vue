@@ -48,8 +48,8 @@
              <!-- Content -->
              <div class="card-content" @click="toDetail(order)">
                 <div class="product-title">
-                   {{order.title || '未知商品'}}
-                   <span class="seckill-tag" v-if="order.title && order.title.includes('秒杀')">秒杀</span>
+                   {{order.name || order.title || '未知商品'}}
+                   <span class="seckill-tag" v-if="(order.name || order.title) && (order.name || order.title).includes('秒杀')">秒杀</span>
                 </div>
                 
                 <div class="info-row">
@@ -64,11 +64,11 @@
                 <div class="price-block">
                    <div class="pb-col">
                       <div class="pb-label">支付金额</div>
-                      <div class="pb-val red">¥{{formatPrice(order.payValue || order.price)}}</div>
+                      <div class="pb-val red">¥{{formatPrice(order.price || order.payValue)}}</div>
                    </div>
                    <div class="pb-col">
                       <div class="pb-label">抵扣金额</div>
-                      <div class="pb-val green">¥{{formatPrice(order.actualValue || order.value)}}</div>
+                      <div class="pb-val green">¥{{formatPrice(order.originalPrice || order.actualValue || order.value)}}</div>
                    </div>
                 </div>
              </div>
@@ -76,7 +76,7 @@
              <!-- Footer -->
              <div class="card-footer">
                 <div class="real-pay">
-                   实付: <span class="pay-num">¥{{formatPrice(order.payValue || order.price)}}</span>
+                   实付: <span class="pay-num">¥{{formatPrice(order.price || order.payValue)}}</span>
                 </div>
                 <div class="action-buttons">
                    <button class="action-btn btn-outline" @click="toDetail(order)">查看详情</button>

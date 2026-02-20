@@ -1,10 +1,13 @@
-<template>
+﻿<template>
   <div class="home-container">
-    <div class="loading-mask" :class="{ hidden: !isLoading }">
-      <div class="loading-spinner"></div>
-      <div class="loading-text">正在加载首页数据</div>
-      <div class="loading-subtext">请稍候...</div>
-    </div>
+    <transition name="van-fade">
+      <div v-if="isLoading" class="global-loading-overlay">
+        <div class="loading-content-box">
+          <van-loading type="spinner" color="#ff2442" size="36px" />
+          <div class="loading-text">正在加载...</div>
+        </div>
+      </div>
+    </transition>
 
     <div class="location-status" v-if="showLocationStatus">
       <div class="status-icon">
@@ -22,7 +25,7 @@
       </div>
       <div class="search-input" @click="toSearchPage">
         <i class="el-icon-search"></i>
-        <span>请输入商户名、地点</span>
+        <span>请输入商户名称、地点</span>
       </div>
       <div class="header-icon" @click="toPage(5)"><img src="@/assets/ai-avatar.jpg" alt="" style="width: 38px;
       height: 38px;
@@ -34,6 +37,27 @@
       <div class="type-box" v-for="t in types" :key="t.id" @click="toShopList(t.id, t.name)">
         <div class="type-view"><img :src="'/imgs/' + t.icon" alt=""></div>
         <div class="type-text">{{t.name}}</div>
+      </div>
+    </div>
+
+    <div class="home-deal-panel">
+      <div class="deal-section">
+        <div class="deal-tabs">
+          <button
+            class="deal-tab-item"
+            @click="goDealZone('normal')"
+          >
+            <span class="deal-tab-title">优惠专区</span>
+            <span class="deal-tab-desc">代金券 / 团购</span>
+          </button>
+          <button
+            class="deal-tab-item seckill"
+            @click="goDealZone('seckill')"
+          >
+            <span class="deal-tab-title">秒杀专区</span>
+            <span class="deal-tab-desc">限时低价</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -55,7 +79,7 @@
                      <div class="img-placeholder" v-if="b.imgError">图片加载失败</div>
                    </div>
                    <div class="blog-content">
-                     <div class="blog-title">{{b.title || '无标题'}}</div>
+                     <div class="blog-title">{{ b.title || '无标题' }}</div>
                      <div class="blog-foot">
                        <div class="blog-user-icon">
                          <img :src="b.icon || '/imgs/icons/default-icon.png'" alt="用户头像" @error="handleAvatarError($event)">
@@ -96,7 +120,7 @@
                      <div class="img-placeholder" v-if="b.imgError">图片加载失败</div>
                    </div>
                    <div class="blog-content">
-                     <div class="blog-title">{{b.title || '无标题'}}</div>
+                     <div class="blog-title">{{ b.title || '无标题' }}</div>
                      <div class="blog-foot">
                        <div class="blog-user-icon">
                          <img :src="b.icon || '/imgs/icons/default-icon.png'" alt="用户头像" @error="handleAvatarError($event)">
@@ -136,7 +160,7 @@
                      <div class="img-placeholder" v-if="b.imgError">图片加载失败</div>
                    </div>
                    <div class="blog-content">
-                     <div class="blog-title">{{b.title || '无标题'}}</div>
+                     <div class="blog-title">{{ b.title || '无标题' }}</div>
                      <div class="blog-foot">
                        <div class="blog-user-icon">
                          <img :src="b.icon || '/imgs/icons/default-icon.png'" alt="用户头像" @error="handleAvatarError($event)">
@@ -169,25 +193,31 @@
         </template>
     </van-tabs>
     
-    <!-- Dropdown Content (outside tabs, but overlays) -->
-    <div class="home-dropdown-content" v-if="showMoreCategories" :style="{ zIndex: 2002 }">
-        <div class="category-grid">
-          <div class="grid-item" v-if="token" :class="{ active: activeCategory === 'follow' }" @click="selectCategoryFromModal('follow')">关注</div>
-          <div class="grid-item" :class="{ active: activeCategory === 'hot' }" @click="selectCategoryFromModal('hot')">热门</div>
-          <div
-                  class="grid-item"
-                  v-for="c in categories"
-                  :key="c.id"
-                  :class="{ active: activeCategory === c.id }"
-                  @click="selectCategoryFromModal(c.id)"
-          >
-            {{ c.name }}
+    <transition name="dropdown-mask-fade">
+      <div class="home-dropdown-mask" v-if="showMoreCategories" @click="showMoreCategories = false"></div>
+    </transition>
+
+    <transition name="dropdown-pop">
+      <div class="home-dropdown-content" v-if="showMoreCategories">
+          <div class="dropdown-header">
+            <span class="dropdown-title">全部分类</span>
+            <i class="el-icon-close" @click="showMoreCategories = false"></i>
           </div>
-        </div>
-    </div>
-    
-    <!-- Mask -->
-    <div class="home-dropdown-mask" v-if="showMoreCategories" @click="showMoreCategories = false"></div>
+          <div class="category-grid">
+            <div class="grid-item" v-if="token" :class="{ active: activeCategory === 'follow' }" @click="selectCategoryFromModal('follow')">关注</div>
+            <div class="grid-item" :class="{ active: activeCategory === 'hot' }" @click="selectCategoryFromModal('hot')">热门</div>
+            <div
+                    class="grid-item"
+                    v-for="c in categories"
+                    :key="c.id"
+                    :class="{ active: activeCategory === c.id }"
+                    @click="selectCategoryFromModal(c.id)"
+            >
+              {{ c.name }}
+            </div>
+          </div>
+      </div>
+    </transition>
 
     <!-- Category Modal Removed (Replaced by Dropdown) -->
 
@@ -264,7 +294,7 @@ export default {
       token: localStorage.getItem("token") || '',
       showMoreCategories: false,
       showLocationModal: false,
-      hotCities: ['佛山','上海','北京','深圳','广州','成都','南京','武汉','西安'],
+      hotCities: ['佛山', '上海', '北京', '深圳', '广州', '成都', '南京', '武汉', '西安'],
       cityCoordinates: {
         '佛山': { x: 113.121416, y: 23.021548 },
         '杭州': { x: 120.15507, y: 30.274085 },
@@ -393,6 +423,16 @@ export default {
       this.$router.push({
         path: '/blog/detail',
         query: { id: b.id }
+      });
+    },
+    goDealZone(zone) {
+      const isSeckill = zone === 'seckill';
+      this.$router.push({
+        path: '/deal/list',
+        query: {
+          zone: isSeckill ? 'seckill' : 'normal',
+          type: isSeckill ? 1 : 0
+        }
       });
     },
     handleImageError(event, blog) {
@@ -528,7 +568,10 @@ export default {
             if (!list || list.length === 0) {
               this.noMoreFollowData = true;
             } else {
-               list.forEach(item => {
+               const mappedList = list.map(rawItem => {
+                const detail = rawItem?.data && typeof rawItem.data === 'object' && !Array.isArray(rawItem.data) ? rawItem.data : null;
+                const item = detail ? { ...rawItem, ...detail } : { ...rawItem };
+                
                 // Map API fields to Component expected fields
                 // Component expects: img, title, icon, name, liked, id (blogId)
                 
@@ -559,17 +602,26 @@ export default {
                     item.icon = '';
                 }
 
+                if (item.shopLogo) {
+                    if (!item.shopLogo.startsWith('http')) {
+                        item.shopLogo = this.$fileURL + item.shopLogo;
+                    }
+                }
+
                 // Map 'userName' to 'name'
                 // Check 'userName' first, then 'nickName', then 'name'
                 item.name = item.userName || item.nickName || item.name || '匿名用户';
                 item.liked = item.likes || item.liked || 0;
+                item.isLike = item.isLike || false;
+                item.title = item.title || '';
                 
                 // Important: map targetId to id for navigation (fallback to id)
                 item.id = item.targetId || item.id;
 
                 item.imgError = !item.img;
+                return item;
               });
-              this.followBlogs = this.followBlogs.concat(list);
+              this.followBlogs = this.followBlogs.concat(mappedList);
               
               // precise updating for next scroll
               this.followParams.minTime = data.minTime || 0;
@@ -611,10 +663,10 @@ export default {
             this.userLocation = loc;
             if(loc.region && loc.region.city) {
                this.currentCity = typeof loc.region.city === 'string' ? loc.region.city : loc.region.province;
-               // Clean up city name (remove '市')
-               this.currentCity = this.currentCity.replace('市','');
+               // Clean up city suffix
+               this.currentCity = this.currentCity.replace('市', '');
             } else if (loc.region && loc.region.province) {
-               this.currentCity = loc.region.province.replace('省','').replace('市','');
+               this.currentCity = loc.region.province.replace('省', '').replace('市', '');
             }
        },
        switchCategory(categoryId) {
@@ -704,7 +756,7 @@ export default {
          this.locationLoading = true;
          this.locationSuccess = false;
          this.locationError = false;
-         this.locationStatusText = "正在定位...";
+         this.locationStatusText = '正在定位...';
          
          locationUtil.getLocation(true).then(loc => {
            this.updateLocationState(loc);
@@ -713,11 +765,11 @@ export default {
            // Explicitly ensure it's saved (redundant but safe)
            locationUtil.saveLocation(loc);
            
-           this.locationStatusText = "定位成功：" + this.currentCity;
+           this.locationStatusText = '定位成功：' + this.currentCity;
            setTimeout(() => this.showLocationStatus = false, 1500);
          }).catch(err => {
            this.locationError = true;
-           this.locationStatusText = "定位失败，请手动选择";
+           this.locationStatusText = '定位失败，请手动选择';
            setTimeout(() => {
               this.showLocationStatus = false;
               this.showLocationModal = true; // Re-open modal on fail
@@ -751,7 +803,7 @@ export default {
          // Use centered overlay instead of $message
          this.locationSuccess = true;
          this.locationError = false;
-         this.locationStatusText = "已切换到 " + city;
+         this.locationStatusText = '已切换到 ' + city;
          this.showLocationStatus = true;
          setTimeout(() => {
             this.showLocationStatus = false;
@@ -810,100 +862,97 @@ export default {
   display: flex;
   align-items: center;
 }
-/* Extracted from index.html CSS */
-.category-nav {
+
+/* Home deal zone */
+.home-deal-panel {
+  padding: 10px 10px 2px;
+  background: #f8f9fa;
+}
+
+.deal-section {
+  background: #fff;
+  border-radius: 12px;
+  padding: 10px;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.deal-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.deal-tab-item {
+  border: none;
+  background: linear-gradient(135deg, #fff8f2 0%, #ffefe2 100%);
+  color: #ff6d3d;
+  border-radius: 12px;
+  font-size: 12px;
+  line-height: 1.2;
+  padding: 10px 8px;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.2s ease;
   display: flex;
-  align-items: center;
-  padding: 12px 0;
-  background: white;
-  border-bottom: 1px solid #f0f0f0;
-  position: relative;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.category-tabs {
-  display: flex;
-  overflow-x: auto;
-  flex: 1;
-  white-space: nowrap;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  margin-right: 0;
-  padding: 0 5px 0 15px;
-  scroll-behavior: smooth;
+.deal-tab-item.seckill {
+  background: linear-gradient(135deg, #fff1f3 0%, #ffe1e7 100%);
+  color: #ff3b5c;
 }
 
-.category-tabs::-webkit-scrollbar {
-  display: none;
+.deal-tab-title {
+  font-size: 14px;
+  font-weight: 600;
 }
 
-.category-tab {
-  flex-shrink: 0;
-  padding: 8px 12px;
-  margin-right: 15px;
+.deal-tab-desc {
+  font-size: 11px;
+  opacity: 0.88;
+}
+
+.deal-tab-item:active {
+  transform: scale(0.98);
+}
+/* Tabs + category tags */
+:deep(.van-tabs__line) {
+  height: 3px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #ff9c00 0%, #ff6633 100%);
+}
+
+:deep(.van-tab) {
   color: #666;
   font-size: 14px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  position: relative;
-  border: none;
-  background: none;
-}
-
-.category-tab:last-child {
-  margin-right: 0;
-}
-
-.category-tab.active {
-  color: #409EFF;
   font-weight: 500;
-  font-size: 15px;
 }
 
-.category-tab.active::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 20px;
-  height: 2px;
-  background: #409EFF;
-  border-radius: 1px;
+:deep(.van-tab--active) {
+  color: #ff6633;
+  font-weight: 600;
 }
 
-.category-more-btn {
-  flex-shrink: 0;
-  width: 40px;
-  height: 100%;
-  padding: 0 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: #666;
-  font-size: 16px;
-  border-left: 1px solid #f0f0f0;
-  box-shadow: -5px 0 8px -5px rgba(0, 0, 0, 0.1);
-  position: sticky;
-  right: 0;
-  background: white;
-  z-index: 10;
-}
-
-/* Dropdown Styling */
-.category-nav {
-  position: relative; /* Ensure dropdown is relative to nav */
+:deep(.van-tabs__nav) {
+  background: #fff;
 }
 
 .home-dropdown-content {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: white;
-  padding: 10px;
+  position: fixed;
+  top: 154px;
+  left: 12px;
+  right: 12px;
+  background: #fff;
+  padding: 10px 10px 12px;
   z-index: 2002;
-  border-top: 1px solid #f0f0f0;
+  border-radius: 14px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+  max-height: 42vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .home-dropdown-mask {
@@ -912,56 +961,76 @@ export default {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
   z-index: 2000;
 }
 
-.el-icon-arrow-down.rotate {
-    transform: rotate(180deg);
-    transition: transform 0.3s;
+.dropdown-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 4px 10px;
 }
 
-/* Modal styles removed/replaced above */
-/* Recycled .category-grid and .grid-item styles match Shop List now */
+.dropdown-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.dropdown-header .el-icon-close {
+  font-size: 18px;
+  color: #999;
+  cursor: pointer;
+}
 
 .category-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 10px;
-  max-height: 300px;
   overflow-y: auto;
+  max-height: none;
+  flex: 1;
+  padding-right: 2px;
+}
+
+.grid-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 36px;
+  padding: 0 10px;
+  background: #f7f8fa;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #666;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: all 0.2s ease;
+}
+
+.grid-item:active {
+  transform: scale(0.98);
+}
+
+.grid-item.active {
+  background: linear-gradient(90deg, #ff9c00 0%, #ff6633 100%);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(255, 102, 51, 0.28);
 }
 
 .modal-header i {
   cursor: pointer;
   font-size: 18px;
   color: #999;
-}
-
-.category-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-  overflow-y: auto;
-  max-height: calc(100% - 40px);
-}
-
-.grid-item {
-  text-align: center;
-  padding: 8px 0;
-  background: #f5f5f5;
-  border-radius: 4px;
-  font-size: 12px;
-  color: #333;
-  cursor: pointer;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.grid-item.active {
-  background: #fff0eb;
-  color: #F63;
 }
 
 /* Blog List Content (Inside van-tab) */
@@ -982,7 +1051,7 @@ export default {
   justify-content: center;
   background: white;
   cursor: pointer;
-  color: #666;
+  color: #ff6633;
   font-size: 14px;
   position: relative;
   z-index: 10;
@@ -997,16 +1066,25 @@ export default {
   transform: rotate(180deg);
 }
 
-/* Dropdown Content (Positioned below tabs) */
-.home-dropdown-content {
-  position: fixed;
-  top: 156px; /* Below tabs */
-  left: 0;
-  right: 0;
-  background: white;
-  padding: 10px;
-  z-index: 2002;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+.dropdown-mask-fade-enter-active,
+.dropdown-mask-fade-leave-active {
+  transition: opacity 0.18s ease;
+}
+
+.dropdown-mask-fade-enter-from,
+.dropdown-mask-fade-leave-to {
+  opacity: 0;
+}
+
+.dropdown-pop-enter-active,
+.dropdown-pop-leave-active {
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.dropdown-pop-enter-from,
+.dropdown-pop-leave-to {
+  opacity: 0;
+  transform: translateY(6px);
 }
 
 .blog-list {
@@ -1125,51 +1203,47 @@ export default {
   grid-column: 1 / -1;
 }
 
-.loading-mask {
+/* ============ 全局加载特效 ============ */
+.global-loading-overlay {
   position: fixed;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(255, 255, 255, 0.95);
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  /* 杞诲井鐏板簳姣涚幓鐠冩晥鏋?*/
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-content-box {
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
-  z-index: 9999;
-  transition: opacity 0.3s ease;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  padding: 24px 32px;
+  border-radius: 16px;
+  /* 品牌化轻弹动效 */
+  animation: boxPopUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
 }
 
-.loading-mask.hidden {
-  opacity: 0;
-  pointer-events: none;
-}
-
-.loading-spinner {
-  width: 50px;
-  height: 50px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #409EFF;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 15px;
+@keyframes boxPopUp {
+  0% { transform: scale(0.85); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 .loading-text {
-  font-size: 16px;
-  color: #666;
-  text-align: center;
-}
-
-.loading-subtext {
+  margin-top: 12px;
   font-size: 14px;
-  color: #999;
-  margin-top: 8px;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  color: #666;
+  font-weight: 500;
+  letter-spacing: 1px;
 }
 
 .location-status {
@@ -1286,3 +1360,4 @@ export default {
   margin-bottom: 20px;
 }
 </style>
+

@@ -255,7 +255,7 @@ export default {
       const id = String(sourceId);
 
       if (sourceType === 3) return `/blog/detail?id=${id}`;
-      if (sourceType === 4) return `/voucher/detail?id=${id}`;
+      if (sourceType === 4) return `/product/detail?id=${id}`;
       if (sourceType === 2) return `/shop/detail?id=${id}`;
       if (sourceType === 7) return `/review/detail?id=${id}`;
       if (sourceType === 5) return `/comment/list?id=${id}&type=5`;
@@ -285,7 +285,7 @@ export default {
 
       const sourceType = Number(item.sourceType || 0);
       const extraSourceType = Number(extra.sourceType || 0);
-      const hasPrice = this.hasPositiveNumber(extra.payValue) || this.hasPositiveNumber(extra.actualValue);
+      const hasPrice = this.hasPositiveNumber(extra.price) || this.hasPositiveNumber(extra.payValue) || this.hasPositiveNumber(extra.originalPrice) || this.hasPositiveNumber(extra.actualValue);
       const hasValidity =
         this.hasPositiveNumber(extra.validityType) ||
         this.hasPositiveNumber(extra.validDays) ||
@@ -308,8 +308,8 @@ export default {
         subTitle: extra.subTitle ? String(extra.subTitle) : '',
         shopName: extra.shopName ? String(extra.shopName) : '',
         rules: extra.rules ? String(extra.rules) : '',
-        payValue: this.formatVoucherAmount(extra.payValue),
-        actualValue: this.formatVoucherAmount(extra.actualValue),
+        payValue: this.formatVoucherAmount(extra.price || extra.payValue),
+        actualValue: this.formatVoucherAmount(extra.originalPrice || extra.actualValue),
         showPriceRow: hasPrice,
         validity: this.formatVoucherValidity(extra),
         stock: this.formatVoucherStock(extra.stock),
@@ -403,7 +403,7 @@ export default {
     },
     formatReviewTargetType(targetType) {
       if (targetType === 2) return '关联店铺';
-      if (targetType === 4) return '关联代金券';
+      if (targetType === 4) return '关联商品';
       if (targetType === 3) return '博客评论';
       if (targetType === 7) return '评价评论';
       if (targetType === 5) return '回复评论';
@@ -421,7 +421,7 @@ export default {
       if (!this.hasNoticeValue(targetId) && targetType !== 5) return '';
       const id = this.hasNoticeValue(targetId) ? String(targetId) : '';
       if (targetType === 2) return `/shop/detail?id=${id}`;
-      if (targetType === 4) return `/voucher/detail?id=${id}`;
+      if (targetType === 4) return `/product/detail?id=${id}`;
       if (targetType === 3) return `/blog/detail?id=${id}`;
       if (targetType === 7) return `/comment/list?id=${id}&type=7`;
       if (targetType === 5) {

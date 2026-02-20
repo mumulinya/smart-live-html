@@ -1,74 +1,17 @@
 <template>
   <div class="page-layout">
-    <!-- 骨架屏状态 -->
-    <div v-if="loading" class="skeleton-wrapper">
-      <slot name="skeleton">
-        <!-- 默认骨架屏，根据 skeletonType 显示不同样式 -->
-        <div class="default-skeleton" :class="skeletonType">
-          <!-- List 类型骨架 -->
-          <template v-if="skeletonType === 'list'">
-            <div class="sk-list-item" v-for="i in 5" :key="i">
-              <div class="sk-avatar animate-pulse"></div>
-              <div class="sk-content">
-                <div class="sk-row width-60 animate-pulse"></div>
-                <div class="sk-row width-100 animate-pulse"></div>
-                <div class="sk-row width-40 animate-pulse"></div>
-              </div>
-            </div>
-          </template>
-
-          <!-- Profile 类型骨架 -->
-          <template v-else-if="skeletonType === 'profile'">
-            <div class="sk-profile">
-              <div class="sk-cover animate-pulse"></div>
-              <div class="sk-profile-header">
-                <div class="sk-avatar-large animate-pulse"></div>
-                <div class="sk-stats">
-                  <div class="sk-stat animate-pulse" v-for="i in 3" :key="i"></div>
-                </div>
-              </div>
-              <div class="sk-info">
-                <div class="sk-row width-40 animate-pulse"></div>
-                <div class="sk-row width-60 animate-pulse"></div>
-              </div>
-              <div class="sk-tabs animate-pulse"></div>
-              <div class="sk-grid">
-                <div class="sk-grid-item animate-pulse" v-for="i in 6" :key="i"></div>
-              </div>
-            </div>
-          </template>
-
-          <!-- Detail 类型骨架 -->
-          <template v-else-if="skeletonType === 'detail'">
-            <div class="sk-detail">
-              <div class="sk-detail-header">
-                <div class="sk-avatar animate-pulse"></div>
-                <div class="sk-row width-30 animate-pulse"></div>
-              </div>
-              <div class="sk-image animate-pulse"></div>
-              <div class="sk-content-block">
-                <div class="sk-row width-80 animate-pulse"></div>
-                <div class="sk-row width-100 animate-pulse"></div>
-                <div class="sk-row width-60 animate-pulse"></div>
-              </div>
-            </div>
-          </template>
-
-          <!-- 默认通用骨架 -->
-          <template v-else>
-            <div class="sk-general">
-              <div class="sk-row width-50 animate-pulse"></div>
-              <div class="sk-row width-100 animate-pulse"></div>
-              <div class="sk-row width-80 animate-pulse"></div>
-              <div class="sk-row width-60 animate-pulse"></div>
-            </div>
-          </template>
+    <!-- 统一加载遮罩屏 -->
+    <transition name="van-fade">
+      <div v-if="loading" class="global-loading-overlay">
+        <div class="loading-content-box">
+          <van-loading type="spinner" color="#ff2442" size="36px" />
+          <div class="loading-text">加载中...</div>
         </div>
-      </slot>
-    </div>
+      </div>
+    </transition>
 
     <!-- 真实内容 -->
-    <div v-else class="real-content fade-in">
+    <div v-show="!loading" class="real-content fade-in">
       <slot></slot>
     </div>
   </div>
@@ -78,16 +21,15 @@
 export default {
   name: 'PageLayout',
   props: {
-    // 控制是否显示骨架屏
+    // 控制是否显示全局加载效果
     loading: {
       type: Boolean,
       required: true
     },
-    // 骨架屏类型: 'list' | 'profile' | 'detail' | 'general'
+    // (保留兼容属性骨架屏类型，但不再使用内置复杂设计，统一用精致Loading动画代替)
     skeletonType: {
       type: String,
-      default: 'general',
-      validator: (value) => ['list', 'profile', 'detail', 'general'].includes(value)
+      default: 'general'
     }
   }
 }
@@ -97,153 +39,59 @@ export default {
 .page-layout {
   min-height: 100vh;
   background: #f5f5f5;
+  position: relative;
 }
 
-.skeleton-wrapper {
-  padding: 15px;
+/* ============ 统一全局加载特效 ============ */
+.global-loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  /* 轻微灰底毛玻璃效果 */
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* ============ 骨架屏动画 ============ */
-.animate-pulse {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: pulse 1.5s ease-in-out infinite;
+.loading-content-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  padding: 24px 32px;
+  border-radius: 16px;
+  /* 增加品牌化微弹跳动画增强动效质感 */
+  animation: boxPopUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
 }
 
-@keyframes pulse {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+@keyframes boxPopUp {
+  0% { transform: scale(0.85); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
-/* ============ 淡入动画 ============ */
+.loading-text {
+  margin-top: 12px;
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+  letter-spacing: 1px;
+}
+
+/* ============ 真实内容淡入动画 ============ */
 .fade-in {
-  animation: fadeIn 0.3s ease-out;
+  animation: fadeIn 0.4s ease-out;
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-/* ============ 通用骨架元素 ============ */
-.sk-row {
-  height: 14px;
-  border-radius: 4px;
-  margin-bottom: 12px;
-}
-.width-30 { width: 30%; }
-.width-40 { width: 40%; }
-.width-50 { width: 50%; }
-.width-60 { width: 60%; }
-.width-80 { width: 80%; }
-.width-100 { width: 100%; }
-
-.sk-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.sk-avatar-large {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-}
-
-/* ============ List 类型骨架 ============ */
-.sk-list-item {
-  display: flex;
-  gap: 12px;
-  padding: 15px;
-  background: white;
-  border-radius: 12px;
-  margin-bottom: 12px;
-}
-
-.sk-content {
-  flex: 1;
-}
-
-/* ============ Profile 类型骨架 ============ */
-.sk-profile .sk-cover {
-  width: 100%;
-  height: 180px;
-  border-radius: 0;
-}
-
-.sk-profile .sk-profile-header {
-  display: flex;
-  align-items: flex-end;
-  padding: 0 20px;
-  margin-top: -40px;
-  gap: 20px;
-}
-
-.sk-profile .sk-stats {
-  display: flex;
-  gap: 20px;
-  flex: 1;
-  justify-content: flex-end;
-}
-
-.sk-profile .sk-stat {
-  width: 50px;
-  height: 40px;
-  border-radius: 8px;
-}
-
-.sk-profile .sk-info {
-  padding: 20px;
-  background: white;
-  margin-top: 15px;
-  border-radius: 12px;
-}
-
-.sk-profile .sk-tabs {
-  height: 44px;
-  margin-top: 15px;
-  border-radius: 8px;
-}
-
-.sk-profile .sk-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-  margin-top: 15px;
-}
-
-.sk-profile .sk-grid-item {
-  aspect-ratio: 1;
-  border-radius: 8px;
-}
-
-/* ============ Detail 类型骨架 ============ */
-.sk-detail {
-  background: white;
-}
-
-.sk-detail .sk-detail-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 15px;
-  background: white;
-}
-
-.sk-detail .sk-image {
-  width: 100%;
-  height: 350px;
-}
-
-.sk-detail .sk-content-block {
-  padding: 20px;
-}
-
-/* ============ General 类型骨架 ============ */
-.sk-general {
-  background: white;
-  padding: 20px;
-  border-radius: 12px;
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 </style>

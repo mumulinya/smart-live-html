@@ -207,11 +207,11 @@ export default {
             const data = res.data || res;
             if(data) {
                 // Try to find the amount field
-                const amt = data.payValue || data.price || data.amount || data.totalAmount || data.payAmount;
+                const amt = data.price || data.payValue || data.amount || data.totalAmount || data.payAmount;
                 if(amt) {
                     this.orderAmount = Number(amt);
-                    if(!this.orderTitle && data.title) {
-                        this.orderTitle = data.title;
+                    if(!this.orderTitle) {
+                        this.orderTitle = data.name || data.title;
                     }
                 }
             }

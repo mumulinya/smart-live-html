@@ -77,13 +77,8 @@ const isOnAIPage = computed(() => {
   return route.path === '/ai';
 });
 
-// Allowed paths for AI assistant
-const allowedPaths = ['/home', '/', '/search', '/map'];
 const showAssistant = computed(() => {
-    return allowedPaths.some(path => {
-        if (path === '/') return route.path === '/' || route.path === '/home';
-        return route.path.startsWith(path);
-    });
+    return route.path === '/' || route.path === '/home';
 });
 
 // 位置状态

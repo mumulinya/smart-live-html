@@ -5,8 +5,7 @@
     <van-tabs v-model:active="activeTab" sticky offset-top="46px" color="#ff2442">
       <van-tab title="用户" />
       <van-tab title="店铺" />
-      <van-tab title="代金券" />
-      <van-tab title="团购" />
+      <van-tab title="商品" />
     </van-tabs>
 
     <div class="list-container">
@@ -28,116 +27,119 @@
            </div>
         </template>
 
-        <!-- Shop List (Tab 1) -->
-        <template v-if="activeTab === 1">
-           <div class="shop-item" v-for="item in list" :key="item.id" @click="toShopDetail(item)">
-              <div class="shop-img-box">
-                  <img :src="item.image || '/imgs/default-shop.png'" class="shop-cover">
-              </div>
-              <div class="shop-main">
-                  <div class="shop-title">{{ item.name }}</div>
-                  <div class="shop-rating-row">
-                      <van-rate 
-                          :model-value="item.score / 10" 
-                          readonly 
-                          allow-half 
-                          color="#ff9900" 
-                          void-icon="star"
-                          void-color="#eee"
-                          size="12px"
-                      />
-                      <span class="shop-score-val">{{ formatScore(item.score) }}</span>
-                      <span class="shop-comment-count">{{ item.comments || 0 }}条</span>
-                  </div>
-                  <div class="shop-meta-row">
-                      <span class="shop-area-text">{{ item.area || '未知区域' }} | 美食</span>
-                  </div>
-                  <div class="shop-tags-row">
-                      <span class="shop-tag">可预约</span>
-                      <span class="shop-tag">有停车位</span>
-                  </div>
-              </div>
-              <div class="shop-side">
-                   <div class="shop-price">¥{{ item.avgPrice || '0' }}/人</div>
-                   <div class="shop-distance">1.5km</div>
-              </div>
-           </div>
-        </template>
+         <!-- Shop List (Tab 1) -->
+         <template v-if="activeTab === 1">
+            <div class="shop-item" v-for="item in list" :key="item.id" @click="toShopDetail(item)">
+               <div class="shop-img-box">
+                   <img :src="item.shopLogo || item.images || item.image || '/imgs/default-shop.png'" class="shop-cover" @error="$event.target.src='/imgs/default-shop.png'">
+               </div>
+               <div class="shop-main">
+                   <div class="shop-title">{{ item.name }}</div>
+                   <div class="shop-rating-row">
+                       <van-rate 
+                           :model-value="item.score / 10" 
+                           readonly 
+                           allow-half 
+                           color="#ff9900" 
+                           void-icon="star"
+                           void-color="#eee"
+                           size="12px"
+                       />
+                       <span class="shop-score-val">{{ formatScore(item.score) }}</span>
+                       <span class="shop-comment-count">{{ item.comments || 0 }}条</span>
+                   </div>
+                   <div class="shop-meta-row">
+                       <span class="shop-area-text">{{ item.area || '未知区域' }} | 美食</span>
+                   </div>
+                   <div class="shop-tags-row">
+                       <span class="shop-tag">可预约</span>
+                       <span class="shop-tag">有停车位</span>
+                   </div>
+               </div>
+               <div class="shop-side">
+                    <div class="shop-price">¥{{ item.avgPrice || '0' }}/人</div>
+                    <div class="shop-distance">{{ item.distance ? (item.distance/1000).toFixed(1) + 'km' : '' }}</div>
+               </div>
+            </div>
+         </template>
         
-        <!-- Voucher List (Tab 2) -->
+        <!-- Goods List (Tab 2) - Merged Voucher & Group -->
         <template v-if="activeTab === 2">
-           <div class="voucher-card-v2" v-for="item in list" :key="item.id" @click="toVoucherDetail(item)">
-              <!-- 顶部信息区 (白色背景) -->
-              <div class="voucher-header-section">
-                  <!-- 秒杀券顶部 -->
-                  <template v-if="item.type === 1">
-                      <div class="voucher-big-title">
-                          <span class="amount-highlight seckill-color">{{ item.actualValue }}</span>元代金券
-                          <span class="seckill-tag"><van-icon name="clock-o" size="10" />限时抢</span>
+           <div v-if="list.length === 0 && !loading" class="empty-placeholder">暂无关注商品</div>
+           <div v-else class="list-content">
+               <template v-for="item in list" :key="item.id">
+                   <!-- Category 1: Voucher -->
+                   <div v-if="item.category == 1" class="voucher-card-v2" @click="toProductDetail(item)">
+                      <!-- 顶部信息区 (白色背景) -->
+                      <div class="voucher-header-section">
+                           <!-- 秒杀券顶部 -->
+                          <template v-if="item.activityType === 1">
+                              <div class="voucher-big-title">
+                                  <span class="amount-highlight seckill-color">{{ item.originalPrice }}</span>元
+                                  <span class="seckill-tag"><van-icon name="clock-o" size="10" />限时抢</span>
+                              </div>
+                              <div class="shop-name-row">适用商铺：{{ item.shopName || '通用' }}</div>
+                              <div class="time-row" v-if="item.beginTime && item.endTime">
+                                  <van-icon name="clock-o" size="12" color="#FF2442" />
+                                  <span>{{ formatSeckillTimeRange(item.beginTime, item.endTime) }}</span>
+                              </div>
+                          </template>
+                          <!-- 普通券顶部 -->
+                          <template v-else>
+                              <div class="voucher-big-title">
+                                  <span class="amount-highlight">{{ item.originalPrice }}</span>元
+                              </div>
+                              <div class="shop-name-row normal">适用商铺：{{ item.shopName || '通用' }}</div>
+                              <div class="voucher-rule" v-if="item.subTitle">{{ item.subTitle }}</div>
+                              <div class="time-row normal" v-if="item.subTitle">
+                                  <van-icon name="clock-o" size="12" color="#FF9000" />
+                                  <span>{{ item.subTitle }}</span>
+                              </div>
+                          </template>
+                          <div class="validity-row" v-if="getValidityText(item)">{{ getValidityText(item) }}</div>
                       </div>
-                      <div class="shop-name-row">适用商铺：{{ item.shopName || '通用' }}</div>
-                      <div class="time-row" v-if="item.beginTime && item.endTime">
-                          <van-icon name="clock-o" size="12" color="#FF2442" />
-                          <span>{{ formatSeckillTimeRange(item.beginTime, item.endTime) }}</span>
-                      </div>
-                  </template>
-                  <!-- 普通券顶部 -->
-                  <template v-else>
-                      <div class="voucher-big-title">
-                          <span class="amount-highlight">{{ item.actualValue }}</span>元代金券
-                      </div>
-                      <div class="shop-name-row normal">适用商铺：{{ item.shopName || '通用' }}</div>
-                      <div class="voucher-rule" v-if="item.subTitle">{{ item.subTitle }}</div>
-                      <div class="time-row normal" v-if="item.subTitle">
-                          <van-icon name="clock-o" size="12" color="#FF9000" />
-                          <span>{{ item.subTitle }}</span>
-                      </div>
-                  </template>
-                  <div class="validity-row" v-if="getValidityText(item)">{{ getValidityText(item) }}</div>
-              </div>
-              
-              <!-- 底部价格区 (渐变背景) -->
-              <div class="voucher-price-section" :class="{ seckill: item.type === 1 }">
-                  <div class="price-main">
-                      <div class="price-row">
-                          <span class="currency">¥</span>
-                          <span class="price-value">{{ item.payValue }}</span>
-                          <span class="orig-price">¥{{ item.actualValue }}</span>
-                          <span class="discount-badge" v-if="item.actualValue">
-                              {{ ((item.payValue / item.actualValue) * 10).toFixed(1) }}折
-                          </span>
-                      </div>
-                      <div class="progress-row">
-                          <span class="sold-text">已售{{ getSoldPercent(item) }}%</span>
-                          <div class="progress-bar">
-                              <div class="progress-fill" :style="{ width: getSoldPercent(item) + '%' }"></div>
+                      
+                      <!-- 底部价格区 (渐变背景) -->
+                      <div class="voucher-price-section" :class="{ seckill: item.activityType === 1 }">
+                          <div class="price-main">
+                              <div class="price-row">
+                                  <span class="currency">¥</span>
+                                  <span class="price-value">{{ item.price }}</span>
+                                  <span class="orig-price">¥{{ item.originalPrice }}</span>
+                                  <span class="discount-badge" v-if="item.originalPrice">
+                                      {{ ((item.price / item.originalPrice) * 10).toFixed(1) }}折
+                                  </span>
+                              </div>
+                              <div class="progress-row">
+                                  <span class="sold-text">已售{{ getSoldPercent(item) }}%</span>
+                                  <div class="progress-bar">
+                                      <div class="progress-fill" :style="{ width: getSoldPercent(item) + '%' }"></div>
+                                  </div>
+                                  <span class="stock-text">剩{{ item.stock || 0 }}张</span>
+                              </div>
                           </div>
-                          <span class="stock-text">剩{{ item.stock || 0 }}张</span>
+                          <div class="action-btn" :class="getButtonState(item).class" @click.stop="handleBtnClick(item)">
+                              {{ getButtonState(item).text }}
+                          </div>
                       </div>
-                  </div>
-                  <div class="action-btn" :class="getButtonState(item).class" @click.stop="handleBtnClick(item)">
-                      {{ getButtonState(item).text }}
-                  </div>
-              </div>
-           </div>
-        </template>
-        
-         <!-- Group Deal List (Tab 3) -->
-        <template v-if="activeTab === 3">
-           <div class="shop-item" v-for="item in list" :key="item.id">
-              <div class="shop-img-box">
-                   <img :src="item.image" class="shop-cover">
-              </div>
-              <div class="shop-main">
-                 <div class="shop-title">{{ item.title }}</div>
-                 <div class="shop-rating-row">
-                     <span class="shop-score-val" style="color:#ff5000; font-size: 16px;">¥{{ item.price }}</span>
-                     <span class="orig-price" style="text-decoration: line-through; color:#999; margin-left: 5px; font-size:12px">¥{{ item.originalPrice }}</span>
-                 </div>
-              </div>
-           </div>
-        </template>
+                   </div>
 
+                   <!-- Category 2: Group (or others) -->
+                   <div v-else class="shop-item" @click="toShopDetail(item)">
+                      <div class="shop-img-box">
+                           <img :src="item.image" class="shop-cover">
+                      </div>
+                      <div class="shop-main">
+                         <div class="shop-title">{{ item.name }}</div>
+                         <div class="shop-rating-row">
+                             <span class="shop-score-val" style="color:#ff5000; font-size: 16px;">¥{{ item.price }}</span>
+                             <span class="orig-price" style="text-decoration: line-through; color:#999; margin-left: 5px; font-size:12px">¥{{ item.originalPrice }}</span>
+                         </div>
+                      </div>
+                   </div>
+               </template>
+           </div>
+        </template>
       </van-list>
     </div>
   </PageLayout>
@@ -170,125 +172,30 @@ const toShopDetail = (item) => {
     router.push(`/shop/detail?id=${item.id}`);
 };
 
-const toVoucherDetail = (item) => {
-  router.push(`/voucher/detail?id=${item.id}`);
+const toProductDetail = (item) => {
+  router.push(`/product/detail?id=${item.id}`);
 };
 
-// Map tab to sourceType: User(1), Shop(2), Voucher(4), Group(5)
+// Map tab to sourceType: User(1), Shop(2), Goods(4)
 const getSourceType = (index) => {
     switch(index) {
         case 0: return 1;
         case 1: return 2;
         case 2: return 4;
-        case 3: return 5;
         default: return 1;
     }
 }
 
-const formatScore = (score) => {
-    if(!score) return '0.0';
-    return (score / 10).toFixed(1);
-};
-
-const getValidityText = (v) => {
-    if (v.validityType === 1) {
-    const start = v.useStartTime?.split(' ')[0] || '';
-    const end = v.useEndTime?.split(' ')[0] || '';
-    return `${start} 至 ${end} 有效`;
-    } else if (v.validityType === 2) {
-    return `领取/购买后 ${v.validDays} 天内有效`;
-    }
-    return '';
-};
-
-const formatSeckillTimeRange = (begin, end) => {
-    if (!begin || !end) return '';
-    const format = (str) => {
-        const d = new Date(String(str).replace(/-/g, '/'));
-        const m = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        const h = String(d.getHours()).padStart(2, '0');
-        const min = String(d.getMinutes()).padStart(2, '0');
-        return `${m}.${day} ${h}:${min}`;
-    };
-    return `${format(begin)} - ${format(end)}`;
-};
-
-const getSoldPercent = (item) => {
-    const sold = item.sold || 0;
-    const stock = item.stock || 0;
-    const total = sold + stock;
-    if (total === 0) return 0;
-    return Math.round((sold / total) * 100);
-};
-
-const isSeckill = (item) => item.type === 1;
-
-const isSeckillStarted = (item) => {
-    if(!item.beginTime) return false;
-    return new Date(item.beginTime).getTime() <= Date.now();
-};
-const isSeckillEnded = (item) => {
-    // API might return endTme or endTime? assume endTime
-    if(!item.endTime) return false;
-    return new Date(item.endTime).getTime() <= Date.now();
-};
-
-const getButtonState = (item) => {
-    if (isSeckill(item)) {
-        if (item.stock <= 0) {
-            return { text: '已抢光', class: 'btn-gray', action: 'none' };
-        }
-        if (isSeckillStarted(item) && !isSeckillEnded(item)) {
-             return { text: '去抢购', class: 'btn-red', action: 'buy' };
-        }
-        if (isSeckillEnded(item)) {
-             return { text: '已结束', class: 'btn-gray', action: 'none' };
-        }
-        // Not started
-        return { text: '开抢提醒', class: 'btn-orange', action: 'remind' };
-    } else {
-        return { text: '去抢购', class: 'btn-red', action: 'buy' };
-    }
-};
-
-const handleBtnClick = (item) => {
-    toVoucherDetail(item);
-};
-
-const getFirstImage = (images) => {
-    if(!images) return '/imgs/icons/default-icon.png';
-    const arr = images.split(',');
-    let url = arr[0];
-    if (url && !url.startsWith('http')) {
-        return fileURL + url;
-    }
-    return url;
-};
-const handleImgError = (e) => {
-    e.target.src = '/imgs/icons/default-icon.png';
-};
+// ...
 
 const processItem = (item) => {
-    // Helper to format item data based on type
-    let img = item.image || item.icon || item.userAvatar;
-    if (img && !img.startsWith('http')) {
-        img = fileURL + img;
-    }
-    
-    // For Vouchers/Shops, ensure fields match template expectations
-    // Template expects: image, icon, userAvatar depending on tab
-    // Let's normalize to template usage or adjust template?
-    // Template uses:
-    // Tab 0: item.icon
-    // Tab 1: item.image
-    // Tab 2: ticket-stub (no image)
-    
     return {
         ...item,
         icon: (item.icon && !item.icon.startsWith('http')) ? fileURL + item.icon : item.icon,
         image: (item.image && !item.image.startsWith('http')) ? fileURL + item.image : item.image,
         userAvatar: (item.userAvatar && !item.userAvatar.startsWith('http')) ? fileURL + item.userAvatar : item.userAvatar,
+        shopLogo: (item.shopLogo && !item.shopLogo.startsWith('http')) ? fileURL + item.shopLogo.split(',')[0] : (item.shopLogo ? item.shopLogo.split(',')[0] : null),
+        images: (item.images && !item.images.startsWith('http')) ? fileURL + item.images.split(',')[0] : (item.images ? item.images.split(',')[0] : null)
     };
 };
 
@@ -303,8 +210,16 @@ const onLoad = async () => {
            current: current.value,
            size: size
        };
+       /*
+       if (activeTab.value === 2) {
+           params.productType = 1;
+       } else if (activeTab.value === 3) {
+           params.productType = 2;
+       }
+       */
        
        const res = await getFollows(params);
+
        let rawList = res.data || res || [];
        if (rawList.records) rawList = rawList.records; // Handle PageResult
        
@@ -345,6 +260,77 @@ const initUser = () => {
            }
         });
     }
+};
+
+const formatScore = (score) => {
+    if(!score) return '0.0';
+    return (score / 10).toFixed(1);
+};
+
+const getValidityText = (v) => {
+    if (v.validityType === 1) {
+    const start = v.useStartTime?.split(' ')[0] || '';
+    const end = v.useEndTime?.split(' ')[0] || '';
+    return `${start} 至 ${end} 有效`;
+    } else if (v.validityType === 2) {
+    return `领取/购买后 ${v.validDays} 天内有效`;
+    }
+    return '';
+};
+
+const formatSeckillTimeRange = (begin, end) => {
+    if (!begin || !end) return '';
+    const format = (str) => {
+        const d = new Date(String(str).replace(/-/g, '/'));
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const h = String(d.getHours()).padStart(2, '0');
+        const min = String(d.getMinutes()).padStart(2, '0');
+        return `${m}.${day} ${h}:${min}`;
+    };
+    return `${format(begin)} - ${format(end)}`;
+};
+
+const getSoldPercent = (item) => {
+    const sold = item.sold || 0;
+    const stock = item.stock || 0;
+    const total = sold + stock;
+    if (total === 0) return 0;
+    return Math.round((sold / total) * 100);
+};
+
+const isSeckill = (item) => item.activityType === 1;
+
+const isSeckillStarted = (item) => {
+    if(!item.beginTime) return false;
+    return new Date(item.beginTime).getTime() <= Date.now();
+};
+const isSeckillEnded = (item) => {
+    if(!item.endTme && !item.endTime) return false;
+    const end = item.endTime || item.endTme; // Handle typo in API if any
+    return new Date(end).getTime() <= Date.now();
+};
+
+const getButtonState = (item) => {
+    if (isSeckill(item)) {
+        if (item.stock <= 0) {
+            return { text: '已抢光', class: 'btn-gray', action: 'none' };
+        }
+        if (isSeckillStarted(item) && !isSeckillEnded(item)) {
+             return { text: '去抢购', class: 'btn-red', action: 'buy' };
+        }
+        if (isSeckillEnded(item)) {
+             return { text: '已结束', class: 'btn-gray', action: 'none' };
+        }
+        // Not started
+        return { text: '开抢提醒', class: 'btn-orange', action: 'remind' };
+    } else {
+        return { text: '去抢购', class: 'btn-red', action: 'buy' };
+    }
+};
+
+const handleBtnClick = (item) => {
+    toProductDetail(item);
 };
 
 watch(activeTab, () => {

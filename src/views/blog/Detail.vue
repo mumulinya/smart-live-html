@@ -14,7 +14,7 @@
         <button class="top-follow-btn" :class="{followed: followed}" @click.stop="toggleFollow" v-if="user && user.id !== blog.userId && blog.id">
           {{followed ? '已关注' : '关注'}}
         </button>
-        <i class="el-icon-upload2 top-share-icon"></i>
+        <i class="el-icon-share top-share-icon" @click="showShare = true"></i>
         <el-popover
             v-if="isOwner"
             placement="bottom-end"
@@ -102,7 +102,7 @@
           </div>
 
           <!-- 关联店铺卡片 (POI Card) -->
-          <div class="poi-card" v-if="shop.id" @click="toShopDetail">
+          <div class="poi-card modern-poi" v-if="shop.id" @click="toShopDetail">
              <div class="poi-thumbnail">
                 <img :src="shop.image || '/imgs/default-placeholder.png'" @error="(e) => e.target.src = '/imgs/default-placeholder.png'">
              </div>
@@ -110,30 +110,31 @@
                 <div class="poi-name">{{shop.name}}</div>
                 <div class="poi-rating">
                    <div class="star-icons">
-                      <i class="el-icon-star-on" v-for="n in Math.floor(shop.score/10)" :key="'f'+n"></i>
-                      <i class="el-icon-star-off" v-for="n in (5 - Math.floor(shop.score/10))" :key="'e'+n"></i>
+                      <van-rate v-model="commentRating" :size="12" color="#FF9900" void-icon="star" void-color="#eee" readonly />
                    </div>
                    <span class="rating-score">{{(shop.score/10).toFixed(1)}}</span>
                 </div>
                 <div class="poi-price">¥{{shop.avgPrice}}/人</div>
              </div>
              <div class="poi-arrow">
-                <i class="el-icon-arrow-right"></i>
+                <div class="arrow-circle"><i class="el-icon-arrow-right"></i></div>
              </div>
           </div>
 
           <!-- 点赞用户列表 -->
-          <div class="like-section" v-if="likes && likes.length > 0">
-             <div class="like-icon-btn" @click="addLike">
-                 <svg viewBox="0 0 24 24" width="24" height="24">
-                     <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" :fill="blog.isLike ? '#ff2442' : '#82848a'"></path>
-                 </svg>
-             </div>
-             <div class="like-avatars">
-                <div class="like-avatar-item" v-for="u in likes.slice(0, 8)" :key="u.id" @click="toUserDetail(u.id)">
-                   <img :src="u.icon || '/imgs/icons/default-icon.png'">
-                </div>
-                <span class="like-count-text">{{blog.liked}}人点赞</span>
+          <div class="like-section modern-like" v-if="likes && likes.length > 0">
+             <div class="like-container">
+                 <div class="like-icon-btn" :class="{'is-liked': blog.isLike}" @click="addLike">
+                     <svg viewBox="0 0 24 24" width="22" height="22">
+                         <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" :fill="blog.isLike ? '#ff2442' : '#bbbbbb'"></path>
+                     </svg>
+                 </div>
+                 <div class="like-avatars">
+                    <div class="like-avatar-item" v-for="(u, index) in likes.slice(0, 8)" :key="u.id" :style="{ zIndex: 10 - index }" @click="toUserDetail(u.id)">
+                       <img :src="u.icon || '/imgs/icons/default-icon.png'">
+                    </div>
+                 </div>
+                 <div class="like-count-text">{{blog.liked}}人点赞</div>
              </div>
           </div>
 
@@ -257,67 +258,82 @@
       </div> <!-- End of content-wrapper -->
     </div> <!-- End of scroll-container -->
 
-    <!-- 底部固定操作栏 -->
-    <div class="fixed-bottom-bar">
-      <div class="bottom-comment-input" @click="checkLogin">
-        <i class="el-icon-edit"></i>
-        <span>说点什么...</span>
-      </div>
-      <div class="bottom-actions">
-        <div class="bottom-action-item" @click="addLike">
-          <svg viewBox="0 0 24 24" width="22" height="22">
-            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" :fill="blog.isLike ? '#ff2442' : '#333'"></path>
-          </svg>
-          <span>{{blog.liked || 0}}</span>
-        </div>
-        <div class="bottom-action-item" @click="toggleStar">
-          <i :class="blog.isStared ? 'el-icon-star-on active' : 'el-icon-star-off'"></i>
-          <span>{{blog.stared || 0}}</span>
-        </div>
-        <div class="bottom-action-item" @click="viewAllComments">
-          <i class="el-icon-chat-dot-round"></i>
-          <span>{{blog.comments || 0}}</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- 评论输入弹窗 -->
-    <div class="comment-pop-overlay" v-if="showCommentPublish" @click="closeCommentModal">
-      <div class="comment-pop-box" @click.stop>
-         <div class="pop-header">
-            <span class="pop-title">{{ replyToComment ? ('回复 @' + replyToComment.nickName) : '发表评论' }}</span>
-            <i class="el-icon-close pop-close" @click="closeCommentModal"></i>
-         </div>
-         <div class="pop-textarea">
-            <textarea 
-               ref="commentTextarea"
+    <!-- 新版小红书式底部固定内联操作栏 (Sticky Bottom Bar) -->
+    <div class="sticky-bottom-bar" :class="{ 'is-focused': isInputFocus }">
+       <!-- 展开输入的真实区域 -->
+       <div class="inline-input-container" v-show="isInputFocus">
+         <div class="inline-textarea-wrapper">
+             <textarea 
+               ref="inlineTextarea"
                v-model="commentText" 
-               placeholder="分享你此刻的想法..." 
+               :placeholder="replyToComment ? ('回复 @' + replyToComment.nickName) : '说点什么...'" 
                :maxlength="500"
                rows="3"
-            ></textarea>
+               @focus="onInlineFocus"
+             ></textarea>
          </div>
-         <div class="pop-images" v-if="selectedImages.length > 0">
-            <div class="pop-image-item" v-for="(img, idx) in selectedImages" :key="idx">
+         <!-- 图片缩略图预览区 -->
+         <div class="inline-images" v-if="selectedImages.length > 0">
+            <div class="inline-image-item" v-for="(img, idx) in selectedImages" :key="idx">
                <img :src="img.url">
                <i class="el-icon-close" @click="removeImage(idx)"></i>
             </div>
-            <div class="pop-image-add" @click="$refs.imageInput.click()" v-if="selectedImages.length < 9">
+            <div class="inline-image-add" @click="$refs.imageInput.click()" v-if="selectedImages.length < 9">
                <i class="el-icon-plus"></i>
             </div>
          </div>
-         <div class="pop-toolbar">
-            <div class="pop-toolbar-left">
-               <svg class="pic-icon" @click="$refs.imageInput.click()" viewBox="0 0 1024 1024" width="24" height="24">
+         <!-- 工具栏 (表情、图片、发送、取消) -->
+         <div class="inline-toolbar">
+            <div class="inline-toolbar-left">
+               <span class="toolbar-icon" @click="insertAt">@</span>
+               <svg class="toolbar-icon pic-icon" @click="$refs.imageInput.click()" viewBox="0 0 1024 1024" width="22" height="22">
                   <path d="M896 160H128c-35.2 0-64 28.8-64 64v576c0 35.2 28.8 64 64 64h768c35.2 0 64-28.8 64-64V224c0-35.2-28.8-64-64-64z m0 640H128V224h768v576z" fill="#666"></path>
                   <path d="M320 512c53 0 96-43 96-96s-43-96-96-96-96 43-96 96 43 96 96 96z" fill="#666"></path>
                   <path d="M896 736l-192-192-128 96-192-160-256 256v64h768z" fill="#666"></path>
                </svg>
                <input type="file" ref="imageInput" multiple accept="image/*" @change="handleImageUpload" style="display:none">
+               <van-icon
+                 name="smile-o"
+                 class="emoji-icon emoji-toggle"
+                 :class="{ active: showEmojiPanel }"
+                 @click="toggleEmojiPanel"
+               />
             </div>
-            <el-button type="primary" size="small" :disabled="!commentText.trim()" @click="publishComment">发送</el-button>
+            <div class="inline-toolbar-right">
+               <el-button class="cancel-btn" size="small" round @click="closeInlineInput">取消</el-button>
+               <el-button class="send-btn" type="primary" size="small" :disabled="!commentText.trim()" round @click="publishComment">发送</el-button>
+            </div>
          </div>
-      </div>
+         <div class="emoji-panel" v-show="showEmojiPanel">
+            <div class="emoji-grid">
+               <span class="emoji-item" v-for="emoji in emojis" :key="emoji" @click="insertEmoji(emoji)">{{emoji}}</span>
+            </div>
+         </div>
+       </div>
+
+       <!-- 未聚焦时的紧凑底栏 -->
+       <div class="compact-bottom-bar" v-show="!isInputFocus">
+          <div class="compact-input-placeholder" @click="openInlineInput">
+            <i class="el-icon-edit"></i>
+            <span>说点什么...</span>
+          </div>
+          <div class="compact-actions">
+            <div class="action-item" @click="addLike">
+              <svg viewBox="0 0 24 24" width="22" height="22">
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" :fill="blog.isLike ? '#ff2442' : '#333'"></path>
+              </svg>
+              <span>{{blog.liked || 0}}</span>
+            </div>
+            <div class="action-item" @click="toggleStar">
+              <i :class="blog.isStared ? 'el-icon-star-on active' : 'el-icon-star-off'"></i>
+              <span>{{blog.stared || 0}}</span>
+            </div>
+            <div class="action-item" @click="viewAllComments">
+              <i class="el-icon-chat-dot-round"></i>
+              <span>{{blog.comments || 0}}</span>
+            </div>
+          </div>
+       </div>
     </div>
     
     <!-- All Reviews Bottom Sheet Popup -->
@@ -427,7 +443,7 @@
           <!-- Bottom Input Bar in Popup -->
           <div class="popup-bottom-bar" @click="writeCommentFromPopup">
              <div class="popup-input-placeholder">发条评论，和大家一起讨论</div>
-             <el-button type="primary" size="small" round>发布</el-button>
+             <el-button type="primary" size="small" round @click.stop="writeCommentFromPopup">发布</el-button>
           </div>
        </div>
     </div>
@@ -449,6 +465,14 @@
         <div class="delete-dialog-text">确定删除这篇笔记吗？删除后不可恢复</div>
       </div>
     </van-dialog>
+
+    <!-- Share Sheet -->
+    <van-share-sheet
+      v-model:show="showShare"
+      title="立即分享给好友"
+      :options="shareOptions"
+      @select="onShareSelect"
+    />
   </PageLayout>
 </template>
 
@@ -485,10 +509,23 @@ export default {
        touchEndX: 0,
        
        // Comment UI
-       showCommentPublish: false,
+       isInputFocus: false,
+       showEmojiPanel: false,
        commentText: '',
        commentRating: 5,
        selectedImages: [], // {file, url}
+       emojis: [
+          '\uD83D\uDE00', '\uD83D\uDE03', '\uD83D\uDE04', '\uD83D\uDE01', '\uD83D\uDE06',
+          '\uD83D\uDE05', '\uD83D\uDE02', '\uD83E\uDD23', '\uD83D\uDE0A', '\uD83D\uDE42',
+          '\uD83D\uDE09', '\uD83D\uDE0D', '\uD83E\uDD70', '\uD83D\uDE18', '\uD83D\uDE0B',
+          '\uD83D\uDE0E', '\uD83E\uDD29', '\uD83E\uDD14', '\uD83E\uDD2D', '\uD83D\uDE2E',
+          '\uD83D\uDE31', '\uD83D\uDE2D', '\uD83D\uDE22', '\uD83D\uDE24', '\uD83D\uDE21',
+          '\uD83E\uDD2C', '\uD83D\uDE37', '\uD83E\uDD22', '\uD83D\uDC4D', '\uD83D\uDC4E',
+          '\uD83D\uDC4F', '\uD83D\uDE4C', '\uD83D\uDE4F', '\uD83E\uDD1D', '\uD83D\uDC4C',
+          '\u2764\uFE0F', '\uD83E\uDDE1', '\uD83D\uDC9B', '\uD83D\uDC9A', '\uD83D\uDC99',
+          '\uD83D\uDC9C', '\uD83D\uDDA4', '\uD83D\uDC94', '\uD83D\uDD25', '\u2728',
+          '\uD83C\uDF1F', '\uD83C\uDF89', '\uD83C\uDF8A', '\uD83D\uDCAF', '\uD83D\uDE80'
+       ],
        
        // Preview
        showImagePreview: false,
@@ -505,7 +542,18 @@ export default {
        allCommentsLoading: false,
 
        // Delete Dialog
-       showDeleteDialog: false
+       showDeleteDialog: false,
+       
+       // Share Sheet
+       showShare: false,
+       shareOptions: [
+          { name: '微信', icon: 'wechat' },
+          { name: '朋友圈', icon: 'wechat-moments' },
+          { name: '微博', icon: 'weibo' },
+          { name: 'QQ', icon: 'qq' },
+          { name: '复制链接', icon: 'link' },
+          { name: '系统分享', icon: 'poster' }, // using a generic icon for native share
+       ]
     }
   },
   computed: {
@@ -537,6 +585,38 @@ export default {
         } else {
            this.$router.push(`/user/profile/${this.blog.userId}`);
         }
+     },
+     onShareSelect(option) {
+         this.showShare = false;
+         const shareUrl = window.location.href;
+         const shareTitle = this.blog.title || 'SmartLive 笔记分享';
+         const shareText = this.blog.content ? this.blog.content.replace(/<[^>]+>/g, '').substring(0, 50) + '...' : '快来看看这篇有趣的笔记吧！';
+
+         if (option.name === '复制链接') {
+              navigator.clipboard.writeText(shareUrl).then(() => {
+                  this.$message.success('链接已复制到剪贴板');
+              }).catch(() => {
+                  this.$message.error('复制失败，请手动复制浏览器地址栏');
+              });
+         } else if (option.name === '系统分享' || option.name === '微信' || option.name === '朋友圈' || option.name === '微博' || option.name === 'QQ') {
+             // 尝试调用系统底层 Web Share API (Safari, Chrome for Android)
+             if (navigator.share) {
+                 navigator.share({
+                     title: shareTitle,
+                     text: shareText,
+                     url: shareUrl,
+                 }).catch((error) => console.log('分享失败或用户取消', error));
+             } else {
+                 if(option.name !== '系统分享') {
+                     // 网页端没实现SDK分享时，降级处理为复制链接
+                     navigator.clipboard.writeText(shareUrl).then(() => {
+                         this.$message.success('已复制链接，请前往对应 App 粘贴发送');
+                     });
+                 } else {
+                    this.$message.warning('当前环境不支持系统原生分享');
+                 }
+             }
+         }
      },
       toUserDetail(userId) {
          if(!userId) return;
@@ -835,19 +915,55 @@ export default {
          this.replyToComment = null;
          this.commentText = '';
          this.selectedImages = [];
-         this.showCommentPublish = true;
+         
+         // Using new inline input
+         this.showReviewPopup = false; 
+         this.openInlineInput();
       },
      checkLogin() {
         if(!this.user.id) this.$router.push('/user/login');
-        else this.showCommentPublish = true;
+        else this.openInlineInput();
      },
-     closeCommentModal() {
+     openInlineInput() {
+        this.isInputFocus = true;
+        this.showEmojiPanel = false;
+        this.$nextTick(() => {
+           if(this.$refs.inlineTextarea) {
+              this.$refs.inlineTextarea.focus();
+           }
+        });
+     },
+     closeInlineInput() {
+        this.isInputFocus = false;
+        this.showEmojiPanel = false;
         this.commentText = '';
         this.selectedImages = [];
-        this.showCommentPublish = false;
         this.replyToComment = null;
      },
-     
+     onInlineFocus() {
+        this.isInputFocus = true;
+        this.showEmojiPanel = false;
+     },
+     toggleEmojiPanel() {
+        this.showEmojiPanel = !this.showEmojiPanel;
+        this.$nextTick(() => {
+           if (!this.$refs.inlineTextarea) return;
+           if (this.showEmojiPanel) this.$refs.inlineTextarea.blur();
+           else this.$refs.inlineTextarea.focus();
+        });
+     },
+     insertAt() {
+         this.commentText += '@';
+         if(this.$refs.inlineTextarea) this.$refs.inlineTextarea.focus();
+     },
+     insertEmoji(emoji) {
+         this.commentText += emoji;
+         if(!this.showEmojiPanel && this.$refs.inlineTextarea) {
+             this.$nextTick(() => {
+                 this.$refs.inlineTextarea.focus();
+             });
+         }
+     },
      // Comment Publish
      async handleImageUpload(e) {
         const files = e.target.files;
@@ -915,7 +1031,7 @@ export default {
 
         addComment(data).then(() => {
            this.$message.success("发布成功");
-           this.closeCommentModal();
+           this.closeInlineInput();
            // Reload
            this.comments = []; 
            this.aiComment = null; // Reset AI comment
@@ -1658,6 +1774,35 @@ export default {
 }
 .pic-icon:hover path {
   fill: #ff6633;
+}
+
+.emoji-toggle.active {
+  color: #ff2442;
+}
+
+.emoji-panel {
+  margin-top: 10px;
+  background: #f7f8fa;
+  border: 1px solid #eceef2;
+  border-radius: 12px;
+  padding: 10px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.emoji-panel .emoji-grid {
+  grid-template-columns: repeat(8, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+}
+
+.emoji-panel .emoji-item {
+  font-size: 24px;
+  line-height: 1;
+  padding: 4px 0;
+}
+
+.emoji-panel .emoji-item:active {
+  transform: scale(1.12);
 }
 
 /* Empty State */
