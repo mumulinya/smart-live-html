@@ -127,7 +127,7 @@ const handleAuthChanged = (event) => {
 
 <template>
   <router-view v-slot="{ Component }">
-    <keep-alive :key="keepAliveVersion" include="OrderList,MyStar,MyFollow,Drafts,ListPage,MyReviews,UserInfo,HomeIndex,SearchIndex,UserSearch,ShopList">
+    <keep-alive :key="keepAliveVersion" include="OrderList,MyStar,MyFollow,MyInteractions,Drafts,ListPage,MyReviews,UserInfo,HomeIndex,SearchIndex,UserSearch,ShopList">
       <component :is="Component" />
     </keep-alive>
   </router-view>

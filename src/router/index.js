@@ -69,6 +69,11 @@ const routes = [
         component: () => import('@/views/user/social/MyFollow.vue')
     },
     {
+        path: '/user/interactions',
+        name: 'MyInteractions',
+        component: () => import('@/views/user/social/MyInteractions.vue')
+    },
+    {
         path: '/review/mine',
         name: 'MyReviews',
         component: () => import('@/views/review/MyReviews.vue')

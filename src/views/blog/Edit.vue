@@ -53,9 +53,15 @@
 
         <!-- Footer Actions -->
         <div class="footer-action">
-            <div class="draft-btn" @click="saveDraft" v-if="!editMode">
-                <i class="el-icon-document"></i>
-                <span>存草稿</span>
+            <div class="draft-actions">
+                <div class="draft-btn" @click="saveDraft" v-if="!editMode">
+                    <i class="el-icon-document"></i>
+                    <span>存草稿</span>
+                </div>
+                <div class="draft-btn" @click="goDraftBox">
+                    <i class="el-icon-folder-opened"></i>
+                    <span>草稿箱</span>
+                </div>
             </div>
             <button class="publish-btn-footer" :disabled="!canSubmit" @click="submitBlog">
                 {{ (editMode && !isDraft) ? '保存' : '发布' }}
@@ -150,6 +156,7 @@ export default {
       isSubmitting: false,
       shopLoading: false,
       showExitDialog: false,
+      exitAction: 'back',
       
       // Edit mode
       editMode: false,
@@ -216,6 +223,10 @@ export default {
         images: this.serverFilePaths ? this.serverFilePaths.join(',') : '',
         shopId: this.selectedShop ? (this.selectedShop.id || '') : ''
       });
+    },
+    hasUnsavedChanges() {
+      const currentSnapshot = this.getSnapshot();
+      return this.originalData && currentSnapshot !== this.originalData;
     },
     checkLogin() {
       // Assuming route guard handles this, but double check
@@ -428,8 +439,8 @@ export default {
       this.checkSubmitStatus();
     },
     goBack() {
-      const currentSnapshot = this.getSnapshot();
-      if (this.originalData && currentSnapshot !== this.originalData) {
+      if (this.hasUnsavedChanges()) {
+          this.exitAction = 'back';
           this.showExitDialog = true;
       } else {
           this.$router.go(-1);
@@ -437,7 +448,15 @@ export default {
     },
     confirmExit() {
         this.showExitDialog = false;
-        this.$router.go(-1);
+        if (this.exitAction === 'draft') {
+            this.$router.push({
+                path: '/drafts',
+                query: { type: 'note' }
+            });
+        } else {
+            this.$router.go(-1);
+        }
+        this.exitAction = 'back';
     },
     saveDraft() {
         if (!this.params.title && !this.params.content && !this.fileList.length) {
@@ -485,6 +504,17 @@ export default {
                     this.isSubmitting = false;
                 });
         }
+    },
+    goDraftBox() {
+        if (this.hasUnsavedChanges()) {
+            this.exitAction = 'draft';
+            this.showExitDialog = true;
+            return;
+        }
+        this.$router.push({
+            path: '/drafts',
+            query: { type: 'note' }
+        });
     }
   }
 };
@@ -863,6 +893,11 @@ export default {
     gap: 16px;
     z-index: 100;
     padding-bottom: env(safe-area-inset-bottom);
+}
+.draft-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
 }
 .draft-btn {
     display: flex;

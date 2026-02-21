@@ -1,8 +1,8 @@
 <template>
   <PageLayout :loading="loading" skeleton-type="list" class="my-follow-page">
-    <van-nav-bar title="我的关注" left-arrow @click-left="$router.back()" fixed placeholder />
+    <van-nav-bar title="我的关注" left-arrow @click-left="$router.back()" fixed placeholder z-index="1001" />
     
-    <van-tabs v-model:active="activeTab" sticky offset-top="46px" color="#ff2442">
+    <van-tabs ref="tabsRef" v-model:active="activeTab" sticky :offset-top="46" color="#ff2442" :ellipsis="false">
       <van-tab title="用户" />
       <van-tab title="店铺" />
       <van-tab title="商品" />
@@ -150,7 +150,7 @@ defineOptions({
   name: 'MyFollow'
 });
 
-import { ref, watch, onMounted, onActivated } from 'vue';
+import { ref, watch, onMounted, onActivated, onBeforeUnmount, nextTick } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { getFollows } from '@/api/interaction';
 import { getCurrentUser } from '@/api/user';
@@ -167,6 +167,20 @@ const current = ref(1);
 const size = 10;
 const userId = ref(null);
 const initialized = ref(false);
+const tabsRef = ref(null);
+
+const refreshTabs = () => {
+    const doResize = () => tabsRef.value?.resize?.();
+    nextTick(() => {
+        doResize();
+        requestAnimationFrame(doResize);
+        setTimeout(doResize, 120);
+    });
+};
+
+const handleWindowResize = () => {
+    refreshTabs();
+};
 
 const toShopDetail = (item) => {
     router.push(`/shop/detail?id=${item.id}`);
@@ -343,6 +357,13 @@ watch(activeTab, () => {
         loading.value = true;
         onLoad();
     }
+    refreshTabs();
+});
+
+watch(loading, (val) => {
+    if (!val) {
+        refreshTabs();
+    }
 });
 
 onMounted(() => {
@@ -353,6 +374,8 @@ onMounted(() => {
     }
     initialized.value = true;
     initUser();
+    refreshTabs();
+    window.addEventListener('resize', handleWindowResize);
 });
 
 // 使用 onActivated 处理 keep-alive 缓存的情况
@@ -361,6 +384,11 @@ onActivated(() => {
     if (tabFromQuery !== undefined && parseInt(tabFromQuery) !== activeTab.value) {
         activeTab.value = parseInt(tabFromQuery) || 0;
     }
+    refreshTabs();
+});
+
+onBeforeUnmount(() => {
+    window.removeEventListener('resize', handleWindowResize);
 });
 </script>
 

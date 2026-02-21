@@ -29,10 +29,12 @@ service.interceptors.request.use(
     if (token) {
       config.headers['authorization'] = token;
     }
-    // Prevent GET request caching
+    // Add no-cache timestamp only when explicitly requested.
     if (config.method === 'get') {
       config.params = config.params || {};
-      config.params['_t'] = Date.now();
+      if (config.noCache === true) {
+        config.params['_t'] = Date.now();
+      }
     }
     return config;
   },

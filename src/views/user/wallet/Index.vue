@@ -38,6 +38,11 @@
               <van-icon name="balance-list-o" size="22" color="#673ab7" style="margin-bottom: 6px;" />
             </template>
           </van-grid-item>
+          <van-grid-item text="积分" to="/user/points">
+            <template #icon>
+              <van-icon name="points" size="22" color="#67C23A" style="margin-bottom: 6px;" />
+            </template>
+          </van-grid-item>
         </van-grid>
       </div>
 

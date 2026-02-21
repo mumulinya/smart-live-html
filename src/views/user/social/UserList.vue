@@ -5,15 +5,19 @@
       left-arrow
       fixed
       placeholder
+      z-index="1001"
       @click-left="goBack"
     />
 
     <van-tabs 
+      ref="tabsRef"
       v-model:active="activeTab" 
-      sticky 
+      sticky
+      :offset-top="46"
       animated 
       swipeable 
       color="#ff5000" 
+      :ellipsis="false"
       title-active-color="#333"
       @click-tab="handleTabClick"
     >
@@ -124,7 +128,33 @@ export default {
     if(this.type) this.activeTab = this.type;
     this.queryUser();
   },
+  mounted() {
+    this.refreshTabs();
+    window.addEventListener('resize', this.refreshTabs);
+  },
+  activated() {
+    this.refreshTabs();
+  },
+  beforeUnmount() {
+    window.removeEventListener('resize', this.refreshTabs);
+  },
+  watch: {
+    loading(val) {
+      if (!val) {
+        this.refreshTabs();
+      }
+    }
+  },
   methods: {
+    refreshTabs() {
+      this.$nextTick(() => {
+        const tabs = this.$refs.tabsRef;
+        const doResize = () => tabs?.resize?.();
+        doResize();
+        requestAnimationFrame(doResize);
+        setTimeout(doResize, 120);
+      });
+    },
     goBack() {
       this.$router.back();
     },
@@ -133,6 +163,7 @@ export default {
         // If it's the tab name string:
         this.activeTab = name.name || name; 
         this.resetList();
+        this.refreshTabs();
     },
     async queryUser() {
       try {
@@ -250,6 +281,7 @@ export default {
             if (targetTab === this.activeTab && currentRefreshId === this.refreshId) {
                 this.loading = false;
             }
+            this.refreshTabs();
         })
     },
     

@@ -98,52 +98,42 @@
         <van-grid clickable :column-num="4" :border="false" class="custom-grid">
             <van-grid-item @click="toOrders">
                <template #icon>
-                   <div class="service-icon-wrapper bg-blue">
+                   <div class="service-icon-wrapper bg-blue priority">
                        <van-icon name="orders-o" size="24" color="#409EFF" />
                    </div>
                </template>
                <template #text>
-                   <span class="service-text">我的订单</span>
+                   <span class="service-text priority-text">订单</span>
                </template>
             </van-grid-item>
             <van-grid-item @click="toWallet">
                <template #icon>
-                   <div class="service-icon-wrapper bg-orange">
+                   <div class="service-icon-wrapper bg-orange priority">
                        <van-icon name="balance-o" size="24" color="#ff9900" />
                    </div>
                </template>
                <template #text>
-                   <span class="service-text">钱包</span>
-               </template>
-            </van-grid-item>
-            <van-grid-item @click="toPoints">
-               <template #icon>
-                   <div class="service-icon-wrapper bg-green">
-                       <van-icon name="points" size="24" color="#67C23A" />
-                   </div>
-               </template>
-               <template #text>
-                   <span class="service-text">积分</span>
+                   <span class="service-text priority-text">钱包</span>
                </template>
             </van-grid-item>
              <van-grid-item @click="toCollections">
                <template #icon>
-                   <div class="service-icon-wrapper bg-red">
+                   <div class="service-icon-wrapper bg-red priority">
                        <van-icon name="star-o" size="24" color="#ff2442" />
                    </div>
                </template>
                <template #text>
-                   <span class="service-text">我的收藏</span>
+                   <span class="service-text priority-text">收藏</span>
                </template>
             </van-grid-item>
-             <van-grid-item @click="toReviews">
+             <van-grid-item @click="toInteractions">
                <template #icon>
                    <div class="service-icon-wrapper bg-purple">
                        <van-icon name="comment-o" size="24" color="#8e44ad" />
                    </div>
                </template>
                <template #text>
-                   <span class="service-text">我的评价</span>
+                   <span class="service-text">互动</span>
                </template>
             </van-grid-item>
              <van-grid-item @click="toMyFollow">
@@ -153,7 +143,7 @@
                     </div>
                </template>
                <template #text>
-                   <span class="service-text">我的关注</span>
+                   <span class="service-text">关注</span>
                </template>
             </van-grid-item>
              <van-grid-item @click="$router.push('/user/moments')">
@@ -163,13 +153,23 @@
                     </div>
                </template>
                <template #text>
-                   <span class="service-text">我的动态</span>
+                   <span class="service-text">动态</span>
+               </template>
+            </van-grid-item>
+            <van-grid-item @click.stop="$router.push({ path: '/review/mine', query: { tab: 'reviewed' } })">
+               <template #icon>
+                    <div class="service-icon-wrapper bg-grayblue">
+                        <van-icon name="description-o" size="24" color="#607D8B" />
+                    </div>
+               </template>
+               <template #text>
+                   <span class="service-text">评价</span>
                </template>
             </van-grid-item>
             <van-grid-item @click="toDrafts">
                <template #icon>
-                    <div class="service-icon-wrapper bg-grayblue">
-                        <van-icon name="description-o" size="24" color="#607D8B" />
+                    <div class="service-icon-wrapper bg-green">
+                        <van-icon name="notes-o" size="24" color="#67C23A" />
                     </div>
                </template>
                <template #text>
@@ -509,17 +509,17 @@ export default {
      toWallet() {
         this.$router.push('/user/wallet');
      },
-     toPoints() {
-        this.$router.push('/user/points');
-     },
      toCollections() {
           this.$router.push('/user/star');
       },
      toMyFollow() {
         this.$router.push('/user/follow');
      },
+     toInteractions() {
+        this.$router.push('/user/interactions');
+     },
      toReviews() {
-        this.$router.push('/review/mine');
+        this.$router.push({ path: '/review/mine', query: { tab: 'reviewed' } });
      },
      toDrafts() {
         this.$router.push('/drafts');
@@ -740,14 +740,51 @@ export default {
          }).finally(() => this.blogLoading = false);
      },
      processBlog(b) {
+        const item = (b && typeof b === 'object') ? b : {};
+        const iconRaw = item.icon || item.userIcon || '';
+        const avatarRaw = item.userAvatar || item.icon || item.userIcon || '';
+        const toUrl = (val) => {
+            if (!val || typeof val !== 'string') return '';
+            if (
+                val.startsWith('http') ||
+                val.startsWith('/imgs/') ||
+                val.startsWith('data:') ||
+                val.startsWith('blob:')
+            ) {
+                return val;
+            }
+            return this.$fileURL + val;
+        };
         return {
-           ...b,
-           icon: b.icon ? this.$fileURL + b.icon : '',
-           userAvatar: b.userAvatar ? this.$fileURL + b.userAvatar : '',
-           images: b.images,
+           ...item,
+           icon: toUrl(iconRaw),
+           userAvatar: toUrl(avatarRaw),
+           images: item.images,
            // Image error flag
            imgError: false
         };
+     },
+
+     normalizeLikeRecord(record) {
+        if (!record || typeof record !== 'object') return {};
+        const detail = record.data && typeof record.data === 'object' && !Array.isArray(record.data)
+            ? record.data
+            : null;
+        const merged = detail ? { ...record, ...detail } : { ...record };
+        if (Array.isArray(merged.images)) {
+            merged.images = merged.images.filter(Boolean).join(',');
+        }
+        if (!merged.icon && merged.userIcon) {
+            merged.icon = merged.userIcon;
+        }
+        if (!merged.userAvatar && merged.icon) {
+            merged.userAvatar = merged.icon;
+        }
+        if (!merged.name) {
+            merged.name = merged.nickName || merged.userName || merged.username || '';
+        }
+        merged.likeTime = record.likeTime || merged.likeTime || merged.createTime || '';
+        return merged;
      },
      
      // Collection Logic
@@ -789,7 +826,7 @@ export default {
         likeRecord({ userId: this.user.id, sourceType: 3, current: this.likeCurrent, size: 10 }).then(res => {
             let list = res.data || res || [];
             if(list.records) list = list.records;
-            this.likes = list.map(this.processBlog);
+            this.likes = list.map(this.normalizeLikeRecord).map(this.processBlog);
             if(list.length < 10) this.likeNoMore = true;
         }).finally(() => this.likeLoading = false);
      },
@@ -801,7 +838,7 @@ export default {
             let list = res.data || res || [];
             if(list.records) list = list.records;
             if(list.length > 0) {
-                this.likes = [...this.likes, ...list.map(this.processBlog)];
+                this.likes = [...this.likes, ...list.map(this.normalizeLikeRecord).map(this.processBlog)];
             }
             if(list.length < 10) this.likeNoMore = true;
         }).catch(() => {
@@ -1451,6 +1488,12 @@ export default {
     margin-bottom: 8px;
     transition: transform 0.2s ease;
 }
+.service-icon-wrapper.priority {
+    width: 50px;
+    height: 50px;
+    border-radius: 14px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+}
 
 /* Active touch state */
 .custom-grid :deep(.van-grid-item__content:active) .service-icon-wrapper {
@@ -1461,6 +1504,10 @@ export default {
     font-size: 13px;
     color: #333;
     font-weight: 500;
+}
+.service-text.priority-text {
+    font-weight: 600;
+    color: #222;
 }
 
 /* Colors for specific functions */

@@ -365,7 +365,27 @@ export default {
     },
     getImage(imgs) {
        if(!imgs) return '';
-       return imgs.split(',')[0];
+       if (Array.isArray(imgs)) return imgs[0] || '';
+       return String(imgs).split(',')[0];
+    },
+
+    normalizeLikeRecord(record) {
+       if (!record || typeof record !== 'object') return {};
+       const detail = record.data && typeof record.data === 'object' && !Array.isArray(record.data)
+           ? record.data
+           : null;
+       const merged = detail ? { ...record, ...detail } : { ...record };
+       if (Array.isArray(merged.images)) {
+           merged.images = merged.images.filter(Boolean).join(',');
+       }
+       if (!merged.icon && merged.userIcon) {
+           merged.icon = merged.userIcon;
+       }
+       if (!merged.name) {
+           merged.name = merged.nickName || merged.userName || merged.username || '';
+       }
+       merged.likeTime = record.likeTime || merged.likeTime || merged.createTime || '';
+       return merged;
     },
 
     initData() {
@@ -469,15 +489,37 @@ export default {
            let list = res.data || res || [];
            // Handle potential wrapper structure if records exist
            if(list.records) list = list.records;
+           const normalizedList = list.map(this.normalizeLikeRecord);
            
            if(list.length < 10) this.likeNoMore = true;
-           this.likes = this.likeCurrent === 1 ? list : [...this.likes, ...list];
+           this.likes = this.likeCurrent === 1 ? normalizedList : [...this.likes, ...normalizedList];
            
            this.likes.forEach(b => {
-               if(b.images && !b.images.startsWith('http')) b.images = this.$fileURL + b.images;
+               if (
+                   typeof b.images === 'string' &&
+                   b.images &&
+                   !b.images.startsWith('http') &&
+                   !b.images.startsWith('/imgs/') &&
+                   !b.images.startsWith('data:') &&
+                   !b.images.startsWith('blob:')
+               ) b.images = this.$fileURL + b.images;
                 // Icons for liked blogs user
-               if(b.icon && !b.icon.startsWith('http')) b.icon = this.$fileURL + b.icon;
-               if(b.userAvatar && !b.userAvatar.startsWith('http')) b.userAvatar = this.$fileURL + b.userAvatar;
+               if (
+                   typeof b.icon === 'string' &&
+                   b.icon &&
+                   !b.icon.startsWith('http') &&
+                   !b.icon.startsWith('/imgs/') &&
+                   !b.icon.startsWith('data:') &&
+                   !b.icon.startsWith('blob:')
+               ) b.icon = this.$fileURL + b.icon;
+               if (
+                   typeof b.userAvatar === 'string' &&
+                   b.userAvatar &&
+                   !b.userAvatar.startsWith('http') &&
+                   !b.userAvatar.startsWith('/imgs/') &&
+                   !b.userAvatar.startsWith('data:') &&
+                   !b.userAvatar.startsWith('blob:')
+               ) b.userAvatar = this.$fileURL + b.userAvatar;
            });
            this.likeCurrent++;
        }).finally(() => this.likeLoading = false);

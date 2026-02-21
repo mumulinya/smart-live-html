@@ -5,6 +5,8 @@ html, body {
   width: 100%;
   height: 100%;
   -webkit-tap-highlight-color: transparent;
+  /* Prevent browser pull-to-refresh from causing full page reload on H5 */
+  overscroll-behavior: none;
 }
 
 #app {

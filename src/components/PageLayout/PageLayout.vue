@@ -11,7 +11,7 @@
     </transition>
 
     <!-- 真实内容 -->
-    <div v-show="!loading" class="real-content fade-in">
+    <div class="real-content fade-in">
       <slot></slot>
     </div>
   </div>

@@ -2,7 +2,7 @@
 defineOptions({
   name: 'MyStar'
 });
-import { ref, watch, onMounted, onActivated } from 'vue';
+import { ref, watch, onMounted, onActivated, onBeforeUnmount, nextTick } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { starList } from '@/api/interaction';
 import { getCurrentUser } from '@/api/user';
@@ -19,6 +19,20 @@ const current = ref(1);
 const size = 10;
 const userId = ref(null);
 const initialized = ref(false);
+const tabsRef = ref(null);
+
+const refreshTabs = () => {
+    const doResize = () => tabsRef.value?.resize?.();
+    nextTick(() => {
+        doResize();
+        requestAnimationFrame(doResize);
+        setTimeout(doResize, 120);
+    });
+};
+
+const handleWindowResize = () => {
+    refreshTabs();
+};
 
 const onClickLeft = () => history.back();
 
@@ -267,6 +281,8 @@ onMounted(() => {
     }
     initialized.value = true;
     initUser();
+    refreshTabs();
+    window.addEventListener('resize', handleWindowResize);
 });
 
 // 使用 onActivated 处理 keep-alive 缓存的情况
@@ -275,11 +291,23 @@ onActivated(() => {
     if (tabFromQuery !== undefined && parseInt(tabFromQuery) !== activeTab.value) {
         activeTab.value = parseInt(tabFromQuery) || 0;
     }
+    refreshTabs();
+});
+
+onBeforeUnmount(() => {
+    window.removeEventListener('resize', handleWindowResize);
 });
 
 watch(activeTab, () => {
     if (initialized.value) {
         handleTabChange();
+    }
+    refreshTabs();
+});
+
+watch(loading, (val) => {
+    if (!val) {
+        refreshTabs();
     }
 });
 </script>
@@ -291,10 +319,11 @@ watch(activeTab, () => {
       left-arrow
       fixed
       placeholder
+      z-index="1001"
       @click-left="onClickLeft"
     />
 
-    <van-tabs v-model:active="activeTab" sticky animated swipeable color="#ff2442">
+    <van-tabs ref="tabsRef" v-model:active="activeTab" sticky :offset-top="46" animated swipeable color="#ff2442" :ellipsis="false">
       <van-tab title="店铺">
          <van-list
             v-model:loading="loading"

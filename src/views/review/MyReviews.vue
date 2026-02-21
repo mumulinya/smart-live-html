@@ -9,7 +9,7 @@
                <span class="header-tab" :class="{active: activeHeaderTab === 'pending'}" @click="switchTab('pending')">待评价</span>
                <span class="header-tab" :class="{active: activeHeaderTab === 'reviewed'}" @click="switchTab('reviewed')">已评价</span>
            </div>
-           <div class="header-right" @click="$router.push('/drafts')">
+           <div class="header-right" @click="$router.push({ path: '/drafts', query: { type: 'review' } })">
                <van-icon name="notes-o" size="18" />
                <span class="drafts-text">草稿箱({{ draftsCount }})</span>
            </div>
@@ -23,31 +23,54 @@
 
      <!-- Reviewed Tab -->
      <div v-show="activeHeaderTab === 'reviewed'" class="tab-content scroll-wrapper">
+       <div class="review-type-tabs">
+           <span
+               class="review-type-tab"
+               :class="{ active: reviewSourceType === 'all' }"
+               @click="onReviewTypeSelect('all')"
+           >
+               全部
+           </span>
+           <span
+               class="review-type-tab"
+               :class="{ active: reviewSourceType === '2' }"
+               @click="onReviewTypeSelect('2')"
+           >
+               店铺评价
+           </span>
+           <span
+               class="review-type-tab"
+               :class="{ active: reviewSourceType === '4' }"
+               @click="onReviewTypeSelect('4')"
+           >
+               商品评价
+           </span>
+       </div>
        <!-- Filter -->
        <div class="review-filter-row">
            <div class="filter-left" @click="showSortSheet = true">
                {{ currentSortLabel }} <i class="el-icon-caret-bottom"></i>
            </div>
-           <div class="filter-right">全部评价共{{reviews.length}}条</div>
+            <div class="filter-right">{{ currentTypeLabel }}共{{ reviews.length }}条</div>
        </div>
 
        <!-- Review List -->
        <div class="review-list">
-           <van-list
-               v-model:loading="loading"
-               :finished="finished"
-               finished-text="没有更多了"
-               :immediate-check="false"
-               @load="loadReviews"
-           >
+            <van-list
+                v-model:loading="loading"
+                :finished="finished"
+                finished-text="没有更多了"
+                :immediate-check="false"
+                @load="loadReviews"
+            >
                <div class="review-card" v-for="r in reviews" :key="r.id" @click="toReviewDetail(r)">
                     <!-- Header -->
                     <div class="rc-header">
                         <!-- Order Review Header -->
-                        <template v-if="r.reviewType === 'order'">
-                             <span class="type-tag order">
-                                <van-icon name="bag-o" style="margin-right: 4px; font-size: 15px;" />
-                                订单评价 {{ r.orderId ? '#' + (r.orderId.length > 6 ? r.orderId.slice(-6) : r.orderId) : '' }}
+                        <template v-if="r.reviewType === 'product'">
+                             <span class="type-tag product">
+                                <van-icon name="goods-collect-o" style="margin-right: 4px; font-size: 15px;" />
+                                商品评价 {{ r.shopName }}
                             </span>
                         </template>
                          <!-- Shop Review Header -->
@@ -143,11 +166,23 @@ export default {
        filePrefix: filePrefix,
        showSortSheet: false,
        currentSort: 'desc',
+       reviewSourceType: 'all',
        activeHeaderTab: 'reviewed', // Default
        draftsCount: 5,
     }
   },
   computed: {
+      reviewTypeActions() {
+          return [
+              { name: '全部', value: 'all' },
+              { name: '店铺评价', value: '2' },
+              { name: '商品评价', value: '4' }
+          ];
+      },
+      currentTypeLabel() {
+          const item = this.reviewTypeActions.find(a => a.value === this.reviewSourceType);
+          return item ? item.name : '全部';
+      },
       sortActions() {
           return [
               { name: '最新发布', value: 'desc', color: this.currentSort === 'desc' ? '#ff9900' : '#333' },
@@ -179,6 +214,17 @@ export default {
           this.activeHeaderTab = tab;
           // Optional: Update query param without reloading
           this.$router.replace({ query: { ...this.$route.query, tab } });
+      },
+      onReviewTypeSelect(type) {
+          if (this.reviewSourceType === type) return;
+          this.reviewSourceType = type;
+          this.resetReviewedList();
+          this.loadReviews();
+      },
+      resetReviewedList() {
+          this.reviews = [];
+          this.page = 1;
+          this.finished = false;
       },
       // Removed goToPending since it's now a tab switch
       toReviewDetail(review) {
@@ -226,7 +272,6 @@ export default {
           this.loading = true;
           
           const params = {
-              sourceType: 2, 
               current: this.page,
               size: this.size,
               userId: this.user.id,
@@ -235,6 +280,9 @@ export default {
               sortOrder: this.currentSort,
               status: 0
           };
+          if (this.reviewSourceType !== 'all') {
+              params.sourceType = Number(this.reviewSourceType);
+          }
 
           getUserReviewList(params).then(res => {
               let list = [];
@@ -277,12 +325,13 @@ export default {
               content: item.content,
               images: images,
               viewCount: item.viewCount || 0,
-              likeCount: item.liked || 0,
-              expanded: false,
-              orderId: item.orderId,
-              reviewType: (item.orderId && item.orderId !== 0 && item.orderId !== '0') ? 'order' : 'shop'
-          };
-      },
+               likeCount: item.liked || 0,
+               expanded: false,
+               orderId: item.orderId,
+               sourceType: Number(item.sourceType || 2),
+               reviewType: Number(item.sourceType || 2) === 4 ? 'product' : 'shop'
+           };
+       },
 
        formatDate(time) {
            if (!time) return '';
@@ -295,10 +344,7 @@ export default {
        onSortSelect(item) {
            this.currentSort = item.value;
            this.showSortSheet = false;
-           // Reload
-           this.reviews = [];
-           this.page = 1;
-           this.finished = false;
+           this.resetReviewedList();
            this.loadReviews();
        }
   }
@@ -371,6 +417,33 @@ export default {
 
 .scroll-wrapper {
     padding-top: 10px;
+}
+.review-type-tabs {
+    background: #fff;
+    display: flex;
+    gap: 8px;
+    padding: 10px 12px 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.review-type-tabs::-webkit-scrollbar {
+    display: none;
+}
+.review-type-tab {
+    flex-shrink: 0;
+    font-size: 12px;
+    color: #666;
+    line-height: 1;
+    padding: 8px 12px;
+    border-radius: 14px;
+    border: 1px solid #eee;
+    background: #fff;
+    cursor: pointer;
+}
+.review-type-tab.active {
+    color: #ff2442;
+    border-color: #ff2442;
+    background: #fff1f4;
 }
 .tab-content {
     min-height: calc(100vh - 48px);
@@ -450,7 +523,8 @@ export default {
     align-items: center;
 }
 
-.type-tag.order {
+.type-tag.order,
+.type-tag.product {
     color: #ff6600;
 }
 

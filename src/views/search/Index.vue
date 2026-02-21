@@ -1136,7 +1136,10 @@ export default {
        if (!localStorage.getItem("token")) {
            this.$message.warning("请先登录");
            setTimeout(() => {
-              location.href = '/login.html';
+               this.$router.push({
+                 path: '/user/login',
+                 query: { redirect: this.$route.fullPath }
+               }).catch(() => {});
            }, 1000);
            return;
        }

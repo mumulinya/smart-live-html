@@ -255,7 +255,7 @@ import { ref, computed, watch, onMounted, onActivated } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { showToast, showDialog, showConfirmDialog } from 'vant'
 import { addReview, getUserReviewList, removeReview, updateReview } from '@/api/reviews'
-import { saveBlog, getMyBlogs, updateBlog } from '@/api/blog'
+import { saveBlog, getMyBlogs, updateBlog, deleteBlog } from '@/api/blog'
 import { getCurrentUser } from '@/api/user'
 import { fileURL } from '@/utils/request'
 
@@ -265,6 +265,32 @@ const router = useRouter()
 const activeTab = ref(0)
 const isMultiSelect = ref(false)
 const selectedIds = ref([])
+const TAB_TO_TYPE = ['all', 'review', 'note']
+
+const parseRouteTab = () => {
+  const type = String(route.query.type || '')
+  if (type === 'note') return 2
+  if (type === 'review') return 1
+  if (type === 'all') return 0
+
+  if (route.query.tab !== undefined) {
+    const tabIndex = Number(route.query.tab)
+    if (Number.isInteger(tabIndex) && tabIndex >= 0 && tabIndex <= 2) {
+      return tabIndex
+    }
+  }
+  return 0
+}
+
+const syncRouteTab = (tabIndex) => {
+  router.replace({
+    query: {
+      ...route.query,
+      tab: String(tabIndex),
+      type: TAB_TO_TYPE[tabIndex] || 'all'
+    }
+  })
+}
 
 // 多选相关的computed
 const selectedCount = computed(() => selectedIds.value.length)
@@ -291,22 +317,20 @@ const allSelected = computed({
 // 监听tab切换，清空选中状态
 watch(activeTab, (newVal) => {
   selectedIds.value = []
-  // Sync URL
-  router.replace({ query: { ...route.query, tab: newVal } })
+  syncRouteTab(newVal)
 })
 
 // 组件挂载时加载草稿
 onMounted(() => {
-  if (route.query.tab !== undefined) {
-      activeTab.value = Number(route.query.tab) || 0
-  }
+  activeTab.value = parseRouteTab()
   loadDrafts()
 })
 
 // Keep-alive activated hook
 onActivated(() => {
-   if (route.query.tab !== undefined && Number(route.query.tab) !== activeTab.value) {
-       activeTab.value = Number(route.query.tab) || 0
+   const routeTab = parseRouteTab()
+   if (routeTab !== activeTab.value) {
+       activeTab.value = routeTab
    }
 })
 const reviewDraftsData = ref([])
@@ -440,11 +464,6 @@ const totalCount = computed(() => allDrafts.value.length)
 const reviewCount = computed(() => reviewDrafts.value.length)
 const noteCount = computed(() => noteDrafts.value.length)
 
-// 组件挂载时加载草稿
-onMounted(() => {
-  loadDrafts()
-})
-
 const handleEdit = (item) => {
   if (item.type === 'review') {
     router.push({
@@ -466,23 +485,27 @@ const handleDelete = (item) => {
     title: '提示',
     message: '确定要删除这条草稿吗？',
     confirmButtonColor: '#ff4d4f',
-  }).then(() => {
+  }).then(async () => {
     if (item.type === 'review') {
       // 删除评价草稿（从API）
       if (item.id) {
-        removeReview(item.id).then(() => {
+        await removeReview(item.id)
           reviewDraftsData.value = reviewDraftsData.value.filter(d => d.id !== item.id)
           localStorage.setItem('review_drafts', JSON.stringify(reviewDraftsData.value))
           showToast('删除成功')
-        })
       }
     } else {
-      // 删除笔记草稿（从API）
+      // 删除笔记草稿（调用删除笔记接口）
+      if (item.id) {
+        await deleteBlog(item.id)
+      }
       noteDraftsData.value = noteDraftsData.value.filter(d => d.id !== item.id)
       showToast('删除成功')
     }
-  }).catch(() => {
-    // cancel
+  }).catch((err) => {
+    if (err === 'cancel' || err === 'close') return
+    console.error('Delete draft failed', err)
+    showToast('删除失败，请重试')
   })
 }
 
@@ -646,26 +669,41 @@ const handleBatchDelete = () => {
     message: `确定要删除选中的 ${selectedIds.value.length} 条草稿吗？`,
     confirmButtonText: '删除',
     confirmButtonColor: '#ff4d4f',
-  }).then(() => {
-    // 批量删除
-    // 这里需要调API删除
-    // 此处简化，仅前端移除，实际应循环调API或批量接口
-     selectedIds.value.forEach(id => {
-         // Try removal
-         if (reviewDraftsData.value.find(d => d.id === id)) {
-             removeReview(id).catch(() => {})
-             reviewDraftsData.value = reviewDraftsData.value.filter(d => d.id !== id)
-         }
-         if (noteDraftsData.value.find(d => d.id === id)) {
-             noteDraftsData.value = noteDraftsData.value.filter(d => d.id !== id)
-         }
-     })
-    showToast('删除成功')
+  }).then(async () => {
+    const ids = [...selectedIds.value]
+    let successCount = 0
+
+    for (const id of ids) {
+      try {
+        if (reviewDraftsData.value.some(d => d.id === id)) {
+          await removeReview(id)
+          reviewDraftsData.value = reviewDraftsData.value.filter(d => d.id !== id)
+          successCount++
+        } else if (noteDraftsData.value.some(d => d.id === id)) {
+          await deleteBlog(id)
+          noteDraftsData.value = noteDraftsData.value.filter(d => d.id !== id)
+          successCount++
+        }
+      } catch (err) {
+        console.error('Batch delete draft failed', id, err)
+      }
+    }
+
+    if (successCount === 0) {
+      showToast('删除失败，请重试')
+    } else if (successCount < ids.length) {
+      showToast(`已删除${successCount}条，${ids.length - successCount}条删除失败`)
+    } else {
+      showToast('删除成功')
+    }
+
     // 退出多选模式
     isMultiSelect.value = false
     selectedIds.value = []
-  }).catch(() => {
-    // cancel
+  }).catch((err) => {
+    if (err === 'cancel' || err === 'close') return
+    console.error('Batch delete failed', err)
+    showToast('删除失败，请重试')
   })
 }
 </script>
