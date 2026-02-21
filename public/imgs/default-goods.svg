@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640" role="img" aria-label="Default product image">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fff7f0"/>
+      <stop offset="100%" stop-color="#ffe5d6"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#fff4ec"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ff8b5a"/>
+      <stop offset="100%" stop-color="#ff5a3b"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="640" height="640" fill="url(#bg)"/>
+  <rect x="80" y="92" width="480" height="456" rx="36" fill="url(#card)" stroke="#ffd5bf" stroke-width="2"/>
+
+  <rect x="185" y="180" width="270" height="196" rx="24" fill="#fff" stroke="#ffd7c5" stroke-width="2"/>
+  <path d="M240 240h160c12 0 22 10 22 22v84c0 12-10 22-22 22H240c-12 0-22-10-22-22v-84c0-12 10-22 22-22z" fill="#fff8f4"/>
+  <path d="M255 262h130l-15 92H270l-15-92z" fill="url(#accent)" opacity="0.14"/>
+  <path d="M276 275c0-24 14-38 44-38s44 14 44 38" fill="none" stroke="#ff6e49" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="286" cy="302" r="8" fill="#ff6e49"/>
+  <circle cx="354" cy="302" r="8" fill="#ff6e49"/>
+  <rect x="285" y="314" width="70" height="22" rx="11" fill="#ff6e49"/>
+
+  <text x="320" y="440" text-anchor="middle" font-family="Arial, sans-serif" font-size="44" font-weight="700" fill="#ff6a42">PRODUCT</text>
+  <text x="320" y="478" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#b98266">Default Placeholder</text>
+</svg>
