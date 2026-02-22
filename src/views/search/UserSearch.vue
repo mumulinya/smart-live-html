@@ -1,5 +1,11 @@
 <template>
-  <div class="search-page">
+  <div
+    class="search-page"
+    @touchstart.capture.passive="onTouchStart"
+    @touchmove.capture.passive="onTouchMove"
+    @touchend.capture="onTouchEnd"
+    @touchcancel.capture="onTouchCancel"
+  >
     <!-- Navbar with Search -->
     <div class="search-header">
       <div class="back-icon" @click="$router.go(-1)">
@@ -20,35 +26,46 @@
       </van-search>
     </div>
 
-    <!-- Search History (Shown when no keyword and not searching) -->
-    <div class="search-history" v-if="!keyword && historyList.length > 0">
-       <div class="history-header">
-          <span>历史搜索</span>
-          <van-icon name="delete-o" @click="clearHistory" />
-       </div>
-       <div class="history-tags">
-          <span v-for="(item, index) in historyList" :key="index" class="history-tag" @click="fillSearch(item)">
-             {{ item }}
-          </span>
-       </div>
-    </div>
+    <div
+      class="search-content"
+      @touchstart.capture.passive="onTouchStart"
+      @touchmove.capture.passive="onTouchMove"
+      @touchend="onTouchEnd"
+      @touchcancel="onTouchCancel"
+      @mousedown="onMouseDown"
+      @mousemove="onMouseMove"
+      @mouseup="onMouseUp"
+      @mouseleave="onMouseUp"
+    >
+      <!-- Search History (Shown when no keyword and not searching) -->
+      <div class="search-history" v-if="!keyword && historyList.length > 0">
+         <div class="history-header">
+            <span>历史搜索</span>
+            <van-icon name="delete-o" @click="clearHistory" />
+         </div>
+         <div class="history-tags">
+            <span v-for="(item, index) in historyList" :key="index" class="history-tag" @click="fillSearch(item)">
+               {{ item }}
+            </span>
+         </div>
+      </div>
 
-    <!-- Search Scopes Level 1 -->
-    <div class="scope-selection">
-       <div class="scope-tabs">
-          <div class="scope-tab" :class="{active: activeScope === 'blog'}" @click="changeScope('blog')">
-             <span>笔记</span>
-             <div class="indicator" v-if="activeScope === 'blog'"></div>
-          </div>
-          <div class="scope-tab" :class="{active: activeScope === 'shop'}" @click="changeScope('shop')">
-             <span>店铺</span>
-             <div class="indicator" v-if="activeScope === 'shop'"></div>
-          </div>
-          <div class="scope-tab" :class="{active: activeScope === 'voucher'}" @click="changeScope('voucher')">
-             <span>商品</span>
-             <div class="indicator" v-if="activeScope === 'voucher'"></div>
-          </div>
-       </div>
+      <!-- Search Scopes Level 1 -->
+      <div class="scope-selection">
+         <div class="scope-tabs">
+            <div class="scope-tab" :class="{active: activeScope === 'blog'}" @click="changeScope('blog')">
+               <span>笔记</span>
+               <div class="indicator" v-if="activeScope === 'blog'"></div>
+            </div>
+            <div class="scope-tab" :class="{active: activeScope === 'shop'}" @click="changeScope('shop')">
+               <span>店铺</span>
+               <div class="indicator" v-if="activeScope === 'shop'"></div>
+            </div>
+            <div class="scope-tab" :class="{active: activeScope === 'voucher'}" @click="changeScope('voucher')">
+               <span>商品</span>
+               <div class="indicator" v-if="activeScope === 'voucher'"></div>
+            </div>
+         </div>
 
       <!-- Search Scopes Level 2 -->
       <div class="sub-scope-list">
@@ -241,6 +258,7 @@
             <img src="https://img01.yzcdn.cn/vant/empty-image-search.png" />
             <p>暂无搜索结果</p>
         </div>
+      </div>
     </div>
   </div>
 </template>
@@ -262,7 +280,15 @@ export default {
       hasSearched: false,
       current: 1,
       userId: null,
-      $fileURL: 'http://localhost:8080/api/common/download?name='
+      $fileURL: 'http://localhost:8080/api/common/download?name=',
+      scopeOrder: ['blog', 'shop', 'voucher'],
+      touchStartX: 0,
+      touchStartY: 0,
+      touchEndX: 0,
+      touchEndY: 0,
+      swipeThreshold: 24,
+      maxVerticalTravel: 120,
+      isPointerActive: false
     };
   },
   computed: {
@@ -287,7 +313,7 @@ export default {
 
      // Restore from URL
      const q = this.$route.query;
-     if (q.scope) this.activeScope = q.scope;
+     if (q.scope) this.activeScope = this.normalizeScope(q.scope);
      if (q.subScope) this.activeSubScope = q.subScope;
      if (q.k) {
          this.keyword = q.k;
@@ -297,7 +323,7 @@ export default {
   activated() {
      const q = this.$route.query;
      if (q.scope && q.scope !== this.activeScope) {
-         this.changeScope(q.scope);
+         this.changeScope(this.normalizeScope(q.scope));
      }
      if (q.k !== undefined && q.k !== this.keyword) {
          this.keyword = q.k;
@@ -305,6 +331,70 @@ export default {
      }
   },
   methods: {
+    normalizeScope(scope) {
+        return this.scopeOrder.includes(scope) ? scope : 'blog';
+    },
+    startSwipe(x, y) {
+        this.touchStartX = x;
+        this.touchStartY = y;
+        this.touchEndX = x;
+        this.touchEndY = y;
+    },
+    updateSwipe(x, y) {
+        this.touchEndX = x;
+        this.touchEndY = y;
+    },
+    finishSwipe() {
+        const deltaX = this.touchEndX - this.touchStartX;
+        const absX = Math.abs(deltaX);
+        const absY = Math.abs(this.touchEndY - this.touchStartY);
+        if (absY > this.maxVerticalTravel) return;
+        if (absX < this.swipeThreshold) return;
+        if (absX <= absY * 1.05) return;
+
+        const currentIndex = this.scopeOrder.indexOf(this.activeScope);
+        if (currentIndex < 0) return;
+
+        if (deltaX < 0 && currentIndex < this.scopeOrder.length - 1) {
+            this.changeScope(this.scopeOrder[currentIndex + 1]);
+        } else if (deltaX > 0 && currentIndex > 0) {
+            this.changeScope(this.scopeOrder[currentIndex - 1]);
+        }
+    },
+    onTouchStart(e) {
+        const touch = e.touches && e.touches[0];
+        if (!touch) return;
+        this.startSwipe(touch.clientX, touch.clientY);
+    },
+    onTouchMove(e) {
+        const touch = e.touches && e.touches[0];
+        if (!touch) return;
+        this.updateSwipe(touch.clientX, touch.clientY);
+    },
+    onTouchEnd(e) {
+        const touch = e.changedTouches && e.changedTouches[0];
+        if (touch) {
+            this.updateSwipe(touch.clientX, touch.clientY);
+        }
+        this.finishSwipe();
+    },
+    onTouchCancel() {
+        this.isPointerActive = false;
+    },
+    onMouseDown(e) {
+        if (e.button !== 0) return;
+        this.isPointerActive = true;
+        this.startSwipe(e.clientX, e.clientY);
+    },
+    onMouseMove(e) {
+        if (!this.isPointerActive) return;
+        this.updateSwipe(e.clientX, e.clientY);
+    },
+    onMouseUp() {
+        if (!this.isPointerActive) return;
+        this.isPointerActive = false;
+        this.finishSwipe();
+    },
     getScopeName() {
         const map = { blog: '笔记', shop: '店铺', voucher: '商品' };
         return map[this.activeScope];
@@ -335,6 +425,7 @@ export default {
         this.finished = false;
     },
     changeScope(scope) {
+        scope = this.normalizeScope(scope);
         if(this.activeScope === scope) return;
         this.activeScope = scope;
 
@@ -560,6 +651,9 @@ export default {
 .search-page {
   min-height: 100vh;
   background-color: #fff;
+}
+.search-content {
+  touch-action: pan-y;
 }
 .search-header {
   display: flex;

@@ -6,12 +6,18 @@
     <div class="filter-bar sticky-top">
        <div class="filter-scroll-wrap">
          <div class="filter-item" :class="{active: activeFilter === 'ALL'}" @click="changeFilter('ALL')">全部</div>
-         <div class="filter-item" :class="{active: activeFilter === 'BLOG'}" @click="changeFilter('BLOG')">关注的人</div>
-         <div class="filter-item" :class="{active: activeFilter === 'SHOP_NEW'}" @click="changeFilter('SHOP_NEW')">店铺更新</div>
-         <div class="filter-item" :class="{active: activeFilter === 'RESTOCK'}" @click="changeFilter('RESTOCK')">昨价补偿</div>
+         <div class="filter-item" :class="{active: activeFilter === 'BLOG'}" @click="changeFilter('BLOG')">达人分享</div>
+         <div class="filter-item" :class="{active: activeFilter === 'SHOP_NEW'}" @click="changeFilter('SHOP_NEW')">商家上新</div>
+         <div class="filter-item" :class="{active: activeFilter === 'RESTOCK'}" @click="changeFilter('RESTOCK')">好物情报</div>
        </div>
     </div>
 
+    <div
+      class="moments-content"
+      @touchstart.passive="onTouchStart"
+      @touchmove.passive="onTouchMove"
+      @touchend="onTouchEnd"
+    >
     <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
       <van-list 
         v-model:loading="loading" 
@@ -30,6 +36,7 @@
         />
       </van-list>
     </van-pull-refresh>
+    </div>
   </div>
 </template>
 
@@ -48,6 +55,13 @@ const finished = ref(false);
 const refreshing = ref(false);
 const activeFilter = ref('ALL');
 const initialized = ref(false);
+const filterOrder = ['ALL', 'BLOG', 'SHOP_NEW', 'RESTOCK'];
+const touchStartX = ref(0);
+const touchStartY = ref(0);
+const touchEndX = ref(0);
+const touchEndY = ref(0);
+const swipeThreshold = 60;
+const maxVerticalTravel = 50;
 
 const scrollParams = ref({
     lastId: 0,
@@ -314,6 +328,41 @@ const changeFilter = async (newFilter) => {
 // Update filter bar click methods to use changeFilter
 const setFilter = (val) => changeFilter(val);
 
+const onTouchStart = (e) => {
+    const touch = e.touches?.[0];
+    if (!touch) return;
+    touchStartX.value = touch.clientX;
+    touchStartY.value = touch.clientY;
+    touchEndX.value = touch.clientX;
+    touchEndY.value = touch.clientY;
+};
+
+const onTouchMove = (e) => {
+    const touch = e.touches?.[0];
+    if (!touch) return;
+    touchEndX.value = touch.clientX;
+    touchEndY.value = touch.clientY;
+};
+
+const onTouchEnd = () => {
+    if (isFilterChanging.value) return;
+
+    const deltaX = touchEndX.value - touchStartX.value;
+    const deltaY = Math.abs(touchEndY.value - touchStartY.value);
+
+    if (deltaY > maxVerticalTravel) return;
+    if (Math.abs(deltaX) < swipeThreshold) return;
+
+    const currentIndex = filterOrder.indexOf(activeFilter.value);
+    if (currentIndex < 0) return;
+
+    if (deltaX < 0 && currentIndex < filterOrder.length - 1) {
+        changeFilter(filterOrder[currentIndex + 1]);
+    } else if (deltaX > 0 && currentIndex > 0) {
+        changeFilter(filterOrder[currentIndex - 1]);
+    }
+};
+
 const toBlog = (item) => {
     router.push(`/blog/detail?id=${item.targetId || item.id}`);
 };
@@ -404,6 +453,10 @@ onMounted(() => {
 
 .feed-list {
     padding: 12px 12px 40px;
+}
+
+.moments-content {
+    touch-action: pan-y;
 }
 
 /* Premium Filter Bar */

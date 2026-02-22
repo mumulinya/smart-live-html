@@ -34,9 +34,29 @@
     </div>
 
     <div class="type-list">
-      <div class="type-box" v-for="t in types" :key="t.id" @click="toShopList(t.id, t.name)">
-        <div class="type-view"><img :src="'/imgs/' + t.icon" alt=""></div>
-        <div class="type-text">{{t.name}}</div>
+      <div class="type-pager" ref="typePager" @scroll.passive="onTypePagerScroll">
+        <div class="type-page" v-for="(page, pageIndex) in featuredTypePages" :key="'type-page-' + pageIndex">
+          <button
+            class="type-box"
+            v-for="t in page"
+            :key="t.id"
+            type="button"
+            @click="toShopList(t.id, t.name)"
+          >
+            <div class="type-view">
+              <img :src="getTypeIconSrc(t.icon)" :alt="t.name" @error="handleTypeIconError" />
+            </div>
+            <div class="type-text">{{ t.name }}</div>
+          </button>
+        </div>
+      </div>
+      <div class="type-page-indicators" v-if="featuredTypePages.length > 1">
+        <span
+          class="type-page-dot"
+          v-for="(_, pageIndex) in featuredTypePages"
+          :key="'type-dot-' + pageIndex"
+          :class="{ active: activeTypePage === pageIndex }"
+        ></span>
       </div>
     </div>
 
@@ -47,15 +67,25 @@
             class="deal-tab-item"
             @click="goDealZone('normal')"
           >
-            <span class="deal-tab-title">优惠专区</span>
-            <span class="deal-tab-desc">代金券 / 团购</span>
+            <div class="deal-tab-main">
+              <span class="deal-tab-title">优惠专区</span>
+              <span class="deal-tab-desc">代金券 / 团购</span>
+            </div>
+            <div class="deal-tab-ornament">
+              <Present class="deal-tab-icon" />
+            </div>
           </button>
           <button
             class="deal-tab-item seckill"
             @click="goDealZone('seckill')"
           >
-            <span class="deal-tab-title">秒杀专区</span>
-            <span class="deal-tab-desc">限时低价</span>
+            <div class="deal-tab-main">
+              <span class="deal-tab-title">秒杀专区</span>
+              <span class="deal-tab-desc">限时低价</span>
+            </div>
+            <div class="deal-tab-ornament">
+              <Lightning class="deal-tab-icon" />
+            </div>
           </button>
         </div>
       </div>
@@ -185,39 +215,31 @@
             </div>
         </van-tab>
         
-        <!-- Dropdown Button in nav-left slot -->
-        <template #nav-left>
-            <div class="nav-drop-btn nav-left" @click="showMoreCategories = !showMoreCategories">
-                <i class="el-icon-arrow-down" :class="{ rotate: showMoreCategories }"></i>
+        <template #nav-bottom>
+          <div class="tabs-nav-bottom-shell">
+            <div class="nav-drop-btn nav-right" @click="showMoreCategories = !showMoreCategories">
+              <i class="el-icon-arrow-down" :class="{ rotate: showMoreCategories }"></i>
             </div>
-        </template>
-    </van-tabs>
-    
-    <transition name="dropdown-mask-fade">
-      <div class="home-dropdown-mask" v-if="showMoreCategories" @click="showMoreCategories = false"></div>
-    </transition>
-
-    <transition name="dropdown-pop">
-      <div class="home-dropdown-content" v-if="showMoreCategories">
-          <div class="dropdown-header">
-            <span class="dropdown-title">全部分类</span>
-            <i class="el-icon-close" @click="showMoreCategories = false"></i>
-          </div>
-          <div class="category-grid">
-            <div class="grid-item" v-if="token" :class="{ active: activeCategory === 'follow' }" @click="selectCategoryFromModal('follow')">关注</div>
-            <div class="grid-item" :class="{ active: activeCategory === 'hot' }" @click="selectCategoryFromModal('hot')">热门</div>
-            <div
+            <transition name="dropdown-expand">
+              <div class="home-dropdown-content" v-if="showMoreCategories">
+                <div class="category-grid">
+                  <div class="grid-item" v-if="token" :class="{ active: activeCategory === 'follow' }" @click="selectCategoryFromModal('follow')">关注</div>
+                  <div class="grid-item" :class="{ active: activeCategory === 'hot' }" @click="selectCategoryFromModal('hot')">热门</div>
+                  <div
                     class="grid-item"
                     v-for="c in categories"
                     :key="c.id"
                     :class="{ active: activeCategory === c.id }"
                     @click="selectCategoryFromModal(c.id)"
-            >
-              {{ c.name }}
-            </div>
+                  >
+                    {{ c.name }}
+                  </div>
+                </div>
+              </div>
+            </transition>
           </div>
-      </div>
-    </transition>
+        </template>
+    </van-tabs>
 
     <!-- Category Modal Removed (Replaced by Dropdown) -->
 
@@ -253,16 +275,20 @@ import { getShopTypes } from '@/api/shop';
 import { getHotBlogs, getBlogsByCategory } from '@/api/blog';
 import { likeBlog, getFeedList } from '@/api/interaction';
 import FootBar from '@/components/FootBar.vue';
+import { Lightning, Present } from '@element-plus/icons-vue';
 
 export default {
   name: 'HomeIndex',
   components: {
-    FootBar
+    FootBar,
+    Lightning,
+    Present
   },
   data() {
     return {
       isReachBottom: false,
       types: [],
+      activeTypePage: 0,
       blogs: [],
       current: 1,
       isLoading: false,
@@ -320,6 +346,17 @@ export default {
     }
   },
   computed: {
+    featuredTypePages() {
+      const pageSize = 8;
+      const list = Array.isArray(this.types) ? this.types : [];
+      const pages = [];
+
+      for (let i = 0; i < list.length; i += pageSize) {
+        pages.push(list.slice(i, i + pageSize));
+      }
+
+      return pages;
+    },
     visibleCategories() {
       return this.categories;
     }
@@ -419,6 +456,34 @@ export default {
         query: { type: id, name: name }
       });
     },
+    getTypeIconSrc(icon) {
+      if (!icon) return '/imgs/types/ms.png';
+
+      const normalized = String(icon).trim();
+      if (!normalized) return '/imgs/types/ms.png';
+
+      if (normalized.startsWith('http')) return normalized;
+      if (normalized.startsWith('/imgs/')) return normalized;
+      if (normalized.startsWith('/types/')) return '/imgs' + normalized;
+      if (normalized.startsWith('types/')) return '/imgs/' + normalized;
+      if (normalized.startsWith('/')) return normalized;
+      return '/imgs/' + normalized;
+    },
+    handleTypeIconError(event) {
+      event.target.src = '/imgs/types/ms.png';
+    },
+    onTypePagerScroll(event) {
+      const pager = event?.target;
+      if (!pager) return;
+
+      const pageWidth = pager.clientWidth || 1;
+      const maxPage = Math.max(0, this.featuredTypePages.length - 1);
+      const currentPage = Math.min(maxPage, Math.max(0, Math.round(pager.scrollLeft / pageWidth)));
+
+      if (currentPage !== this.activeTypePage) {
+        this.activeTypePage = currentPage;
+      }
+    },
     toBlogDetail(b) {
       this.$router.push({
         path: '/blog/detail',
@@ -452,11 +517,24 @@ export default {
          let data = res;
          if (res && res.data) data = res.data;
          else if (res && Array.isArray(res)) data = res;
-         
-         this.types = data || [];
+
+         const list = Array.isArray(data) ? data.slice() : [];
+         list.sort((a, b) => {
+           const sa = Number(a?.sort ?? Number.MAX_SAFE_INTEGER);
+           const sb = Number(b?.sort ?? Number.MAX_SAFE_INTEGER);
+           return sa - sb;
+         });
+
+         this.types = list;
          this.categories = this.generateCategoriesFromTypes(this.types);
 
          this.$nextTick(() => {
+             this.activeTypePage = 0;
+             const pager = this.$refs.typePager;
+             if (pager && typeof pager.scrollTo === 'function') {
+               pager.scrollTo({ left: 0, behavior: 'auto' });
+             }
+
              // Resume pending category if any
              if (this.pendingCategoryId) {
                  // Check if pending ID exists in loaded categories
@@ -692,7 +770,8 @@ export default {
            this.queryBlogsByCategory(categoryId);
          }
        },
-       onTabChange(name) {
+      onTabChange(name) {
+         this.showMoreCategories = false;
          // 保存 tab 状态到路由查询参数
          this.$router.replace({ query: { ...this.$route.query, tab: name } });
          // Force reload data for new category (van-tabs already updated v-model)
@@ -822,7 +901,7 @@ export default {
 }
 /* Header Styles */
 .search-bar {
-  background: linear-gradient(90deg, #ff9c00, #f63);
+  background: linear-gradient(96deg, #ff9c00 0%, #ff6633 100%);
   padding: 10px 15px;
   display: flex;
   align-items: center;
@@ -830,6 +909,8 @@ export default {
   top: 0;
   z-index: 100;
   height: 50px;
+  border-radius: 0 0 16px 16px;
+  box-shadow: 0 8px 16px rgba(255, 114, 56, 0.24);
 }
 .city-btn {
   color: white;
@@ -863,18 +944,119 @@ export default {
   align-items: center;
 }
 
+.type-list {
+  margin: 10px 10px 0;
+  padding: 12px 10px 10px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.06);
+}
+
+.type-pager {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+  scrollbar-width: none;
+}
+
+.type-pager::-webkit-scrollbar {
+  display: none;
+}
+
+.type-page {
+  flex: 0 0 100%;
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px 10px;
+  scroll-snap-align: start;
+}
+
+.type-box {
+  border: none;
+  background: transparent;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.type-box:active {
+  transform: scale(0.97);
+}
+
+.type-view {
+  width: 54px;
+  height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
+.type-view img {
+  width: 54px;
+  height: 54px;
+  object-fit: contain;
+}
+
+.type-text {
+  width: 100%;
+  margin: 0;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.25;
+  font-weight: 500;
+  color: #263238;
+  white-space: normal;
+  word-break: keep-all;
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+.type-page-indicators {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding-top: 8px;
+}
+
+.type-page-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #d7d9dd;
+  transition: all 0.2s ease;
+}
+
+.type-page-dot.active {
+  width: 14px;
+  background: #ff7a45;
+}
+
 /* Home deal zone */
 .home-deal-panel {
-  padding: 10px 10px 2px;
+  padding: 6px 10px 4px;
   background: #f8f9fa;
 }
 
 .deal-section {
   background: #fff;
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 10px;
   margin-bottom: 10px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
 }
 
 .deal-tabs {
@@ -885,34 +1067,90 @@ export default {
 }
 
 .deal-tab-item {
-  border: none;
-  background: linear-gradient(135deg, #fff8f2 0%, #ffefe2 100%);
+  border: 1px solid rgba(255, 157, 99, 0.38);
+  background: linear-gradient(130deg, #fff4e8 0%, #ffe3cd 55%, #ffd9bc 100%);
   color: #ff6d3d;
-  border-radius: 12px;
-  font-size: 12px;
+  border-radius: 13px;
   line-height: 1.2;
-  padding: 10px 8px;
+  padding: 11px 10px;
   text-align: left;
   cursor: pointer;
   transition: transform 0.2s ease;
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 72px;
+  position: relative;
+  overflow: hidden;
+}
+
+.deal-tab-item::before {
+  content: '';
+  position: absolute;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  right: -22px;
+  top: -28px;
+  background: rgba(255, 255, 255, 0.34);
 }
 
 .deal-tab-item.seckill {
-  background: linear-gradient(135deg, #fff1f3 0%, #ffe1e7 100%);
+  border-color: rgba(255, 119, 165, 0.36);
+  background: linear-gradient(130deg, #ffeef4 0%, #ffdbe8 58%, #ffcde0 100%);
   color: #ff3b5c;
 }
 
+.deal-tab-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+  z-index: 1;
+}
+
 .deal-tab-title {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
+  color: inherit;
 }
 
 .deal-tab-desc {
-  font-size: 11px;
-  opacity: 0.88;
+  font-size: 12px;
+  color: #9c4a2a;
+  font-weight: 500;
+  opacity: 1;
+}
+
+.deal-tab-item.seckill .deal-tab-desc {
+  color: #9f365d;
+}
+
+.deal-tab-ornament {
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.42);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  position: relative;
+  z-index: 1;
+}
+
+.deal-tab-item.seckill .deal-tab-ornament {
+  background: rgba(255, 255, 255, 0.48);
+}
+
+.deal-tab-icon {
+  width: 18px;
+  height: 18px;
+  color: rgba(159, 74, 42, 0.9);
+}
+
+.deal-tab-item.seckill .deal-tab-icon {
+  color: rgba(159, 54, 93, 0.92);
 }
 
 .deal-tab-item:active {
@@ -940,50 +1178,19 @@ export default {
   background: #fff;
 }
 
+:deep(.van-tabs__nav--line.van-tabs__nav--complete) {
+  padding-right: 48px;
+}
+
+.tabs-nav-bottom-shell {
+  position: relative;
+}
+
 .home-dropdown-content {
-  position: fixed;
-  top: 154px;
-  left: 12px;
-  right: 12px;
   background: #fff;
-  padding: 10px 10px 12px;
-  z-index: 2002;
-  border-radius: 14px;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
-  max-height: 42vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.home-dropdown-mask {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.28);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
-  z-index: 2000;
-}
-
-.dropdown-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 2px 4px 10px;
-}
-
-.dropdown-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #333;
-}
-
-.dropdown-header .el-icon-close {
-  font-size: 18px;
-  color: #999;
-  cursor: pointer;
+  padding: 8px 10px 12px;
+  border-top: 1px solid #f2f3f5;
+  box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.02);
 }
 
 .category-grid {
@@ -991,8 +1198,7 @@ export default {
   grid-template-columns: repeat(4, 1fr);
   gap: 10px;
   overflow-y: auto;
-  max-height: none;
-  flex: 1;
+  max-height: 180px;
   padding-right: 2px;
 }
 
@@ -1042,7 +1248,7 @@ export default {
   background: #f5f5f5;
 }
 
-/* Category More Button in nav-left slot */
+/* Category More Button in nav-right slot */
 .nav-drop-btn {
   width: 44px;
   height: 44px;
@@ -1053,11 +1259,23 @@ export default {
   cursor: pointer;
   color: #ff6633;
   font-size: 14px;
-  position: relative;
-  z-index: 10;
+  z-index: 12;
 }
-.nav-drop-btn.nav-left {
-  box-shadow: 6px 0 10px 2px rgba(255,255,255,1);
+.nav-drop-btn.nav-right {
+  position: absolute;
+  right: 0;
+  top: -44px;
+  background: #fff;
+}
+.nav-drop-btn.nav-right::before {
+  content: '';
+  position: absolute;
+  left: -14px;
+  top: 0;
+  width: 14px;
+  height: 44px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0), #fff);
+  pointer-events: none;
 }
 .nav-drop-btn i {
   transition: transform 0.3s;
@@ -1066,25 +1284,24 @@ export default {
   transform: rotate(180deg);
 }
 
-.dropdown-mask-fade-enter-active,
-.dropdown-mask-fade-leave-active {
-  transition: opacity 0.18s ease;
+.dropdown-expand-enter-active,
+.dropdown-expand-leave-active {
+  transition: max-height 0.22s ease, opacity 0.2s ease, padding 0.2s ease;
+  overflow: hidden;
 }
 
-.dropdown-mask-fade-enter-from,
-.dropdown-mask-fade-leave-to {
+.dropdown-expand-enter-from,
+.dropdown-expand-leave-to {
+  max-height: 0;
   opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
-.dropdown-pop-enter-active,
-.dropdown-pop-leave-active {
-  transition: transform 0.2s ease, opacity 0.2s ease;
-}
-
-.dropdown-pop-enter-from,
-.dropdown-pop-leave-to {
-  opacity: 0;
-  transform: translateY(6px);
+.dropdown-expand-enter-to,
+.dropdown-expand-leave-from {
+  max-height: 220px;
+  opacity: 1;
 }
 
 .blog-list {

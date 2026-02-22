@@ -14,7 +14,6 @@
         <button class="top-follow-btn" :class="{followed: followed}" @click.stop="toggleFollow" v-if="user && user.id !== blog.userId && blog.id">
           {{followed ? '已关注' : '关注'}}
         </button>
-        <i class="el-icon-share top-share-icon" @click="showShare = true"></i>
         <el-popover
             v-if="isOwner"
             placement="bottom-end"
@@ -46,7 +45,7 @@
     </div>
 
     <!-- 可滚动内容区域 -->
-    <div class="scroll-container">
+    <div class="scroll-container" ref="scrollContainer" @scroll.passive="onMainScroll">
        <div v-if="!blog.id && !pageLoading" class="empty-state">
            <i class="el-icon-warning-outline"></i>
            <p>内容不存在或已被删除</p>
@@ -141,7 +140,7 @@
           <div class="section-line"></div>
 
           <!-- 评论区域 -->
-          <div class="comments-section">
+          <div class="comments-section" ref="commentsSection">
              <div class="comments-header">网友评论 ({{blog.comments || 0}})</div>
              
              <div class="comment-list" v-if="(comments && comments.length > 0) || (aiComment && aiComment.content)">
@@ -248,12 +247,12 @@
                    </div>
                 </div>
               
-               <div class="view-all-btn" @click="viewAllComments">
-                  查看全部{{blog.comments}}条评论 <i class="el-icon-arrow-right"></i>
-               </div>
-            </div>
-            <div v-else class="no-comments">暂无评论，快来发表第一条评论吧～</div>
-         </div>
+             </div>
+             <div v-if="comments.length === 0 && !(aiComment && aiComment.content) && !commentsLoading && commentsNoMore" class="no-comments">暂无评论，快来发表第一条评论吧～</div>
+             <div class="comment-load-state" v-if="commentsLoading">加载中...</div>
+             <div class="comment-load-state comment-load-end" v-else-if="commentsNoMore && comments.length > 0">没有更多评论了</div>
+             <div ref="commentLoadTrigger" class="comment-load-trigger" v-if="!commentsNoMore"></div>
+          </div>
          
       </div> <!-- End of content-wrapper -->
     </div> <!-- End of scroll-container -->
@@ -322,15 +321,19 @@
               <svg viewBox="0 0 24 24" width="22" height="22">
                 <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" :fill="blog.isLike ? '#ff2442' : '#333'"></path>
               </svg>
-              <span>{{blog.liked || 0}}</span>
+              <span>{{formatCompactCount(blog.liked)}}</span>
             </div>
             <div class="action-item" @click="toggleStar">
               <i :class="blog.isStared ? 'el-icon-star-on active' : 'el-icon-star-off'"></i>
-              <span>{{blog.stared || 0}}</span>
+              <span>{{formatCompactCount(blog.stared)}}</span>
             </div>
-            <div class="action-item" @click="viewAllComments">
+            <div class="action-item" @click="scrollToComments">
               <i class="el-icon-chat-dot-round"></i>
-              <span>{{blog.comments || 0}}</span>
+              <span>{{formatCompactCount(blog.comments)}}</span>
+            </div>
+            <div class="action-item action-share" @click="showShare = true">
+              <i class="el-icon-share"></i>
+              <span>分享</span>
             </div>
           </div>
        </div>
@@ -441,9 +444,23 @@
              <div v-if="allCommentsNoMore" class="no-more-reviews">没有更多评论了</div>
           </div>
           <!-- Bottom Input Bar in Popup -->
-          <div class="popup-bottom-bar" @click="writeCommentFromPopup">
-             <div class="popup-input-placeholder">发条评论，和大家一起讨论</div>
-             <el-button type="primary" size="small" round @click.stop="writeCommentFromPopup">发布</el-button>
+          <div class="popup-bottom-bar" @click.stop>
+             <input
+               ref="popupCommentInput"
+               v-model="commentText"
+               class="popup-input-editor"
+               :placeholder="replyToComment ? ('回复 @' + replyToComment.nickName) : '发条评论，和大家一起讨论'"
+               maxlength="500"
+               @focus="handlePopupInputFocus"
+               @click.stop
+             />
+             <el-button
+               type="primary"
+               size="small"
+               round
+               :disabled="!commentText.trim()"
+               @click.stop="publishCommentFromPopup"
+             >发布</el-button>
           </div>
        </div>
     </div>
@@ -498,6 +515,12 @@ export default {
        user: {},
        likes: [],
        comments: [],
+       commentsPage: 1,
+       commentsPageSize: 10,
+       commentsNoMore: false,
+       commentsLoading: false,
+       commentLoadArmed: false,
+       commentObserver: null,
        aiComment: null,
        followed: false,
        pageLoading: true, // 初始为 true，确保骨架屏立即显示
@@ -577,6 +600,17 @@ export default {
         }
      }
   },
+  mounted() {
+     this.setupCommentObserver();
+     window.addEventListener('scroll', this.onWindowScroll, { passive: true });
+  },
+  beforeUnmount() {
+     if (this.commentObserver) {
+        this.commentObserver.disconnect();
+        this.commentObserver = null;
+     }
+     window.removeEventListener('scroll', this.onWindowScroll);
+  },
   methods: {
      goBack() { this.$router.go(-1); },
      toOtherInfo() {
@@ -629,13 +663,22 @@ export default {
       toShopDetail() {
         if(this.shop.id) this.$router.push({ path: '/shop/detail', query: { id: this.shop.id } });
      },
-     formatDate(time) {
-        if(!time) return '';
-        const d = new Date(time);
-        const hours = String(d.getHours()).padStart(2, '0');
-        const minutes = String(d.getMinutes()).padStart(2, '0');
-        return `${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()} ${hours}:${minutes}`;
-     },
+      formatDate(time) {
+         if(!time) return '';
+         const d = new Date(time);
+         const hours = String(d.getHours()).padStart(2, '0');
+         const minutes = String(d.getMinutes()).padStart(2, '0');
+         return `${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()} ${hours}:${minutes}`;
+      },
+      formatCompactCount(value) {
+         const num = Number(value || 0);
+         if (!Number.isFinite(num) || num <= 0) return '0';
+         if (num >= 10000) {
+            const wan = (num / 10000).toFixed(num >= 100000 ? 0 : 1).replace(/\.0$/, '');
+            return `${wan}万`;
+         }
+         return String(num);
+      },
      
      // API Calls
       async queryBlogById(id) {
@@ -742,44 +785,142 @@ export default {
      },
      
      // Comments
-      loadComments(id) {
-         getComments({ 
-            sourceId: id, sourceType: 3, current: 1 
-         }).then(res => {
-            let list = [];
-            if (Array.isArray(res)) list = res;
-            else if (res && Array.isArray(res.list)) list = res.list;
-            else if (res && Array.isArray(res.data)) list = res.data;
-            else if (res && res.data && Array.isArray(res.data.records)) list = res.data.records;
-            
-             const processedList = (list || []).map(c => ({
-                ...c,
-                userIcon: c.userIcon ? (c.userIcon.startsWith('http') ? c.userIcon : this.fileURL + c.userIcon) : '',
-                images: c.images ? c.images.split(',').filter(x=>x).map(i => i.startsWith('http') ? i : this.fileURL + i) : [],
-                isLike: c.isLike || false,
-                liked: c.liked || 0,
-                comments: c.replyCount || c.comments || c.childCount || 0, 
-                showReplies: false, 
-                replies: [],
-                replyPage: 1
-             }));
+     loadComments(id, reset = true) {
+        if (!id) return Promise.resolve();
+        if (this.commentsLoading) return Promise.resolve();
+        if (!reset && this.commentsNoMore) return Promise.resolve();
 
-             // Extract AI Comment
-             const aiIdx = processedList.findIndex(c => c.isAIGenerated);
-             if(aiIdx > -1) {
-                this.aiComment = processedList[aiIdx];
-                processedList.splice(aiIdx, 1);
-             }
+        if (reset) {
+           this.comments = [];
+           this.aiComment = null;
+           this.commentsPage = 1;
+           this.commentsNoMore = false;
+           this.commentLoadArmed = false;
+        }
 
-             // We only take ROOT comments here. Replies are fetched on demand.
-             const roots = processedList.filter(c => !c.answerId || c.answerId === 0 || c.answerId === '0');
+        this.commentsLoading = true;
 
-             this.comments = roots.slice(0, 3);
-          }).catch(err => {
-             console.error('Failed to load comments:', err);
-          });
+        return getComments({
+           sourceId: id,
+           sourceType: 3,
+           current: this.commentsPage,
+           size: this.commentsPageSize
+        }).then(res => {
+           let list = [];
+           if (Array.isArray(res)) list = res;
+           else if (res && Array.isArray(res.list)) list = res.list;
+           else if (res && Array.isArray(res.data)) list = res.data;
+           else if (res && res.data && Array.isArray(res.data.records)) list = res.data.records;
+
+           const rawList = list || [];
+           if (rawList.length === 0) {
+              this.commentsNoMore = true;
+              return;
+           }
+
+           const aiComment = rawList.find(c => c.isAIGenerated);
+           if (reset && aiComment) {
+              this.aiComment = {
+                 ...aiComment,
+                 createTime: this.formatDate(aiComment.createTime)
+              };
+           }
+
+           const roots = rawList
+              .filter(c => !c.isAIGenerated)
+              .map(c => ({
+                 ...c,
+                 userIcon: c.userIcon ? (c.userIcon.startsWith('http') ? c.userIcon : this.fileURL + c.userIcon) : '',
+                 images: c.images ? c.images.split(',').filter(x => x).map(i => i.startsWith('http') ? i : this.fileURL + i) : [],
+                 isLike: c.isLike || false,
+                 liked: c.liked || 0,
+                 comments: c.replyCount || c.comments || c.childCount || 0,
+                 showReplies: false,
+                 replies: [],
+                 replyPage: 1
+              }))
+              .filter(c => !c.answerId || c.answerId === 0 || c.answerId === '0');
+
+           if (roots.length > 0) {
+              const existingIds = new Set(this.comments.map(c => String(c.id)));
+              const nextList = roots.filter(c => !existingIds.has(String(c.id)));
+              this.comments = [...this.comments, ...nextList];
+           }
+
+           if (rawList.length < this.commentsPageSize) {
+              this.commentsNoMore = true;
+           } else {
+              this.commentsPage += 1;
+           }
+        }).catch(err => {
+           console.error('Failed to load comments:', err);
+        }).finally(() => {
+           this.commentsLoading = false;
+           this.$nextTick(() => this.observeCommentLoadTrigger());
+        });
+     },
+      loadMoreComments() {
+         if (!this.blog.id || this.commentsLoading || this.commentsNoMore || !this.commentLoadArmed) return;
+         this.loadComments(this.blog.id, false);
       },
-      // ... (existing helper methods if needed) ...
+      onMainScroll(e) {
+         const target = e && e.target ? e.target : null;
+         const top = (target && typeof target.scrollTop === 'number') ? target.scrollTop : 0;
+         if (!this.commentLoadArmed && top > 0) {
+            this.commentLoadArmed = true;
+            this.observeCommentLoadTrigger();
+         }
+         if (this.commentLoadArmed && target) {
+            const remain = target.scrollHeight - target.scrollTop - target.clientHeight;
+            if (remain < 180) {
+               this.loadMoreComments();
+            }
+         }
+      },
+      onWindowScroll() {
+         if (!this.commentLoadArmed && window.scrollY > 0) {
+            this.commentLoadArmed = true;
+            this.observeCommentLoadTrigger();
+         }
+         if (!this.commentLoadArmed || this.commentsLoading || this.commentsNoMore) return;
+         const triggerEl = this.$refs.commentLoadTrigger;
+         if (!triggerEl || typeof triggerEl.getBoundingClientRect !== 'function') return;
+         const rect = triggerEl.getBoundingClientRect();
+         const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+         if (rect.top - viewportHeight < 180) {
+            this.loadMoreComments();
+         }
+      },
+     scrollToComments() {
+        this.$nextTick(() => {
+           if (this.$refs.commentsSection && this.$refs.commentsSection.scrollIntoView) {
+              this.$refs.commentsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+           }
+        });
+     },
+     setupCommentObserver() {
+        if (typeof window === 'undefined' || !('IntersectionObserver' in window)) return;
+        if (this.commentObserver) {
+           this.commentObserver.disconnect();
+        }
+         this.commentObserver = new IntersectionObserver((entries) => {
+            if (entries.some(entry => entry.isIntersecting)) {
+               this.loadMoreComments();
+            }
+         }, {
+            root: null,
+            rootMargin: '0px 0px 220px 0px',
+            threshold: 0
+         });
+        this.observeCommentLoadTrigger();
+     },
+     observeCommentLoadTrigger() {
+        if (!this.commentObserver) return;
+        this.commentObserver.disconnect();
+        if (this.$refs.commentLoadTrigger) {
+           this.commentObserver.observe(this.$refs.commentLoadTrigger);
+        }
+     },
       
       toggleReplies(comment) {
           if (!comment.showReplies) {
@@ -849,11 +990,7 @@ export default {
           });
       },
       viewAllComments() {
-         this.showReviewPopup = true;
-         this.allComments = [];
-         this.allCommentsPage = 1;
-         this.allCommentsNoMore = false;
-         this.loadAllComments();
+         this.scrollToComments();
       },
       loadAllComments() {
          if(this.allCommentsLoading || this.allCommentsNoMore) return;
@@ -907,18 +1044,24 @@ export default {
             this.loadAllComments();
          }
       },
-      writeCommentFromPopup() {
+      handlePopupInputFocus() {
+         if(!this.user || !this.user.id) {
+            this.$message.warning("请先登录");
+            if(this.$refs.popupCommentInput) {
+               this.$refs.popupCommentInput.blur();
+            }
+            this.$router.push('/user/login');
+         }
+      },
+      publishCommentFromPopup() {
          if(!this.user || !this.user.id) {
             this.$message.warning("请先登录");
             return this.$router.push('/user/login');
          }
-         this.replyToComment = null;
-         this.commentText = '';
          this.selectedImages = [];
-         
-         // Using new inline input
-         this.showReviewPopup = false; 
-         this.openInlineInput();
+         this.showEmojiPanel = false;
+         this.isInputFocus = false;
+         this.publishComment();
       },
      checkLogin() {
         if(!this.user.id) this.$router.push('/user/login');
@@ -1033,8 +1176,6 @@ export default {
            this.$message.success("发布成功");
            this.closeInlineInput();
            // Reload
-           this.comments = []; 
-           this.aiComment = null; // Reset AI comment
            this.loadComments(this.blog.id); // Reload comments for the current blog
            this.queryBlogById(this.blog.id); // Refresh blog details to update comment count
            // Also refresh popup comments if open
@@ -1072,12 +1213,20 @@ export default {
            c.liked = c.isLike ? (c.liked + 1) : (c.liked - 1);
         });
      },
-     handleCommentReply(c) {
-        if(!this.user.id) return this.$router.push('/user/login');
-        this.replyToComment = c;
-        this.commentText = ''; // Dont prefill, use placeholder
-        this.showCommentPublish = true;
-     },
+      handleCommentReply(c) {
+         if(!this.user.id) return this.$router.push('/user/login');
+         this.replyToComment = c;
+         this.commentText = ''; // Dont prefill, use placeholder
+         if (this.showReviewPopup) {
+            this.$nextTick(() => {
+               if (this.$refs.popupCommentInput) {
+                  this.$refs.popupCommentInput.focus();
+               }
+            });
+         } else {
+            this.openInlineInput();
+         }
+      },
      handleCommentDelete(c) {
         showConfirmDialog({
            title: '提示',
@@ -1089,12 +1238,11 @@ export default {
            const sourceType = c.sourceType || 3; // Default to blog type
            const sourceId = c.sourceId || this.blog.id;
            
-           removeComment({ id: c.id, sourceType, sourceId }).then(() => {
-              this.$message.success('删除成功');
-              this.comments = []; // Clear first to force reload
-              this.loadComments(this.blog.id);
-              this.queryBlogById(this.blog.id);
-           }).catch(err => {
+            removeComment({ id: c.id, sourceType, sourceId }).then(() => {
+               this.$message.success('删除成功');
+               this.loadComments(this.blog.id);
+               this.queryBlogById(this.blog.id);
+            }).catch(err => {
               console.error('删除失败', err);
               this.$message.error('删除失败，请重试');
            });
@@ -1286,12 +1434,6 @@ export default {
   color: #999;
   border-color: #ddd;
 }
-.top-share-icon {
-  font-size: 20px;
-  color: #333;
-  cursor: pointer;
-}
-
 /* Scroll Container */
 .scroll-container {
   flex: 1;

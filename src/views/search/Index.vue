@@ -47,7 +47,13 @@
     </div>
 
     <!-- Main Content (Show WHEN searched) -->
-    <div v-else class="search-main-content">
+    <div
+      v-else
+      class="search-main-content"
+      @touchstart.capture.passive="onTouchStart"
+      @touchmove.capture.passive="onTouchMove"
+      @touchend.capture="onTouchEnd"
+    >
         <!-- Filter Dropdowns (Global Overlay) -->
         <div class="filter-content" :class="{show: !!activeFilterTab}">
               <!-- Shop Type -->
@@ -502,6 +508,13 @@ export default {
       page: 1,
       loadingMore: false,
       noMore: false,
+      tabOrder: ["shop", "voucher", "group", "blog", "user"],
+      touchStartX: 0,
+      touchStartY: 0,
+      touchEndX: 0,
+      touchEndY: 0,
+      swipeThreshold: 24,
+      maxVerticalTravel: 120
     };
   },
   // ...
@@ -589,6 +602,45 @@ export default {
     // window.removeEventListener('scroll', this.onScroll);
   },
   methods: {
+    onTouchStart(e) {
+      const touch = e.touches && e.touches[0];
+      if (!touch) return;
+      this.touchStartX = touch.clientX;
+      this.touchStartY = touch.clientY;
+      this.touchEndX = touch.clientX;
+      this.touchEndY = touch.clientY;
+    },
+    onTouchMove(e) {
+      const touch = e.touches && e.touches[0];
+      if (!touch) return;
+      this.touchEndX = touch.clientX;
+      this.touchEndY = touch.clientY;
+    },
+    onTouchEnd(e) {
+      const touch = e.changedTouches && e.changedTouches[0];
+      if (touch) {
+        this.touchEndX = touch.clientX;
+        this.touchEndY = touch.clientY;
+      }
+
+      const deltaX = this.touchEndX - this.touchStartX;
+      const absX = Math.abs(deltaX);
+      const absY = Math.abs(this.touchEndY - this.touchStartY);
+      if (absY > this.maxVerticalTravel) return;
+      if (absX < this.swipeThreshold) return;
+      if (absX <= absY * 1.05) return;
+
+      const currentIndex = this.tabOrder.indexOf(this.activeTab);
+      if (currentIndex < 0) return;
+
+      if (deltaX < 0 && currentIndex < this.tabOrder.length - 1) {
+        this.activeTab = this.tabOrder[currentIndex + 1];
+        this.onTabChange(this.activeTab);
+      } else if (deltaX > 0 && currentIndex > 0) {
+        this.activeTab = this.tabOrder[currentIndex - 1];
+        this.onTabChange(this.activeTab);
+      }
+    },
     checkLogin() {
       const token = localStorage.getItem("token");
       if (token) {

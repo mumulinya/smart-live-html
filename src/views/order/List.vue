@@ -5,7 +5,12 @@
       <div class="header-title">我的订单</div>
     </div>
 
-    <div class="orders-container">
+    <div
+      class="orders-container"
+      @touchstart.passive="onTouchStart"
+      @touchmove.passive="onTouchMove"
+      @touchend="onTouchEnd"
+    >
        <!-- Filter & Stats Bar -->
        <div class="filter-bar">
           <div class="filter-tabs">
@@ -116,7 +121,14 @@ export default {
        orders: [],
        pageLoading: false,
        timer: null,
-       activeTab: 'all'
+       activeTab: 'all',
+       tabOrder: ['all', '1', '2', '3', '4', '6'],
+       touchStartX: 0,
+       touchStartY: 0,
+       touchEndX: 0,
+       touchEndY: 0,
+       swipeThreshold: 60,
+       maxVerticalTravel: 50
     }
   },
   watch: {
@@ -143,6 +155,35 @@ export default {
      if(this.timer) clearInterval(this.timer);
   },
   methods: {
+     onTouchStart(e) {
+        const touch = e.touches && e.touches[0];
+        if (!touch) return;
+        this.touchStartX = touch.clientX;
+        this.touchStartY = touch.clientY;
+        this.touchEndX = touch.clientX;
+        this.touchEndY = touch.clientY;
+     },
+     onTouchMove(e) {
+        const touch = e.touches && e.touches[0];
+        if (!touch) return;
+        this.touchEndX = touch.clientX;
+        this.touchEndY = touch.clientY;
+     },
+     onTouchEnd() {
+        const deltaX = this.touchEndX - this.touchStartX;
+        const deltaY = Math.abs(this.touchEndY - this.touchStartY);
+        if (deltaY > this.maxVerticalTravel) return;
+        if (Math.abs(deltaX) < this.swipeThreshold) return;
+
+        const currentIndex = this.tabOrder.indexOf(this.activeTab);
+        if (currentIndex < 0) return;
+
+        if (deltaX < 0 && currentIndex < this.tabOrder.length - 1) {
+            this.activeTab = this.tabOrder[currentIndex + 1];
+        } else if (deltaX > 0 && currentIndex > 0) {
+            this.activeTab = this.tabOrder[currentIndex - 1];
+        }
+     },
      goBack() {
         this.$router.go(-1);
      },

@@ -18,6 +18,12 @@
       <van-checkbox v-model="allSelected" @click="handleSelectAll">全选</van-checkbox>
     </div>
 
+    <div
+      class="tabs-swipe-area"
+      @touchstart.passive="onTouchStart"
+      @touchmove.passive="onTouchMove"
+      @touchend="onTouchEnd"
+    >
     <van-tabs v-model:active="activeTab" sticky offset-top="0" background="#f5f6f8">
       <van-tab :title="`全部(${totalCount})`">
         <div class="draft-list" :class="{ 'has-footer': isMultiSelect }">
@@ -244,6 +250,7 @@
         </div>
       </van-tab>
     </van-tabs>
+    </div>
   </div>
 </template>
 
@@ -266,6 +273,13 @@ const activeTab = ref(0)
 const isMultiSelect = ref(false)
 const selectedIds = ref([])
 const TAB_TO_TYPE = ['all', 'review', 'note']
+const tabOrder = [0, 1, 2]
+const touchStartX = ref(0)
+const touchStartY = ref(0)
+const touchEndX = ref(0)
+const touchEndY = ref(0)
+const swipeThreshold = 60
+const maxVerticalTravel = 50
 
 const parseRouteTab = () => {
   const type = String(route.query.type || '')
@@ -290,6 +304,40 @@ const syncRouteTab = (tabIndex) => {
       type: TAB_TO_TYPE[tabIndex] || 'all'
     }
   })
+}
+
+const onTouchStart = (e) => {
+  const touch = e.touches?.[0]
+  if (!touch) return
+  touchStartX.value = touch.clientX
+  touchStartY.value = touch.clientY
+  touchEndX.value = touch.clientX
+  touchEndY.value = touch.clientY
+}
+
+const onTouchMove = (e) => {
+  const touch = e.touches?.[0]
+  if (!touch) return
+  touchEndX.value = touch.clientX
+  touchEndY.value = touch.clientY
+}
+
+const onTouchEnd = () => {
+  if (isMultiSelect.value) return
+
+  const deltaX = touchEndX.value - touchStartX.value
+  const deltaY = Math.abs(touchEndY.value - touchStartY.value)
+  if (deltaY > maxVerticalTravel) return
+  if (Math.abs(deltaX) < swipeThreshold) return
+
+  const currentIndex = tabOrder.indexOf(activeTab.value)
+  if (currentIndex < 0) return
+
+  if (deltaX < 0 && currentIndex < tabOrder.length - 1) {
+    activeTab.value = tabOrder[currentIndex + 1]
+  } else if (deltaX > 0 && currentIndex > 0) {
+    activeTab.value = tabOrder[currentIndex - 1]
+  }
 }
 
 // 多选相关的computed
@@ -712,6 +760,10 @@ const handleBatchDelete = () => {
 .drafts-container {
   min-height: 100vh;
   background-color: #f5f6f8;
+}
+
+.tabs-swipe-area {
+  touch-action: pan-y;
 }
 
 .nav-right-text {

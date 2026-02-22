@@ -208,10 +208,10 @@
        <div id="review" class="section-block" style="background: white; padding: 16px;">
        <div class="comments-section">
           <div class="section-header">
-             <div class="section-title">网友评价 <span class="count">({{comments.length || 0}})</span></div>
+             <div class="section-title">网友评价 <span class="count">({{shop.comments || comments.length || 0}})</span></div>
           </div>
           
-          <div class="empty-comments" v-if="comments.length === 0 && !aiComment">
+          <div class="empty-comments" v-if="comments.length === 0 && !aiComment && !commentsLoading && commentsNoMore">
              <div class="empty-text">暂无评价，快来抢沙发～</div>
           </div>
           
@@ -228,7 +228,7 @@
              </div>
           </div>
           
-          <div class="comment-box" v-for="c in comments.slice(0, 3)" :key="c.id">
+           <div class="comment-box" v-for="c in comments" :key="c.id">
              <div class="comment-icon" @click.stop="toUserDetail(c.userId)">
                 <img :src="c.userIcon || '/imgs/icons/default-icon.png'">
              </div>
@@ -328,10 +328,10 @@
              </div>
 
           
-          <div class="view-all" @click="viewAllComments">
-             查看全部{{comments.length}}条评价 <i class="el-icon-arrow-right"></i>
-          </div>
-       </div>
+           <div class="comment-load-state" v-if="commentsLoading">加载中...</div>
+           <div class="comment-load-state comment-load-end" v-else-if="commentsNoMore && comments.length > 0">没有更多评价了</div>
+           <div ref="commentLoadTrigger" class="comment-load-trigger" v-if="!commentsNoMore"></div>
+        </div>
 
        </div> <!-- End #review -->
        </van-tab>
@@ -358,7 +358,7 @@
     <div style="height: 60px;"></div>
 
     <!-- Foot Bar - Local Service Style -->
-    <div class="foot-bar">
+    <div class="foot-bar" v-show="!isInputFocus">
        <div class="foot-left">
           <div class="foot-icon-btn" @click="toggleStar" :class="{active: shop.isStared, animate: starAnimating}">
              <i :class="shop.isStared ? 'el-icon-star-on' : 'el-icon-star-off'"></i>
@@ -369,9 +369,59 @@
              <span>电话</span>
           </div>
        </div>
-          <div class="foot-main-btn" @click="writeComment">
-             <i class="el-icon-edit" style="margin-right: 4px; font-size: 16px;"></i> 写评价
+           <div class="foot-main-btn" @click="writeComment">
+              <i class="el-icon-edit" style="margin-right: 4px; font-size: 16px;"></i> 写评价
+           </div>
+    </div>
+
+    <div class="sticky-bottom-bar" :class="{ 'is-focused': isInputFocus }" v-show="isInputFocus">
+       <div class="inline-input-container">
+          <div class="inline-textarea-wrapper">
+             <textarea
+               ref="inlineTextarea"
+               v-model="commentText"
+               :placeholder="replyToComment ? ('回复 @' + (replyToComment.nickName || replyToComment.userName || '用户')) : '说点什么...'"
+               :maxlength="500"
+               rows="3"
+               @focus="onInlineFocus"
+             ></textarea>
           </div>
+          <div class="inline-images" v-if="selectedImages.length > 0">
+             <div class="inline-image-item" v-for="(img, idx) in selectedImages" :key="idx">
+                <img :src="img.url">
+                <i class="el-icon-close" @click="removeImage(idx)"></i>
+             </div>
+             <div class="inline-image-add" @click="$refs.imageInput.click()" v-if="selectedImages.length < 9">
+                <i class="el-icon-plus"></i>
+             </div>
+          </div>
+          <div class="inline-toolbar">
+             <div class="inline-toolbar-left">
+                <span class="toolbar-icon" @click="insertAt">@</span>
+                <svg class="toolbar-icon pic-icon" @click="$refs.imageInput.click()" viewBox="0 0 1024 1024" width="22" height="22">
+                   <path d="M896 160H128c-35.2 0-64 28.8-64 64v576c0 35.2 28.8 64 64 64h768c35.2 0 64-28.8 64-64V224c0-35.2-28.8-64-64-64z m0 640H128V224h768v576z" fill="#666"></path>
+                   <path d="M320 512c53 0 96-43 96-96s-43-96-96-96-96 43-96 96 43 96 96 96z" fill="#666"></path>
+                   <path d="M896 736l-192-192-128 96-192-160-256 256v64h768z" fill="#666"></path>
+                </svg>
+                <input type="file" ref="imageInput" multiple accept="image/*" @change="handleImageUpload" style="display:none">
+                <van-icon
+                  name="smile-o"
+                  class="emoji-icon emoji-toggle"
+                  :class="{ active: showEmojiPanel }"
+                  @click="toggleEmojiPanel"
+                />
+             </div>
+             <div class="inline-toolbar-right">
+                <el-button class="cancel-btn" size="small" round @click="closeInlineInput">取消</el-button>
+                <el-button class="send-btn" type="primary" size="small" :disabled="!commentText.trim()" round @click="publishComment">发送</el-button>
+             </div>
+          </div>
+          <div class="emoji-panel" v-show="showEmojiPanel">
+             <div class="emoji-grid">
+                <span class="emoji-item" v-for="emoji in emojis" :key="emoji" @click="insertEmoji(emoji)">{{emoji}}</span>
+             </div>
+          </div>
+       </div>
     </div>
     
      <div class="image-preview" v-if="showPreview" @click="closePreview">
@@ -385,48 +435,6 @@
         </div>
         <div class="preview-indicator">{{previewIndex+1}} / {{previewList.length}}</div>
      </div>
-
-   <!-- Comment Pop Input -->
-   <div class="comment-pop-overlay" v-if="showCommentPublish" @click="closeCommentModal">
-      <div class="comment-pop-box" @click.stop>
-         <div class="pop-header">
-            <span class="pop-title">{{ replyToComment ? ('回复 @' + replyToComment.nickName) : '发表评论' }}</span>
-            <i class="el-icon-close pop-close" @click="closeCommentModal"></i>
-         </div>
-         <div class="pop-textarea">
-            <textarea 
-               ref="commentTextarea"
-               v-model="commentText" 
-               placeholder="分享你此刻的想法..." 
-               :maxlength="500"
-               rows="3"
-            ></textarea>
-         </div>
-         <div class="pop-images" v-if="selectedImages.length > 0">
-            <div class="pop-image-item" v-for="(img, idx) in selectedImages" :key="idx">
-               <img :src="img.url">
-               <i class="el-icon-close" @click="removeImage(idx)"></i>
-            </div>
-            <div class="pop-image-add" @click="$refs.imageInput.click()" v-if="selectedImages.length < 9">
-               <i class="el-icon-plus"></i>
-            </div>
-         </div>
-         <div class="pop-toolbar">
-            <div class="pop-toolbar-left">
-               <svg class="pic-icon" @click="$refs.imageInput.click()" viewBox="0 0 1024 1024" width="24" height="24">
-                  <path d="M896 160H128c-35.2 0-64 28.8-64 64v576c0 35.2 28.8 64 64 64h768c35.2 0 64-28.8 64-64V224c0-35.2-28.8-64-64-64z m0 640H128V224h768v576z" fill="#666"></path>
-                  <path d="M320 512c53 0 96-43 96-96s-43-96-96-96-96 43-96 96 43 96 96 96z" fill="#666"></path>
-                  <path d="M896 736l-192-192-128 96-192-160-256 256v64h768z" fill="#666"></path>
-               </svg>
-               <input type="file" ref="imageInput" multiple accept="image/*" @change="handleImageUpload" style="display:none">
-               <div class="pop-rating-inline" v-if="!replyToComment">
-                   <el-rate v-model="commentRating" :colors="['#99A9BF', '#F7BA2A', '#FF9900']"></el-rate>
-               </div>
-            </div>
-            <el-button type="primary" size="small" :disabled="!commentText.trim()" @click="publishComment">发送</el-button>
-         </div>
-      </div>
-   </div>
 
    <!-- All Reviews Bottom Sheet Popup -->
    <div class="review-popup-overlay" v-if="showReviewPopup" @click="showReviewPopup = false">
@@ -509,7 +517,7 @@
                                         </svg>
                                         <span v-if="r.liked > 0">{{r.liked}}</span>
                                      </div>
-                                     <div class="c-action-btn" @click.stop="handleCommentReply(r)">
+                                     <div class="c-action-btn" @click.stop="handleCommentReply(r, c.id)">
                                         <i class="el-icon-chat-dot-square"></i>
                                      </div>
                                       <div class="c-action-btn delete-btn" v-if="user.id === r.userId" @click.stop="handleCommentDelete(r)">
@@ -537,6 +545,24 @@
             
             <div v-if="allCommentsLoading" class="loading-more">加载中...</div>
             <div v-if="allCommentsNoMore && allComments.length > 0" class="no-more-reviews">没有更多评论了</div>
+         </div>
+         <div class="popup-bottom-bar" @click.stop>
+            <input
+              ref="popupCommentInput"
+              v-model="commentText"
+              class="popup-input-editor"
+              :placeholder="replyToComment ? ('回复 @' + (replyToComment.nickName || replyToComment.userName || '用户')) : '发条评论，和大家一起讨论'"
+              maxlength="500"
+              @focus="handlePopupInputFocus"
+              @click.stop
+            />
+            <el-button
+              type="primary"
+              size="small"
+              round
+              :disabled="!commentText.trim()"
+              @click.stop="publishCommentFromPopup"
+            >发布</el-button>
          </div>
       </div>
    </div>
@@ -567,6 +593,12 @@ export default {
        products: [],
        groupBuyProducts: [], // For Category 2
        comments: [],
+       commentsPage: 1,
+       commentsPageSize: 10,
+       commentsNoMore: false,
+       commentsLoading: false,
+       commentLoadArmed: false,
+       commentObserver: null,
        // isStared now comes from shop.isStared (API response)
        starAnimating: false,
        user: null,
@@ -587,11 +619,25 @@ export default {
        isFollowed: false,
 
        // Comment interaction
-       showCommentPublish: false,
+       isInputFocus: false,
+       showEmojiPanel: false,
        commentText: '',
        commentRating: 5,
        replyToComment: null,
+       replyRootId: null,
        selectedImages: [],
+       emojis: [
+          '\uD83D\uDE00', '\uD83D\uDE03', '\uD83D\uDE04', '\uD83D\uDE01', '\uD83D\uDE06',
+          '\uD83D\uDE05', '\uD83D\uDE02', '\uD83E\uDD23', '\uD83D\uDE0A', '\uD83D\uDE42',
+          '\uD83D\uDE09', '\uD83D\uDE0D', '\uD83E\uDD70', '\uD83D\uDE18', '\uD83D\uDE0B',
+          '\uD83D\uDE0E', '\uD83E\uDD29', '\uD83E\uDD14', '\uD83E\uDD2D', '\uD83D\uDE2E',
+          '\uD83D\uDE31', '\uD83D\uDE2D', '\uD83D\uDE22', '\uD83D\uDE24', '\uD83D\uDE21',
+          '\uD83E\uDD2C', '\uD83D\uDE37', '\uD83E\uDD22', '\uD83D\uDC4D', '\uD83D\uDC4E',
+          '\uD83D\uDC4F', '\uD83D\uDE4C', '\uD83D\uDE4F', '\uD83E\uDD1D', '\uD83D\uDC4C',
+          '\u2764\uFE0F', '\uD83E\uDDE1', '\uD83D\uDC9B', '\uD83D\uDC9A', '\uD83D\uDC99',
+          '\uD83D\uDC9C', '\uD83D\uDDA4', '\uD83D\uDC94', '\uD83D\uDD25', '\u2728',
+          '\uD83C\uDF1F', '\uD83C\uDF89', '\uD83C\uDF8A', '\uD83D\uDCAF', '\uD83D\uDE80'
+       ],
        
        // Review popup
        showReviewPopup: false,
@@ -616,6 +662,17 @@ export default {
      
      this.fetchData(id);
      this.checkLogin();
+  },
+  mounted() {
+     this.setupCommentObserver();
+     window.addEventListener('scroll', this.onWindowScroll, { passive: true });
+  },
+  beforeUnmount() {
+     if (this.commentObserver) {
+        this.commentObserver.disconnect();
+        this.commentObserver = null;
+     }
+     window.removeEventListener('scroll', this.onWindowScroll);
   },
   methods: {
      toReviewDetail(comment) {
@@ -696,72 +753,118 @@ export default {
             this.onDataLoaded();
         });
         
-        getReviewList({ sourceId: id, sourceType: 2, current: 1, status: 0 }).then(res => {
+        this.loadComments(true, id).finally(() => {
+           this.onDataLoaded();
+        });
+         },
+         loadComments(reset = true, sourceId = this.shop.id) {
+            if (!sourceId) return Promise.resolve();
+            if (this.commentsLoading) return Promise.resolve();
+            if (!reset && this.commentsNoMore) return Promise.resolve();
+
+            if (reset) {
+               this.comments = [];
+               this.aiComment = null;
+               this.commentsPage = 1;
+               this.commentsNoMore = false;
+               this.commentLoadArmed = false;
+            }
+
+            this.commentsLoading = true;
+
+            return getReviewList({
+               sourceId,
+               sourceType: 2,
+               current: this.commentsPage,
+               status: 0,
+               size: this.commentsPageSize
+            }).then(res => {
                let list = [];
                if(Array.isArray(res)) list = res;
                else if(res && Array.isArray(res.list)) list = res.list;
                else if(res && Array.isArray(res.data)) list = res.data;
                else if(res && res.data && Array.isArray(res.data.records)) list = res.data.records;
-               
-               const processedList = (list || []).map(c => ({
-                  ...c,
-                  userIcon: c.userIcon ? (c.userIcon.startsWith('http') ? c.userIcon : this.fileURL + c.userIcon) : '',
-                  images: c.images ? c.images.split(',').filter(x=>x).map(i => i.startsWith('http') ? i : this.fileURL + i) : [],
-                  rating: c.score || c.rating || 5, 
-                  isLike: c.isLike || false,
-                  liked: c.liked || 0,
-                  // Map API count to UI comments count
-                  comments: c.replyCount || c.comments || c.childCount || 0, 
-                  showReplies: false, 
-                  replies: [],
-                  replyPage: 1
-               }));
 
-               // Extract AI Comment
-               const aiIdx = processedList.findIndex(c => c.isAIGenerated);
-               if(aiIdx > -1) {
-                  this.aiComment = processedList[aiIdx];
-                  processedList.splice(aiIdx, 1);
+               const rawList = list || [];
+               if (rawList.length === 0) {
+                  this.commentsNoMore = true;
+                  return;
                }
 
-               // Filter roots
-               const roots = processedList.filter(c => !c.answerId || c.answerId === 0 || c.answerId === '0');
-               this.comments = roots.slice(0, 3);
-               this.onDataLoaded();
+               const aiComment = rawList.find(c => c.isAIGenerated);
+               if (reset && aiComment) {
+                  this.aiComment = {
+                     ...aiComment,
+                     createTime: this.formatDate(aiComment.createTime)
+                  };
+               }
+
+               const roots = rawList
+                  .filter(c => !c.isAIGenerated)
+                  .map(c => ({
+                     ...c,
+                     userIcon: c.userIcon ? (c.userIcon.startsWith('http') ? c.userIcon : this.fileURL + c.userIcon) : '',
+                     images: c.images ? c.images.split(',').filter(x=>x).map(i => i.startsWith('http') ? i : this.fileURL + i) : [],
+                     rating: c.score || c.rating || 5,
+                     isLike: c.isLike || false,
+                     liked: c.liked || 0,
+                     comments: c.replyCount || c.comments || c.childCount || 0,
+                     showReplies: false,
+                     replies: [],
+                     replyPage: 1
+                  }))
+                  .filter(c => !c.answerId || c.answerId === 0 || c.answerId === '0');
+
+               if (roots.length > 0) {
+                  const existingIds = new Set(this.comments.map(c => String(c.id)));
+                  const nextList = roots.filter(c => !existingIds.has(String(c.id)));
+                  this.comments = [...this.comments, ...nextList];
+               }
+
+               if (rawList.length < this.commentsPageSize) {
+                  this.commentsNoMore = true;
+               } else {
+                  this.commentsPage += 1;
+               }
             }).catch(err => {
-               this.onDataLoaded();
+               console.error('loadComments failed:', err);
+            }).finally(() => {
+               this.commentsLoading = false;
+               this.$nextTick(() => this.observeCommentLoadTrigger());
             });
          },
-         loadComments() {
-            getReviewList({ sourceId: this.shop.id, sourceType: 2, current: 1, status: 0 }).then(res => {
-               let list = [];
-               if(Array.isArray(res)) list = res;
-               else if(res && Array.isArray(res.list)) list = res.list;
-               else if(res && Array.isArray(res.data)) list = res.data;
-               else if(res && res.data && Array.isArray(res.data.records)) list = res.data.records;
-               
-               const processedList = (list || []).map(c => ({
-                  ...c,
-                  userIcon: c.userIcon ? (c.userIcon.startsWith('http') ? c.userIcon : this.fileURL + c.userIcon) : '',
-                  images: c.images ? c.images.split(',').filter(x=>x).map(i => i.startsWith('http') ? i : this.fileURL + i) : [],
-                  rating: c.score || c.rating || 5,
-                  isLike: c.isLike || false,
-                  liked: c.liked || 0,
-                  comments: c.replyCount || c.comments || c.childCount || 0, 
-                  showReplies: false, 
-                  replies: [],
-                  replyPage: 1
-               }));
-
-               const aiIdx = processedList.findIndex(c => c.isAIGenerated);
-               if(aiIdx > -1) {
-                  this.aiComment = processedList[aiIdx];
-                  processedList.splice(aiIdx, 1);
+         loadMoreComments() {
+            if (!this.shop.id || this.commentsLoading || this.commentsNoMore || !this.commentLoadArmed) return;
+            this.loadComments(false);
+         },
+         onWindowScroll() {
+            if (!this.commentLoadArmed && window.scrollY > 0) {
+               this.commentLoadArmed = true;
+               this.observeCommentLoadTrigger();
+            }
+         },
+         setupCommentObserver() {
+            if (typeof window === 'undefined' || !('IntersectionObserver' in window)) return;
+            if (this.commentObserver) {
+               this.commentObserver.disconnect();
+            }
+            this.commentObserver = new IntersectionObserver((entries) => {
+               if (entries.some(entry => entry.isIntersecting)) {
+                  this.loadMoreComments();
                }
-
-               const roots = processedList.filter(c => !c.answerId || c.answerId === 0 || c.answerId === '0');
-               this.comments = roots.slice(0, 3);
+            }, {
+               root: null,
+               rootMargin: '0px 0px 220px 0px',
+               threshold: 0
             });
+            this.observeCommentLoadTrigger();
+         },
+         observeCommentLoadTrigger() {
+            if (!this.commentObserver) return;
+            this.commentObserver.disconnect();
+            if (this.$refs.commentLoadTrigger) {
+               this.commentObserver.observe(this.$refs.commentLoadTrigger);
+            }
          },
          toggleReplies(comment) {
              if (!comment.showReplies) {
@@ -925,14 +1028,6 @@ export default {
            this.$router.push(`/user/profile/${userId}`);
         }
      },
-     writeComment() {
-        if(!localStorage.getItem('token')) {
-            this.$message.warning("请先登录");
-            this.$router.push('/user/login');
-            return;
-        }
-        this.showCommentPublish = true;
-     },
      viewAllComments() {
         this.$router.push({
            path: '/comment/list',
@@ -1010,7 +1105,7 @@ export default {
         this.$router.push({ path: '/product/detail', query: { id: v.id } });
      },
      handleCommentLike(c, isReview = false) {
-        if(!this.user.id) return this.$router.push('/user/login');
+        if(!this.user || !this.user.id) return this.$router.push('/user/login');
         const oldState = c.isLike;
         c.isLike = !c.isLike;
         c.liked = c.isLike ? (c.liked + 1) : (c.liked - 1);
@@ -1020,12 +1115,21 @@ export default {
            c.liked = c.isLike ? (c.liked + 1) : (c.liked - 1);
         });
      },
-     handleCommentReply(c, rootId) {
-        if(!this.user.id) return this.$router.push('/user/login');
-        this.replyToComment = c;
-        this.replyRootId = rootId || null;
-        this.commentText = '';
-        this.showCommentPublish = true;
+    handleCommentReply(c, rootId) {
+       if(!this.user || !this.user.id) return this.$router.push('/user/login');
+       this.replyToComment = c;
+       this.replyRootId = rootId || null;
+       this.commentText = '';
+       this.showEmojiPanel = false;
+       if (this.showReviewPopup) {
+          this.$nextTick(() => {
+             if (this.$refs.popupCommentInput) {
+                this.$refs.popupCommentInput.focus();
+             }
+          });
+        } else {
+          this.openInlineInput();
+        }
      },
      writeComment() {
         if(!this.user || !this.user.id) {
@@ -1037,13 +1141,47 @@ export default {
             query: { shopId: this.shop.id }
         });
      },
-     closeCommentModal() {
-        this.showCommentPublish = false;
+     openInlineInput() {
+        this.isInputFocus = true;
+        this.showEmojiPanel = false;
+        this.$nextTick(() => {
+           if (this.$refs.inlineTextarea) {
+              this.$refs.inlineTextarea.focus();
+           }
+        });
+     },
+     closeInlineInput() {
+        this.isInputFocus = false;
+        this.showEmojiPanel = false;
         this.commentText = '';
         this.selectedImages = [];
         this.replyToComment = null;
         this.replyRootId = null;
         this.commentRating = 5;
+     },
+     onInlineFocus() {
+        this.isInputFocus = true;
+        this.showEmojiPanel = false;
+     },
+     toggleEmojiPanel() {
+        this.showEmojiPanel = !this.showEmojiPanel;
+        this.$nextTick(() => {
+           if (!this.$refs.inlineTextarea) return;
+           if (this.showEmojiPanel) this.$refs.inlineTextarea.blur();
+           else this.$refs.inlineTextarea.focus();
+        });
+     },
+     insertAt() {
+        this.commentText += '@';
+        if (this.$refs.inlineTextarea) this.$refs.inlineTextarea.focus();
+     },
+     insertEmoji(emoji) {
+        this.commentText += emoji;
+        if (!this.showEmojiPanel && this.$refs.inlineTextarea) {
+           this.$nextTick(() => {
+              this.$refs.inlineTextarea.focus();
+           });
+        }
      },
      callShop() {
         if(this.shop.phone) {
@@ -1052,16 +1190,35 @@ export default {
            this.$message.warning("暂无联系方式");
         }
      },
-     writeCommentFromPopup() {
-        if(!this.user || !this.user.id) {
-           this.$message.warning("请先登录");
-           return this.$router.push('/user/login');
-        }
-        // Redirect to review publish page
-        this.$router.push({ path: '/review/publish', query: { shopId: this.shop.id } });
-     },
-     // Image Upload
-     async handleImageUpload(e) {
+    writeCommentFromPopup() {
+       if(!this.user || !this.user.id) {
+          this.$message.warning("请先登录");
+          return this.$router.push('/user/login');
+       }
+       // Redirect to review publish page
+       this.$router.push({ path: '/review/publish', query: { shopId: this.shop.id } });
+    },
+    handlePopupInputFocus() {
+       if(!this.user || !this.user.id) {
+          this.$message.warning("请先登录");
+          if(this.$refs.popupCommentInput) {
+             this.$refs.popupCommentInput.blur();
+          }
+          this.$router.push('/user/login');
+       }
+    },
+    publishCommentFromPopup() {
+       if(!this.user || !this.user.id) {
+          this.$message.warning("请先登录");
+          return this.$router.push('/user/login');
+       }
+       this.selectedImages = [];
+       this.showEmojiPanel = false;
+       this.isInputFocus = false;
+       this.publishComment();
+    },
+    // Image Upload
+    async handleImageUpload(e) {
         const files = e.target.files;
         for(let file of files) {
            const formData = new FormData();
@@ -1127,8 +1284,8 @@ export default {
 
          addComment(data).then(() => {
             this.$message.success("发布成功");
-            this.closeCommentModal();
-            this.loadComments();
+            this.closeInlineInput();
+            this.loadComments(true);
             // Also refresh popup comments if open
             if(this.showReviewPopup) {
                this.allComments = [];
@@ -1151,8 +1308,7 @@ export default {
            
            removeComment({ id: c.id, sourceType, sourceId }).then(() => {
               this.$message.success('删除成功');
-              this.comments = []; // Clear first to force reload
-              this.loadComments();
+              this.loadComments(true);
            }).catch(err => {
               console.error('删除失败', err);
               this.$message.error('删除失败，请重试');

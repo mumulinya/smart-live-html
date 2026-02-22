@@ -216,7 +216,7 @@ const handleSend = () => {
 }
 
 .ai-bubble {
-  background: linear-gradient(135deg, #a855f7, #3b82f6);
+  background: linear-gradient(135deg, #ffb36a 0%, #ff8a5b 52%, #ff6b6b 100%);
   color: white;
   padding: 8px 12px;
   border-radius: 8px;
@@ -224,7 +224,7 @@ const handleSend = () => {
   text-align: center;
   margin-bottom: 8px;
   position: relative;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  box-shadow: 0 6px 14px rgba(255, 122, 92, 0.26);
   white-space: nowrap;
 }
 .bubble-arrow {
@@ -236,7 +236,7 @@ const handleSend = () => {
   height: 0; 
   border-left: 6px solid transparent;
   border-right: 6px solid transparent;
-  border-top: 6px solid #3b82f6;
+  border-top: 6px solid #ff7665;
 }
 
 .ai-icon-wrapper {
@@ -300,13 +300,13 @@ const handleSend = () => {
   bottom: 120px;
   right: 0;
   z-index: 9999;
-  background: linear-gradient(135deg, #a855f7, #3b82f6);
+  background: linear-gradient(135deg, #ffb36a 0%, #ff8a5b 52%, #ff6b6b 100%);
   color: white;
   padding: 8px 4px 8px 8px;
   border-top-left-radius: 20px;
   border-bottom-left-radius: 20px;
   cursor: pointer;
-  box-shadow: -2px 2px 10px rgba(0,0,0,0.2);
+  box-shadow: -3px 6px 14px rgba(255, 122, 92, 0.28);
   display: flex;
   align-items: center;
   gap: 4px;

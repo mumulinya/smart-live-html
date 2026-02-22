@@ -354,6 +354,12 @@ export default {
               }
           });
       },
+      getValidOrderId() {
+          if (this.orderId === null || this.orderId === undefined || this.orderId === '' || this.orderId === 0 || this.orderId === '0') {
+              return null;
+          }
+          return this.orderId;
+      },
       submitReview() {
           if (!this.canSubmit) return;
           this.submitting = true;
@@ -374,11 +380,15 @@ export default {
               serviceScore: this.serviceScore,
               images: images,
               isAnonymous: this.isAnonymous,
-              orderId: this.orderId || 0,
               userId: this.userId,
               status: 0  // 0=发布
           };
           
+          const validOrderId = this.getValidOrderId();
+          if (validOrderId) {
+              params.orderId = validOrderId;
+          }
+
           if (this.isEdit) {
               params.id = this.id;
               updateReview(params).then(() => {
@@ -439,12 +449,16 @@ export default {
                   return f.path;
               }).join(','),
               isAnonymous: this.isAnonymous,
-              orderId: this.orderId || 0,
               userId: this.userId,
               status: 3  // 3=草稿
           };
 
           // 如果是编辑模式，传递草稿ID用于更新
+          const validOrderId = this.getValidOrderId();
+          if (validOrderId) {
+              params.orderId = validOrderId;
+          }
+
           if (this.isEdit && this.id) {
               params.id = this.id;
               updateReview(params).then(() => {

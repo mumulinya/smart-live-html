@@ -21,15 +21,15 @@
     <div class="nav-bar" :class="{ 'nav-scrolled': scrollTop > 50 }">
        <div class="nav-left">
           <i class="el-icon-back" @click="goBack" v-if="!isSelf" :style="{ color: scrollTop > 50 ? '#333' : '#fff' }"></i>
-          <div class="add-friend-btn" @click="toAddFriend" v-else :style="{ background: scrollTop > 50 ? '#f5f5f5' : 'rgba(0,0,0,0.2)', color: scrollTop > 50 ? '#333' : '#fff' }">
+          <div class="icon-btn top-add-user-btn" @click="toAddFriend" v-if="isSelf" :style="{ color: scrollTop > 50 ? '#333' : '#fff', background: scrollTop > 50 ? 'transparent' : 'rgba(93, 131, 173, 0.35)', border: scrollTop > 50 ? 'none' : '0.5px solid rgba(255,255,255,0.3)' }">
              <i class="el-icon-user-solid"></i>
-             <span style="font-size: 14px; font-weight: bold;">+</span>
+             <span class="add-text">添加朋友</span>
           </div>
        </div>
        <div class="nav-title" v-if="scrollTop > 50">{{ user.nickName }}</div>
        <div class="nav-right">
-          <div class="icon-btn" @click="$router.push('/search/user')" :style="{ color: scrollTop > 50 ? '#333' : '#fff', background: scrollTop > 50 ? 'transparent' : 'rgba(0,0,0,0.2)',  border: scrollTop > 50 ? 'none' : '0.5px solid rgba(255,255,255,0.2)' }"><i class="el-icon-search"></i></div>
-          <div class="icon-btn" @click="logout" v-if="isSelf" :style="{ color: scrollTop > 50 ? '#333' : '#fff', background: scrollTop > 50 ? 'transparent' : 'rgba(0,0,0,0.2)', border: scrollTop > 50 ? 'none' : '0.5px solid rgba(255,255,255,0.2)' }"><i class="el-icon-setting"></i></div>
+          <div class="icon-btn top-circle-btn" @click="$router.push('/search/user')" :style="{ color: scrollTop > 50 ? '#333' : '#fff', background: scrollTop > 50 ? 'transparent' : 'rgba(93, 131, 173, 0.35)',  border: scrollTop > 50 ? 'none' : '0.5px solid rgba(255,255,255,0.3)' }"><i class="el-icon-search"></i></div>
+          <div class="icon-btn top-circle-btn top-menu-btn" @click="logout" v-if="isSelf" :style="{ color: scrollTop > 50 ? '#333' : '#fff', background: scrollTop > 50 ? 'transparent' : 'rgba(93, 131, 173, 0.35)', border: scrollTop > 50 ? 'none' : '0.5px solid rgba(255,255,255,0.3)' }"><i class="el-icon-s-operation"></i></div>
        </div>
     </div>
 
@@ -59,9 +59,10 @@
        </div>
 
        <!-- Info Text -->
-       <div class="info-text-section">
+        <div class="info-text-section">
           <div class="user-name-row">
              <div class="cancel-bold-name">{{ user.nickName || '未命名' }}</div>
+             <button type="button" class="name-edit-btn" @click="toEdit" v-if="isSelf">编辑资料</button>
           </div>
           <div class="user-id-row">
              <span>生活号：{{ user.id || '未知' }}</span>
@@ -84,9 +85,7 @@
        </div>
 
        <!-- Action Buttons -->
-       <div class="action-buttons-row">
-          <div class="edit-btn" @click="toEdit" v-if="isSelf">编辑资料</div>
-          <div class="setting-btn" @click="logout" v-if="isSelf"><i class="el-icon-s-tools"></i></div>
+       <div class="action-buttons-row" v-if="!isSelf">
           <div class="follow-btn" v-if="!isSelf" @click="handleFollow">关注</div>
           <div class="chat-btn" v-if="!isSelf" @click="toChat">私信</div>
        </div>
@@ -1013,11 +1012,23 @@ export default {
     display: flex;
     align-items: center;
 }
+.nav-right {
+    justify-content: flex-end;
+}
 .nav-left i {
     font-size: 24px;
     color: #333;
 }
 .nav-title {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 42%;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     font-size: 16px;
     font-weight: 600;
     color: #333;
@@ -1027,19 +1038,53 @@ export default {
 .nav-scrolled .nav-title {
     opacity: 1;
 }
-.add-friend-btn {
-    background: #f5f5f5;
-    padding: 4px 12px;
-    border-radius: 16px;
-    display: flex;
-    align-items: center;
-    font-size: 12px;
-    color: #333;
-}
 .icon-btn {
-    margin-left: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 28px;
+    padding: 0 4px;
+    border-radius: 14px;
+    margin-left: 0;
     font-size: 20px;
     color: #333;
+}
+.icon-btn + .icon-btn {
+    margin-left: 10px;
+}
+.top-circle-btn {
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 50%;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+.top-circle-btn i {
+    font-size: 17px;
+}
+.top-add-user-btn {
+    gap: 4px;
+    min-width: 102px;
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 17px;
+    font-size: 13px;
+    font-weight: 600;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+.top-add-user-btn i {
+    font-size: 15px;
+}
+.top-add-user-btn .add-text {
+    font-size: 13px;
+    line-height: 1;
+}
+.top-menu-btn i {
+    font-size: 16px;
 }
 
 /* Profile Cover */
@@ -1122,12 +1167,33 @@ export default {
     margin-bottom: 16px;
 }
 .user-name-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
     margin-bottom: 6px;
 }
 .cancel-bold-name {
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     font-size: 22px;
     font-weight: 600;
     color: #333;
+}
+.name-edit-btn {
+    flex-shrink: 0;
+    height: 32px;
+    padding: 0 14px;
+    border: 1px solid #ddd;
+    border-radius: 16px;
+    background: #fff;
+    color: #333;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
 }
 .user-id-row {
     font-size: 12px;
@@ -1173,22 +1239,6 @@ export default {
     display: flex;
     gap: 10px;
     margin-bottom: 20px;
-}
-.edit-btn, .setting-btn {
-    border: 1px solid #ddd;
-    border-radius: 20px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 13px;
-    color: #333;
-}
-.edit-btn {
-    flex: 1;
-}
-.setting-btn {
-    width: 40px;
 }
 .follow-btn, .chat-btn {
     flex: 1;

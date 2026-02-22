@@ -15,6 +15,12 @@
            </div>
       </div>
 
+     <div
+       class="tab-swipe-area"
+       @touchstart.passive="onTouchStart"
+       @touchmove.passive="onTouchMove"
+       @touchend="onTouchEnd"
+     >
      <!-- Tab Content -->
      <!-- Wait Review Tab -->
      <div v-show="activeHeaderTab === 'pending'" class="tab-content">
@@ -22,8 +28,19 @@
      </div>
 
      <!-- Reviewed Tab -->
-     <div v-show="activeHeaderTab === 'reviewed'" class="tab-content scroll-wrapper">
-       <div class="review-type-tabs">
+     <div
+       v-show="activeHeaderTab === 'reviewed'"
+       class="tab-content scroll-wrapper"
+       @touchstart.capture.stop.passive="onReviewTypeTouchStart"
+       @touchmove.capture.stop.passive="onReviewTypeTouchMove"
+       @touchend.capture.stop="onReviewTypeTouchEnd"
+       @touchcancel.capture.stop="onReviewTypeTouchCancel"
+       @mousedown.capture.stop="onReviewTypeMouseDown"
+       @mousemove.capture.stop="onReviewTypeMouseMove"
+       @mouseup.capture.stop="onReviewTypeMouseUp"
+       @mouseleave.capture.stop="onReviewTypeMouseUp"
+    >
+      <div class="review-type-tabs">
            <span
                class="review-type-tab"
                :class="{ active: reviewSourceType === 'all' }"
@@ -141,6 +158,7 @@
            </div>
        </van-popup>
     </div>
+    </div>
   </PageLayout>
 </template>
 
@@ -169,6 +187,21 @@ export default {
        reviewSourceType: 'all',
        activeHeaderTab: 'reviewed', // Default
        draftsCount: 5,
+       headerTabOrder: ['pending', 'reviewed'],
+       reviewTypeOrder: ['all', '2', '4'],
+       touchStartX: 0,
+       touchStartY: 0,
+       touchEndX: 0,
+       touchEndY: 0,
+       swipeThreshold: 60,
+       maxVerticalTravel: 50,
+       reviewTouchStartX: 0,
+       reviewTouchStartY: 0,
+       reviewTouchEndX: 0,
+       reviewTouchEndY: 0,
+       reviewSwipeThreshold: 24,
+       reviewMaxVerticalTravel: 120,
+       reviewPointerActive: false
     }
   },
   computed: {
@@ -211,9 +244,103 @@ export default {
   },
   methods: {
       switchTab(tab) {
+          if (tab === this.activeHeaderTab) return;
           this.activeHeaderTab = tab;
-          // Optional: Update query param without reloading
           this.$router.replace({ query: { ...this.$route.query, tab } });
+          if (tab === 'reviewed' && this.reviews.length === 0 && !this.loading && !this.finished) {
+              this.loadReviews();
+          }
+      },
+      onTouchStart(e) {
+          const touch = e.touches && e.touches[0];
+          if (!touch) return;
+          this.touchStartX = touch.clientX;
+          this.touchStartY = touch.clientY;
+          this.touchEndX = touch.clientX;
+          this.touchEndY = touch.clientY;
+      },
+      onTouchMove(e) {
+          const touch = e.touches && e.touches[0];
+          if (!touch) return;
+          this.touchEndX = touch.clientX;
+          this.touchEndY = touch.clientY;
+      },
+      onTouchEnd() {
+          const deltaX = this.touchEndX - this.touchStartX;
+          const deltaY = Math.abs(this.touchEndY - this.touchStartY);
+
+          if (deltaY > this.maxVerticalTravel) return;
+          if (Math.abs(deltaX) < this.swipeThreshold) return;
+
+          const currentIndex = this.headerTabOrder.indexOf(this.activeHeaderTab);
+          if (currentIndex < 0) return;
+
+          if (deltaX < 0 && currentIndex < this.headerTabOrder.length - 1) {
+              this.switchTab(this.headerTabOrder[currentIndex + 1]);
+          } else if (deltaX > 0 && currentIndex > 0) {
+              this.switchTab(this.headerTabOrder[currentIndex - 1]);
+          }
+      },
+      onReviewTypeTouchStart(e) {
+          const touch = e.touches && e.touches[0];
+          if (!touch) return;
+          this.startReviewSwipe(touch.clientX, touch.clientY);
+      },
+      onReviewTypeTouchMove(e) {
+          const touch = e.touches && e.touches[0];
+          if (!touch) return;
+          this.updateReviewSwipe(touch.clientX, touch.clientY);
+      },
+      onReviewTypeTouchEnd(e) {
+          const touch = e.changedTouches && e.changedTouches[0];
+          if (touch) {
+              this.updateReviewSwipe(touch.clientX, touch.clientY);
+          }
+          this.finishReviewSwipe();
+      },
+      onReviewTypeTouchCancel() {
+          this.reviewPointerActive = false;
+      },
+      onReviewTypeMouseDown(e) {
+          if (e.button !== 0) return;
+          this.reviewPointerActive = true;
+          this.startReviewSwipe(e.clientX, e.clientY);
+      },
+      onReviewTypeMouseMove(e) {
+          if (!this.reviewPointerActive) return;
+          this.updateReviewSwipe(e.clientX, e.clientY);
+      },
+      onReviewTypeMouseUp() {
+          if (!this.reviewPointerActive) return;
+          this.reviewPointerActive = false;
+          this.finishReviewSwipe();
+      },
+      startReviewSwipe(x, y) {
+          this.reviewTouchStartX = x;
+          this.reviewTouchStartY = y;
+          this.reviewTouchEndX = x;
+          this.reviewTouchEndY = y;
+      },
+      updateReviewSwipe(x, y) {
+          this.reviewTouchEndX = x;
+          this.reviewTouchEndY = y;
+      },
+      finishReviewSwipe() {
+          const deltaX = this.reviewTouchEndX - this.reviewTouchStartX;
+          const absX = Math.abs(deltaX);
+          const absY = Math.abs(this.reviewTouchEndY - this.reviewTouchStartY);
+          if (absY > this.reviewMaxVerticalTravel) return;
+          if (absX < this.reviewSwipeThreshold) return;
+          if (absX <= absY * 1.05) return;
+
+          const currentIndex = this.reviewTypeOrder.indexOf(this.reviewSourceType);
+          if (currentIndex < 0) return;
+
+          if (deltaX < 0 && currentIndex < this.reviewTypeOrder.length - 1) {
+              this.onReviewTypeSelect(this.reviewTypeOrder[currentIndex + 1]);
+          } else if (deltaX > 0 && currentIndex > 0) {
+              this.onReviewTypeSelect(this.reviewTypeOrder[currentIndex - 1]);
+          }
       },
       onReviewTypeSelect(type) {
           if (this.reviewSourceType === type) return;
@@ -413,6 +540,10 @@ export default {
     height: 3px;
     background: #ff2442;
     border-radius: 2px;
+}
+
+.tab-swipe-area {
+    min-height: calc(100vh - 48px);
 }
 
 .scroll-wrapper {

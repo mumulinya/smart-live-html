@@ -113,13 +113,10 @@
 
 
         <!-- Comments Section -->
-        <div class="comments-section">
-            <div class="comments-title">评论 ({{ comments.length }})</div>
-                <div class="comment-list">
-                    <div class="comment-box" v-if="comments.length === 0">
-                        <div class="c-placeholder">暂无评论</div>
-                    </div>
-                    <div class="comment-box" v-for="c in comments.slice(0, 3)" :key="c.id">
+        <div class="comments-section" ref="commentsSection">
+            <div class="comments-title">评论 ({{ (review && review.comments) || comments.length }})</div>
+                <div class="comment-list" v-if="comments.length > 0">
+                    <div class="comment-box" v-for="c in comments" :key="c.id">
                         <div class="comment-icon" @click.stop="toUserDetail(c.userId)">
                             <img :src="c.userAvatar" />
                         </div>
@@ -206,10 +203,10 @@
                 </div>
             </div>
             
-            <!-- View All Button -->
-            <div class="view-all-btn" v-if="comments.length > 3 || (review && review.comments > 3)" @click="showReviewPopup = true; loadAllComments()">
-               查看全部{{review.comments || comments.length}}条评价 <i class="el-icon-arrow-right"></i>
-            </div>
+            <div class="no-comments" v-if="comments.length === 0 && !commentsLoading && commentsNoMore">暂无评论</div>
+            <div class="comment-load-state" v-if="commentsLoading">加载中...</div>
+            <div class="comment-load-state comment-load-end" v-else-if="commentsNoMore && comments.length > 0">没有更多评论了</div>
+            <div ref="commentLoadTrigger" class="comment-load-trigger" v-if="!commentsNoMore"></div>
         </div>
 
         <!-- Sticky Bottom Bar (Same style as Blog Detail) -->
@@ -278,7 +275,7 @@
                         <i :class="review.isCollect ? 'el-icon-star-on active' : 'el-icon-star-off'"></i>
                         <span>{{ review.collectCount || 0 }}</span>
                     </div>
-                    <div class="action-item" @click="showReviewPopup = true; loadAllComments()">
+                    <div class="action-item" @click="scrollToComments">
                         <i class="el-icon-chat-dot-round"></i>
                         <span>{{ review.comments || comments.length || 0 }}</span>
                     </div>
@@ -390,9 +387,23 @@
              <div v-if="allCommentsNoMore && allComments.length > 0" class="no-more-reviews">没有更多评论了</div>
           </div>
           <!-- Bottom Input Bar in Popup -->
-          <div class="popup-bottom-bar" @click="writeCommentFromPopup">
-             <div class="popup-input-placeholder">说点什么吧~</div>
-             <el-button type="primary" size="small" round @click.stop="writeCommentFromPopup">发布</el-button>
+          <div class="popup-bottom-bar" @click.stop>
+             <input
+               ref="popupCommentInput"
+               v-model="commentText"
+               class="popup-input-editor"
+               :placeholder="replyToComment ? ('回复 @' + (replyToComment.nickName || replyToComment.userName || '用户')) : '说点什么吧~'"
+               maxlength="500"
+               @focus="handlePopupInputFocus"
+               @click.stop
+             />
+             <el-button
+               type="primary"
+               size="small"
+               round
+               :disabled="!commentText.trim()"
+               @click.stop="publishCommentFromPopup"
+             >发布</el-button>
           </div>
        </div>
     </div>
@@ -429,6 +440,11 @@ export default {
           voucher: null,  // 代金券详情
           imgPrefix: fileURL,
           comments: [],
+          commentsPage: 1,
+          commentsPageSize: 10,
+          commentsNoMore: false,
+          commentsLoading: false,
+          commentObserver: null,
           // Preview
           showImagePreview: false,
           previewImages: [],
@@ -487,6 +503,15 @@ export default {
       } else {
           this.$message.error('参数错误');
           this.$router.go(-1);
+      }
+  },
+  mounted() {
+      this.setupCommentObserver();
+  },
+  beforeUnmount() {
+      if (this.commentObserver) {
+          this.commentObserver.disconnect();
+          this.commentObserver = null;
       }
   },
   methods: {
@@ -553,87 +578,102 @@ export default {
       buyVoucher() {
           this.toVoucherDetail();
       },
-      loadComments(id) {
-          // Increase size to fetch more comments for client-side nesting
-          getComments({ sourceId: id, sourceType: 7, current: 1, size: 500 }).then(res => {
-             let list = [];
-             if (Array.isArray(res)) list = res;
-             else if (res && Array.isArray(res.data)) list = res.data;
-             else if (res && res.data && Array.isArray(res.data.records)) list = res.data.records;
-             
-             const processedList = (list || []).map(c => ({
-                ...c,
-                userAvatar: c.userIcon ? (c.userIcon.startsWith('http') ? c.userIcon : this.imgPrefix + c.userIcon) : this.defaultAvatar,
-                createTime: this.formatDate(c.createTime),
-                images: c.images ? c.images.split(',').map(i => i.startsWith('http') ? i : this.imgPrefix + i) : [],
-                isLike: c.isLike || false,
-                liked: c.liked || 0,
-                comments: c.replyCount || c.comments || 0, // Prioritize replyCount as per user request
-                showReplies: false, // UI toggle state
-                replies: [], // will be filled on demand or by local nesting if data is present
-                replyPage: 1 // Pagination state for replies
-             }));
+      loadComments(id, reset = true) {
+          if (!id) return Promise.resolve();
+          if (this.commentsLoading) return Promise.resolve();
+          if (!reset && this.commentsNoMore) return Promise.resolve();
 
-             // 1. Build a robust map with string keys for safety
-             const commentMap = {};
-             processedList.forEach(c => {
-                c.replies = []; 
-                commentMap[String(c.id)] = c;
-             });
-             
-             const roots = [];
-             
-             // 2. Process each comment to determine if it's a root or a nested reply
-             processedList.forEach(c => {
-                 const aId = c.answerId ? String(c.answerId) : '0';
-                 
-                 // If answerId is "0" or null/missing, it's a top-level comment
-                 if (aId === '0') {
-                     roots.push(c);
-                 } else { 
-                     // It is a reply. Find who it belongs to.
-                     const directParent = commentMap[aId];
-                     if(directParent) {
-                         c.replyToName = directParent.nickName;
-                         
-                         // In BlogDetail style, all replies are flattened under the top-level comment.
-                         // Find the true "root" (the comment whose answerId points to the review/shop, or '0')
-                         let curr = directParent;
-                         let depth = 0;
-                         while(curr && curr.answerId && String(curr.answerId) !== '0' && depth < 20) {
-                              const nextId = String(curr.answerId);
-                              // If the parent is not in the map, it means 'curr' is the root comment (connected to review/shop)
-                              if (!commentMap[nextId]) break;
-                              
-                              curr = commentMap[nextId];
-                              depth++;
-                         }
-                         
-                         if(curr) {
-                            // Link this reply to the root comment's replies list
-                            if(!curr.replies.some(reply => reply.id === c.id)) {
-                                curr.replies.push(c);
-                            }
-                         } else {
-                            // If root can't be found despite parent existing (shouldn't happen with break fix), treat as root
-                            roots.push(c);
-                         }
-                     } else {
-                         // If the parent comment isn't in the list, treat this as a root comment
-                         roots.push(c);
-                     }
-                 }
-             });
-             
-             // 3. Final sorting of replies
-             roots.forEach(r => {
-                if(r.replies && r.replies.length) {
-                   r.replies.sort((a,b) => new Date(a.createTime) - new Date(b.createTime));
-                }
-             });
+          if (reset) {
+              this.comments = [];
+              this.commentsPage = 1;
+              this.commentsNoMore = false;
+          }
 
-             this.comments = roots;
+          this.commentsLoading = true;
+
+          return getComments({
+              sourceId: id,
+              sourceType: 7,
+              current: this.commentsPage,
+              size: this.commentsPageSize
+          }).then(res => {
+              let list = [];
+              if (Array.isArray(res)) list = res;
+              else if (res && Array.isArray(res.data)) list = res.data;
+              else if (res && res.data && Array.isArray(res.data.records)) list = res.data.records;
+
+              const rawList = list || [];
+              if (rawList.length === 0) {
+                  this.commentsNoMore = true;
+                  return;
+              }
+
+              const roots = rawList
+                  .map(c => ({
+                      ...c,
+                      userAvatar: c.userIcon ? (c.userIcon.startsWith('http') ? c.userIcon : this.imgPrefix + c.userIcon) : this.defaultAvatar,
+                      createTime: this.formatDate(c.createTime),
+                      images: c.images ? c.images.split(',').map(i => i.startsWith('http') ? i : this.imgPrefix + i) : [],
+                      isLike: c.isLike || false,
+                      liked: c.liked || 0,
+                      comments: c.replyCount || c.comments || 0,
+                      showReplies: false,
+                      replies: [],
+                      replyPage: 1
+                  }))
+                  .filter(c => !c.answerId || c.answerId === 0 || c.answerId === '0');
+
+              if (roots.length > 0) {
+                  const existingIds = new Set(this.comments.map(c => String(c.id)));
+                  const nextList = roots.filter(c => !existingIds.has(String(c.id)));
+                  this.comments = [...this.comments, ...nextList];
+              }
+
+              if (rawList.length < this.commentsPageSize) {
+                  this.commentsNoMore = true;
+              } else {
+                  this.commentsPage += 1;
+              }
+          }).catch(err => {
+              console.error('Failed to load comments:', err);
+          }).finally(() => {
+              this.commentsLoading = false;
+              this.$nextTick(() => this.observeCommentLoadTrigger());
           });
+      },
+      loadMoreComments() {
+          if (!this.review || !this.review.id || this.commentsLoading || this.commentsNoMore) return;
+          this.loadComments(this.review.id, false);
+      },
+      scrollToComments() {
+          this.$nextTick(() => {
+              if (this.$refs.commentsSection && this.$refs.commentsSection.scrollIntoView) {
+                  this.$refs.commentsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }
+          });
+      },
+      setupCommentObserver() {
+          if (typeof window === 'undefined' || !('IntersectionObserver' in window)) return;
+          if (this.commentObserver) {
+              this.commentObserver.disconnect();
+          }
+          this.commentObserver = new IntersectionObserver((entries) => {
+              if (entries.some(entry => entry.isIntersecting)) {
+                  this.loadMoreComments();
+              }
+          }, {
+              root: null,
+              rootMargin: '0px 0px 220px 0px',
+              threshold: 0
+          });
+          this.observeCommentLoadTrigger();
+      },
+      observeCommentLoadTrigger() {
+          if (!this.commentObserver) return;
+          this.commentObserver.disconnect();
+          if (this.$refs.commentLoadTrigger) {
+              this.commentObserver.observe(this.$refs.commentLoadTrigger);
+          }
       },
       formatDate(time) {
           if (!time) return '';
@@ -708,7 +748,6 @@ export default {
           this.showEmojiPanel = false;
           this.commentText = '';
           this.selectedImages = [];
-          this.replyToComment = null;
       },
       onInlineFocus() {
           this.isInputFocus = true;
@@ -774,7 +813,15 @@ export default {
               return;
           }
           this.replyToComment = null; // Clear reply target when opening from main button
-          this.openInlineInput();
+          if (this.showReviewPopup) {
+              this.$nextTick(() => {
+                  if (this.$refs.popupCommentInput) {
+                      this.$refs.popupCommentInput.focus();
+                  }
+              });
+          } else {
+              this.openInlineInput();
+          }
       },
       handleReply(comment) {
           if (!this.user || !this.user.id) {
@@ -784,7 +831,15 @@ export default {
           }
           this.replyToComment = comment;
           this.commentText = '';
-          this.openInlineInput();
+          if (this.showReviewPopup) {
+              this.$nextTick(() => {
+                  if (this.$refs.popupCommentInput) {
+                      this.$refs.popupCommentInput.focus();
+                  }
+              });
+          } else {
+              this.openInlineInput();
+          }
       },
       handleCommentDelete(comment) {
           showConfirmDialog({
@@ -938,7 +993,15 @@ export default {
           addComment(params).then(() => {
               this.$message.success("评论成功");
               this.closeInlineInput();
-              this.loadComments(this.review.id);
+              this.loadComments(this.review.id).then(() => {
+                  if (this.showReviewPopup) {
+                      this.allComments = [];
+                      this.allCommentsPage = 1;
+                      this.allCommentsNoMore = false;
+                      this.allCommentsLoading = false;
+                      this.loadAllComments();
+                  }
+              });
           });
       },
       toggleReplies(comment) {
@@ -1035,17 +1098,25 @@ export default {
               }
           }
       },
-      writeCommentFromPopup() {
+      handlePopupInputFocus() {
+          if (!this.user || !this.user.id) {
+              this.$message.warning("请先登录");
+              if (this.$refs.popupCommentInput) {
+                  this.$refs.popupCommentInput.blur();
+              }
+              this.$router.push('/user/login');
+          }
+      },
+      publishCommentFromPopup() {
           if (!this.user || !this.user.id) {
               this.$message.warning("请先登录");
               this.$router.push('/user/login');
               return;
           }
-          this.replyToComment = null;
-          this.commentText = '';
           this.selectedImages = [];
-          this.showReviewPopup = false;
-          this.openInlineInput();
+          this.showEmojiPanel = false;
+          this.isInputFocus = false;
+          this.publishComment();
       }
   }
 }

@@ -2,13 +2,27 @@
   <PageLayout :loading="loading" skeleton-type="list" class="my-follow-page">
     <van-nav-bar title="我的关注" left-arrow @click-left="$router.back()" fixed placeholder z-index="1001" />
     
-    <van-tabs ref="tabsRef" v-model:active="activeTab" sticky :offset-top="46" color="#ff2442" :ellipsis="false">
+    <van-tabs
+      ref="tabsRef"
+      v-model:active="activeTab"
+      sticky
+      :offset-top="46"
+      color="#ff2442"
+      :ellipsis="false"
+      swipeable
+      animated
+    >
       <van-tab title="用户" />
       <van-tab title="店铺" />
       <van-tab title="商品" />
     </van-tabs>
 
-    <div class="list-container">
+    <div
+      class="list-container"
+      @touchstart.passive="onTouchStart"
+      @touchmove.passive="onTouchMove"
+      @touchend="onTouchEnd"
+    >
       <van-list
         v-model:loading="loading"
         :finished="finished"
@@ -168,6 +182,12 @@ const size = 10;
 const userId = ref(null);
 const initialized = ref(false);
 const tabsRef = ref(null);
+const touchStartX = ref(0);
+const touchStartY = ref(0);
+const touchEndX = ref(0);
+const touchEndY = ref(0);
+const swipeThreshold = 60;
+const maxVerticalTravel = 50;
 
 const refreshTabs = () => {
     const doResize = () => tabsRef.value?.resize?.();
@@ -180,6 +200,36 @@ const refreshTabs = () => {
 
 const handleWindowResize = () => {
     refreshTabs();
+};
+
+const onTouchStart = (e) => {
+    const touch = e.touches?.[0];
+    if (!touch) return;
+    touchStartX.value = touch.clientX;
+    touchStartY.value = touch.clientY;
+    touchEndX.value = touch.clientX;
+    touchEndY.value = touch.clientY;
+};
+
+const onTouchMove = (e) => {
+    const touch = e.touches?.[0];
+    if (!touch) return;
+    touchEndX.value = touch.clientX;
+    touchEndY.value = touch.clientY;
+};
+
+const onTouchEnd = () => {
+    const deltaX = touchEndX.value - touchStartX.value;
+    const deltaY = Math.abs(touchEndY.value - touchStartY.value);
+
+    if (deltaY > maxVerticalTravel) return;
+    if (Math.abs(deltaX) < swipeThreshold) return;
+
+    if (deltaX < 0 && activeTab.value < 2) {
+        activeTab.value += 1;
+    } else if (deltaX > 0 && activeTab.value > 0) {
+        activeTab.value -= 1;
+    }
 };
 
 const toShopDetail = (item) => {
