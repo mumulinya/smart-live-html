@@ -1,5 +1,5 @@
 <template>
-  <PageLayout :loading="loading" skeleton-type="list" class="my-follow-page">
+  <PageLayout :loading="pageLoading" skeleton-type="list" class="my-follow-page">
     <van-nav-bar title="我的关注" left-arrow @click-left="$router.back()" fixed placeholder z-index="1001" />
     
     <van-tabs
@@ -175,6 +175,7 @@ const router = useRouter();
 const route = useRoute();
 const activeTab = ref(0);
 const list = ref([]);
+const pageLoading = ref(true);
 const loading = ref(false);
 const finished = ref(false);
 const current = ref(1);
@@ -301,9 +302,11 @@ const onLoad = async () => {
        } else {
            current.value++;
        }
+       pageLoading.value = false;
    } catch (error) {
        console.error(error);
        loading.value = false;
+       pageLoading.value = false;
        finished.value = true; // Stop on error to avoid loop
    }
 };
@@ -322,6 +325,8 @@ const initUser = () => {
                localStorage.setItem('userInfo', JSON.stringify(u));
                onLoad();
            }
+        }).catch(() => {
+            pageLoading.value = false;
         });
     }
 };

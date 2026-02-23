@@ -1,5 +1,5 @@
 <template>
-  <PageLayout :loading="isLoading" skeleton-type="list" class="search-page" @scroll="onScroll">
+  <PageLayout :loading="pageLoading" skeleton-type="list" class="search-page" @scroll="onScroll">
     <!-- Header -->
     <div class="search-header">
       <div class="back-btn" @click="goBack">
@@ -103,7 +103,7 @@
         <van-tabs v-model:active="activeTab" swipeable type="line" animated sticky offset-top="54px" color="#ff6633" title-active-color="#ff6633" :ellipsis="false" @click-tab="onTabChange">
             
             <!-- SHOP TAB -->
-            <van-tab title="商铺" name="shop">
+            <van-tab title="店铺" name="shop">
                 <div class="tab-content">
                     <!-- Shop Filter Bar -->
                     <div class="meituan-filter-bar">
@@ -121,8 +121,8 @@
                     <!-- Selected Tags -->
                     <div class="selected-filters" v-if="selectedShopType || selectedDistance || selectedScore">
                           <div class="selected-filter-tag" v-if="selectedShopType">{{getShopTypeName(selectedShopType)}} <span class="close" @click="selectShopType(selectedShopType)">×</span></div>
-                          <div class="selected-filter-tag" v-if="selectedDistance">{{selectedDistance}} <span class="close" @click="selectedDistance=null;doSearch()">×</span></div>
-                          <div class="selected-filter-tag" v-if="selectedScore">{{selectedScore}} <span class="close" @click="selectedScore=null;doSearch()">×</span></div>
+                          <div class="selected-filter-tag" v-if="selectedDistance">{{selectedDistance}} <span class="close" @click="selectedDistance=null;triggerSearch()">×</span></div>
+                          <div class="selected-filter-tag" v-if="selectedScore">{{selectedScore}} <span class="close" @click="selectedScore=null;triggerSearch()">×</span></div>
                           <div class="clear-all" @click="clearAllFilters">清除全部</div>
                     </div>
 
@@ -131,19 +131,19 @@
                     <div v-else>
                         <div v-if="shopList.length===0" class="empty-result">
                             <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiByeD0iOCIgZmlsbD0iI0Y4RjlGQSIvPgo8cGF0aCBkPSJNNDAgNDJMMzIgMzRMMzQgMzJMNDAgMzhMNDYgMzJMNDggMzRMNDAgNDJaIiBmaWxsPSIjQzBDNEY0Ii8+CjxwYXRoIGQ9Ik00MCA0MkwzMiAzNEwzNCAzMkw0MCAzOEw0NiAzMkw0OCAzNEw0MCA0MloiIGZpbGw9IiNDMEM0RjQiLz4KPC9zdmc+Cg==">
-                            <p>暂无相关商铺</p>
+                            <p>暂无相关店铺</p>
                             <span class="sub-text">换个关键词试试吧</span>
                         </div>
                         <div class="shop-box" v-for="shop in shopList" :key="shop.id" @click="toShopDetail(shop)">
                             <div class="shop-img">
-                                <img :src="shop.images || '/imgs/default-shop.jpg'" @error="e => e.target.src='/imgs/default-shop.jpg'" alt="">
+                                <img :src="shop.images || '/imgs/default-shop.jpg'" loading="lazy" decoding="async" @error="e => e.target.src='/imgs/default-shop.jpg'" alt="">
                             </div>
                             <div class="shop-info">
                                 <div class="shop-title" v-html="shop.name"></div>
                                 <div class="shop-rate">
                                     <el-rate disabled :model-value="shop.score/10" text-color="#F63" :size="12"></el-rate>
                                     <span class="shop-score">{{(shop.score/10).toFixed(1)}}分</span>
-                                    <span class="shop-price" v-if="shop.avgPrice">￥{{shop.avgPrice}}/人</span>
+                                    <span class="shop-price" v-if="shop.avgPrice">￥{{ shop.avgPrice }}/人</span>
                                 </div>
                                 <div class="shop-area">
                                     <span class="area-text">{{shop.area || '未知区域'}} <span v-if="getShopTypeName(shop.typeId)">| {{getShopTypeName(shop.typeId)}}</span></span>
@@ -167,7 +167,7 @@
                               <div class="filter-text">{{selectedProductType !== null ? getProductTypeName(selectedProductType) : '类型'}} <i class="el-icon-arrow-down"></i></div>
                            </div>
                            <div class="filter-item" :class="{active: activeFilterTab==='status'}" @click="toggleFilterTab('status')">
-                              <div class="filter-text">{{selectedStatus ? getStatusName(selectedStatus) : '状态'}} <i class="el-icon-arrow-down"></i></div>
+                              <div class="filter-text">{{ selectedStatus ? getStatusName(selectedStatus) : '状态' }} <i class="el-icon-arrow-down"></i></div>
                            </div>
                            <div class="filter-item" :class="{active: activeFilterTab==='pShopType'}" @click="toggleFilterTab('pShopType')">
                               <div class="filter-text">{{selectedProductShopType ? getShopTypeName(selectedProductShopType) : '分类'}} <i class="el-icon-arrow-down"></i></div>
@@ -176,9 +176,9 @@
                       
                       <!-- Selected Tags -->
                      <div class="selected-filters" v-if="selectedProductType !== null || selectedStatus || selectedProductShopType">
-                           <div class="selected-filter-tag" v-if="selectedProductType !== null">{{getProductTypeName(selectedProductType)}} <span class="close" @click="selectedProductType=null;doSearch()">×</span></div>
-                           <div class="selected-filter-tag" v-if="selectedStatus">{{getStatusName(selectedStatus)}} <span class="close" @click="selectedStatus=null;doSearch()">×</span></div>
-                           <div class="selected-filter-tag" v-if="selectedProductShopType">{{getShopTypeName(selectedProductShopType)}} <span class="close" @click="selectedProductShopType=null;doSearch()">×</span></div>
+                           <div class="selected-filter-tag" v-if="selectedProductType !== null">{{getProductTypeName(selectedProductType)}} <span class="close" @click="selectedProductType=null;triggerSearch()">×</span></div>
+                           <div class="selected-filter-tag" v-if="selectedStatus">{{getStatusName(selectedStatus)}} <span class="close" @click="selectedStatus=null;triggerSearch()">×</span></div>
+                           <div class="selected-filter-tag" v-if="selectedProductShopType">{{getShopTypeName(selectedProductShopType)}} <span class="close" @click="selectedProductShopType=null;triggerSearch()">×</span></div>
                            <div class="clear-all" @click="clearAllFilters">清除全部</div>
                      </div>
                       
@@ -202,7 +202,7 @@
                                         <span class="voucher-flash-tag"><i class="el-icon-time"></i> 限时抢</span>
                                      </div>
                                      <div class="voucher-shops" v-if="v.shopName">
-                                        <span class="shop-label">适用商铺：</span>
+                                        <span class="shop-label">适用店铺：</span>
                                         <span class="shop-names">{{v.shopName}}</span>
                                      </div>
                                      <div class="voucher-time" v-if="v.beginTime && v.endTime">
@@ -216,11 +216,11 @@
                                   <div class="voucher-card-body gradient-pink">
                                      <div class="voucher-price-section">
                                         <div class="voucher-current-price">
-                                           <span class="price-symbol">¥</span>
+                                           <span class="price-symbol">￥</span>
                                            <span class="price-value">{{v.price}}</span>
                                         </div>
                                         <div class="voucher-original-info">
-                                           <span class="original-price">¥{{v.originalPrice}}</span>
+                                           <span class="original-price">￥{{v.originalPrice}}</span>
                                            <span class="discount-badge">{{(v.price/v.originalPrice*10).toFixed(1)}}折</span>
                                         </div>
                                         <div class="voucher-sold-info">
@@ -234,7 +234,7 @@
                                         <button class="voucher-buy-btn pink-text" @click.stop="doSeckill(v)" :disabled="isNotBegin(v) || isEnd(v) || v.stock < 1">
                                            {{ isEnd(v) ? '已结束' : (isNotBegin(v) ? '待开始' : (v.stock < 1 ? '已抢光' : '立即抢购')) }}
                                         </button>
-                                        <div class="voucher-stock">剩{{v.stock}}张</div>
+                                        <div class="voucher-stock">剩{{ v.stock }}件</div>
                                      </div>
                                   </div>
                               </div>
@@ -263,11 +263,11 @@
                                   <div class="voucher-card-body gradient-orange">
                                      <div class="voucher-price-section">
                                         <div class="voucher-current-price">
-                                           <span class="price-symbol">¥</span>
+                                           <span class="price-symbol">￥</span>
                                            <span class="price-value">{{v.price}}</span>
                                         </div>
                                         <div class="voucher-original-info">
-                                           <span class="original-price">¥{{v.originalPrice}}</span>
+                                           <span class="original-price">￥{{v.originalPrice}}</span>
                                            <span class="discount-badge">{{(v.price/v.originalPrice*10).toFixed(1)}}折</span>
                                         </div>
                                         <div class="voucher-sold-info">
@@ -290,7 +290,7 @@
                       <!-- Product Filter Bar (Reused or Simplified) -->
                       <div class="meituan-filter-bar">
                            <div class="filter-item" :class="{active: activeFilterTab==='status'}" @click="toggleFilterTab('status')">
-                              <div class="filter-text">{{selectedStatus ? getStatusName(selectedStatus) : '状态'}} <i class="el-icon-arrow-down"></i></div>
+                              <div class="filter-text">{{ selectedStatus ? getStatusName(selectedStatus) : '状态' }} <i class="el-icon-arrow-down"></i></div>
                            </div>
                            <div class="filter-item" :class="{active: activeFilterTab==='pShopType'}" @click="toggleFilterTab('pShopType')">
                               <div class="filter-text">{{selectedProductShopType ? getShopTypeName(selectedProductShopType) : '分类'}} <i class="el-icon-arrow-down"></i></div>
@@ -299,8 +299,8 @@
                       
                       <!-- Selected Tags -->
                      <div class="selected-filters" v-if="selectedStatus || selectedProductShopType">
-                           <div class="selected-filter-tag" v-if="selectedStatus">{{getStatusName(selectedStatus)}} <span class="close" @click="selectedStatus=null;doSearch()">×</span></div>
-                           <div class="selected-filter-tag" v-if="selectedProductShopType">{{getShopTypeName(selectedProductShopType)}} <span class="close" @click="selectedProductShopType=null;doSearch()">×</span></div>
+                           <div class="selected-filter-tag" v-if="selectedStatus">{{getStatusName(selectedStatus)}} <span class="close" @click="selectedStatus=null;triggerSearch()">×</span></div>
+                           <div class="selected-filter-tag" v-if="selectedProductShopType">{{getShopTypeName(selectedProductShopType)}} <span class="close" @click="selectedProductShopType=null;triggerSearch()">×</span></div>
                            <div class="clear-all" @click="clearAllFilters">清除全部</div>
                      </div>
                       
@@ -315,13 +315,13 @@
                       
                           <div class="shop-box" v-for="v in productList" :key="v.id" @click="toProductDetail(v)">
                               <div class="shop-img">
-                                  <img :src="v.images || v.image || '/imgs/default-goods.png'" @error="e => e.target.src='/imgs/default-goods.png'">
+                                  <img :src="v.images || v.image || '/imgs/default-goods.png'" loading="lazy" decoding="async" @error="e => e.target.src='/imgs/default-goods.png'">
                               </div>
                               <div class="shop-info">
                                   <div class="shop-title" v-html="v.name"></div>
                                   <div class="shop-rate">
-                                      <span class="shop-score" style="color:#ff5000; font-size: 16px;">¥{{ v.price }}</span>
-                                      <span class="shop-price" style="text-decoration: line-through; color:#999; font-size:12px">¥{{ v.originalPrice }}</span>
+                                      <span class="shop-score" style="color:#ff5000; font-size: 16px;">￥{{ v.price }}</span>
+                                      <span class="shop-price" style="text-decoration: line-through; color:#999; font-size:12px">￥{{ v.originalPrice }}</span>
                                   </div>
                                   <div class="shop-area">
                                       <span class="area-text">{{v.shopName || '通用'}}</span>
@@ -359,7 +359,7 @@
                         <div v-else class="waterfall-container">
                            <div v-for="b in blogList" :key="b.id" class="waterfall-item" @click="toBlogDetail(b)">
                               <div class="xhs-card-image">
-                                 <img :src="b.images" v-show="!b.imageError" @error="b.imageError=true" v-if="b.images">
+                                 <img :src="b.images" v-show="!b.imageError" v-if="b.images" loading="lazy" decoding="async" @error="b.imageError=true">
                                  <div class="img-placeholder" v-if="!b.images || b.imageError">
                                      图片加载失败
                                  </div>
@@ -368,7 +368,7 @@
                                  <div class="xhs-card-title" v-html="b.title || '无标题'"></div>
                                  <div class="xhs-card-footer">
                                     <div class="xhs-card-author" @click.stop="toUser(b)">
-                                       <img :src="b.icon || '/imgs/icons/default-icon.png'" @error="e => e.target.src='/imgs/icons/default-icon.png'">
+                                       <img :src="b.icon || '/imgs/icons/default-icon.png'" loading="lazy" decoding="async" @error="e => e.target.src='/imgs/icons/default-icon.png'">
                                        <span v-html="b.nickName || b.name || '用户'"></span>
                                     </div>
                                     <div class="xhs-card-like" @click.stop="addLike(b)">
@@ -397,14 +397,14 @@
                          </div>
                         <div v-for="u in userList" :key="u.id" class="user-item" @click="toUser(u)">
                             <div class="user-avatar">
-                               <img :src="u.icon || '/imgs/icons/default-icon.png'" @error="e => e.target.src='/imgs/icons/default-icon.png'">
+                               <img :src="u.icon || '/imgs/icons/default-icon.png'" loading="lazy" decoding="async" @error="e => e.target.src='/imgs/icons/default-icon.png'">
                             </div>
                             <div class="user-info">
                                  <div class="user-name" v-html="u.nickName || '未命名'"></div>
                                  <div class="user-desc">{{u.introduce || '这个人很懒，什么都没写'}}</div>
                             </div>
                             <button class="follow-btn" :class="{'following': u.isFollow}" @click.stop="toggleFollow(u)" v-if="user && u.id !== user.id">
-                                {{u.isFollow ? '已关注' : '关注'}}
+                                {{ u.isFollow ? '已关注' : '关注' }}
                             </button>
                         </div>
                     </div>
@@ -412,6 +412,7 @@
             </van-tab>
 
         </van-tabs>
+        <div ref="searchLoadSentinel" class="io-sentinel" aria-hidden="true"></div>
     </div>
   </PageLayout>
 </template>
@@ -433,6 +434,8 @@ import {
   clearSearchHistory,
   recordSearch,
 } from "@/api/search";
+import { throttle } from '@/utils/throttle';
+import { debounce } from '@/utils/debounce';
 
 
 import PageLayout from '@/components/PageLayout/PageLayout.vue';
@@ -451,6 +454,7 @@ export default {
       userList: [],
       productList: [],
       
+      pageLoading: true,
       isLoading: false,
       locationLoading: false,
       locationSuccess: false,
@@ -514,7 +518,10 @@ export default {
       touchEndX: 0,
       touchEndY: 0,
       swipeThreshold: 24,
-      maxVerticalTravel: 120
+      maxVerticalTravel: 120,
+      searchListObserver: null,
+      searchRequestToken: 0,
+      searchDebouncedRunner: null
     };
   },
   // ...
@@ -542,7 +549,7 @@ export default {
     },
     searchPlaceholder() {
         const placeholders = {
-          shop: '搜索商铺名称...',
+          shop: '搜索店铺名称...',
           voucher: '搜索代金券...',
           group: '搜索团购...',
           blog: '搜索笔记...',
@@ -552,6 +559,8 @@ export default {
     },
   },
   created() {
+    this.onScroll = throttle(this.onScroll, 120);
+    this.searchDebouncedRunner = debounce(() => this.doSearch(false), 180);
     this.checkLogin();
     this.loadShopTypes();
     this.reGetLocation();
@@ -576,8 +585,11 @@ export default {
     if (q.bt) this.selectedBlogType = Number(q.bt);
 
     // If state restored, trigger search
-    if (this.keyword || this.hasSelectedFilters || this.activeTab !== 'shop') {
+    const shouldAutoSearch = this.keyword || this.hasSelectedFilters || this.activeTab !== 'shop';
+    if (shouldAutoSearch) {
         this.doSearch();
+    } else {
+        this.pageLoading = false;
     }
   },
   activated() {
@@ -594,14 +606,79 @@ export default {
         this.keyword = k;
         this.doSearch();
     }
+    this.$nextTick(() => {
+      this.setupSearchSentinelObserver();
+    });
   },
   mounted() {
+    this.$nextTick(() => {
+      this.setupSearchSentinelObserver();
+    });
     // window.addEventListener('scroll', this.onScroll);
   },
+  deactivated() {
+    this.destroySearchSentinelObserver();
+    if (typeof this.onScroll?.cancel === 'function') {
+      this.onScroll.cancel();
+    }
+    if (typeof this.searchDebouncedRunner?.cancel === 'function') {
+      this.searchDebouncedRunner.cancel();
+    }
+  },
   beforeUnmount() {
+    this.destroySearchSentinelObserver();
+    if (typeof this.onScroll?.cancel === 'function') {
+      this.onScroll.cancel();
+    }
+    if (typeof this.searchDebouncedRunner?.cancel === 'function') {
+      this.searchDebouncedRunner.cancel();
+    }
     // window.removeEventListener('scroll', this.onScroll);
   },
   methods: {
+    triggerSearch(immediate = false) {
+      if (immediate) {
+        if (typeof this.searchDebouncedRunner?.cancel === 'function') {
+          this.searchDebouncedRunner.cancel();
+        }
+        this.doSearch(false);
+        return;
+      }
+      if (typeof this.searchDebouncedRunner === 'function') {
+        this.searchDebouncedRunner();
+        return;
+      }
+      this.doSearch(false);
+    },
+    loadMoreSearchResults() {
+      if (this.loadingMore || this.noMore || !this.hasSearched || this.isLoading) return;
+      this.doSearch(true);
+    },
+    setupSearchSentinelObserver() {
+      this.destroySearchSentinelObserver();
+      if (typeof window === 'undefined' || !('IntersectionObserver' in window)) return;
+      const sentinel = this.$refs.searchLoadSentinel;
+      if (!sentinel) return;
+      const root = this.$el && this.$el.classList && this.$el.classList.contains('search-page')
+        ? this.$el
+        : null;
+      this.searchListObserver = new IntersectionObserver((entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          this.loadMoreSearchResults();
+        }
+      }, {
+        root,
+        rootMargin: '0px 0px 180px 0px',
+        threshold: 0
+      });
+      this.searchListObserver.observe(sentinel);
+    },
+    destroySearchSentinelObserver() {
+      if (this.searchListObserver && typeof this.searchListObserver.disconnect === 'function') {
+        this.searchListObserver.disconnect();
+      }
+      this.searchListObserver = null;
+    },
     onTouchStart(e) {
       const touch = e.touches && e.touches[0];
       if (!touch) return;
@@ -755,22 +832,22 @@ export default {
     selectShopType(id) {
       this.selectedShopType = this.selectedShopType === id ? null : id;
       this.activeFilterTab = "";
-      this.doSearch();
+      this.triggerSearch();
     },
     selectDistance(d) {
       this.selectedDistance = d.label === "全部" ? null : d.label;
       this.activeFilterTab = "";
-      this.doSearch();
+      this.triggerSearch();
     },
     selectScore(s) {
       this.selectedScore = s.label === "全部" ? null : s.label;
       this.activeFilterTab = "";
-      this.doSearch();
+      this.triggerSearch();
     },
     selectProductType(t) {
         this.selectedProductType = t.label === "全部" ? null : t.value;
         this.activeFilterTab = "";
-        this.doSearch();
+        this.triggerSearch();
     },
     clearAllFilters() {
       this.selectedShopType = null;
@@ -779,16 +856,19 @@ export default {
       this.selectedScore = null;
       this.selectedProductType = null;
       this.selectedBlogType = null;
-      this.doSearch();
+      this.triggerSearch();
     },
     changeTab(tab) {
         this.activeTab = tab;
-        this.doSearch();
+        this.triggerSearch();
     },
     onTabChange(name) {
         // activeTab is already updated by v-model
         this.activeFilterTab = ""; // Close filters
-        this.doSearch();
+        this.triggerSearch();
+        this.$nextTick(() => {
+          this.setupSearchSentinelObserver();
+        });
     },
     getStatusName(val) {
         const s = this.statusOptions.find(o => o.value === val);
@@ -797,301 +877,234 @@ export default {
     selectStatus(s) {
         this.selectedStatus = s.label === "全部" ? null : s.value;
         this.activeFilterTab = "";
-        this.doSearch();
+        this.triggerSearch();
     },
     selectProductShopType(id) {
         this.selectedProductShopType = id;
         this.activeFilterTab = "";
-        this.doSearch();
+        this.triggerSearch();
     },
     selectBlogType(id) {
         this.selectedBlogType = this.selectedBlogType === id ? null : id;
         this.activeFilterTab = "";
-        this.doSearch();
+        this.triggerSearch();
     },
     // Main Search
     doSearch(isLoadMore = false) {
-       // Update URL with current state
-       const query = {
-           k: this.keyword || undefined,
-           tab: this.activeTab,
-           st: this.selectedShopType || undefined,
-           sd: this.selectedDistance || undefined,
-           ss: this.selectedScore || undefined,
-           vt: this.selectedProductType !== null ? this.selectedProductType : undefined,
-           vs: this.selectedStatus !== null ? this.selectedStatus : undefined,
-           vst: this.selectedProductShopType || undefined,
-           bt: this.selectedBlogType || undefined
-       };
-       this.$router.replace({ query }).catch(() => {});
-
-       // if (!this.keyword && !this.hasSelectedFilters) { ... }
-      if (this.keyword && !isLoadMore) {
-          this.saveHistory(this.keyword);
-          recordSearch(this.keyword);
+      if (!isLoadMore && typeof this.searchDebouncedRunner?.cancel === 'function') {
+        this.searchDebouncedRunner.cancel();
       }
-      
+      if (isLoadMore && (this.loadingMore || this.noMore || this.isLoading || !this.hasSearched)) {
+        return;
+      }
+
+      const requestToken = ++this.searchRequestToken;
+      const requestTab = this.activeTab;
+      const targetPage = isLoadMore ? this.page + 1 : 1;
+
       if (!isLoadMore) {
-          this.hasSearched = true;
-          this.isLoading = true;
-          this.page = 1;
-          this.noMore = false;
-          // Clear only if new search
-          this.shopList = [];
-          this.blogList = [];
-          this.userList = [];
-          this.productList = [];
-      } else {
-          this.loadingMore = true;
-          this.page++;
+        // Update URL with current state
+        const query = {
+          k: this.keyword || undefined,
+          tab: requestTab,
+          st: this.selectedShopType || undefined,
+          sd: this.selectedDistance || undefined,
+          ss: this.selectedScore || undefined,
+          vt: this.selectedProductType !== null ? this.selectedProductType : undefined,
+          vs: this.selectedStatus !== null ? this.selectedStatus : undefined,
+          vst: this.selectedProductShopType || undefined,
+          bt: this.selectedBlogType || undefined
+        };
+        this.$router.replace({ query }).catch(() => {});
       }
 
-      const promises = [];
-      const pageParams = { page: this.page, size: 10 };
+      if (this.keyword && !isLoadMore) {
+        this.saveHistory(this.keyword);
+        recordSearch(this.keyword);
+      }
 
-        // SHOP
-        if (this.activeTab === "shop") {
-          const filters = {};
-          if (this.selectedShopType) filters.typeId = this.selectedShopType;
-          if (this.selectedScore) {
-            const s = this.scoreOptions.find((o) => o.label === this.selectedScore);
-            if (s) filters.minScore = s.value;
-          }
-           // Remove distance from filters object as it is passed at top level
-  
-          const data = {
-            keyword: this.keyword,
-            filters,
-            ...pageParams,
-            // Match search.html params
-            lat: this.userLocation ? this.userLocation.y : undefined,
-            lon: this.userLocation ? this.userLocation.x : undefined,
-            // Default to 'all' if no selection
-            distance: this.selectedDistance 
-                      ? (this.distanceOptions.find(o => o.label === this.selectedDistance)?.value || "all") 
-                      : "all"
-          };
-          
+      if (!isLoadMore) {
+        this.hasSearched = true;
+        this.isLoading = true;
+        this.page = 1;
+        this.noMore = false;
+        this.shopList = [];
+        this.blogList = [];
+        this.userList = [];
+        this.productList = [];
+      } else {
+        this.loadingMore = true;
+      }
 
-          promises.push(
-            searchShops(data).then((res) => {
-              let list = [];
-              if (Array.isArray(res)) list = res;
-              else if (res && Array.isArray(res.list)) list = res.list;
-              else if (res && res.data && Array.isArray(res.data.list)) list = res.data.list;
+      const pageParams = { page: targetPage, size: 10 };
+      const isStale = () => requestToken !== this.searchRequestToken || requestTab !== this.activeTab;
 
-              list.forEach((s) => {
-                const rawImg = s.shopLogo || s.images;
-                if (rawImg) {
-                    if (rawImg.startsWith('http')) {
-                        s.images = rawImg;
-                    } else {
-                        s.images = this.$fileURL + rawImg.split(",")[0];
-                    }
-                }
-              });
-              
-              if(isLoadMore) {
-                  this.shopList = [...this.shopList, ...list];
-              } else {
-                  this.shopList = list;
-                  this.isLoading = false;
-              }
-              this.loadingMore = false;
-              if (list.length < 10) this.noMore = true;
-            }).catch(() => {
-                this.isLoading = false;
-                this.loadingMore = false;
-            })
-          );
+      const extractList = (res) => {
+        if (Array.isArray(res)) return res;
+        if (res && Array.isArray(res.list)) return res.list;
+        if (res && Array.isArray(res.data)) return res.data;
+        if (res && res.data && Array.isArray(res.data.list)) return res.data.list;
+        if (res && res.data && Array.isArray(res.data.records)) return res.data.records;
+        if (res && res.data && res.data.data && Array.isArray(res.data.data.list)) return res.data.data.list;
+        if (res && res.data && res.data.data && Array.isArray(res.data.data.records)) return res.data.data.records;
+        return [];
+      };
+
+      const applyList = (key, list) => {
+        if (isStale()) return;
+        const safeList = Array.isArray(list) ? list : [];
+        if (isLoadMore) {
+          this[key] = [...this[key], ...safeList];
+        } else {
+          this[key] = safeList;
         }
+        this.noMore = safeList.length < 10;
+        this.page = targetPage;
+      };
 
+      let requestPromise = Promise.resolve();
 
-        
-        // PRODUCT
-        if (this.activeTab === "product") {
-             const filters = {};
-             if(this.selectedProductShopType) filters.shopTypeId = this.selectedProductShopType;
-             if(this.selectedProductType !== null) filters.type = this.selectedProductType; // 0 or 1
-             if(this.selectedStatus !== null) filters.status = this.selectedStatus;
-             
-             const data = {
-                 ...pageParams,
-                 keyword: this.keyword,
-                 lat: this.userLocation ? this.userLocation.y : undefined,
-                 lon: this.userLocation ? this.userLocation.x : undefined,
-                 filters,
-                 category: null // Pass category to backend
-             };
-             // Note: API for searchProducts might differ, check if it accepts filters obj or flat.
-             // Assuming similar structure or flattening if needed.
-             // Actually backend might expect flat params for some. But standard pattern is object.
-             
-             promises.push(
-               searchProducts(data).then(res => {
-                   let list = [];
-                  if(Array.isArray(res)) list = res;
-                  else if(res && Array.isArray(res.list)) list = res.list;
-                  else if(res && Array.isArray(res.data)) list = res.data;
-                  else if(res && res.data && Array.isArray(res.data.list)) list = res.data.list;
-                  else if(res && res.data && Array.isArray(res.data.records)) list = res.data.records;
-                  else if(res && res.data && res.data.data && Array.isArray(res.data.data.list)) list = res.data.data.list;
-                  else if(res && res.data && res.data.data && Array.isArray(res.data.data.records)) list = res.data.data.records;
-                  
-                  this.productList = list || [];
-                  this.isLoading = false;
-               }).catch(() => this.isLoading = false)
-             );
-        }
-        
-      // BLOG
-      if (this.activeTab === "blog") {
+      if (requestTab === "shop") {
         const filters = {};
-        if (this.selectedBlogType) {
-           filters.typeId = this.selectedBlogType;
+        if (this.selectedShopType) filters.typeId = this.selectedShopType;
+        if (this.selectedScore) {
+          const score = this.scoreOptions.find((o) => o.label === this.selectedScore);
+          if (score) filters.minScore = score.value;
         }
-        
-        const params = {
-           keyword: this.keyword, 
-           filters,
-           ...pageParams 
+
+        const data = {
+          keyword: this.keyword,
+          filters,
+          ...pageParams,
+          lat: this.userLocation ? this.userLocation.y : undefined,
+          lon: this.userLocation ? this.userLocation.x : undefined,
+          distance: this.selectedDistance
+            ? (this.distanceOptions.find(o => o.label === this.selectedDistance)?.value || "all")
+            : "all"
         };
 
-        promises.push(
-          searchBlogs(params).then((res) => {
-            let list = [];
-            if (Array.isArray(res)) list = res;
-            else if (res && Array.isArray(res.list)) list = res.list;
-            else if (res && res.data && Array.isArray(res.data.list)) list = res.data.list;
-
-            list.forEach((b) => {
-              // 1. Clean Title (handle Highlight tags escaping)
-              if (b.title) {
-                 // If title contains &lt;span, unescape it
-                 b.title = b.title.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"');
-              }
-
-              // 2. Process Images
-              let img = b.images;
-              // If images is raw HTML (highlighted), strip tags
-              if (img && (img.indexOf('<') > -1 || img.indexOf('&lt;') > -1)) {
-                 img = img.replace(/<[^>]+>/g, "").replace(/&lt;[^&]+&gt;/g, "");
-              }
-
-              if (img) {
-                 b.images = img.split(",")[0];
-                 if (b.images && !b.images.startsWith("http")) b.images = this.$fileURL + b.images;
-              } else if (b.content) {
-                 // Fallback: extract first image from content
-                 const match = b.content.match(/<img[^>]+src="([^">]+)"/);
-                 if (match) {
-                    let src = match[1];
-                    if (src && !src.startsWith("http")) src = this.$fileURL + src;
-                    b.images = src;
-                 }
-              }
-
-              if (b.icon) b.icon = this.$fileURL + b.icon;
-            });
-            if(isLoadMore) {
-                this.blogList = [...this.blogList, ...list];
+        requestPromise = searchShops(data).then((res) => {
+          if (isStale()) return;
+          const list = extractList(res);
+          list.forEach((item) => {
+            const rawImg = item.shopLogo || item.images;
+            if (!rawImg) return;
+            if (rawImg.startsWith('http')) {
+              item.images = rawImg;
             } else {
-                this.blogList = list;
-                this.isLoading = false;
+              item.images = this.$fileURL + rawImg.split(",")[0];
             }
-            this.loadingMore = false;
-            if (list.length < 10) this.noMore = true;
-          }).catch(() => {
-              this.isLoading = false;
-              this.loadingMore = false;
-          })
-        );
-      }
-
-      // USER
-      if (this.activeTab === "user") {
-        promises.push(
-          searchUsers({ keyword: this.keyword, ...pageParams }).then((res) => {
-            let list = [];
-            if (Array.isArray(res)) list = res;
-            else if (res && Array.isArray(res.list)) list = res.list;
-            else if (res && res.data && Array.isArray(res.data.list)) list = res.data.list;
-
-            list.forEach((u) => {
-              if (u.icon) u.icon = this.$fileURL + u.icon;
-            });
-            if(isLoadMore) {
-                this.userList = [...this.userList, ...list];
-            } else {
-                this.userList = list;
-                this.isLoading = false;
-            }
-            this.loadingMore = false;
-            if (list.length < 10) this.noMore = true;
-          }).catch(() => {
-              this.isLoading = false;
-              this.loadingMore = false;
-          })
-        );
-      }
-
-      // VOUCHER & GROUP
-      if (this.activeTab === "voucher" || this.activeTab === "group") {
+          });
+          applyList('shopList', list);
+        });
+      } else if (requestTab === "product") {
         const filters = {};
-        if(this.selectedProductType !== null) filters.type = this.selectedProductType;
-        if(this.selectedStatus !== null) filters.status = this.selectedStatus;
-        if(this.selectedProductShopType !== null) filters.shopTypeId = this.selectedProductShopType;
-        
-        // category: 1 for Voucher, 2 for Group
-        const category = this.activeTab === "voucher" ? 1 : 2;
-        filters.category = category;
+        if (this.selectedProductShopType) filters.shopTypeId = this.selectedProductShopType;
+        if (this.selectedProductType !== null) filters.type = this.selectedProductType;
+        if (this.selectedStatus !== null) filters.status = this.selectedStatus;
 
-        promises.push(
-          searchProducts({ keyword: this.keyword, filters, ...pageParams }).then((res) => {
-             let list = [];
-             if (Array.isArray(res)) list = res;
-             else if (res && Array.isArray(res.list)) list = res.list;
-             else if (res && res.data && Array.isArray(res.data.list)) list = res.data.list;
-             
-             list.forEach((v) => {
-                 const rawImg = v.shopLogo || v.images || v.image;
-                 if (rawImg) {
-                     if (rawImg.startsWith('http')) {
-                         v.images = rawImg;
-                     } else {
-                         v.images = this.$fileURL + rawImg.split(",")[0];
-                     }
-                 }
-             });
+        const data = {
+          ...pageParams,
+          keyword: this.keyword,
+          lat: this.userLocation ? this.userLocation.y : undefined,
+          lon: this.userLocation ? this.userLocation.x : undefined,
+          filters,
+          category: null
+        };
 
-             if(isLoadMore) {
-                 this.productList = [...this.productList, ...list];
-             } else {
-                 this.productList = list || [];
-                 this.isLoading = false;
-             }
-             this.loadingMore = false;
-             if ((list || []).length < 10) this.noMore = true;
-          }).catch(() => {
-              this.isLoading = false;
-              this.loadingMore = false;
-          })
-        );
+        requestPromise = searchProducts(data).then((res) => {
+          if (isStale()) return;
+          const list = extractList(res);
+          applyList('productList', list);
+        });
+      } else if (requestTab === "blog") {
+        const filters = {};
+        if (this.selectedBlogType) {
+          filters.typeId = this.selectedBlogType;
+        }
+        const params = { keyword: this.keyword, filters, ...pageParams };
+
+        requestPromise = searchBlogs(params).then((res) => {
+          if (isStale()) return;
+          const list = extractList(res);
+          list.forEach((blog) => {
+            if (blog.title) {
+              blog.title = blog.title.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"');
+            }
+
+            let img = blog.images;
+            if (img && (img.indexOf('<') > -1 || img.indexOf('&lt;') > -1)) {
+              img = img.replace(/<[^>]+>/g, "").replace(/&lt;[^&]+&gt;/g, "");
+            }
+
+            if (img) {
+              blog.images = img.split(",")[0];
+              if (blog.images && !blog.images.startsWith("http")) blog.images = this.$fileURL + blog.images;
+            } else if (blog.content) {
+              const match = blog.content.match(/<img[^>]+src="([^">]+)"/);
+              if (match) {
+                let src = match[1];
+                if (src && !src.startsWith("http")) src = this.$fileURL + src;
+                blog.images = src;
+              }
+            }
+
+            if (blog.icon) blog.icon = this.$fileURL + blog.icon;
+          });
+          applyList('blogList', list);
+        });
+      } else if (requestTab === "user") {
+        requestPromise = searchUsers({ keyword: this.keyword, ...pageParams }).then((res) => {
+          if (isStale()) return;
+          const list = extractList(res);
+          list.forEach((user) => {
+            if (user.icon) user.icon = this.$fileURL + user.icon;
+          });
+          applyList('userList', list);
+        });
+      } else if (requestTab === "voucher" || requestTab === "group") {
+        const filters = {};
+        if (this.selectedProductType !== null) filters.type = this.selectedProductType;
+        if (this.selectedStatus !== null) filters.status = this.selectedStatus;
+        if (this.selectedProductShopType !== null) filters.shopTypeId = this.selectedProductShopType;
+        filters.category = requestTab === "voucher" ? 1 : 2;
+
+        requestPromise = searchProducts({ keyword: this.keyword, filters, ...pageParams }).then((res) => {
+          if (isStale()) return;
+          const list = extractList(res);
+          list.forEach((item) => {
+            const rawImg = item.shopLogo || item.images || item.image;
+            if (!rawImg) return;
+            if (rawImg.startsWith('http')) {
+              item.images = rawImg;
+            } else {
+              item.images = this.$fileURL + rawImg.split(",")[0];
+            }
+          });
+          applyList('productList', list);
+        });
       }
 
-      Promise.all(promises).finally(() => {
-        setTimeout(() => {
-            this.isLoading = false;
-        }, 300);
-      });
+      requestPromise
+        .catch((err) => {
+          if (isStale()) return;
+          console.error('搜索请求错误:', err);
+        })
+        .finally(() => {
+          if (isStale()) return;
+          this.isLoading = false;
+          this.pageLoading = false;
+          this.loadingMore = false;
+          this.$nextTick(() => {
+            this.setupSearchSentinelObserver();
+          });
+        });
     },
     onScroll(e) {
        const el = e.target;
 
-       if(this.loadingMore || this.noMore || !this.hasSearched || this.isLoading) return;
-
        if (el.scrollTop + el.clientHeight >= el.scrollHeight - 100) {
-           this.doSearch(true);
+           this.loadMoreSearchResults();
        }
     },
 
@@ -1114,9 +1127,13 @@ export default {
     },
 
     resetToSearchHome() {
+      if (typeof this.searchDebouncedRunner?.cancel === 'function') {
+        this.searchDebouncedRunner.cancel();
+      }
       this.keyword = "";
       this.activeTab = "shop";
       this.activeFilterTab = "";
+      this.destroySearchSentinelObserver();
 
       this.selectedShopType = null;
       this.selectedDistance = null;
@@ -1255,6 +1272,10 @@ export default {
   background: #f5f5f5;
   height: 100vh;
   overflow-y: auto;
+}
+.io-sentinel {
+  width: 100%;
+  height: 1px;
 }
 .search-header {
   position: sticky;
@@ -2787,3 +2808,6 @@ export default {
     color: #999 !important;
 }
 </style>
+
+
+

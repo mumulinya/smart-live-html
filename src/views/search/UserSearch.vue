@@ -115,8 +115,8 @@
             <!-- Blog Results -->
             <div v-if="activeScope === 'blog'" class="blog-list">
                 <div class="waterfall-container">
-                     <div class="waterfall-column" v-for="(col, i) in [0, 1]" :key="i">
-                        <div class="waterfall-item" v-for="b in results.filter((_, index) => index % 2 === i)" :key="b.id" @click="toBlogDetail(b)">
+                     <div class="waterfall-column" v-for="(col, i) in blogColumns" :key="'blog-col-' + i">
+                        <div class="waterfall-item" v-for="b in col" :key="b.id" @click="toBlogDetail(b)">
                             <div class="card-img-box">
                                 <img :src="getFirstImage(b.images)" class="work-cover" loading="lazy">
                             </div>
@@ -297,6 +297,10 @@ export default {
               return `搜索你${this.getSubScopeName()}的${this.getScopeName()}`;
           }
           return '搜索...';
+      },
+      blogColumns() {
+          if (this.activeScope !== 'blog') return [[], []];
+          return this.splitWaterfallColumns(this.results);
       }
   },
   created() {
@@ -331,6 +335,14 @@ export default {
      }
   },
   methods: {
+    splitWaterfallColumns(list) {
+        const columns = [[], []];
+        if (!Array.isArray(list) || list.length === 0) return columns;
+        list.forEach((item, index) => {
+            columns[index % 2].push(item);
+        });
+        return columns;
+    },
     normalizeScope(scope) {
         return this.scopeOrder.includes(scope) ? scope : 'blog';
     },

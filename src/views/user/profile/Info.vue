@@ -190,10 +190,22 @@
                 </template>
                 <div class="tab-content">
                     <div class="waterfall-container">
-                        <div class="waterfall-column" v-for="(col, i) in [0, 1]" :key="i">
-                            <div class="waterfall-item" v-for="b in blogs.filter((_, index) => index % 2 === i)" :key="b.id" @click="toBlogDetail(b)">
-                                <div class="card-img-box" style="position: relative;">
-                                    <img :src="getFirstImage(b.images)" class="work-cover" loading="lazy" @error="handleImgError">
+                        <div class="waterfall-column" v-for="(col, i) in blogColumns" :key="'blog-col-' + i">
+                            <div class="waterfall-item" v-for="(b, index) in col" :key="b.id" @click="toBlogDetail(b)">
+                                <div class="card-img-box">
+                                    <img
+                                        v-show="!b.imgError"
+                                        :src="getFirstImage(b.images)"
+                                        class="work-cover note-cover"
+                                        :class="{ 'is-loaded': b.imgLoaded }"
+                                        :loading="getImageLoading(index)"
+                                        :fetchpriority="index < 2 ? 'high' : 'auto'"
+                                        decoding="async"
+                                        @error="handleImageError($event, b)"
+                                        @load="handleImageLoad($event, b)"
+                                    >
+                                    <div class="img-skeleton" v-if="!b.imgError && !b.imgLoaded"></div>
+                                    <div class="img-placeholder" v-if="b.imgError">图片加载失败</div>
                                     <div class="pinned-tag" v-if="b.pin || b.isTop">置顶</div>
                                 </div>
                                 <div class="card-info">
@@ -229,8 +241,8 @@
                 </template>
                 <div class="tab-content">
                     <div class="waterfall-container">
-                         <div class="waterfall-column" v-for="(col, i) in [0, 1]" :key="i">
-                            <div class="waterfall-item" v-for="b in collections.filter((_, index) => index % 2 === i)" :key="b.id" @click="toBlogDetail(b)">
+                         <div class="waterfall-column" v-for="(col, i) in collectionColumns" :key="'collection-col-' + i">
+                            <div class="waterfall-item" v-for="b in col" :key="b.id" @click="toBlogDetail(b)">
                                 <div class="card-img-box">
                                     <img :src="getFirstImage(b.images)" class="work-cover" loading="lazy" @error="handleImgError">
                                 </div>
@@ -267,8 +279,8 @@
                 </template>
                 <div class="tab-content">
                     <div class="waterfall-container">
-                         <div class="waterfall-column" v-for="(col, i) in [0, 1]" :key="i">
-                            <div class="waterfall-item" v-for="b in likes.filter((_, index) => index % 2 === i)" :key="b.id" @click="toBlogDetail(b)">
+                         <div class="waterfall-column" v-for="(col, i) in likeColumns" :key="'like-col-' + i">
+                            <div class="waterfall-item" v-for="b in col" :key="b.id" @click="toBlogDetail(b)">
                                 <div class="card-img-box">
                                     <img :src="getFirstImage(b.images)" class="work-cover" loading="lazy" @error="handleImgError">
                                 </div>
@@ -394,11 +406,13 @@ export default {
        isPulling: false,
        isExpanded: false,
        
-       showPreview: false,
-       previewImages: [],
-       
-       tabOrder: ['note', 'collection', 'likes', 'feed']
-    }
+        showPreview: false,
+        previewImages: [],
+        
+        tabOrder: ['note', 'collection', 'likes', 'feed'],
+        scrollTicking: false,
+        scrollRafId: null
+     }
   },
   computed: {
     coverUrl() {
@@ -428,6 +442,15 @@ export default {
              display: 'block'
         };
     },
+    blogColumns() {
+        return this.splitWaterfallColumns(this.blogs);
+    },
+    collectionColumns() {
+        return this.splitWaterfallColumns(this.collections);
+    },
+    likeColumns() {
+        return this.splitWaterfallColumns(this.likes);
+    },
 
   },
   created() {
@@ -456,12 +479,25 @@ export default {
      }
   },
   mounted() {
-      window.addEventListener('scroll', this.handleWindowScroll);
+      window.addEventListener('scroll', this.handleWindowScroll, { passive: true });
   },
   beforeUnmount() {
       window.removeEventListener('scroll', this.handleWindowScroll);
+      if (this.scrollRafId !== null) {
+          cancelAnimationFrame(this.scrollRafId);
+          this.scrollRafId = null;
+      }
+      this.scrollTicking = false;
   },
   methods: {
+     splitWaterfallColumns(list) {
+         const columns = [[], []];
+         if (!Array.isArray(list) || list.length === 0) return columns;
+         list.forEach((item, index) => {
+             columns[index % 2].push(item);
+         });
+         return columns;
+     },
      formatCount(num) {
          if (!num) return '0';
          if (num >= 10000) {
@@ -548,21 +584,27 @@ export default {
          });
      },
      handleWindowScroll() {
-         const scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop;
-         this.scrollTop = scrollTop;
-         
-         // Infinite load logic
-         const scrollHeight = document.documentElement.scrollHeight || document.body.scrollHeight;
-         const clientHeight = document.documentElement.clientHeight || document.body.clientHeight;
-         
-         if(scrollTop + clientHeight >= scrollHeight - 100) {
-             const type = this.activeTab;
-             if(type === 'note' && !this.blogLoading && !this.blogNoMore) this.loadMoreBlogs();
-             if(type === 'collection' && !this.collectionLoading && !this.collectionNoMore) this.loadMoreCollections();
-             if(type === 'likes' && !this.likeLoading && !this.likeNoMore) this.loadMoreLikes();
-             if(type === 'feed' && !this.feedLoading && !this.feedNoMore) this.loadMoreFeeds();
-         }
-     },
+          if (this.scrollTicking) return;
+          this.scrollTicking = true;
+          this.scrollRafId = requestAnimationFrame(() => {
+              this.scrollRafId = null;
+              this.scrollTicking = false;
+              const scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop;
+              this.scrollTop = scrollTop;
+              
+              // Infinite load logic
+              const scrollHeight = document.documentElement.scrollHeight || document.body.scrollHeight;
+              const clientHeight = document.documentElement.clientHeight || document.body.clientHeight;
+              
+              if(scrollTop + clientHeight >= scrollHeight - 100) {
+                  const type = this.activeTab;
+                  if(type === 'note' && !this.blogLoading && !this.blogNoMore) this.loadMoreBlogs();
+                  if(type === 'collection' && !this.collectionLoading && !this.collectionNoMore) this.loadMoreCollections();
+                  if(type === 'likes' && !this.likeLoading && !this.likeNoMore) this.loadMoreLikes();
+                  if(type === 'feed' && !this.feedLoading && !this.feedNoMore) this.loadMoreFeeds();
+              }
+          });
+      },
      // Data Query
      queryUser() {
         this.pageLoading = true;
@@ -760,7 +802,8 @@ export default {
            userAvatar: toUrl(avatarRaw),
            images: item.images,
            // Image error flag
-           imgError: false
+           imgError: false,
+           imgLoaded: false
         };
      },
 
@@ -892,6 +935,21 @@ export default {
         if(!img) return 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="150" viewBox="0 0 200 150"><rect fill="%23f5f5f5" width="200" height="150"/><text x="100" y="75" font-size="14" fill="%23ccc" text-anchor="middle" dominant-baseline="middle">暂无图片</text></svg>';
         if(img.startsWith('http')) return img;
         return this.$fileURL + img;
+     },
+     handleImageError(event, blog) {
+        if (blog && typeof blog === 'object') {
+            blog.imgError = true;
+            blog.imgLoaded = false;
+        }
+     },
+     handleImageLoad(event, blog) {
+        if (blog && typeof blog === 'object') {
+            blog.imgError = false;
+            blog.imgLoaded = true;
+        }
+     },
+     getImageLoading(index) {
+        return index < 3 ? 'eager' : 'lazy';
      },
      handleImgError(e) {
         e.target.onerror = null;
@@ -1343,10 +1401,49 @@ export default {
 }
 .card-img-box {
     width: 100%;
+    position: relative;
+    min-height: 120px;
+    background: #f8f9fa;
+    overflow: hidden;
 }
 .work-cover {
     width: 100%;
     display: block;
+}
+.note-cover {
+    opacity: 0;
+    transform: scale(1.015);
+    transition: opacity 220ms ease, transform 420ms ease;
+}
+.note-cover.is-loaded {
+    opacity: 1;
+    transform: scale(1);
+}
+.img-skeleton {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(100deg, #f3f4f6 30%, #ebeef2 45%, #f3f4f6 60%);
+    background-size: 300% 100%;
+    animation: profileImgShimmer 1.25s linear infinite;
+    pointer-events: none;
+}
+@keyframes profileImgShimmer {
+    0% {
+        background-position: 100% 0;
+    }
+    100% {
+        background-position: 0 0;
+    }
+}
+.img-placeholder {
+    width: 100%;
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #c0c4cc;
+    font-size: 14px;
+    background: #f5f5f5;
 }
 .pinned-tag {
     position: absolute;

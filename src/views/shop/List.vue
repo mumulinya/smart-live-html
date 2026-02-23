@@ -65,12 +65,12 @@
     <!-- Search Suggestion Panel Removed -->
 
     <!-- Shop List -->
-    <div class="shop-list-content" @scroll="onScroll" v-loading="isLoading">
+    <div class="shop-list-content" ref="shopListContainer" @scroll.passive="onScroll" v-loading="isLoading">
        <div v-if="shops.length > 0">
           <div class="shop-card" v-for="s in shops" :key="s.id" @click="toDetail(s.id)">
               <!-- Image with Fallback -->
               <div class="shop-card-img">
-                  <img :src="s.shopLogo || s.images" v-if="(s.shopLogo || s.images) && !s.imageError" @error="s.imageError = true" alt="">
+                  <img :src="s.shopLogo || s.images" v-if="(s.shopLogo || s.images) && !s.imageError" loading="lazy" decoding="async" @error="s.imageError = true" alt="">
                   <div class="img-placeholder" v-else>
                       <i class="el-icon-goods"></i>
                   </div>
@@ -81,15 +81,15 @@
                  <div class="shop-card-title" v-html="s.name"></div>
                  <!-- Row 2: Rating + Price -->
                  <div class="shop-card-stats">
-                    <el-rate disabled :model-value="s.score/10" text-color="#F63" :size="12"></el-rate>
-                    <span class="stats-score">{{(s.score/10).toFixed(1)}}</span>
-                    <span class="stats-comments">{{s.comments || 0}}条</span>
-                    <span class="stats-price" v-if="s.avgPrice">￥{{s.avgPrice}}/人</span>
+                    <el-rate disabled :model-value="Number(s.score || 0) / 10" text-color="#F63" :size="12"></el-rate>
+                    <span class="stats-score">{{ formatScore(s.score) }}</span>
+                    <span class="stats-comments">{{ s.comments || 0 }}条</span>
+                    <span class="stats-price" v-if="s.avgPrice">￥{{ s.avgPrice }}/人</span>
                  </div>
                  <!-- Row 3: Location + Distance -->
                  <div class="shop-card-location">
                     <span class="location-text">{{s.area || '未知区域'}} <span v-if="getShopTypeName(s.typeId)">| {{getShopTypeName(s.typeId)}}</span></span>
-                    <span class="location-distance" v-if="s.distance">{{s.distance < 1000 ? s.distance.toFixed(0) + 'm' : (s.distance/1000).toFixed(1) + 'km'}}</span>
+                    <span class="location-distance" v-if="s.distance">{{ formatDistance(s.distance) }}</span>
                  </div>
                  <!-- Row 4: Tags -->
                  <div class="shop-card-tags">
@@ -109,6 +109,7 @@
            <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiByeD0iOCIgZmlsbD0iI0Y4RjlGQSIvPgo8cGF0aCBkPSJNNDAgNDJMMzIgMzRMMzQgMzJMNDAgMzhMNDYgMzJMNDggMzRMNDAgNDJaIiBmaWxsPSIjQzBDNEY0Ii8+CjxwYXRoIGQ9Ik00MCA0MkwzMiAzNEwzNCAzMkw0MCAzOEw0NiAzMkw0OCAzNEw0MCA0MloiIGZpbGw9IiNDMEM0RjQiLz4KPC9zdmc+Cg==">
            <p>暂无相关店铺</p>
        </div>
+       <div ref="shopLoadSentinel" class="io-sentinel" aria-hidden="true"></div>
     </div>
     
   </div>
@@ -119,6 +120,8 @@ import { getShopTypes } from '@/api/shop';
 import { searchShops } from '@/api/search';
 import { locationUtil } from '@/utils/location';
 import { getCurrentUser } from '@/api/user'; // Need userId for history
+import { throttle } from '@/utils/throttle';
+import { debounce } from '@/utils/debounce';
 
 export default {
   name: 'ShopList',
@@ -166,13 +169,18 @@ export default {
           sortBy: '',
           x: 120.149993,
           y: 30.334229
-       }
-    }
+       },
+       shopListObserver: null,
+       shopRequestToken: 0,
+       searchDebouncedRunner: null
+     }
   },
   created() {
+     this.onScroll = throttle(this.onScroll, 120);
+     this.searchDebouncedRunner = debounce(() => this.doSearch(), 180);
      this.typeName = this.$route.query.name || '';
      this.params.typeId = parseInt(this.$route.query.type || 0);
-     this.selectedTypeId = this.params.typeId; // 同步选中状态
+     this.selectedTypeId = this.params.typeId; // sync selected type
 
      // Restore filters from Route
      if (this.$route.query.distance) {
@@ -185,6 +193,11 @@ export default {
      this.loadTypes();
      this.initLocation();
      this.loadUser();
+  },
+  mounted() {
+     this.$nextTick(() => {
+        this.setupShopSentinelObserver();
+     });
   },
   activated() {
      // Keep-alive hook: sync state from URL if changed
@@ -216,8 +229,43 @@ export default {
      if (changed) {
          this.doSearch();
      }
+     this.$nextTick(() => {
+        this.setupShopSentinelObserver();
+     });
+  },
+  deactivated() {
+     this.destroyShopSentinelObserver();
+     if (typeof this.onScroll?.cancel === 'function') {
+        this.onScroll.cancel();
+     }
+     if (typeof this.searchDebouncedRunner?.cancel === 'function') {
+        this.searchDebouncedRunner.cancel();
+     }
+  },
+  beforeUnmount() {
+     this.destroyShopSentinelObserver();
+     if (typeof this.onScroll?.cancel === 'function') {
+        this.onScroll.cancel();
+     }
+     if (typeof this.searchDebouncedRunner?.cancel === 'function') {
+        this.searchDebouncedRunner.cancel();
+     }
   },
   methods: {
+     triggerSearch(immediate = false) {
+         if (immediate) {
+            if (typeof this.searchDebouncedRunner?.cancel === 'function') {
+               this.searchDebouncedRunner.cancel();
+            }
+            this.doSearch();
+            return;
+         }
+         if (typeof this.searchDebouncedRunner === 'function') {
+            this.searchDebouncedRunner();
+            return;
+         }
+         this.doSearch();
+     },
      goBack() {
         if(this.isSearchMode) {
             // Exit search mode cleanly
@@ -257,7 +305,7 @@ export default {
          if(!id) return '全部分类';
          const t = this.shopTypeList.find(i => i.id === id);
          if (t) return t.name;
-         // Fallback: 如果列表未加载或找不到，优先使用 URL 参数中的 name
+         // Fallback: use route query name if type list is not ready.
          if (id === this.selectedTypeId && this.typeName) return this.typeName;
          return '全部分类';
      },
@@ -270,19 +318,19 @@ export default {
          this.typeName = this.getShopTypeName(id);
          this.activeFilterTab = '';
          this.updateRouteQuery();
-         this.doSearch();
+         this.triggerSearch();
      },
      selectDistance(d) {
          this.selectedDistance = d.label === '全部' ? null : d.label;
          this.activeFilterTab = '';
          this.updateRouteQuery();
-         this.doSearch();
+         this.triggerSearch();
      },
      selectScore(s) {
          this.selectedScore = s.label === '全部' ? null : s.label;
          this.activeFilterTab = '';
          this.updateRouteQuery();
-         this.doSearch();
+         this.triggerSearch();
      },
      updateRouteQuery() {
         // Remove 'name' from query as we rely on typeId to determine title
@@ -337,115 +385,175 @@ export default {
          this.searchText = txt;
          this.doSearch();
      },
+     formatScore(score) {
+        const numeric = Number(score);
+        if (!Number.isFinite(numeric) || numeric <= 0) return '0.0';
+        return (numeric / 10).toFixed(1);
+     },
+     formatDistance(distance) {
+        const numeric = Number(distance);
+        if (!Number.isFinite(numeric) || numeric <= 0) return '';
+        return numeric < 1000 ? `${numeric.toFixed(0)}m` : `${(numeric / 1000).toFixed(1)}km`;
+     },
+     resolveDistanceValue(label) {
+        if (!label) return 'all';
+        const matched = this.distanceOptions.find((option) => option.label === label);
+        if (matched) return matched.value || 'all';
+        if (label === '全部' || label === 'All') return 'all';
+        return 'all';
+     },
+     loadMoreShops() {
+        if (this.isSearchMode && this.hasSearched) return;
+        if (this.isLoading || this.noMore) return;
+        this.queryShops();
+     },
+     setupShopSentinelObserver() {
+        this.destroyShopSentinelObserver();
+        if (typeof window === 'undefined' || !('IntersectionObserver' in window)) return;
+        const sentinel = this.$refs.shopLoadSentinel;
+        const root = this.$refs.shopListContainer;
+        if (!sentinel || !root) return;
+        this.shopListObserver = new IntersectionObserver((entries) => {
+           if (entries.some((entry) => entry.isIntersecting)) {
+              this.loadMoreShops();
+           }
+        }, {
+           root,
+           rootMargin: '0px 0px 140px 0px',
+           threshold: 0
+        });
+        this.shopListObserver.observe(sentinel);
+     },
+     destroyShopSentinelObserver() {
+        if (this.shopListObserver && typeof this.shopListObserver.disconnect === 'function') {
+           this.shopListObserver.disconnect();
+        }
+        this.shopListObserver = null;
+     },
      doSearch() {
+         if (typeof this.searchDebouncedRunner?.cancel === 'function') {
+             this.searchDebouncedRunner.cancel();
+         }
          const hasFilters = this.selectedTypeId || this.selectedDistance || this.selectedScore;
          if (!this.searchText.trim() && !hasFilters) return;
+
+         const requestToken = ++this.shopRequestToken;
+         const isStale = () => requestToken !== this.shopRequestToken;
+
          this.isLoading = true;
          this.shops = [];
          this.noMore = false;
          this.hasSearched = true;
-         
-         
-         // History saving removed
-         
-         
-         // Construct filters and params matching Search module (Index.vue)
+
          const filters = {};
          if (this.selectedTypeId) filters.typeId = this.selectedTypeId;
-         
+
          if (this.selectedScore) {
             const s = this.scoreOptions.find(o => o.label === this.selectedScore);
             if (s) filters.minScore = s.value;
          }
-         
+
          const searchParams = {
              keyword: this.searchText,
              filters,
              page: 1,
-             size: 100, 
+             size: 20,
              lat: this.params.y,
              lon: this.params.x,
-             distance: this.selectedDistance 
-                       ? (this.distanceOptions.find(o => o.label === this.selectedDistance)?.value || "all") 
-                       : "all"
+             distance: this.resolveDistanceValue(this.selectedDistance)
          };
-         
+
          searchShops(searchParams).then(res => {
+             if (isStale()) return;
              let list = [];
              if (Array.isArray(res)) list = res;
              else if (res && Array.isArray(res.list)) list = res.list;
              else if (res && res.data && Array.isArray(res.data.list)) list = res.data.list;
-             
-             // Process images and logos
+
              list.forEach(s => {
-                 if(s.shopLogo && !s.shopLogo.startsWith('http')) {
+                 if (s.shopLogo && !s.shopLogo.startsWith('http')) {
                      s.shopLogo = this.$fileURL + s.shopLogo.split(',')[0];
                  }
-                 if(s.images && !s.images.startsWith('http')) {
+                 if (s.images && !s.images.startsWith('http')) {
                      s.images = this.$fileURL + s.images.split(',')[0];
                  }
              });
              this.shops = list;
-             
+
              if (this.shops.length === 0) {
                  this.$message.info('暂无相关店铺');
              }
+         }).catch((err) => {
+             if (isStale()) return;
+             console.error('search shops failed', err);
+             this.$message.error('店铺加载失败，请稍后重试');
          }).finally(() => {
+             if (isStale()) return;
              this.isLoading = false;
          });
      },
-     
+
      queryShops(reset = false) {
         if (this.isSearchMode) {
              this.doSearch();
              return;
-        } 
-        
+        }
+
         if (reset) {
            this.shops = [];
            this.params.current = 1;
            this.noMore = false;
         }
         if (this.isLoading || this.noMore) return;
-        
+
+        const requestToken = ++this.shopRequestToken;
+        const isStale = () => requestToken !== this.shopRequestToken;
+
         this.isLoading = true;
-        
-        // Construct payload for searchShops
+
         const filters = {};
-        if (this.params.typeId) filters.typeId = this.params.typeId;
-        
+        if (this.selectedTypeId) filters.typeId = this.selectedTypeId;
+
         const searchPayload = {
-           keyword: '', // Empty for default list
+           keyword: '',
            filters,
            page: this.params.current,
            size: 10,
            lat: this.params.y,
            lon: this.params.x,
-           distance: "all" // Default distance scope
+           distance: this.resolveDistanceValue(this.selectedDistance)
         };
 
         searchShops(searchPayload).then(res => {
+           if (isStale()) return;
            let list = [];
            if (Array.isArray(res)) list = res;
            else if (res && Array.isArray(res.list)) list = res.list;
            else if (res && res.data && Array.isArray(res.data.list)) list = res.data.list;
            else if (res && Array.isArray(res.data)) list = res.data;
-           
+
            if (!list || list.length === 0) {
               this.noMore = true;
            } else {
               list.forEach(s => {
-                  if(s.shopLogo && !s.shopLogo.startsWith('http')) {
+                  if (s.shopLogo && !s.shopLogo.startsWith('http')) {
                       s.shopLogo = this.$fileURL + s.shopLogo.split(',')[0];
                   }
-                  if(s.images && !s.images.startsWith('http')) {
+                  if (s.images && !s.images.startsWith('http')) {
                       s.images = (this.$fileURL || '') + s.images.split(',')[0];
                   }
               });
               this.shops = this.shops.concat(list);
               this.params.current++;
            }
-        }).finally(() => this.isLoading = false);
+        }).catch((err) => {
+           if (isStale()) return;
+           console.error('query shops failed', err);
+           this.$message.error('店铺列表加载失败，请稍后重试');
+        }).finally(() => {
+           if (isStale()) return;
+           this.isLoading = false;
+        });
      },
      initLocation(force = false) {
         locationUtil.getLocation(force).then(loc => {
@@ -458,13 +566,10 @@ export default {
         });
      },
      onScroll(e) {
-        // If in search mode, maybe no infinite scroll for name search (yet) 
-        // as searchShopsByName api is simple list usually.
-        if (this.isSearchMode && this.hasSearched) return; 
-        
+        if (typeof window !== 'undefined' && 'IntersectionObserver' in window) return;
         const { scrollTop, clientHeight, scrollHeight } = e.target;
         if (scrollTop + clientHeight >= scrollHeight - 50) {
-           this.queryShops();
+           this.loadMoreShops();
         }
      }
   }
@@ -518,6 +623,7 @@ export default {
 /* Shop List Layout */
 .shop-list-page { display: flex; flex-direction: column; height: 100vh; background-color: #fff; }
 .shop-list-content { flex: 1; overflow-y: auto; padding: 0; background: #f5f5f5; }
+.io-sentinel { width: 100%; height: 1px; }
 
 /* Shop Card - Meituan/Yelp Style */
 .shop-card {
@@ -734,3 +840,4 @@ export default {
 .type-dropdown-mask { position: fixed; top: 90px; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 90; }
 
 </style>
+

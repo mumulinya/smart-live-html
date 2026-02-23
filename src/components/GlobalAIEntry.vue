@@ -16,7 +16,7 @@
         
         <!-- Floating Icon -->
         <div class="ai-icon-wrapper">
-           <img src="@/assets/ai-avatar.jpg" class="ai-avatar-img" draggable="false" />
+           <img src="@/assets/ai-avatar-lite.jpg" class="ai-avatar-img" draggable="false" />
            <!-- Close Button -->
            <div class="ai-close">
              <el-icon><Close /></el-icon>
@@ -27,7 +27,7 @@
 
       <!-- Minimized/Docked Mode -->
       <div class="ai-docked" v-if="isMinimized" @click="restore">
-          <img src="@/assets/ai-avatar.jpg" class="dock-avatar-img" draggable="false" />
+          <img src="@/assets/ai-avatar-lite.jpg" class="dock-avatar-img" draggable="false" />
           <div class="dock-text">AI</div>
       </div>
 
@@ -41,7 +41,7 @@
              </div>
 
              <div class="mascot-section">
-                 <img src="@/assets/ai-avatar.jpg" class="breathing-mascot" />
+                 <img src="@/assets/ai-avatar-lite.jpg" class="breathing-mascot" />
                  <h2 class="mascot-greeting">Hello, 我是小只因!</h2>
                  <p class="mascot-sub">您的智能生活助手，帮您找店、找优惠。</p>
              </div>

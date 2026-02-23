@@ -104,10 +104,21 @@
 
                <div class="waterfall-container">
                  <div class="blog-box" v-for="(b, index) in followBlogs" :key="'follow-'+index">
-                   <div class="blog-img" @click="toBlogDetail(b)">
-                     <img v-show="!b.imgError" :src="b.img" :alt="b.title" @error="handleImageError($event, b)" @load="handleImageLoad($event, b)">
-                     <div class="img-placeholder" v-if="b.imgError">图片加载失败</div>
-                   </div>
+                    <div class="blog-img" @click="toBlogDetail(b)">
+                      <img
+                        v-show="!b.imgError"
+                        :class="{ 'is-loaded': b.imgLoaded }"
+                        :src="b.img"
+                        :alt="b.title"
+                        :loading="getImageLoading(index)"
+                        :fetchpriority="index < 2 ? 'high' : 'auto'"
+                        decoding="async"
+                        @error="handleImageError($event, b)"
+                        @load="handleImageLoad($event, b)"
+                      >
+                      <div class="img-skeleton" v-if="!b.imgError && !b.imgLoaded"></div>
+                      <div class="img-placeholder" v-if="b.imgError">图片加载失败</div>
+                    </div>
                    <div class="blog-content">
                      <div class="blog-title">{{ b.title || '无标题' }}</div>
                      <div class="blog-foot">
@@ -145,10 +156,21 @@
 
                <div class="waterfall-container">
                  <div class="blog-box" v-for="(b, index) in blogs" :key="index">
-                   <div class="blog-img" @click="toBlogDetail(b)">
-                     <img v-show="!b.imgError" :src="b.img" :alt="b.title" @error="handleImageError($event, b)" @load="handleImageLoad($event, b)">
-                     <div class="img-placeholder" v-if="b.imgError">图片加载失败</div>
-                   </div>
+                    <div class="blog-img" @click="toBlogDetail(b)">
+                      <img
+                        v-show="!b.imgError"
+                        :class="{ 'is-loaded': b.imgLoaded }"
+                        :src="b.img"
+                        :alt="b.title"
+                        :loading="getImageLoading(index)"
+                        :fetchpriority="index < 2 ? 'high' : 'auto'"
+                        decoding="async"
+                        @error="handleImageError($event, b)"
+                        @load="handleImageLoad($event, b)"
+                      >
+                      <div class="img-skeleton" v-if="!b.imgError && !b.imgLoaded"></div>
+                      <div class="img-placeholder" v-if="b.imgError">图片加载失败</div>
+                    </div>
                    <div class="blog-content">
                      <div class="blog-title">{{ b.title || '无标题' }}</div>
                      <div class="blog-foot">
@@ -185,10 +207,21 @@
 
                <div class="waterfall-container">
                  <div class="blog-box" v-for="(b, index) in blogs" :key="index">
-                   <div class="blog-img" @click="toBlogDetail(b)">
-                     <img v-show="!b.imgError" :src="b.img" :alt="b.title" @error="handleImageError($event, b)" @load="handleImageLoad($event, b)">
-                     <div class="img-placeholder" v-if="b.imgError">图片加载失败</div>
-                   </div>
+                    <div class="blog-img" @click="toBlogDetail(b)">
+                      <img
+                        v-show="!b.imgError"
+                        :class="{ 'is-loaded': b.imgLoaded }"
+                        :src="b.img"
+                        :alt="b.title"
+                        :loading="getImageLoading(index)"
+                        :fetchpriority="index < 2 ? 'high' : 'auto'"
+                        decoding="async"
+                        @error="handleImageError($event, b)"
+                        @load="handleImageLoad($event, b)"
+                      >
+                      <div class="img-skeleton" v-if="!b.imgError && !b.imgLoaded"></div>
+                      <div class="img-placeholder" v-if="b.imgError">图片加载失败</div>
+                    </div>
                    <div class="blog-content">
                      <div class="blog-title">{{ b.title || '无标题' }}</div>
                      <div class="blog-foot">
@@ -502,10 +535,15 @@ export default {
     },
     handleImageError(event, blog) {
       blog.imgError = true;
+      blog.imgLoaded = false;
       // event.target.style.display = 'none'; // Vue way: usign v-if in template
     },
     handleImageLoad(event, blog) {
       blog.imgError = false;
+      blog.imgLoaded = true;
+    },
+    getImageLoading(index) {
+      return index < 6 ? 'eager' : 'lazy';
     },
     handleAvatarError(event) {
       event.target.src = '/imgs/icons/default-icon.png';
@@ -603,6 +641,7 @@ export default {
                 b.icon = b.icon ? (this.$fileURL + b.icon) : '';
                 // If no image URL, set error true immediately so placeholder shows
                 b.imgError = !b.img;
+                b.imgLoaded = false;
                 
                if (!b.liked) b.liked = 0; // Ensure liked count exists
               });
@@ -697,6 +736,7 @@ export default {
                 item.id = item.targetId || item.id;
 
                 item.imgError = !item.img;
+                item.imgLoaded = false;
                 return item;
               });
               this.followBlogs = this.followBlogs.concat(mappedList);
@@ -1330,8 +1370,10 @@ export default {
 }
 
 .blog-img {
+  position: relative;
   width: 100%;
   height: auto; /* Variable height */
+  min-height: 120px;
   overflow: hidden;
   background: #f8f9fa;
   display: flex;
@@ -1341,8 +1383,35 @@ export default {
 
 .blog-img img {
   width: 100%;
-  height: 100%;
+  height: auto;
+  display: block;
   object-fit: cover;
+  opacity: 0;
+  transform: scale(1.015);
+  transition: opacity 220ms ease, transform 420ms ease;
+}
+
+.blog-img img.is-loaded {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.img-skeleton {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, #f3f4f6 30%, #ebeef2 45%, #f3f4f6 60%);
+  background-size: 300% 100%;
+  animation: blogImgShimmer 1.25s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes blogImgShimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: 0 0;
+  }
 }
 
 .img-placeholder {
@@ -1577,4 +1646,3 @@ export default {
   margin-bottom: 20px;
 }
 </style>
-

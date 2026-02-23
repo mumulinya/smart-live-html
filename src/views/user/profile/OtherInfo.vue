@@ -97,9 +97,9 @@
                 </template>
                 <div class="tab-content" v-infinite-scroll="loadMoreNotes" :infinite-scroll-disabled="noteLoading || noteNoMore">
                      <div v-if="notes.length > 0" class="waterfall-container">
-                         <div class="waterfall-column" v-for="(col, i) in [0, 1]" :key="i">
+                         <div class="waterfall-column" v-for="(col, i) in noteColumns" :key="'note-col-' + i">
                             <div class="waterfall-item" 
-                                 v-for="b in notes.filter((_, index) => index % 2 === i)" 
+                                 v-for="b in col" 
                                  :key="b.id"
                                  @click="toNoteDetail(b)"
                             >
@@ -142,9 +142,9 @@
                 </template>
                 <div class="tab-content" v-infinite-scroll="loadMoreCollections" :infinite-scroll-disabled="collectionLoading || collectionNoMore">
                      <div v-if="collections.length > 0" class="waterfall-container">
-                         <div class="waterfall-column" v-for="(col, i) in [0, 1]" :key="i">
+                         <div class="waterfall-column" v-for="(col, i) in collectionColumns" :key="'collection-col-' + i">
                             <div class="waterfall-item" 
-                                 v-for="b in collections.filter((_, index) => index % 2 === i)" 
+                                 v-for="b in col" 
                                  :key="b.id"
                                  @click="toNoteDetail(b)"
                             >
@@ -186,9 +186,9 @@
                 </template>
                 <div class="tab-content" v-infinite-scroll="loadMoreLikes" :infinite-scroll-disabled="likeLoading || likeNoMore">
                    <div v-if="likes.length > 0" class="waterfall-container">
-                      <div class="waterfall-column" v-for="(col, i) in [0, 1]" :key="i">
+                      <div class="waterfall-column" v-for="(col, i) in likeColumns" :key="'like-col-' + i">
                          <div class="waterfall-item" 
-                              v-for="b in likes.filter((_, index) => index % 2 === i)" 
+                              v-for="b in col" 
                               :key="b.id"
                               @click="toNoteDetail(b)"
                          >
@@ -279,14 +279,21 @@ export default {
       showPreview: false,
       
       navOpacity: 0,
-      previewImages: [] 
+      previewImages: [],
+      scrollTicking: false,
+      scrollRafId: null
     }
   },
   mounted() {
-    window.addEventListener('scroll', this.handleScroll);
+    window.addEventListener('scroll', this.handleScroll, { passive: true });
   },
   beforeUnmount() {
     window.removeEventListener('scroll', this.handleScroll);
+    if (this.scrollRafId !== null) {
+      cancelAnimationFrame(this.scrollRafId);
+      this.scrollRafId = null;
+    }
+    this.scrollTicking = false;
   },
   computed: {
     coverUrl() {
@@ -315,6 +322,15 @@ export default {
              objectFit: this.isExpanded ? 'contain' : 'cover',
              display: 'block'
         };
+    },
+    noteColumns() {
+        return this.splitWaterfallColumns(this.notes);
+    },
+    collectionColumns() {
+        return this.splitWaterfallColumns(this.collections);
+    },
+    likeColumns() {
+        return this.splitWaterfallColumns(this.likes);
     }
   },
   created() {
@@ -324,6 +340,14 @@ export default {
     }
   },
   methods: {
+    splitWaterfallColumns(list) {
+       const columns = [[], []];
+       if (!Array.isArray(list) || list.length === 0) return columns;
+       list.forEach((item, index) => {
+          columns[index % 2].push(item);
+       });
+       return columns;
+    },
     formatTime(time) {
         if(!time) return '';
         const d = new Date(time);
@@ -718,11 +742,17 @@ export default {
        }
     },
     handleScroll() {
-       const scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop;
-       let opacity = scrollTop / 100;
-       if (opacity > 1) opacity = 1;
-       if (opacity < 0) opacity = 0;
-       this.navOpacity = opacity;
+       if (this.scrollTicking) return;
+       this.scrollTicking = true;
+       this.scrollRafId = requestAnimationFrame(() => {
+         this.scrollRafId = null;
+         this.scrollTicking = false;
+         const scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop;
+         let opacity = scrollTop / 100;
+         if (opacity > 1) opacity = 1;
+         if (opacity < 0) opacity = 0;
+         this.navOpacity = opacity;
+       });
     },
     handlePreview(url) {
         if(!url) return;

@@ -75,7 +75,7 @@
        <transition name="slide-up">
          <div class="shop-sheet" :class="{ expanded: isSheetExpanded }" v-show="isSheetVisible">
            <div class="sheet-handle" @click="toggleSheet"></div>
-          <div class="shop-list" @scroll="onListScroll">
+          <div class="shop-list" @scroll.passive="onListScroll">
              <div class="empty-tip" v-if="shops.length === 0 && !isLoading">
                 附近暂无商家
              </div>
@@ -126,6 +126,64 @@ import FootBar from '@/components/FootBar.vue';
 import { locationUtil } from '@/utils/location';
 import { getShopTypes } from '@/api/shop';
 import { searchShops } from '@/api/search';
+import { throttle } from '@/utils/throttle';
+
+const AMAP_VERSION = '1.4.15';
+const AMAP_KEY = '60bdbf9b9cf98025c397ee43e8c25871';
+const AMAP_SCRIPT_ID = 'smart-live-amap-sdk';
+let amapScriptPromise = null;
+
+const loadAMapScript = () => {
+  if (typeof window === 'undefined') {
+    return Promise.reject(new Error('Window is not available'));
+  }
+  if (window.AMap) {
+    return Promise.resolve(window.AMap);
+  }
+  if (amapScriptPromise) {
+    return amapScriptPromise;
+  }
+
+  amapScriptPromise = new Promise((resolve, reject) => {
+    const src = `https://webapi.amap.com/maps?v=${AMAP_VERSION}&key=${AMAP_KEY}`;
+    let script = document.getElementById(AMAP_SCRIPT_ID);
+
+    const onLoaded = () => {
+      if (window.AMap) {
+        resolve(window.AMap);
+      } else {
+        amapScriptPromise = null;
+        reject(new Error('AMap loaded but API is unavailable'));
+      }
+    };
+
+    const onFailed = () => {
+      amapScriptPromise = null;
+      reject(new Error('Failed to load AMap SDK'));
+    };
+
+    if (script) {
+      if (window.AMap) {
+        resolve(window.AMap);
+        return;
+      }
+      script.addEventListener('load', onLoaded, { once: true });
+      script.addEventListener('error', onFailed, { once: true });
+      return;
+    }
+
+    script = document.createElement('script');
+    script.id = AMAP_SCRIPT_ID;
+    script.src = src;
+    script.async = true;
+    script.defer = true;
+    script.addEventListener('load', onLoaded, { once: true });
+    script.addEventListener('error', onFailed, { once: true });
+    document.head.appendChild(script);
+  });
+
+  return amapScriptPromise;
+};
 
 export default {
   name: 'MapIndex',
@@ -158,9 +216,7 @@ export default {
        searchTimer: null,
        isMarkerClick: false,
        suppressSearch: false,
-       searchTimer: null,
-       isMarkerClick: false,
-       suppressSearch: false,
+       searchRequestToken: 0,
        noMore: false,
        isSheetVisible: false
     }
@@ -175,9 +231,25 @@ export default {
          return t ? t.name : '全部分类';
       }
   },
+  created() {
+     this.onListScroll = throttle(this.onListScroll, 120);
+  },
   mounted() {
      this.loadTypes();
      this.initMap();
+  },
+  beforeUnmount() {
+     if (typeof this.onListScroll?.cancel === 'function') {
+       this.onListScroll.cancel();
+     }
+     if (this.searchTimer) {
+       clearTimeout(this.searchTimer);
+       this.searchTimer = null;
+     }
+     if (this.map && typeof this.map.destroy === 'function') {
+       this.map.destroy();
+       this.map = null;
+     }
   },
   methods: {
     goBack() {
@@ -251,7 +323,14 @@ export default {
           }
        });
     },
-    initMap() {
+    async initMap() {
+       try {
+         await loadAMapScript();
+       } catch (err) {
+         console.error('AMap SDK load failed:', err);
+         this.$message.error('地图加载失败，请稍后重试');
+         return;
+       }
        const query = this.$route.query;
        // If URL has specific center (from ShopDetail), use it
        if (query.center) {
@@ -273,7 +352,7 @@ export default {
     },
     reGetLocation() {
        locationUtil.getLocation().then(loc => {
-           if(loc) {
+           if(loc && this.map) {
                this.center = [loc.x, loc.y];
                this.map.setCenter(this.center);
                this.map.setZoom(16);
@@ -283,59 +362,56 @@ export default {
        });
     },
     renderMap() {
-       if(window.AMap) {
-          this.map = new window.AMap.Map('amap-container', {
-             zoom: this.zoom,
-             center: this.center,
-             mapStyle: 'amap://styles/whitesmoke',
-             zoomEnable: true,
-             scrollWheel: true,
-             touchZoom: true,
-             doubleClickZoom: true,
-             resizeEnable: true
-          });
-          
-          // Add controls
-          window.AMap.plugin(['AMap.ToolBar', 'AMap.Scale'], () => {
-             this.map.addControl(new window.AMap.ToolBar({
-                 position: 'LT', // Left Top
-                 offset: new window.AMap.Pixel(10, 120)
-             }));
-             this.map.addControl(new window.AMap.Scale());
-          });
-          
-          this.updateUserMarker();
-          
-          // Load shops (will use currentTypeId if set by loadTypes)
-          this.doSearch();
-          
-          // Map events
-          this.map.on('click', () => {
-             if (this.isMarkerClick) {
-                 this.isMarkerClick = false;
-                 return;
-             }
-             this.showFilters = false;
-             this.currentShopId = null;
-             this.showFilters = false;
-             this.currentShopId = null;
-             this.isSheetVisible = false; // Hide sheet on map click
-             this.renderShopMarkers(); // Reset styles
-          });
-          
-          
-          this.map.on('moveend', () => {
-             const center = this.map.getCenter();
-             this.center = [center.lng, center.lat];
-             this.debouncedSearch();
-          });
-          
-          this.map.on('zoomend', () => {
-             this.debouncedSearch();
-          });
-       } else {
-          setTimeout(this.renderMap, 500);
-       }
+       if (!window.AMap) return;
+       this.map = new window.AMap.Map('amap-container', {
+          zoom: this.zoom,
+          center: this.center,
+          mapStyle: 'amap://styles/whitesmoke',
+          zoomEnable: true,
+          scrollWheel: true,
+          touchZoom: true,
+          doubleClickZoom: true,
+          resizeEnable: true
+       });
+       
+       // Add controls
+       window.AMap.plugin(['AMap.ToolBar', 'AMap.Scale'], () => {
+          this.map.addControl(new window.AMap.ToolBar({
+              position: 'LT', // Left Top
+              offset: new window.AMap.Pixel(10, 120)
+          }));
+          this.map.addControl(new window.AMap.Scale());
+       });
+       
+       this.updateUserMarker();
+       
+       // Load shops (will use currentTypeId if set by loadTypes)
+       this.doSearch();
+       
+       // Map events
+       this.map.on('click', () => {
+          if (this.isMarkerClick) {
+              this.isMarkerClick = false;
+              return;
+          }
+          this.showFilters = false;
+          this.currentShopId = null;
+          this.showFilters = false;
+          this.currentShopId = null;
+          this.isSheetVisible = false; // Hide sheet on map click
+          this.renderShopMarkers(); // Reset styles
+       });
+       
+       
+       this.map.on('moveend', () => {
+          const center = this.map.getCenter();
+          this.center = [center.lng, center.lat];
+          this.debouncedSearch();
+       });
+       
+       this.map.on('zoomend', () => {
+          this.debouncedSearch();
+       });
     },
     updateUserMarker() {
        if(!this.map) return;
@@ -375,8 +451,10 @@ export default {
                     ? (this.distanceOptions.find(o => o.label === this.selectedDistance)?.value || "all") 
                     : "all"
        };
+       const requestToken = ++this.searchRequestToken;
        
        searchShops(searchParams).then(res => {
+          if (requestToken !== this.searchRequestToken) return;
           let list = [];
           if (Array.isArray(res)) list = res;
           else if (res && Array.isArray(res.list)) list = res.list; // Handle search API format
@@ -400,7 +478,9 @@ export default {
           
           this.renderShopMarkers();
        }).finally(() => {
-          this.isLoading = false;
+          if (requestToken === this.searchRequestToken) {
+            this.isLoading = false;
+          }
        });
     },
     renderShopMarkers() {

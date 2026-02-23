@@ -1,5 +1,5 @@
 <template>
-  <PageLayout :loading="loading" skeleton-type="list" class="chat-list-page">
+  <PageLayout :loading="pageLoading" skeleton-type="list" class="chat-list-page">
     <div class="header">
       <!-- <div class="header-back-btn"><i class="el-icon-arrow-left"></i></div> -->
       <div class="header-title">消息</div>
@@ -102,6 +102,7 @@ export default {
     return {
        user: {},
        userSessionList: [],
+       pageLoading: true,
        loading: false,
        wsStatus: 'disconnected',
        showConnectionStatus: false,
@@ -167,6 +168,7 @@ export default {
            this.initWebSocket();
            this.loadUserSessions();
         }).catch(() => {
+           this.pageLoading = false;
            this.$router.push('/user/login');
         });
      },
@@ -207,7 +209,7 @@ export default {
               session.unread = (session.unread || 0) + 1;
            }
         } else {
-           this.loadUserSessions();
+           this.loadUserSessions({ silent: true });
         }
      },
      handleSystemMessage(data) {
@@ -216,7 +218,7 @@ export default {
         const notice = addSystemNotice(data);
         const systemSession = this.userSessionList.find(s => s.sessionId === 'SYSTEM');
         if (!systemSession) {
-            this.loadUserSessions();
+            this.loadUserSessions({ silent: true });
             return;
         }
 
@@ -241,8 +243,10 @@ export default {
             isSystem: true
         };
      },
-     loadUserSessions() {
-        this.loading = true;
+     loadUserSessions({ silent = false } = {}) {
+        if (!silent) {
+           this.loading = true;
+        }
         getUserSessions({ userId: this.user.id, current: 1 })
            .then(res => {
               const list = res.data || [];
@@ -262,7 +266,10 @@ export default {
               chatStore.setSystemUnread(systemSession.unread || 0);
            })
            .finally(() => {
-              this.loading = false;
+              if (!silent) {
+                 this.loading = false;
+              }
+              this.pageLoading = false;
            });
      },
      formatLastMessage(msg) {

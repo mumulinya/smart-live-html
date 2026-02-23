@@ -1,38 +1,38 @@
 <template>
-  <PageLayout :loading="loading" skeleton-type="list" class="comment-list-page">
+  <PageLayout :loading="pageLoading" skeleton-type="list" class="comment-list-page">
     <div class="header">
       <div class="header-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
-      <div class="header-title">全部评论</div>
+      <div class="header-title">All Comments</div>
       <div style="width: 20px;"></div>
     </div>
 
-    <div class="scroll-container" @scroll="onScroll">
+    <div class="scroll-container" ref="commentListContainer" @scroll.passive="onScroll">
 
       <!-- List Area -->
       <div class="comments-section">
          <div v-if="comments.length === 0 && !loading" class="empty-state">
             <i class="el-icon-chat-round"></i>
-            <p>暂无评论，快来发表第一条评论吧～</p>
+            <p>No comments yet, be the first to post.</p>
          </div>
 
          <div class="comment-box" v-for="c in comments" :key="c.id" :data-comment-id="String(c.id)">
             <div class="comment-icon" @click.stop="toUserDetail(c.userId)">
-               <img :src="c.userIcon || '/imgs/icons/default-icon.png'">
+               <img :src="c.userIcon || '/imgs/icons/default-icon.png'" loading="lazy" decoding="async">
             </div>
             <div class="comment-info">
                <div class="comment-user" @click.stop="toUserDetail(c.userId)">
-                  {{c.nickName || '匿名用户'}} <span>Lv{{c.userLevel || 1}}</span>
+                  {{c.nickName || 'Anonymous User'}} <span>Lv{{c.userLevel || 1}}</span>
                </div>
                <div class="comment-rating" v-if="sourceType != 3">
                   <el-rate :model-value="c.rating" disabled size="small"></el-rate>
-                  <span class="score">{{c.rating}}分</span>
+                  <span class="score">{{ c.rating }} pts</span>
                </div>
                <div class="comment-content">
-                  <span v-if="c.replyToName" class="reply-target">回复 @{{c.replyToName}}:</span>
+                   <span v-if="c.replyToName" class="reply-target">Reply @{{c.replyToName}}:</span>
                   {{c.content}}
                </div>
                <div class="comment-images" v-if="c.images && c.images.length">
-                  <img v-for="(img, idx) in c.images" :key="idx" :src="img" @click="previewImage(c.images, idx)">
+                  <img v-for="(img, idx) in c.images" :key="idx" :src="img" loading="lazy" decoding="async" @click="previewImage(c.images, idx)">
                </div>
                 <div class="comment-interactions">
                    <span class="comment-time">{{formatTime(c.createTime)}}</span>
@@ -57,26 +57,26 @@
                 <div class="comment-replies" v-if="c.comments > 0">
                    <!-- Initial Expand Button -->
                    <div class="reply-expand" v-if="!c.showReplies" @click.stop="toggleReplies(c)">
-                       展开{{c.comments}}条回复 <i class="el-icon-arrow-down"></i>
+                       Show {{c.comments}} replies <i class="el-icon-arrow-down"></i>
                    </div>
 
                    <!-- Reply List -->
                    <template v-if="c.showReplies">
                       <div class="reply-item" v-for="r in c.replies" :key="r.id" :data-reply-id="String(r.id)">
                           <div class="reply-avatar" @click.stop="toUserDetail(r.userId)">
-                             <img :src="r.userIcon || r.icon || '/imgs/icons/default-icon.png'" alt="">
+                             <img :src="r.userIcon || r.icon || '/imgs/icons/default-icon.png'" alt="" loading="lazy" decoding="async">
                           </div>
                           <div class="reply-main">
                              <div class="reply-header">
-                                <span class="reply-user" @click.stop="toUserDetail(r.userId)">{{r.nickName || '匿名用户'}}</span>
+                                <span class="reply-user" @click.stop="toUserDetail(r.userId)">{{r.nickName || 'Anonymous User'}}</span>
                                 <!-- Remove time from here if consistent with others, or keep formatTime -->
                              </div>
                              <div class="reply-content">
-                                  <span v-if="r.replyToName" class="reply-target">回复 @{{r.replyToName}}:</span>
+                                  <span v-if="r.replyToName" class="reply-target">Reply @{{r.replyToName}}:</span>
                                   {{r.content}}
                              </div>
                              <div class="comment-images" v-if="r.images && r.images.length">
-                                <img v-for="(img, idx) in r.images" :key="idx" :src="img" @click.stop="previewImage(r.images, idx)">
+                                <img v-for="(img, idx) in r.images" :key="idx" :src="img" loading="lazy" decoding="async" @click.stop="previewImage(r.images, idx)">
                              </div>
                              <div class="reply-actions">
                                   <span class="reply-time" style="margin-right: 10px;">{{formatTime(r.createTime)}}</span>
@@ -99,10 +99,10 @@
                            v-if="c.replies.length > 0" 
                            @click.stop="toggleReplies(c)">
                            <template v-if="c.replies.length < Number(c.comments)">
-                              展开更多回复 <i class="el-icon-arrow-down"></i>
+                              Show more replies <i class="el-icon-arrow-down"></i>
                            </template>
                            <template v-else>
-                              收起回复 <i class="el-icon-arrow-up"></i>
+                              Hide replies <i class="el-icon-arrow-up"></i>
                            </template>
                       </div>
                    </template>
@@ -110,7 +110,8 @@
             </div>
          </div>
          
-         <div v-if="noMore" class="no-more">没有更多评论了</div>
+         <div v-if="noMore" class="no-more">No more comments</div>
+         <div ref="commentLoadSentinel" class="io-sentinel" aria-hidden="true"></div>
       </div>
     </div>
 
@@ -119,7 +120,7 @@
     
     <!-- Bottom Fixed Input Bar -->
     <div class="bottom-input-bar" @click="openCommentModal">
-       <div class="input-placeholder">发条评论，和大家一起讨论</div>
+       <div class="input-placeholder">Write a comment...</div>
        <div class="bar-icons">
           <i class="el-icon-picture-outline"></i>
        </div>
@@ -129,14 +130,14 @@
     <div class="comment-pop-overlay" v-if="showCommentPublish" @click="closeCommentModal">
        <div class="comment-pop-box" @click.stop>
           <div class="pop-header">
-             <span class="pop-title">{{ replyToComment ? ('回复 @' + replyToComment.nickName) : '' }}</span>
+             <span class="pop-title">{{ replyToComment ? ('Reply @' + replyToComment.nickName) : '' }}</span>
              <i class="el-icon-close pop-close" @click="closeCommentModal"></i>
           </div>
           <div class="pop-textarea">
              <textarea 
                 ref="commentTextarea"
                 v-model="commentText" 
-                placeholder="分享你此刻的想法..." 
+                placeholder="Share your thoughts..." 
                 :maxlength="500"
                 rows="3"
              ></textarea>
@@ -162,7 +163,7 @@
                      <el-rate v-model="commentRating" :colors="['#99A9BF', '#F7BA2A', '#FF9900']"></el-rate>
                 </div>
              </div>
-             <el-button type="primary" size="small" :disabled="!commentText.trim()" @click="publishComment">发送</el-button>
+             <el-button type="primary" size="small" :disabled="!commentText.trim()" @click="publishComment">Post</el-button>
           </div>
        </div>
     </div>
@@ -177,6 +178,7 @@ import { uploadFile } from '@/api/common';
 import { showConfirmDialog } from 'vant';
 import { ElImageViewer } from 'element-plus';
 import '@/assets/css/blog-detail.css'; // Reuse styles
+import { throttle } from '@/utils/throttle';
 
 import PageLayout from '@/components/PageLayout/PageLayout.vue';
 
@@ -190,6 +192,7 @@ export default {
       user: {},
       comments: [],
       current: 1,
+      pageLoading: true,
       loading: false,
       noMore: false,
       
@@ -208,10 +211,12 @@ export default {
       focusCommentId: '',
       focusRootId: '',
       focusDone: false,
-      focusSearching: false
+      focusSearching: false,
+      commentListObserver: null
     }
   },
   created() {
+    this.onScroll = throttle(this.onScroll, 120);
     const { id, type, focusReplyId, focusCommentId, focusRootId } = this.$route.query;
     this.sourceId = id;
     this.sourceType = type || 3; // Default to blog? Or check logic.
@@ -221,7 +226,33 @@ export default {
     // 1: User?, 2: Shop, 3: Blog. usually.
     
     this.queryUser();
-    if(this.sourceId) this.loadComments();
+    if(this.sourceId) {
+      this.loadComments();
+    } else {
+      this.pageLoading = false;
+    }
+  },
+  mounted() {
+    this.$nextTick(() => {
+      this.setupCommentSentinelObserver();
+    });
+  },
+  activated() {
+    this.$nextTick(() => {
+      this.setupCommentSentinelObserver();
+    });
+  },
+  deactivated() {
+    this.destroyCommentSentinelObserver();
+    if (typeof this.onScroll?.cancel === 'function') {
+      this.onScroll.cancel();
+    }
+  },
+  beforeUnmount() {
+    this.destroyCommentSentinelObserver();
+    if (typeof this.onScroll?.cancel === 'function') {
+      this.onScroll.cancel();
+    }
   },
   methods: {
     goBack() { this.$router.go(-1); },
@@ -283,6 +314,7 @@ export default {
 	          }
 	       }).finally(() => {
             this.loading = false;
+            this.pageLoading = false;
             this.tryFocusTarget();
          });
 	    },
@@ -501,7 +533,7 @@ export default {
     },
     publishComment() {
        if(!this.user.id) return this.$router.push('/user/login');
-       if(!this.commentText.trim()) return this.$message.error('请输入评价内容');
+       if(!this.commentText.trim()) return this.$message.error('Please enter comment content');
        
        const data = {
            content: this.commentText,
@@ -523,7 +555,7 @@ export default {
        }
 
        addComment(data).then(() => {
-           this.$message.success("发布成功");
+           this.$message.success("Published successfully");
            
            // Clear form data
            this.commentText = '';
@@ -557,13 +589,13 @@ export default {
     },
     handleCommentDelete(c) {
         showConfirmDialog({
-           title: '提示',
-           message: '确定删除该评论吗？',
-           confirmButtonText: '确认',
-           cancelButtonText: '取消',
+           title: 'Notice',
+           message: 'Delete this comment?',
+           confirmButtonText: 'Confirm',
+           cancelButtonText: 'Cancel',
         }).then(() => {
            removeComment({ id: c.id, sourceType: c.sourceType, sourceId: c.sourceId }).then(() => {
-               this.$message.success('删除成功');
+               this.$message.success('Deleted successfully');
                this.comments = [];
                this.current = 1;
                this.loading = false;
@@ -598,11 +630,39 @@ export default {
     closeImagePreview() {
        this.showImagePreview = false;
     },
+    loadMoreComments() {
+        if (this.loading || this.noMore) return;
+        this.loadComments();
+    },
+    setupCommentSentinelObserver() {
+        this.destroyCommentSentinelObserver();
+        if (typeof window === 'undefined' || !('IntersectionObserver' in window)) return;
+        const sentinel = this.$refs.commentLoadSentinel;
+        const root = this.$refs.commentListContainer;
+        if (!sentinel || !root) return;
+        this.commentListObserver = new IntersectionObserver((entries) => {
+            if (entries.some((entry) => entry.isIntersecting)) {
+                this.loadMoreComments();
+            }
+        }, {
+            root,
+            rootMargin: '0px 0px 140px 0px',
+            threshold: 0
+        });
+        this.commentListObserver.observe(sentinel);
+    },
+    destroyCommentSentinelObserver() {
+        if (this.commentListObserver && typeof this.commentListObserver.disconnect === 'function') {
+            this.commentListObserver.disconnect();
+        }
+        this.commentListObserver = null;
+    },
     
     onScroll(e) {
+        if (typeof window !== 'undefined' && 'IntersectionObserver' in window) return;
         const { scrollTop, clientHeight, scrollHeight } = e.target;
         if(scrollTop + clientHeight >= scrollHeight - 50) {
-           this.loadComments();
+           this.loadMoreComments();
         }
     },
     toUserDetail(userId) {
@@ -623,6 +683,7 @@ export default {
 .header { height: 50px; background: white; display: flex; align-items: center; padding: 0 15px; border-bottom: 1px solid #eee; position: fixed; top: 0; left: 0; right: 0; z-index: 99; }
 .header-title { flex: 1; text-align: center; font-weight: bold; }
 .scroll-container { flex: 1; overflow-y: auto; margin-top: 50px; }
+.io-sentinel { width: 100%; height: 1px; }
 
 /* Publish Area */
 .comment-publish { background: white; padding: 12px 15px; }

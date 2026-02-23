@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { showToast, showConfirmDialog } from 'vant';
 import { getProductDetail, buyProductAPI, seckillProductAPI } from '@/api/shop'; 
@@ -8,6 +8,7 @@ import { toggleStar, likeComment, getComments, followUser } from '@/api/interact
 import { getReviewList, addReview, removeReview } from '@/api/reviews';
 import { getCurrentUser } from '@/api/user';
 import { fileURL } from '@/utils/request';
+import { throttle } from '@/utils/throttle';
 import PageLayout from '@/components/PageLayout/PageLayout.vue';
 import '@/assets/css/blog-detail.css';
 
@@ -525,12 +526,12 @@ const loadAllComments = async () => {
     }
 };
 
-const onPopupScroll = (e) => {
+const onPopupScroll = throttle((e) => {
     const { scrollTop, clientHeight, scrollHeight } = e.target;
     if(scrollTop + clientHeight >= scrollHeight - 50) {
         loadAllComments();
     }
-};
+}, 120);
 
 const formatDate = (time) => {
     if(!time) return '';
@@ -566,6 +567,12 @@ onMounted(async () => {
     await queryUser();
     if(info.value.id) {
         loadComments();
+    }
+});
+
+onUnmounted(() => {
+    if (typeof onPopupScroll?.cancel === 'function') {
+        onPopupScroll.cancel();
     }
 });
 </script>
@@ -783,7 +790,7 @@ onMounted(async () => {
                 <span class="review-popup-title">全部评价 ({{comments.length || 0}})</span>
                 <i class="el-icon-close review-popup-close" @click="showReviewPopup = false"></i>
             </div>
-            <div class="review-popup-body" @scroll="onPopupScroll">
+            <div class="review-popup-body" @scroll.passive="onPopupScroll">
                 <div v-if="allComments.length === 0 && !allCommentsLoading" class="empty-reviews">
                     <i class="el-icon-chat-round"></i>
                     <p>暂无评价</p>

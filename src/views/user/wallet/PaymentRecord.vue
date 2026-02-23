@@ -1,5 +1,5 @@
 <template>
-  <PageLayout :loading="loading" class="payment-record-page">
+  <PageLayout :loading="pageLoading" class="payment-record-page">
     <van-nav-bar
       title="支付明细"
       left-arrow
@@ -83,7 +83,7 @@ export default {
   data() {
     return {
       activeTab: 'all',
-      loading: false,
+      pageLoading: true,
       refreshing: false,
       listLoading: false,
       finished: false,
@@ -171,6 +171,7 @@ export default {
         console.error(error);
         this.finished = true;
       } finally {
+        this.pageLoading = false;
         this.listLoading = false;
         this.refreshing = false;
       }
@@ -184,11 +185,9 @@ export default {
     onTabChange() {
         this.list = [];
         this.page = 1;
-        this.loading = true;
         this.finished = false;
-        this.fetchList(true).then(() => {
-            this.loading = false;
-        });
+        this.listLoading = true;
+        this.fetchList(true);
     },
 
     onCountdownFinish(item) {

@@ -1,5 +1,5 @@
 <template>
-  <PageLayout :loading="loading" skeleton-type="list" class="wait-review-page">
+  <PageLayout :loading="pageLoading" skeleton-type="list" class="wait-review-page">
     <div class="custom-nav">
        <div class="nav-left" @click="$router.go(-1)">
            <van-icon name="arrow-left" color="#333" size="22"/>
@@ -45,7 +45,7 @@
                          </div>
                     </div>
                 </div>
-                <div v-else-if="!loading" class="empty-state">
+                <div v-else-if="!pageLoading" class="empty-state">
                     <van-empty description="暂无待评价订单" />
                 </div>
             </van-list>
@@ -63,7 +63,7 @@ export default {
     components: { PageLayout },
     data() {
         return {
-            loading: false,
+            pageLoading: true,
             refreshing: false,
             loadingMore: false,
             finished: false,
@@ -111,6 +111,8 @@ export default {
             } catch (error) {
                 this.loadingMore = false;
                 this.finished = true;
+            } finally {
+                this.pageLoading = false;
             }
         },
         onRefresh() {

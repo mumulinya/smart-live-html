@@ -13,6 +13,7 @@ const router = useRouter();
 const route = useRoute();
 const activeTab = ref(0);
 const list = ref([]);
+const pageLoading = ref(true);
 const loading = ref(false);
 const finished = ref(false);
 const current = ref(1);
@@ -59,6 +60,7 @@ const fetchCurrentUser = async () => {
         }
     } catch (e) {
         console.error('Fetch user failed:', e);
+        pageLoading.value = false;
     }
 };
 
@@ -126,8 +128,11 @@ const onLoad = async () => {
   } catch (error) {
     console.error('Fetch error:', error);
     loading.value = false;
+    pageLoading.value = false;
     finished.value = true;
+    return;
   }
+  pageLoading.value = false;
 };
 
 const handleTabChange = () => {
@@ -313,7 +318,7 @@ watch(loading, (val) => {
 </script>
 
 <template>
-  <PageLayout :loading="loading" skeleton-type="list" class="my-star-page">
+  <PageLayout :loading="pageLoading" skeleton-type="list" class="my-star-page">
     <van-nav-bar
       title="我的收藏"
       left-arrow

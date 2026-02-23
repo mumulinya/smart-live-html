@@ -115,6 +115,22 @@
         <!-- Comments Section -->
         <div class="comments-section" ref="commentsSection">
             <div class="comments-title">评论 ({{ (review && review.comments) || comments.length }})</div>
+                <div class="comments-sort-group">
+                    <span
+                      class="comments-sort-btn"
+                      :class="{ active: commentSortType === 'latest' }"
+                      @click="onCommentSortChange('latest')"
+                    >
+                      最新
+                    </span>
+                    <span
+                      class="comments-sort-btn"
+                      :class="{ active: commentSortType === 'hot' }"
+                      @click="onCommentSortChange('hot')"
+                    >
+                      热门
+                    </span>
+                </div>
                 <div class="comment-list" v-if="comments.length > 0">
                     <div class="comment-box" v-for="c in comments" :key="c.id">
                         <div class="comment-icon" @click.stop="toUserDetail(c.userId)">
@@ -293,7 +309,7 @@
              <span class="review-popup-title">全部评论 ({{review.comments || comments.length}})</span>
              <i class="el-icon-close review-popup-close" @click="showReviewPopup = false"></i>
           </div>
-          <div class="review-popup-body" @scroll="onPopupScroll">
+          <div class="review-popup-body" @scroll.passive="onPopupScroll">
              <div v-if="allComments.length === 0 && !allCommentsLoading" class="empty-reviews">
                 <i class="el-icon-chat-round"></i>
                 <p>暂无评论</p>
@@ -426,6 +442,7 @@ import { removeReview, getReview, likeReviewComment } from '@/api/reviews';
 import { getCurrentUser } from '@/api/user';
 import { uploadFile } from '@/api/common';
 import { fileURL } from '@/utils/request';
+import { throttle } from '@/utils/throttle';
 import { getProductDetail } from '@/api/shop';
 import { showConfirmDialog } from 'vant';
 import '@/assets/css/blog-detail.css'; // Import blog-detail.css for shared styles
@@ -442,6 +459,7 @@ export default {
           comments: [],
           commentsPage: 1,
           commentsPageSize: 10,
+          commentSortType: 'latest',
           commentsNoMore: false,
           commentsLoading: false,
           commentObserver: null,
@@ -490,6 +508,7 @@ export default {
      }
   },
   created() {
+      this.onPopupScroll = throttle(this.onPopupScroll, 120);
       // Check login status early
       const token = localStorage.getItem("token");
       if (token) {
@@ -513,8 +532,55 @@ export default {
           this.commentObserver.disconnect();
           this.commentObserver = null;
       }
+      if (typeof this.onPopupScroll?.cancel === 'function') {
+          this.onPopupScroll.cancel();
+      }
   },
   methods: {
+      onCommentSortChange(type) {
+          if (!type || this.commentSortType === type) return;
+          this.commentSortType = type;
+          if (!this.review || !this.review.id) return;
+          this.loadComments(this.review.id, true).then(() => {
+              if (this.showReviewPopup) {
+                  this.loadAllComments(true);
+              }
+          });
+      },
+      getCommentSortParams() {
+          return {
+              sort: this.commentSortType
+          };
+      },
+      getCommentLikeCount(item) {
+          const value = Number(item?.liked ?? item?.likeCount ?? item?.likes ?? 0);
+          return Number.isFinite(value) ? value : 0;
+      },
+      getCommentTime(item) {
+          const source = item?.createTimeRaw ?? item?.createTime ?? item?.updateTime;
+          const timestamp = source ? new Date(source).getTime() : 0;
+          return Number.isNaN(timestamp) ? 0 : timestamp;
+      },
+      sortRootComments(list) {
+          if (!Array.isArray(list) || list.length < 2) return Array.isArray(list) ? [...list] : [];
+          const type = this.commentSortType;
+          return [...list].sort((a, b) => {
+              const aLiked = this.getCommentLikeCount(a);
+              const bLiked = this.getCommentLikeCount(b);
+              const aTime = this.getCommentTime(a);
+              const bTime = this.getCommentTime(b);
+
+              if (type === 'hot') {
+                  if (bLiked !== aLiked) return bLiked - aLiked;
+                  if (bTime !== aTime) return bTime - aTime;
+                  return Number(b?.id || 0) - Number(a?.id || 0);
+              }
+
+              if (bTime !== aTime) return bTime - aTime;
+              if (bLiked !== aLiked) return bLiked - aLiked;
+              return Number(b?.id || 0) - Number(a?.id || 0);
+          });
+      },
       loadDetail(id) {
           getReview(id).then(res => {
               let data = res.data || res;
@@ -595,7 +661,8 @@ export default {
               sourceId: id,
               sourceType: 7,
               current: this.commentsPage,
-              size: this.commentsPageSize
+              size: this.commentsPageSize,
+              ...this.getCommentSortParams()
           }).then(res => {
               let list = [];
               if (Array.isArray(res)) list = res;
@@ -612,6 +679,7 @@ export default {
                   .map(c => ({
                       ...c,
                       userAvatar: c.userIcon ? (c.userIcon.startsWith('http') ? c.userIcon : this.imgPrefix + c.userIcon) : this.defaultAvatar,
+                      createTimeRaw: c.createTime,
                       createTime: this.formatDate(c.createTime),
                       images: c.images ? c.images.split(',').map(i => i.startsWith('http') ? i : this.imgPrefix + i) : [],
                       isLike: c.isLike || false,
@@ -625,8 +693,9 @@ export default {
 
               if (roots.length > 0) {
                   const existingIds = new Set(this.comments.map(c => String(c.id)));
-                  const nextList = roots.filter(c => !existingIds.has(String(c.id)));
-                  this.comments = [...this.comments, ...nextList];
+                  const sortedRoots = this.sortRootComments(roots);
+                  const nextList = sortedRoots.filter(c => !existingIds.has(String(c.id)));
+                  this.comments = this.sortRootComments([...this.comments, ...nextList]);
               }
 
               if (rawList.length < this.commentsPageSize) {
@@ -1081,12 +1150,12 @@ export default {
               }
           });
       },
-      loadAllComments() {
-          if (this.allComments.length > 0) return;
+      loadAllComments(force = false) {
+          if (!force && this.allComments.length > 0) return;
           
           // Since loadComments fetched 500 items and filtered roots, we can assume we have most if not all comments.
           // Directly using existing comments avoids issues with pagination returning localized replies as roots.
-          this.allComments = [...this.comments];
+          this.allComments = this.sortRootComments([...this.comments]);
           this.allCommentsNoMore = true;
           this.allCommentsLoading = false;
       },
@@ -1505,7 +1574,29 @@ export default {
     font-size: 16px;
     font-weight: 600;
     color: #333;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
+}
+.comments-sort-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+.comments-sort-btn {
+    font-size: 12px;
+    line-height: 1;
+    color: #666;
+    background: #f5f5f7;
+    padding: 6px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.2s ease;
+}
+.comments-sort-btn.active {
+    color: #ff2442;
+    background: #ffeff4;
+    font-weight: 600;
 }
 
 /* Fake input placeholder */

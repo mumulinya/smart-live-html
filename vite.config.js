@@ -19,45 +19,50 @@ const manualChunks = (id) => {
 };
 
 // https://vitejs.dev/config/
-export default defineConfig({
-  plugins: [
-    vue(),
-    Components({
-      dts: false,
-      resolvers: [
-        ElementPlusResolver({
-          importStyle: 'css'
-        }),
-        VantResolver()
-      ]
-    })
-  ],
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, 'src')
-    }
-  },
-  optimizeDeps: {
-    include: ['vue', 'vue-router', 'axios', 'element-plus', 'vant']
-  },
-  server: {
-    watch: {
-      ignored: ['**/dist/**', '**/docs/**']
+export default defineConfig(({ command }) => {
+  const isBuild = command === 'build';
+
+  return {
+    plugins: [
+      vue(),
+      Components({
+        dts: false,
+        resolvers: [
+          ElementPlusResolver({
+            importStyle: 'css'
+          }),
+          VantResolver()
+        ]
+      })
+    ],
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, 'src')
+      }
     },
-    proxy: {
-      '/app-dev-api': {
-        target: 'http://127.0.0.1:8080', // Adjust based on common.js logic if needed, user had some commented out IPs
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/app-dev-api/, '')
+    optimizeDeps: {
+      include: ['vue', 'vue-router', 'axios', 'element-plus', 'vant']
+    },
+    server: {
+      watch: {
+        ignored: ['**/dist/**', '**/docs/**']
+      },
+      proxy: {
+        '/app-dev-api': {
+          target: 'http://127.0.0.1:8080', // Adjust based on common.js logic if needed, user had some commented out IPs
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/app-dev-api/, '')
+        }
+      }
+    },
+    esbuild: isBuild ? { drop: ['console', 'debugger'] } : undefined,
+    build: {
+      cssCodeSplit: true,
+      rollupOptions: {
+        output: {
+          manualChunks
+        }
       }
     }
-  },
-  build: {
-    cssCodeSplit: true,
-    rollupOptions: {
-      output: {
-        manualChunks
-      }
-    }
-  }
+  };
 })

@@ -129,7 +129,7 @@
     </div>
     <div class="type-dropdown-mask" v-if="activeFilterTab" @click="activeFilterTab = ''"></div>
 
-    <div class="deal-list" @scroll="onScroll">
+    <div class="deal-list" @scroll.passive="onScroll">
       <div v-if="loading && deals.length === 0" class="state-box">加载中...</div>
       <div v-else-if="displayDeals.length === 0" class="empty-state">
         <div class="empty-illustration">
@@ -193,6 +193,7 @@
 import { searchProducts } from '@/api/search';
 import { getShopTypes } from '@/api/shop';
 import { locationUtil } from '@/utils/location';
+import { throttle } from '@/utils/throttle';
 
 export default {
   name: 'DealListIndex',
@@ -215,6 +216,7 @@ export default {
       noMore: false,
       page: 1,
       size: 10,
+      dealRequestToken: 0,
       isCompactHeader: false,
       lastScrollTop: 0,
       userLocation: null,
@@ -267,10 +269,16 @@ export default {
     }
   },
   created() {
+    this.onScroll = throttle(this.onScroll, 80);
     this.syncFromRoute();
     this.loadShopTypes();
     this.initLocation();
     this.fetchDeals(true);
+  },
+  beforeUnmount() {
+    if (typeof this.onScroll?.cancel === 'function') {
+      this.onScroll.cancel();
+    }
   },
   watch: {
     '$route.query'() {
@@ -539,14 +547,15 @@ export default {
       });
     },
     async fetchDeals(reset = false) {
-      if (this.loading || this.loadingMore) return;
-      if (!reset && this.noMore) return;
+      if (!reset && (this.loading || this.loadingMore || this.noMore)) return;
+      if (reset && this.loadingMore) return;
 
       if (reset) {
         this.page = 1;
         this.noMore = false;
         this.deals = [];
         this.loading = true;
+        this.loadingMore = false;
       } else {
         this.loadingMore = true;
       }
@@ -571,9 +580,11 @@ export default {
         lon: this.userLocation && this.userLocation.x ? this.userLocation.x : undefined,
         distance: this.selectedDistance ? `${this.selectedDistance}km` : undefined
       };
+      const requestToken = ++this.dealRequestToken;
 
       try {
         const res = await searchProducts(params);
+        if (requestToken !== this.dealRequestToken) return;
         const list = this.normalizeProductList(res);
         this.deals = reset ? list : this.deals.concat(list);
         if (list.length < this.size) {
@@ -582,10 +593,13 @@ export default {
           this.page += 1;
         }
       } catch (e) {
+        if (requestToken !== this.dealRequestToken) return;
         if (reset) this.deals = [];
       } finally {
-        this.loading = false;
-        this.loadingMore = false;
+        if (requestToken === this.dealRequestToken) {
+          this.loading = false;
+          this.loadingMore = false;
+        }
       }
     },
     onScroll(e) {

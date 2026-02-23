@@ -346,7 +346,7 @@
              <span class="review-popup-title">全部评论 ({{blog.comments || 0}})</span>
              <i class="el-icon-close review-popup-close" @click="showReviewPopup = false"></i>
           </div>
-          <div class="review-popup-body" @scroll="onPopupScroll">
+          <div class="review-popup-body" @scroll.passive="onPopupScroll">
              <div v-if="allComments.length === 0 && !allCommentsLoading" class="empty-reviews">
                 <i class="el-icon-chat-round"></i>
                 <p>暂无评论</p>
@@ -502,6 +502,7 @@ import { uploadFile } from '@/api/common';
 import '@/assets/css/blog-detail.css';
 import { ElImageViewer } from 'element-plus';
 import { showConfirmDialog } from 'vant';
+import { throttle } from '@/utils/throttle';
 
 import PageLayout from '@/components/PageLayout/PageLayout.vue';
 
@@ -588,6 +589,7 @@ export default {
      }
   },
   created() {
+     this.onPopupScroll = throttle(this.onPopupScroll, 120);
      const id = this.$route.query.id;
      if(id) {
         this.pageLoading = true;
@@ -608,6 +610,9 @@ export default {
      if (this.commentObserver) {
         this.commentObserver.disconnect();
         this.commentObserver = null;
+     }
+     if (typeof this.onPopupScroll?.cancel === 'function') {
+        this.onPopupScroll.cancel();
      }
      window.removeEventListener('scroll', this.onWindowScroll);
   },

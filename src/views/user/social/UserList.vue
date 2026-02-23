@@ -1,5 +1,5 @@
 <template>
-  <PageLayout :loading="loading" skeleton-type="list" class="user-list-page">
+  <PageLayout :loading="pageLoading" skeleton-type="list" class="user-list-page">
     <van-nav-bar
       :title="user.nickName || '用户'"
       left-arrow
@@ -118,6 +118,7 @@ export default {
       
       userList: [],
       current: 1,
+      pageLoading: true,
       loading: false,
       noMore: false,
       refreshId: 0,
@@ -183,6 +184,7 @@ export default {
               // 未登录且没有targetId时，无法显示数据
               if (!myId) {
                   this.loading = false;
+                  this.pageLoading = false;
                   return;
               }
               this.isMe = true;
@@ -202,6 +204,7 @@ export default {
           this.resetList();
       } catch(e) {
           console.error(e);
+          this.pageLoading = false;
       }
     },
 
@@ -241,7 +244,8 @@ export default {
         }
         
         if(!api || (!this.user.id && !this.targetUserId)) { 
-            this.loading = false; 
+            this.loading = false;
+            this.pageLoading = false;
             return; 
         }
 
@@ -281,6 +285,7 @@ export default {
             if (targetTab === this.activeTab && currentRefreshId === this.refreshId) {
                 this.loading = false;
             }
+            this.pageLoading = false;
             this.refreshTabs();
         })
     },

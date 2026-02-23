@@ -209,6 +209,22 @@
        <div class="comments-section">
           <div class="section-header">
              <div class="section-title">网友评价 <span class="count">({{shop.comments || comments.length || 0}})</span></div>
+             <div class="review-sort-group">
+                <span
+                  class="review-sort-btn"
+                  :class="{ active: reviewSortType === 'latest' }"
+                  @click="onReviewSortChange('latest')"
+                >
+                  最新
+                </span>
+                <span
+                  class="review-sort-btn"
+                  :class="{ active: reviewSortType === 'hot' }"
+                  @click="onReviewSortChange('hot')"
+                >
+                  热门
+                </span>
+             </div>
           </div>
           
           <div class="empty-comments" v-if="comments.length === 0 && !aiComment && !commentsLoading && commentsNoMore">
@@ -443,7 +459,7 @@
             <span class="review-popup-title">评价列表 ({{shop.comments || 0}})</span>
             <i class="el-icon-close review-popup-close" @click="showReviewPopup = false"></i>
          </div>
-         <div class="review-popup-body" @scroll="onPopupScroll">
+         <div class="review-popup-body" @scroll.passive="onPopupScroll">
             <div v-if="allComments.length === 0 && !allCommentsLoading" class="empty-reviews">
                <i class="el-icon-chat-round"></i>
                <p>暂无评论</p>
@@ -578,6 +594,7 @@ import { getReviewList, likeReviewComment } from '@/api/reviews';
 import { uploadFile } from '@/api/common';
 import { showConfirmDialog } from 'vant';
 import { getCurrentUser } from '@/api/user';
+import { throttle } from '@/utils/throttle';
 import '@/assets/css/blog-detail.css'; // Import blog styles to reuse reply CSS
 
 import PageLayout from '@/components/PageLayout/PageLayout.vue';
@@ -595,6 +612,7 @@ export default {
        comments: [],
        commentsPage: 1,
        commentsPageSize: 10,
+       reviewSortType: 'latest',
        commentsNoMore: false,
        commentsLoading: false,
        commentLoadArmed: false,
@@ -644,8 +662,10 @@ export default {
        allComments: [],
        allCommentsPage: 1,
        allCommentsNoMore: false,
-       allCommentsLoading: false
-    }
+       allCommentsLoading: false,
+       commentsRequestToken: 0,
+       allCommentsRequestToken: 0
+     }
   },
   computed: {
      fileURL() {
@@ -653,6 +673,7 @@ export default {
      }
   },
   created() {
+     this.onPopupScroll = throttle(this.onPopupScroll, 120);
      const id = this.$route.query.id;
      if(!id) {
         this.$message.error("参数错误");
@@ -672,9 +693,54 @@ export default {
         this.commentObserver.disconnect();
         this.commentObserver = null;
      }
+     if (typeof this.onPopupScroll?.cancel === 'function') {
+        this.onPopupScroll.cancel();
+     }
      window.removeEventListener('scroll', this.onWindowScroll);
   },
   methods: {
+     onReviewSortChange(type) {
+        if (!type || this.reviewSortType === type) return;
+        this.reviewSortType = type;
+        this.loadComments(true);
+        if (this.showReviewPopup) {
+           this.loadAllComments(true);
+        }
+     },
+     getReviewSortParams() {
+        return {
+           sort: this.reviewSortType
+        };
+     },
+     getReviewLikeCount(item) {
+        const value = Number(item?.liked ?? item?.likeCount ?? item?.likes ?? 0);
+        return Number.isFinite(value) ? value : 0;
+     },
+     toTimestamp(value) {
+        if (!value) return 0;
+        const ts = new Date(value).getTime();
+        return Number.isNaN(ts) ? 0 : ts;
+     },
+     sortReviewList(list) {
+        if (!Array.isArray(list) || list.length < 2) return Array.isArray(list) ? [...list] : [];
+        const sortType = this.reviewSortType;
+        return [...list].sort((a, b) => {
+           const aLiked = this.getReviewLikeCount(a);
+           const bLiked = this.getReviewLikeCount(b);
+           const aTime = this.toTimestamp(a?.createTime);
+           const bTime = this.toTimestamp(b?.createTime);
+
+           if (sortType === 'hot') {
+              if (bLiked !== aLiked) return bLiked - aLiked;
+              if (bTime !== aTime) return bTime - aTime;
+              return Number(b?.id || 0) - Number(a?.id || 0);
+           }
+
+           if (bTime !== aTime) return bTime - aTime;
+           if (bLiked !== aLiked) return bLiked - aLiked;
+           return Number(b?.id || 0) - Number(a?.id || 0);
+        });
+     },
      toReviewDetail(comment) {
          if (!comment || !comment.id) return;
          this.$router.push({
@@ -758,32 +824,35 @@ export default {
         });
          },
          loadComments(reset = true, sourceId = this.shop.id) {
-            if (!sourceId) return Promise.resolve();
-            if (this.commentsLoading) return Promise.resolve();
-            if (!reset && this.commentsNoMore) return Promise.resolve();
+             if (!sourceId) return Promise.resolve();
+             if (!reset && this.commentsLoading) return Promise.resolve();
+             if (!reset && this.commentsNoMore) return Promise.resolve();
 
-            if (reset) {
-               this.comments = [];
-               this.aiComment = null;
-               this.commentsPage = 1;
-               this.commentsNoMore = false;
+             const requestToken = ++this.commentsRequestToken;
+             if (reset) {
+                this.comments = [];
+                this.aiComment = null;
+                this.commentsPage = 1;
+                this.commentsNoMore = false;
                this.commentLoadArmed = false;
             }
 
-            this.commentsLoading = true;
+             this.commentsLoading = true;
 
-            return getReviewList({
-               sourceId,
-               sourceType: 2,
+             return getReviewList({
+                sourceId,
+                sourceType: 2,
                current: this.commentsPage,
                status: 0,
-               size: this.commentsPageSize
-            }).then(res => {
-               let list = [];
-               if(Array.isArray(res)) list = res;
-               else if(res && Array.isArray(res.list)) list = res.list;
-               else if(res && Array.isArray(res.data)) list = res.data;
-               else if(res && res.data && Array.isArray(res.data.records)) list = res.data.records;
+                size: this.commentsPageSize,
+                ...this.getReviewSortParams()
+             }).then(res => {
+               if (requestToken !== this.commentsRequestToken) return;
+                let list = [];
+                if(Array.isArray(res)) list = res;
+                else if(res && Array.isArray(res.list)) list = res.list;
+                else if(res && Array.isArray(res.data)) list = res.data;
+                else if(res && res.data && Array.isArray(res.data.records)) list = res.data.records;
 
                const rawList = list || [];
                if (rawList.length === 0) {
@@ -817,21 +886,24 @@ export default {
 
                if (roots.length > 0) {
                   const existingIds = new Set(this.comments.map(c => String(c.id)));
-                  const nextList = roots.filter(c => !existingIds.has(String(c.id)));
-                  this.comments = [...this.comments, ...nextList];
+                  const sortedRoots = this.sortReviewList(roots);
+                  const nextList = sortedRoots.filter(c => !existingIds.has(String(c.id)));
+                  this.comments = this.sortReviewList([...this.comments, ...nextList]);
                }
 
                if (rawList.length < this.commentsPageSize) {
                   this.commentsNoMore = true;
-               } else {
+                } else {
                   this.commentsPage += 1;
-               }
-            }).catch(err => {
-               console.error('loadComments failed:', err);
-            }).finally(() => {
-               this.commentsLoading = false;
-               this.$nextTick(() => this.observeCommentLoadTrigger());
-            });
+                }
+             }).catch(err => {
+               if (requestToken !== this.commentsRequestToken) return;
+                console.error('loadComments failed:', err);
+             }).finally(() => {
+               if (requestToken !== this.commentsRequestToken) return;
+                this.commentsLoading = false;
+                this.$nextTick(() => this.observeCommentLoadTrigger());
+             });
          },
          loadMoreComments() {
             if (!this.shop.id || this.commentsLoading || this.commentsNoMore || !this.commentLoadArmed) return;
@@ -1291,10 +1363,10 @@ export default {
                this.allComments = [];
                this.allCommentsPage = 1;
                this.allCommentsNoMore = false;
-               this.loadAllComments();
-            }
+               this.loadAllComments(true);
+             }
          });
-     },
+      },
      handleCommentDelete(c) {
         showConfirmDialog({
            title: '提示',
@@ -1317,23 +1389,32 @@ export default {
      },
      
      // Review Popup Methods
-     viewAllComments() {
-        this.showReviewPopup = true;
-        this.allComments = [];
-        this.allCommentsPage = 1;
-        this.allCommentsNoMore = false;
-        this.loadAllComments();
-     },
-      loadAllComments() {
-         if(this.allCommentsLoading || this.allCommentsNoMore) return;
-         this.allCommentsLoading = true;
-         
-         getReviewList({ sourceId: this.shop.id, sourceType: 2, current: this.allCommentsPage }).then(res => {
-            let list = [];
-            if(Array.isArray(res)) list = res;
-            else if(res && Array.isArray(res.list)) list = res.list;
-            else if(res && Array.isArray(res.data)) list = res.data;
-            else if(res && res.data && Array.isArray(res.data.records)) list = res.data.records;
+      viewAllComments() {
+         this.showReviewPopup = true;
+         this.loadAllComments(true);
+      },
+       loadAllComments(reset = false) {
+          if (!reset && (this.allCommentsLoading || this.allCommentsNoMore)) return;
+          const requestToken = ++this.allCommentsRequestToken;
+          if (reset) {
+            this.allComments = [];
+            this.allCommentsPage = 1;
+            this.allCommentsNoMore = false;
+          }
+          this.allCommentsLoading = true;
+          
+          getReviewList({
+             sourceId: this.shop.id,
+             sourceType: 2,
+             current: this.allCommentsPage,
+             ...this.getReviewSortParams()
+          }).then(res => {
+             if (requestToken !== this.allCommentsRequestToken) return;
+             let list = [];
+             if(Array.isArray(res)) list = res;
+             else if(res && Array.isArray(res.list)) list = res.list;
+             else if(res && Array.isArray(res.data)) list = res.data;
+             else if(res && res.data && Array.isArray(res.data.records)) list = res.data.records;
             
             if(!list || list.length === 0) {
                this.allCommentsNoMore = true;
@@ -1352,25 +1433,28 @@ export default {
                }));
                
                // Filter root comments
-               const roots = processed.filter(c => !c.answerId || c.answerId === 0 || c.answerId === '0');
+               const roots = this.sortReviewList(
+                  processed.filter(c => !c.answerId || c.answerId === 0 || c.answerId === '0')
+               );
                
                if(this.allCommentsPage === 1) {
                   this.allComments = roots;
                } else {
-                  this.allComments = [...this.allComments, ...roots];
+                  this.allComments = this.sortReviewList([...this.allComments, ...roots]);
                }
                
                // Check if end
-               if(list.length < 10) {
-                  this.allCommentsNoMore = true;
-               } else {
-                  this.allCommentsPage++;
-               }
-            }
-         }).finally(() => {
-            this.allCommentsLoading = false;
-         });
-      },
+                if(list.length < 10) {
+                   this.allCommentsNoMore = true;
+                } else {
+                   this.allCommentsPage++;
+                }
+             }
+          }).finally(() => {
+             if (requestToken !== this.allCommentsRequestToken) return;
+             this.allCommentsLoading = false;
+          });
+       },
      onPopupScroll(e) {
         const { scrollTop, clientHeight, scrollHeight } = e.target;
         if(scrollTop + clientHeight >= scrollHeight - 50) {
@@ -1733,6 +1817,23 @@ export default {
 .section-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 16px; }
 .section-more { font-size: 12px; color: #999; }
 .count { font-size: 12px; color: #999; font-weight: normal; }
+.review-sort-group { display: flex; align-items: center; gap: 8px; }
+.review-sort-btn {
+   font-size: 12px;
+   line-height: 1;
+   color: #666;
+   background: #f5f5f7;
+   padding: 6px 10px;
+   border-radius: 999px;
+   cursor: pointer;
+   user-select: none;
+   transition: all 0.2s ease;
+}
+.review-sort-btn.active {
+   color: #ff2442;
+   background: #ffeff4;
+   font-weight: 600;
+}
 
 .comment-box { display: flex; padding-bottom: 16px; border-bottom: 1px solid #f5f5f5; margin-bottom: 16px; }
 .comment-box:last-child { border-bottom: none; }

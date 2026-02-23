@@ -1,6 +1,5 @@
 <script setup>
-import GlobalAIEntry from '@/components/GlobalAIEntry.vue';
-import { onMounted, onUnmounted, ref } from 'vue';
+import { computed, defineAsyncComponent, onMounted, onUnmounted, ref } from 'vue';
 import router from '@/router';
 import { wsManager } from '@/utils/websocket';
 import { chatStore } from '@/store/chat';
@@ -12,6 +11,11 @@ import { addSystemNotice, getSystemUnreadCount } from '@/utils/systemNotice';
 
 let currentUserId = null;
 const keepAliveVersion = ref(0);
+const GlobalAIEntry = defineAsyncComponent(() => import('@/components/GlobalAIEntry.vue'));
+const showAIEntry = computed(() => {
+    const path = router.currentRoute.value?.path;
+    return path === '/' || path === '/home';
+});
 
 try {
     const cachedUser = localStorage.getItem('userInfo');
@@ -131,7 +135,7 @@ const handleAuthChanged = (event) => {
       <component :is="Component" />
     </keep-alive>
   </router-view>
-  <GlobalAIEntry />
+  <GlobalAIEntry v-if="showAIEntry" />
 </template>
 
 <style>

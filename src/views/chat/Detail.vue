@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="chat-detail-page">
     <div class="header">
       <div class="header-back-btn" @click="goBack"><van-icon name="arrow-left" size="24" /></div>
@@ -11,17 +11,17 @@
     </div>
 
     <!-- Message List -->
-    <div class="chat-messages" ref="chatMessages" @scroll="handleScroll"
+    <div class="chat-messages" ref="chatMessages" @scroll.passive="handleScroll"
          :style="backgroundImage ? { backgroundImage: `url(${backgroundImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}">
        <div ref="topSentinel" class="top-sentinel"></div>
 
        <div v-if="loadingOld" class="loading-tip">
-         <span>加载中...</span>
+         <span>闂傚倸鍊搁崐鎼佸磹妞嬪海鐭嗗〒姘ｅ亾妤犵偛顦甸崹楣冨箛娴ｅ湱绋佺紓鍌氬€烽悞锕佹懌闂佸憡鐟ョ换姗€寮婚悢纰辨晬闁挎繂娲ｅЧ妤呮偡濠婂懎顣奸悽顖涘浮閹瑦绻濋崶銊у帾婵犵數鍊埀顒勫磻閹剧粯鐓?..</span>
        </div>
 
        <div v-if="messages.length === 0 && !loading" class="empty-messages">
           <i class="el-icon-chat-round"></i>
-          <div>暂无消息，开始聊天吧～</div>
+          <div>No messages yet, start a chat</div>
        </div>
 
        <template v-for="(group, index) in groupedMessages">
@@ -37,7 +37,7 @@
                 <img v-if="msg.isSelf && user.icon" :src="user.icon" class="avatar-image">
                 <img v-else-if="!msg.isSelf && contactAvatar" :src="contactAvatar" class="avatar-image">
                 <div v-else class="avatar-fallback">
-                   {{ msg.isSelf ? (user.nickname || '我').charAt(0) : (contactName || '友').charAt(0) }}
+                   {{ msg.isSelf ? (user.nickname || 'Me').charAt(0) : (contactName || 'Ta').charAt(0) }}
                 </div>
              </div>
 
@@ -45,14 +45,14 @@
                 <div v-if="!msg.isSystem" class="message" :class="{'message-left': !msg.isSelf, 'message-right': msg.isSelf, 'message-image': msg.messageType === 1}">
                    <span v-if="!msg.messageType || msg.messageType === 0">{{msg.content}}</span>
                    <img v-else-if="msg.messageType === 1" :src="msg.content" class="msg-img" @click="previewImage(msg.content)">
-                   <span v-else>[未知消息类型]</span>
+                   <span v-else>[Unknown message type]</span>
                 </div>
                 <!-- Status outside bubble -->
                 <div v-if="msg.isSelf && !msg.isSystem" class="message-status-outer">
-                   <span v-if="msg.status==='sending'" class="status-sending">发送中</span>
-                   <span v-else-if="msg.status==='failed'" class="status-failed">失败</span>
-                   <span v-else-if="Number(msg.status)===1" class="status-read">已读</span>
-                   <span v-else class="status-unread">未读</span>
+                   <span v-if="msg.status=='sending'" class="status-sending">Sending</span>
+                   <span v-else-if="msg.status=='failed'" class="status-failed">Failed</span>
+                   <span v-else-if="Number(msg.status)===1" class="status-read">Read</span>
+                   <span v-else class="status-unread">Unread</span>
                 </div>
                 <div v-if="msg.isSystem" class="system-message">{{msg.content}}</div>
              </div>
@@ -69,7 +69,7 @@
           </div>
           
           <!-- Text Input -->
-          <input type="text" v-model="messageInput" @keyup.enter="sendMessage" placeholder="输入消息..." @focus="hideAllPanels">
+          <input type="text" v-model="messageInput" @keyup.enter="sendMessage" placeholder="闂傚倸鍊搁崐椋庣矆娓氣偓楠炴牠顢曚綅閸ヮ剦鏁嶉柣鎰綑娴滆鲸绻濋悽闈浶㈡繛灞傚€楃划缁樺鐎涙鍘甸梻鍌氬€搁顓⑺囬敃鍌涚厽妞ゆ挾鍣ュ▓婊堟煛鐏炲墽娲撮柛鈺佸瀹曟﹢鏁傜捄銊﹀礋濠电姷顣介崜婵娿亹閸愵喗鍋嬮柟鎹愵嚙閽冪喐绻涢幋娆忕労闁轰礁鍟撮弻鏇㈠醇濠靛洤娅ら梺璇叉唉濞咃絿妲?.." @focus="hideAllPanels">
           
           <!-- Emoji Icon -->
           <div class="input-icon emoji-icon" @click="toggleEmojiPanel">
@@ -79,7 +79,7 @@
           </div>
           
           <!-- Plus/Send Icon -->
-          <div v-if="messageInput.trim()" class="send-btn" @click="sendMessage">发送</div>
+          <div v-if="messageInput.trim()" class="send-btn" @click="sendMessage">Send</div>
           <div v-else class="input-icon" @click="toggleMorePanel">
              <i class="el-icon-circle-plus-outline" :class="{ 'active': showMorePanel }"></i>
           </div>
@@ -98,19 +98,19 @@
        <div class="more-panel" v-if="showMorePanel">
           <div class="panel-item" @click="selectImage">
              <div class="panel-icon"><i class="el-icon-picture-outline"></i></div>
-             <div class="panel-text">相册</div>
+             <div class="panel-text">Album</div>
           </div>
           <div class="panel-item">
              <div class="panel-icon"><i class="el-icon-camera"></i></div>
-             <div class="panel-text">拍摄</div>
+             <div class="panel-text">Camera</div>
           </div>
           <div class="panel-item">
              <div class="panel-icon"><i class="el-icon-location-outline"></i></div>
-             <div class="panel-text">位置</div>
+             <div class="panel-text">Location</div>
           </div>
           <div class="panel-item">
              <div class="panel-icon"><i class="el-icon-folder-opened"></i></div>
-             <div class="panel-text">文件</div>
+             <div class="panel-text">File</div>
           </div>
        </div>
     </div>
@@ -121,7 +121,7 @@
     <!-- Back to Latest Button -->
     <div v-if="isHistoryMode" class="back-to-latest" @click="resetToLatest">
       <i class="el-icon-arrow-down"></i>
-      <span>回最新</span>
+      <span>Back to latest</span>
     </div>
     
 
@@ -135,6 +135,7 @@ import { getCurrentUser } from '@/api/user';
 import { getChatSession, getMessageList, getUserSessions } from '@/api/chat';
 import { uploadFile } from "@/api/common";
 import { showImagePreview } from 'vant'; // Use showImagePreview for Vue 3/Vant 4
+import { throttle } from '@/utils/throttle';
 
 export default {
   name: 'ChatDetail',
@@ -143,15 +144,15 @@ export default {
     return {
        sessionId: 0,
        toUserId: 0,
-       user: { id: 0, nickname: '我', icon: '' },
-       contactName: '加载中...',
+       user: { id: 0, nickname: 'Me', icon: '' },
+       contactName: '闂傚倸鍊搁崐椋庣矆娓氣偓楠炲鍨鹃幇浣圭稁缂傚倷鐒﹁摫闁告瑥绻橀弻鐔碱敍閿濆洣姹楅悷婊呭鐢帡鎮欐繝鍥ㄧ厪濠电倯鈧崑鎾绘煛?..',
        contactAvatar: '',
        messages: [],
        messageInput: '',
        loading: false,
        wsStatus: 'disconnected',
        showConnectionStatus: false,
-       connectionStatusText: '连接中...',
+       connectionStatusText: '闂傚倸鍊风粈渚€骞栭位鍥敃閿曗偓閻ょ偓绻濋棃娑卞剰缁炬儳顭烽弻锝夊箛椤掑倷绮甸梺鍝勬缁捇骞冨Δ鈧埥澶娾枎濡厧濮洪梻?..',
        isSending: false,
        
        // Refactored state
@@ -160,21 +161,14 @@ export default {
        loadingNew: false,
        noMoreOld: false,
        noMoreNew: false,
+       chatInitToken: 0,
        targetDate: null, 
 
        showMorePanel: false,
        showEmojiPanel: false,
-       backgroundImage: '', // 聊天背景图
+       backgroundImage: '', // NOTE: removed corrupted comment.
        emojiList: [
-          '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣',
-          '☺️', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗',
-          '😙', '😚', '😋', '😛', '😜', '🤪', '😝', '🤑',
-          '🤗', '🤭', '🫢', '🫣', '🤫', '🤔', '🫡', '🤐',
-          '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '😮',
-          '😯', '😲', '😳', '🥺', '☹️', '🙁', '😦', '😧',
-          '😨', '😰', '😥', '😢', '😭', '😱', '😖', '😣',
-          '👍', '👎', '👊', '✌️', '🙏', '👋', '❤️', '💔',
-          '🔥', '✨', '🎉', '🎁', '💯', '👀', '🚀', '🌟'
+          ':)', ':D', ';)' , ':P', 'XD', '<3', ':(', ':|'
        ]
     }
   },
@@ -205,6 +199,7 @@ export default {
      }
   },
   created() {
+     this.handleScroll = throttle(this.handleScroll, 120);
      this.sessionId = this.$route.query.sessionId;
      this.targetDate = this.$route.query.targetDate || null;
      this.queryLoginUser();
@@ -212,32 +207,34 @@ export default {
   activated() {
      const newSessionId = this.$route.query.sessionId;
      if (newSessionId && String(newSessionId) !== String(this.sessionId)) {
-         // 切换会话：清理旧资源
+         // NOTE: removed corrupted comment.
          if (this.sessionId) {
              wsManager.unregisterCallback('private-chat-' + this.sessionId);
          }
 
-         // 重置状态
+         // NOTE: removed corrupted comment.
          this.sessionId = newSessionId;
          this.targetDate = this.$route.query.targetDate || null;
          this.messages = [];
-         this.contactName = '加载中...';
+         this.contactName = '闂傚倸鍊搁崐椋庣矆娓氣偓楠炲鍨鹃幇浣圭稁缂傚倷鐒﹁摫闁告瑥绻橀弻鐔碱敍閿濆洣姹楅悷婊呭鐢帡鎮欐繝鍥ㄧ厪濠电倯鈧崑鎾绘煛?..';
          this.contactAvatar = '';
 
-         // 重新加载
+         // NOTE: removed corrupted comment.
          this.queryLoginUser();
      } else {
-         // 同一会话：恢复活跃状态
+         // NOTE: removed corrupted comment.
          this.setCurrentActiveSession();
-         // 重新注册回调防止丢失（如果ws重连过）
+         // NOTE: removed corrupted comment.
          if (this.sessionId) {
              wsManager.registerCallback('private-chat-' + this.sessionId, this.handleWebSocketMessage);
          }
      }
   },
   deactivated() {
-     // 离开页面时更新活跃会话状态
-     if(wsManager.getWebSocket() && wsManager.getWebSocket().isConnected) {
+     if (typeof this.handleScroll?.cancel === 'function') {
+        this.handleScroll.cancel();
+     }
+     if (wsManager.getWebSocket() && wsManager.getWebSocket().isConnected) {
         wsManager.sendMessage('UPDATE_ACTIVE_SESSION', { sessionId: null });
      }
   },
@@ -245,6 +242,9 @@ export default {
      this.setupIntersectionObserver();
   },
   beforeUnmount() {
+     if (typeof this.handleScroll?.cancel === 'function') {
+       this.handleScroll.cancel();
+     }
      if (this.observer) {
        this.observer.disconnect();
      }
@@ -266,7 +266,7 @@ export default {
         if (msg.isSelf) {
             this.$router.push('/user/info');
         } else {
-            // 如果是对方，跳转到对方主页
+            // NOTE: removed corrupted comment.
             if (this.toUserId) {
                 this.$router.push(`/user/profile/${this.toUserId}`);
             } else {
@@ -275,14 +275,17 @@ export default {
         }
      },
      queryLoginUser() {
+        const sessionKey = String(this.sessionId || '');
         getCurrentUser().then(res => {
+           if (String(this.sessionId || '') !== sessionKey) return;
            this.user = res.data || res;
            if(this.user.icon && !this.user.icon.startsWith('http')) {
                this.user.icon = this.$fileURL + this.user.icon;
            }
            this.initWebSocket();
-           this.getChatSession();
+           this.getChatSession(sessionKey);
         }).catch(() => {
+           if (String(this.sessionId || '') !== sessionKey) return;
            this.$router.push('/user/login');
         });
      },
@@ -314,7 +317,7 @@ export default {
      },
      handleConnectionChange(status) {
         this.wsStatus = status;
-        this.connectionStatusText = status === 'connected' ? '已连接' : '连接断开';
+        this.connectionStatusText = status === 'connected' ? 'Connected' : 'Disconnected';
         this.showConnectionStatus = status !== 'connected';
         if(status === 'connected') {
            setTimeout(() => this.showConnectionStatus = false, 2000);
@@ -325,20 +328,22 @@ export default {
         wsManager.sendMessage('UPDATE_ACTIVE_SESSION', { sessionId: this.sessionId });
      },
      handleWebSocketMessage(message) {
-        console.log('📩 Detail.vue收到WS消息:', message);
+        if (import.meta.env.DEV) {
+          console.log('[ChatDetail] WS message', message?.type, this.sessionId);
+        }
         if(message.type === 'NEW_MESSAGE') {
            // Loose equality check for ID (string vs number)
            if(message.data.sessionId == this.sessionId) {
               this.addMessageToUI(message.data);
            } else {
-              console.log('⚠️ 消息sessionId不匹配:', message.data.sessionId, '当前:', this.sessionId);
+              if (import.meta.env.DEV) console.log('[ChatDetail] Ignore message from other session', message.data.sessionId, this.sessionId);
            }
         } else if (message.type === 'MESSAGE_SENT') {
            this.handleMessageSent(message.data);
         } else if (message.type === 'MESSAGE_STATUS_UPDATE') {
            this.handleMessageStatusUpdate(message.data);
         } else if (message.type === 'ERROR') {
-           this.$message.error('发送失败: ' + (message.data.msg || '未知错误'));
+           this.$message.error('Send failed: ' + (message.data.msg || 'unknown error'));
            // Mark latest sending message as failed
            const sendingMsg = this.messages.slice().reverse().find(m => m.status === 'sending');
            if (sendingMsg) {
@@ -366,18 +371,19 @@ export default {
          }
       },
      
-     // 核心加载逻辑重构
-     getChatSession() {
-        // 先获取当前用户信息
+     // NOTE: removed corrupted comment.
+     getChatSession(sessionKey = String(this.sessionId || '')) {
+        // NOTE: removed corrupted comment.
         if (this.user.id) {
-           this.fetchSessionAndBackground();
+           this.fetchSessionAndBackground(sessionKey);
         } else {
-           // 如果 user 未加载完，等待 queryLoginUser 完成
-           // 其实 queryLoginUser 会自动调这个，这里是防止直接调
+           // NOTE: removed corrupted comment.
+           // NOTE: removed corrupted comment.
         }
      },
-     fetchSessionAndBackground() {
+     fetchSessionAndBackground(sessionKey = String(this.sessionId || '')) {
         getChatSession({ sessionId: this.sessionId }).then(async res => {
+           if (String(this.sessionId || '') !== sessionKey) return;
            const session = res.data || res;
            this.contactName = session.contactName;
            this.contactAvatar = session.contactAvatar ? this.$fileURL + session.contactAvatar : '';
@@ -388,38 +394,43 @@ export default {
                this.toUserId = session.fromUid;
            }
            
-           // 获取个人会话设置（背景图）
+           // NOTE: removed corrupted comment.
            try {
                const sessionsRes = await getUserSessions({ userId: this.user.id, current: 1 });
+               if (String(this.sessionId || '') !== sessionKey) return;
                const userSessions = sessionsRes.data || [];
                const userSession = userSessions.find(s => s.sessionId == this.sessionId);
                if (userSession && userSession.backgroundImage) {
                    this.backgroundImage = this.$fileURL + userSession.backgroundImage;
                }
            } catch (e) {
-               console.error('获取背景图失败', e);
+               console.error('Failed to load session background', e);
            }
            
-           this.loadMessages();
+           this.loadMessages(sessionKey);
         });
      },
 
-     loadMessages() {
+     loadMessages(sessionKey = String(this.sessionId || '')) {
+        const initToken = ++this.chatInitToken;
+        this.loadingOld = false;
+        this.loadingNew = false;
         if (this.targetDate) {
-           this.initByDate(this.targetDate);
+           this.initByDate(this.targetDate, initToken, sessionKey);
         } else {
-           this.initLatest();
+           this.initLatest(initToken, sessionKey);
         }
      },
 
-     // 初始化：加载最新消息
-     initLatest() {
+     // NOTE: removed corrupted comment.
+     initLatest(initToken = this.chatInitToken, sessionKey = String(this.sessionId || '')) {
         this.loading = true;
         this.isHistoryMode = false;
         this.noMoreOld = false;
-        this.noMoreNew = true; // 最新模式下没有"更新"的消息
+        this.noMoreNew = true; // NOTE: removed corrupted comment.
         
         getMessageList({ sessionId: this.sessionId, current: 1 }).then(res => {
+             if (initToken !== this.chatInitToken || String(this.sessionId || '') !== sessionKey) return;
              const list = res.data || [];
              this.messages = list.map(this.processMessage).sort((a,b) => a.id - b.id);
              this.scrollToBottom();
@@ -427,7 +438,7 @@ export default {
                  this.noMoreOld = true;
              }
              
-             // 自动检测填满
+             // NOTE: removed corrupted comment.
              this.$nextTick(() => {
                  const el = this.$refs.chatMessages;
                  if(el) {
@@ -436,23 +447,28 @@ export default {
                     }
                  }
              });
-        }).finally(() => this.loading = false);
+        }).finally(() => {
+             if (initToken === this.chatInitToken && String(this.sessionId || '') === sessionKey) {
+                 this.loading = false;
+             }
+        });
      },
 
-     // 初始化：按日期加载
-     initByDate(dateStr) {
+     // NOTE: removed corrupted comment.
+     initByDate(dateStr, initToken = this.chatInitToken, sessionKey = String(this.sessionId || '')) {
         this.loading = true;
-        // 直接传递日期字符串
+        // NOTE: removed corrupted comment.
         const params = { sessionId: this.sessionId, targetDate: dateStr, current: 1 };
         
         getMessageList(params).then(res => {
+             if (initToken !== this.chatInitToken || String(this.sessionId || '') !== sessionKey) return;
              const list = res.data || [];
              this.messages = list.map(this.processMessage).sort((a,b) => a.id - b.id);
              this.isHistoryMode = true;
              this.noMoreOld = false;
              this.noMoreNew = false;
              
-             // 滚动到顶部
+             // NOTE: removed corrupted comment.
              this.$nextTick(() => {
                  const el = this.$refs.chatMessages;
                  if(el) {
@@ -463,17 +479,20 @@ export default {
                  }
              });
         }).finally(() => {
-             this.loading = false;
+             if (initToken === this.chatInitToken && String(this.sessionId || '') === sessionKey) {
+                 this.loading = false;
+             }
         });
      },
 
-     // 向上加载（更旧的消息）
+     // NOTE: removed corrupted comment.
      loadMoreOld() {
         if (this.messages.length === 0) return;
         if (this.loadingOld || this.noMoreOld) return;
         this.loadingOld = true;
+        const sessionKey = String(this.sessionId || '');
         
-        // 确保使用当前最小ID
+        // NOTE: removed corrupted comment.
         const currentMinId = this.minId;
 
         const params = {
@@ -482,75 +501,90 @@ export default {
             direction: 'old'
         };
         
-        const oldHeight = this.$refs.chatMessages.scrollHeight;
+        const oldHeight = this.$refs.chatMessages?.scrollHeight || 0;
         
         getMessageList(params).then(res => {
+             if (String(this.sessionId || '') !== sessionKey) return;
              const list = res.data || [];
              if (list.length > 0) {
                  const newMessages = list.map(this.processMessage);
-                 // 过滤
-                 const uniqueMessages = newMessages.filter(m => !this.messages.some(ex => ex.id == m.id));
+                 const existingIds = new Set(this.messages.map(m => this.normalizeId(m.id)));
+                 const uniqueMessages = newMessages.filter(m => !existingIds.has(this.normalizeId(m.id)));
                  
                  if (uniqueMessages.length > 0) {
-                     // 拼接并强制重新排序
                      this.messages = [...uniqueMessages, ...this.messages].sort((a,b) => a.id - b.id);
                      
-                     // 保持滚动位置
+                     // NOTE: removed corrupted comment.
                      this.$nextTick(() => {
-                        const newHeight = this.$refs.chatMessages.scrollHeight;
+                        if (String(this.sessionId || '') !== sessionKey) return;
+                        const container = this.$refs.chatMessages;
+                        if (!container) return;
+                        const newHeight = container.scrollHeight;
                         const diff = newHeight - oldHeight;
-                        this.$refs.chatMessages.scrollTop = diff;
+                        container.scrollTop = diff;
                      });
                  } else {
-                     console.warn('获取到重复消息，停止加载旧消息');
+                     console.warn('Received duplicate old messages, stop loading older history');
                      this.noMoreOld = true;
                  }
              } else {
                  this.noMoreOld = true;
              }
-        }).finally(() => this.loadingOld = false);
+        }).finally(() => {
+             if (String(this.sessionId || '') === sessionKey) {
+                 this.loadingOld = false;
+             }
+        });
      },
 
-     // 向下加载（更新的消息 - 仅历史模式）
+     // NOTE: removed corrupted comment.
      loadMoreNew() {
         if (!this.isHistoryMode || this.loadingNew || this.noMoreNew) return;
         this.loadingNew = true;
+        const sessionKey = String(this.sessionId || '');
         
-        // 确保使用当前最大ID
+        // NOTE: removed corrupted comment.
         const currentMaxId = this.maxId;
         const params = {
             sessionId: this.sessionId,
             anchorId: Number(currentMaxId) || currentMaxId,
             direction: 'new',
-            current: 1 // 兼容参数
+            current: 1 // NOTE: removed corrupted comment.
         };
         
-        console.log('加载新消息, anchorId:', params.anchorId);
+        if (import.meta.env.DEV) console.log('[ChatDetail] debug log');
         
         getMessageList(params).then(res => {
+             if (String(this.sessionId || '') !== sessionKey) return;
              const list = res.data || [];
              if (list.length > 0) {
                  const newMessages = list.map(this.processMessage);
-                 // 过滤
-                 const uniqueMessages = newMessages.filter(m => !this.messages.some(ex => ex.id == m.id));
+                 // NOTE: removed corrupted comment.
+                 const existingIds = new Set(this.messages.map(m => this.normalizeId(m.id)));
+                 const uniqueMessages = newMessages.filter(m => !existingIds.has(this.normalizeId(m.id)));
                  
                  if (uniqueMessages.length > 0) {
-                     // 拼接并强制重新排序
+                     // NOTE: removed corrupted comment.
                      this.messages = [...this.messages, ...uniqueMessages].sort((a,b) => a.id - b.id);
                  } else {
-                     console.warn('获取到重复消息，停止加载新消息');
+                     console.warn('Received duplicate new messages, stop loading newer history');
                      this.noMoreNew = true;
                  }
              } else {
                  this.noMoreNew = true;
              }
-        }).finally(() => this.loadingNew = false);
+        }).finally(() => {
+             if (String(this.sessionId || '') === sessionKey) {
+                 this.loadingNew = false;
+             }
+        });
      },
 
-     // 回到最新
+     // NOTE: removed corrupted comment.
      resetToLatest() {
+        this.targetDate = null;
         this.messages = [];
-        this.initLatest();
+        this.loadMessages();
      },
 
      setupIntersectionObserver() {
@@ -575,12 +609,13 @@ export default {
      handleScroll() {
         const el = this.$refs.chatMessages;
         if (!el) return;
+        const hasObserver = typeof window !== 'undefined' && 'IntersectionObserver' in window && this.observer;
         
-        // 触顶加载旧消息
-        if (el.scrollTop < 50) {
+        // NOTE: removed corrupted comment.
+        if (!hasObserver && el.scrollTop < 50) {
             this.loadMoreOld();
         } 
-        // 触底加载新消息 (仅历史模式)
+        // NOTE: removed corrupted comment.
         else if (el.scrollTop + el.clientHeight >= el.scrollHeight - 50) {
             this.loadMoreNew();
         }
@@ -596,7 +631,7 @@ export default {
         let content = msg.content || '';
         const processedId = this.normalizeId(msg.id ?? msg.messageId);
 
-        // 智能修正：如果类型是文本(0)，但内容看起来像图片路径，则强制改为图片类型(1)
+        // NOTE: removed corrupted comment.
         if (msgType === 0 && content) {
             const lower = content.toLowerCase();
             if (lower.endsWith('.jpg') || lower.endsWith('.png') || lower.endsWith('.jpeg') || lower.endsWith('.gif') || lower.endsWith('.webp')) {
@@ -609,7 +644,7 @@ export default {
             const isFullUrl = content.startsWith('http') || content.startsWith('blob:') || content.startsWith('data:');
             if (!isFullUrl) {
                 const prefix = this.$fileURL || '';
-                // 只要不以 http 开头，都尝试拼接
+                // prepend file host for relative image paths
                 if (!content.startsWith(prefix) && !content.startsWith('http')) {
                      content = prefix + content;
                 }
@@ -623,12 +658,12 @@ export default {
            messageType: msgType,
            fromUid: fromId,
            isSelf: fromId === this.user.id
-           // status: 'sent', // 删除此行，保留后端原始 status
-           // dbStatus: msg.status // 删除此行
+           // NOTE: removed corrupted comment.
+           // NOTE: removed corrupted comment.
         };
      },
      addMessageToUI(data) {
-        console.log('⚡ 准备添加消息到UI:', data);
+        if (import.meta.env.DEV) console.log('[ChatDetail] debug log');
         const msg = this.processMessage(data);
 
         // Fix: If backend returns ID 0, do not use it for deduplication
@@ -637,24 +672,24 @@ export default {
             exists = this.messages.find(m => m.id == msg.id);
         }
 
-        // Fix: 如果是自己发的消息，后端通过NEW_MESSAGE推回来时，
-        // 临时消息(tempId)还在，会导致重复。检查是否有pending的临时消息
+        // NOTE: removed corrupted comment.
+        // NOTE: removed corrupted comment.
         if (!exists && msg.isSelf) {
             const pendingTemp = this.messages.find(m => m.tempId && m.status === 'sending');
             if (pendingTemp) {
-                console.log('🔄 自己发的消息回推，更新临时消息:', pendingTemp.tempId, '->', msg.id);
+                if (import.meta.env.DEV) console.log('[ChatDetail] debug log');
                 pendingTemp.id = msg.id;
                 pendingTemp.status = msg.status || 'sent';
                 pendingTemp.tempId = undefined;
                 return;
             }
 
-            // 兜底：tempId 对不上时，用内容+类型+发送中状态匹配，避免遗漏
+            // NOTE: removed corrupted comment.
             const pendingSameContent = this.messages.find(m =>
                 m.isSelf && m.status === 'sending' && m.content === msg.content && m.messageType === msg.messageType
             );
             if (pendingSameContent) {
-                console.log('🔄 自己发的消息回推(内容匹配兜底)，更新临时消息:', pendingSameContent.id, '->', msg.id);
+                if (import.meta.env.DEV) console.log('[ChatDetail] debug log');
                 pendingSameContent.id = msg.id;
                 pendingSameContent.status = msg.status || 'sent';
                 pendingSameContent.tempId = undefined;
@@ -663,7 +698,7 @@ export default {
         }
 
         if(!exists) {
-           console.log('✅ 消息不存在，Pushing:', msg);
+           if (import.meta.env.DEV) console.log('[ChatDetail] debug log');
            this.messages.push(msg);
            if (!this.isHistoryMode) {
                this.$nextTick(() => {
@@ -671,12 +706,12 @@ export default {
                });
            }
         } else {
-           console.log('🚫 消息已存在，跳过:', msg.id);
+           if (import.meta.env.DEV) console.log('[ChatDetail] debug log');
         }
      },
      sendMessage() {
         if(this.isSendDisabled) {
-            console.log('Send disabled:', this.messageInput, this.isSending, this.wsStatus);
+            if (import.meta.env.DEV) console.log('Send disabled:', this.messageInput, this.isSending, this.wsStatus);
             return;
         }
 
@@ -739,28 +774,28 @@ export default {
      previewImage(currentUrl) {
         if (!currentUrl) return;
 
-        // 收集所有图片消息
+        // NOTE: removed corrupted comment.
         const images = this.messages
             .filter(m => m.messageType === 1 && m.content)
             .map(m => m.content);
 
-        // 找到当前点击图片的索引
+        // NOTE: removed corrupted comment.
         const index = images.indexOf(currentUrl);
 
-        console.log('Preview image:', currentUrl, 'Index:', index, 'Total:', images.length);
+        if (import.meta.env.DEV) console.log('Preview image:', currentUrl, 'Index:', index, 'Total:', images.length);
 
         showImagePreview({
             images: images,
             startPosition: index !== -1 ? index : 0,
             closeable: true,
-            loop: false // 是否循环播放，可按需开启
+            loop: false // NOTE: removed corrupted comment.
         });
      },
       handleMessageSent(data) {
          const idx = this.messages.findIndex(m => m.tempId === data.tempId);
          if(idx !== -1) {
             const normalizedId = this.normalizeId(data.messageId);
-            // 如果后端暂时返回 0/空的 messageId，等待后续 NEW_MESSAGE，再用 tempId 对齐
+            // NOTE: removed corrupted comment.
             if (!normalizedId || normalizedId === '0') {
                this.messages[idx].status = 'sending';
                return;
@@ -775,7 +810,7 @@ export default {
                 this.messages[idx].tempId = undefined;
             }
          } else {
-           // 兜底：如果找不到 tempId，对齐最近的发送中消息
+           // NOTE: removed corrupted comment.
            const fallbackIdxFromEnd = this.messages.slice().reverse().findIndex(m => m.isSelf && m.status === 'sending');
            if (fallbackIdxFromEnd !== -1) {
                const realIdx = this.messages.length - 1 - fallbackIdxFromEnd;
@@ -789,7 +824,7 @@ export default {
                    this.messages[realIdx].tempId = undefined;
                }
            } else {
-               // 最终兜底：如果列表里已经有相同 id，直接标记为已发送；否则补一条
+               // fallback: tempId not found, reconcile using messageId
                const normalizedId = this.normalizeId(data.messageId);
                const exists = this.messages.find(m => m.id == normalizedId);
                if (exists) {
@@ -811,10 +846,12 @@ export default {
      },
      getGroupTime(timeStr) {
         const d = new Date(timeStr);
-        return `${d.getMonth()+1}月${d.getDate()}日 ${d.getHours()}:${d.getMinutes()}`;
+        return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
      },
      getStatusText(status) {
-        return status === 'sending' ? '发送中' : (status === 'failed' ? '失败' : '');
+        if (status === 'sending') return 'Sending';
+        if (status === 'failed') return 'Failed';
+        return '';
      },
      toggleMorePanel() {
         this.showEmojiPanel = false;
@@ -831,7 +868,7 @@ export default {
         }
      },
      toggleVoice() {
-        this.$message.info('语音功能开发中');
+        this.$message.info('Voice input is not available yet');
      },
      hideAllPanels() {
         this.showMorePanel = false;
@@ -845,7 +882,7 @@ export default {
         if (!file) return;
 
         if (file.size > 5 * 1024 * 1024) {
-            this.$message.warning('图片大小不能超过5MB');
+            this.$message.warning('Image size cannot exceed 5MB');
             return;
         }
 
@@ -877,13 +914,13 @@ export default {
         uploadFile(formData).then(res => {
             let path = res.data || res;
             if (path && typeof path === 'string') {
-                 // 如果返回的是完整URL，截取相对路径
+                 // NOTE: removed corrupted comment.
                  const prefix = this.$fileURL || '';
                  if (prefix && path.startsWith(prefix)) {
                      path = path.substring(prefix.length);
                  } else if (path.startsWith('http')) {
-                     // 如果前缀匹配不上但还是http开头（可能是不同域名配置），尝试保留相对路径部分
-                     // 假设结构是 /smart-live/...
+                     // NOTE: removed corrupted comment.
+                     // NOTE: removed corrupted comment.
                      const match = path.match(/(\/smart-live\/.*)/) || path.match(/(\/20\d{2}\/.*)/);
                      if (match) path = match[1];
                  }
@@ -893,7 +930,7 @@ export default {
         }).catch(err => {
             console.error(err);
             msg.status = 'failed';
-            this.$message.error('图片发送失败');
+            this.$message.error('Image upload failed');
         });
 
         e.target.value = '';
@@ -936,7 +973,7 @@ export default {
 .message-left { background: white; border-top-left-radius: 4px; }
 .message-right { background: #95EC69; border-top-right-radius: 4px; }
 
-/* 图片消息样式覆盖 */
+/* NOTE: removed corrupted comment. */
 .message-image {
     background: transparent !important;
     padding: 0 !important;
@@ -945,7 +982,7 @@ export default {
 }
 
 /* Status outside bubble */
-/* 样式优化：限制图片大小 */
+/* NOTE: removed corrupted comment. */
 .msg-img {
     max-width: 150px;
     max-height: 150px;
