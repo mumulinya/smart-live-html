@@ -32,7 +32,10 @@
         <!-- User List (Tab 0) -->
         <template v-if="activeTab === 0">
            <div class="user-row" v-for="item in list" :key="item.id">
-              <van-image round width="40" height="40" :src="item.icon" class="user-avatar-img" />
+              <div style="position: relative; width: 40px; height: 40px; margin-right: 12px; flex-shrink: 0;">
+                  <van-image round width="40" height="40" :src="item.icon" class="user-avatar-img" :class="{ 'is-loaded': item.imgLoaded }" @load="item.imgLoaded = true" @error="item.imgError = true" style="margin-right: 0;" />
+                  <div class="img-skeleton" style="width: 40px; height: 40px; border-radius: 50%; top: 0; left: 0;" v-if="!item.imgError && !item.imgLoaded"></div>
+              </div>
               <div class="user-info-box">
                  <div class="user-name">{{ item.name || item.nickName }}</div>
                  <div class="user-bio">{{ item.introduce || item.content || '暂无简介' }}</div>
@@ -45,7 +48,8 @@
          <template v-if="activeTab === 1">
             <div class="shop-item" v-for="item in list" :key="item.id" @click="toShopDetail(item)">
                <div class="shop-img-box">
-                   <img :src="item.shopLogo || item.images || item.image || '/imgs/default-shop.png'" class="shop-cover" @error="$event.target.src='/imgs/default-shop.png'">
+                   <img :src="item.shopLogo || item.images || item.image || '/imgs/default-shop.png'" :class="{ 'is-loaded': item.imgLoaded }" class="shop-cover" @error="item.imgError = true; $event.target.src='/imgs/default-shop.png'" @load="item.imgLoaded = true">
+                   <div class="img-skeleton" v-if="!item.imgError && !item.imgLoaded"></div>
                </div>
                <div class="shop-main">
                    <div class="shop-title">{{ item.name }}</div>
@@ -141,7 +145,8 @@
                    <!-- Category 2: Group (or others) -->
                    <div v-else class="shop-item" @click="toShopDetail(item)">
                       <div class="shop-img-box">
-                           <img :src="item.image" class="shop-cover">
+                           <img :src="item.image" :class="{ 'is-loaded': item.imgLoaded }" class="shop-cover" @error="item.imgError = true" @load="item.imgLoaded = true">
+                           <div class="img-skeleton" v-if="!item.imgError && !item.imgLoaded"></div>
                       </div>
                       <div class="shop-main">
                          <div class="shop-title">{{ item.name }}</div>
@@ -260,7 +265,9 @@ const processItem = (item) => {
         image: (item.image && !item.image.startsWith('http')) ? fileURL + item.image : item.image,
         userAvatar: (item.userAvatar && !item.userAvatar.startsWith('http')) ? fileURL + item.userAvatar : item.userAvatar,
         shopLogo: (item.shopLogo && !item.shopLogo.startsWith('http')) ? fileURL + item.shopLogo.split(',')[0] : (item.shopLogo ? item.shopLogo.split(',')[0] : null),
-        images: (item.images && !item.images.startsWith('http')) ? fileURL + item.images.split(',')[0] : (item.images ? item.images.split(',')[0] : null)
+        images: (item.images && !item.images.startsWith('http')) ? fileURL + item.images.split(',')[0] : (item.images ? item.images.split(',')[0] : null),
+        imgLoaded: false,
+        imgError: false
     };
 };
 
@@ -497,6 +504,7 @@ onBeforeUnmount(() => {
     border-bottom: 1px solid #f5f5f5;
 }
 .shop-img-box {
+    position: relative;
     width: 80px;
     height: 80px;
     margin-right: 12px;

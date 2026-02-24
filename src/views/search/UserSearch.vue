@@ -118,7 +118,8 @@
                      <div class="waterfall-column" v-for="(col, i) in blogColumns" :key="'blog-col-' + i">
                         <div class="waterfall-item" v-for="b in col" :key="b.id" @click="toBlogDetail(b)">
                             <div class="card-img-box">
-                                <img :src="getFirstImage(b.images)" class="work-cover" loading="lazy">
+                                <img :src="getFirstImage(b.images)" class="work-cover" :class="{ 'is-loaded': b.imgLoaded }" loading="lazy" @error="handleImgError($event, b)" @load="b.imgLoaded=true">
+                                <div class="img-skeleton" v-if="!b.imgError && !b.imgLoaded"></div>
                             </div>
                             <div class="card-info">
                                 <div class="card-title" v-html="b.title"></div>
@@ -143,7 +144,8 @@
             <div v-if="activeScope === 'shop'" class="shop-list">
                 <div v-for="item in results" :key="item.id" class="shop-item" @click="toShopDetail(item)">
                     <div class="shop-img-box">
-                        <img :src="getImage(item.shopLogo || item.images || item.image)" class="shop-cover">
+                        <img :src="getImage(item.shopLogo || item.images || item.image)" :class="{ 'is-loaded': item.imgLoaded }" class="shop-cover" loading="lazy" @error="item.imgError = true; $event.target.src='/imgs/default-shop.png'" @load="item.imgLoaded = true">
+                        <div class="img-skeleton" v-if="!item.imgError && !item.imgLoaded"></div>
                     </div>
                     <div class="shop-main">
                         <div class="shop-title" v-html="item.name"></div>
@@ -237,7 +239,8 @@
                      <!-- Category 2: Group (using shop-item style) -->
                      <div v-else class="shop-item" @click="toProductDetail(item)">
                         <div class="shop-img-box">
-                             <img :src="getImage(item.shopLogo || item.images || item.image)" class="shop-cover">
+                             <img :src="getImage(item.shopLogo || item.images || item.image)" :class="{ 'is-loaded': item.imgLoaded }" class="shop-cover" loading="lazy" @error="item.imgError = true; $event.target.src='/imgs/default-goods.png'" @load="item.imgLoaded = true">
+                             <div class="img-skeleton" v-if="!item.imgError && !item.imgLoaded"></div>
                         </div>
                         <div class="shop-main">
                              <div class="shop-title" v-html="item.name"></div>
@@ -568,26 +571,12 @@ export default {
              if(newItem.icon && !newItem.icon.startsWith('http')) newItem.icon = this.getImage(newItem.icon);
              if(typeof newItem.images === 'string') newItem.images = newItem.images.split(',');
         }
+        newItem.imgLoaded = false;
+        newItem.imgError = false;
         return newItem;
     },
     getImage(img) {
         if (!img) return '/imgs/icons/default-icon.png';
-        let url = img;
-        if(Array.isArray(img)) url = img[0];
-        if (url.startsWith('http')) return url;
-        return this.$fileURL + url;
-    },
-    getFirstImage(images) {
-        if (!images) return '';
-        let img = images;
-        if (Array.isArray(images)) img = images.length > 0 ? images[0] : '';
-        else if(typeof images === 'string') img = images.split(',')[0];
-        return this.getImage(img);
-    },
-    // --- Helper Methods for New UI ---
-    formatScore(score) {
-        if(!score) return '0.0';
-        return (score / 10).toFixed(1);
     },
     getValidityText(v) {
         if (v.validityType === 1) {
@@ -794,6 +783,9 @@ export default {
     overflow: hidden;
     box-shadow: 0 1px 6px rgba(0,0,0,0.05);
 }
+.card-img-box {
+    position: relative;
+}
 .card-img-box img {
     width: 100%;
     display: block;
@@ -807,6 +799,7 @@ export default {
     margin-bottom: 6px;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
@@ -838,6 +831,7 @@ export default {
     box-shadow: 0 1px 4px rgba(0,0,0,0.05); /* Slight shadow for search list */
 }
 .shop-img-box {
+    position: relative;
     width: 80px;
     height: 80px;
     margin-right: 12px;

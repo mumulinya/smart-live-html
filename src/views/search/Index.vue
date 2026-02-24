@@ -136,7 +136,8 @@
                         </div>
                         <div class="shop-box" v-for="shop in shopList" :key="shop.id" @click="toShopDetail(shop)">
                             <div class="shop-img">
-                                <img :src="shop.images || '/imgs/default-shop.jpg'" loading="lazy" decoding="async" @error="e => e.target.src='/imgs/default-shop.jpg'" alt="">
+                                <img :src="shop.images || '/imgs/default-shop.jpg'" :class="{ 'is-loaded': shop.imgLoaded }" loading="lazy" decoding="async" @error="handleImgError($event, shop)" @load="shop.imgLoaded=true" alt="" />
+                                <div class="img-skeleton" v-if="!shop.imgError && !shop.imgLoaded"></div>
                             </div>
                             <div class="shop-info">
                                 <div class="shop-title" v-html="shop.name"></div>
@@ -157,6 +158,50 @@
                     </div>
                 </div>
             </van-tab>
+        <div class="filter-content" :class="{show: !!activeFilterTab}">
+              <!-- Shop Type -->
+              <div v-if="activeFilterTab==='type'" class="shop-type-panel">
+                 <div class="shop-type-grid">
+                    <div class="shop-type-item" :class="{active: selectedShopType===type.id}" v-for="type in shopTypes" :key="type.id" @click="selectShopType(type.id)">{{type.name}}</div>
+                 </div>
+              </div>
+              <!-- Distance -->
+              <div v-if="activeFilterTab==='distance'" class="distance-panel">
+                 <div class="distance-options">
+                    <div class="distance-option" :class="{active: selectedDistance===d.label}" v-for="d in distanceOptions" :key="d.value" @click="selectDistance(d)">{{d.label}}</div>
+                 </div>
+              </div>
+              <!-- Score -->
+               <div v-if="activeFilterTab==='score'" class="score-panel">
+                 <div class="score-options">
+                    <div class="score-option" :class="{active: selectedScore===s.label}" v-for="s in scoreOptions" :key="s.value" @click="selectScore(s)">{{s.label}}</div>
+                 </div>
+              </div>
+              <!-- Voucher Type -->
+              <div v-if="activeFilterTab==='pType'" class="score-panel">
+                 <div class="score-options">
+                     <div class="score-option" :class="{active: selectedProductType===t.value}" v-for="t in productTypeOptions" :key="t.value" @click="selectProductType(t)">{{t.label}}</div>
+                 </div>
+              </div>
+              <!-- Product Status -->
+              <div v-if="activeFilterTab==='status'" class="score-panel">
+                 <div class="score-options">
+                     <div class="score-option" :class="{active: selectedStatus===s.value}" v-for="s in statusOptions" :key="s.value" @click="selectStatus(s)">{{s.label}}</div>
+                 </div>
+              </div>
+              <!-- Product Shop Type -->
+              <div v-if="activeFilterTab==='pShopType'" class="shop-type-panel">
+                 <div class="shop-type-grid">
+                     <div class="shop-type-item" :class="{active: selectedProductShopType===type.id}" v-for="type in shopTypes" :key="type.id" @click="selectProductShopType(type.id)">{{type.name}}</div>
+                 </div>
+              </div>
+              <!-- Blog Type -->
+              <div v-if="activeFilterTab==='blogType'" class="shop-type-panel">
+                 <div class="shop-type-grid">
+                    <div class="shop-type-item" :class="{active: selectedBlogType===type.id}" v-for="type in shopTypes" :key="type.id" @click="selectBlogType(type.id)">{{type.name}}</div>
+                 </div>
+              </div>
+        </div>
 
             <!-- VOUCHER TAB -->
             <van-tab title="代金券" name="voucher">
@@ -315,7 +360,8 @@
                       
                           <div class="shop-box" v-for="v in productList" :key="v.id" @click="toProductDetail(v)">
                               <div class="shop-img">
-                                  <img :src="v.images || v.image || '/imgs/default-goods.png'" loading="lazy" decoding="async" @error="e => e.target.src='/imgs/default-goods.png'">
+                                  <img :src="v.images || v.image || '/imgs/default-goods.png'" :class="{ 'is-loaded': v.imgLoaded }" loading="lazy" decoding="async" @error="handleImgError($event, v)" @load="v.imgLoaded=true" />
+                                  <div class="img-skeleton" v-if="!v.imgError && !v.imgLoaded"></div>
                               </div>
                               <div class="shop-info">
                                   <div class="shop-title" v-html="v.name"></div>
@@ -359,16 +405,17 @@
                         <div v-else class="waterfall-container">
                            <div v-for="b in blogList" :key="b.id" class="waterfall-item" @click="toBlogDetail(b)">
                               <div class="xhs-card-image">
-                                 <img :src="b.images" v-show="!b.imageError" v-if="b.images" loading="lazy" decoding="async" @error="b.imageError=true">
+                                 <img :src="b.images" v-show="!b.imageError" v-if="b.images" :class="{ 'is-loaded': b.imgLoaded }" loading="lazy" decoding="async" @error="handleImgError($event, b, 'imageError')" @load="b.imgLoaded=true" />
                                  <div class="img-placeholder" v-if="!b.images || b.imageError">
                                      图片加载失败
                                  </div>
+                                 <div class="img-skeleton" v-if="b.images && !b.imageError && !b.imgLoaded"></div>
                               </div>
                               <div class="xhs-card-content">
                                  <div class="xhs-card-title" v-html="b.title || '无标题'"></div>
                                  <div class="xhs-card-footer">
                                     <div class="xhs-card-author" @click.stop="toUser(b)">
-                                       <img :src="b.icon || '/imgs/icons/default-icon.png'" loading="lazy" decoding="async" @error="e => e.target.src='/imgs/icons/default-icon.png'">
+                                       <img :src="b.icon || '/imgs/icons/default-icon.png'" :class="{ 'is-loaded': b.iconLoaded }" loading="lazy" decoding="async" @error="handleImgError($event, b, 'iconError', '/imgs/icons/default-icon.png')" @load="b.iconLoaded=true" />
                                        <span v-html="b.nickName || b.name || '用户'"></span>
                                     </div>
                                     <div class="xhs-card-like" @click.stop="addLike(b)">
@@ -397,11 +444,11 @@
                          </div>
                         <div v-for="u in userList" :key="u.id" class="user-item" @click="toUser(u)">
                             <div class="user-avatar">
-                               <img :src="u.icon || '/imgs/icons/default-icon.png'" loading="lazy" decoding="async" @error="e => e.target.src='/imgs/icons/default-icon.png'">
+                               <img :src="u.icon || '/imgs/icons/default-icon.png'" :class="{ 'is-loaded': u.imgLoaded }" loading="lazy" decoding="async" @error="handleImgError($event, u)" @load="u.imgLoaded=true" />
+                               <div class="img-skeleton" v-if="!u.imgError && !u.imgLoaded" style="border-radius: 50%;"></div>
                             </div>
                             <div class="user-info">
                                  <div class="user-name" v-html="u.nickName || '未命名'"></div>
-                                 <div class="user-desc">{{u.introduce || '这个人很懒，什么都没写'}}</div>
                             </div>
                             <button class="follow-btn" :class="{'following': u.isFollow}" @click.stop="toggleFollow(u)" v-if="user && u.id !== user.id">
                                 {{ u.isFollow ? '已关注' : '关注' }}
@@ -987,6 +1034,8 @@ export default {
           if (isStale()) return;
           const list = extractList(res);
           list.forEach((item) => {
+            item.imgLoaded = false;
+            item.imgError = false;
             const rawImg = item.shopLogo || item.images;
             if (!rawImg) return;
             if (rawImg.startsWith('http')) {
@@ -1015,6 +1064,10 @@ export default {
         requestPromise = searchProducts(data).then((res) => {
           if (isStale()) return;
           const list = extractList(res);
+          list.forEach((item) => {
+             item.imgLoaded = false;
+             item.imgError = false;
+          });
           applyList('productList', list);
         });
       } else if (requestTab === "blog") {
@@ -1028,6 +1081,10 @@ export default {
           if (isStale()) return;
           const list = extractList(res);
           list.forEach((blog) => {
+            blog.imgLoaded = false;
+            blog.imgError = false;
+            blog.iconLoaded = false;
+            blog.iconError = false;
             if (blog.title) {
               blog.title = blog.title.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"');
             }
@@ -1058,6 +1115,8 @@ export default {
           if (isStale()) return;
           const list = extractList(res);
           list.forEach((user) => {
+            user.imgLoaded = false;
+            user.imgError = false;
             if (user.icon) user.icon = this.$fileURL + user.icon;
           });
           applyList('userList', list);
@@ -1073,6 +1132,8 @@ export default {
           if (isStale()) return;
           const list = extractList(res);
           list.forEach((item) => {
+            item.imgLoaded = false;
+            item.imgError = false;
             const rawImg = item.shopLogo || item.images || item.image;
             if (!rawImg) return;
             if (rawImg.startsWith('http')) {
@@ -1200,6 +1261,14 @@ export default {
       } else {
          this.$router.push(`/user/profile/${u.id}`);
       }
+    },
+    handleImgError(e, obj, errorFlag = 'imgError', fallbackSrc = '/imgs/icons/default-icon.png') {
+        if (e && e.target) {
+            e.target.src = fallbackSrc;
+        }
+        if (obj) {
+            obj[errorFlag] = true;
+        }
     },
     addLike(b) {
        if (!localStorage.getItem("token")) {
@@ -1502,6 +1571,7 @@ export default {
   transform: scale(0.98);
 }
 .shop-img {
+  position: relative;
   width: 90px;
   height: 90px;
   border-radius: 8px;
@@ -2333,6 +2403,7 @@ export default {
   line-height: 1.4;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   margin-bottom: 8px;
@@ -2501,6 +2572,7 @@ export default {
   background: #fafafa;
 }
 .user-item .user-avatar {
+  position: relative;
   width: 50px;
   height: 50px;
   border-radius: 50%;

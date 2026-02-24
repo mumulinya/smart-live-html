@@ -70,8 +70,9 @@
           <div class="shop-card" v-for="s in shops" :key="s.id" @click="toDetail(s.id)">
               <!-- Image with Fallback -->
               <div class="shop-card-img">
-                  <img :src="s.shopLogo || s.images" v-if="(s.shopLogo || s.images) && !s.imageError" loading="lazy" decoding="async" @error="s.imageError = true" alt="">
-                  <div class="img-placeholder" v-else>
+                  <img :src="s.shopLogo || s.images" v-if="(s.shopLogo || s.images) && !s.imageError" :class="{ 'is-loaded': s.imgLoaded }" loading="lazy" decoding="async" @error="s.imageError = true" @load="s.imgLoaded = true" alt="">
+                  <div class="img-skeleton" v-if="(s.shopLogo || s.images) && !s.imageError && !s.imgLoaded"></div>
+                  <div class="img-placeholder" v-if="!(s.shopLogo || s.images) || s.imageError">
                       <i class="el-icon-goods"></i>
                   </div>
               </div>
@@ -81,7 +82,7 @@
                  <div class="shop-card-title" v-html="s.name"></div>
                  <!-- Row 2: Rating + Price -->
                  <div class="shop-card-stats">
-                    <el-rate disabled :model-value="Number(s.score || 0) / 10" text-color="#F63" :size="12"></el-rate>
+                    <van-rate :model-value="Number(s.score || 0) / 10" readonly allow-half color="#F63" void-icon="star" void-color="#eee" size="12px" />
                     <span class="stats-score">{{ formatScore(s.score) }}</span>
                     <span class="stats-comments">{{ s.comments || 0 }}条</span>
                     <span class="stats-price" v-if="s.avgPrice">￥{{ s.avgPrice }}/人</span>
@@ -172,7 +173,8 @@ export default {
        },
        shopListObserver: null,
        shopRequestToken: 0,
-       searchDebouncedRunner: null
+       searchDebouncedRunner: null,
+       savedScrollTop: 0
      }
   },
   created() {
@@ -231,6 +233,9 @@ export default {
      }
      this.$nextTick(() => {
         this.setupShopSentinelObserver();
+        if (this.$refs.shopListContainer) {
+            this.$refs.shopListContainer.scrollTop = this.savedScrollTop;
+        }
      });
   },
   deactivated() {
@@ -477,6 +482,8 @@ export default {
                  if (s.images && !s.images.startsWith('http')) {
                      s.images = this.$fileURL + s.images.split(',')[0];
                  }
+                 s.imgLoaded = false;
+                 s.imageError = false;
              });
              this.shops = list;
 
@@ -542,6 +549,8 @@ export default {
                   if (s.images && !s.images.startsWith('http')) {
                       s.images = (this.$fileURL || '') + s.images.split(',')[0];
                   }
+                  s.imgLoaded = false;
+                  s.imageError = false;
               });
               this.shops = this.shops.concat(list);
               this.params.current++;
@@ -566,8 +575,12 @@ export default {
         });
      },
      onScroll(e) {
-        if (typeof window !== 'undefined' && 'IntersectionObserver' in window) return;
+        if (typeof window !== 'undefined' && 'IntersectionObserver' in window) {
+           this.savedScrollTop = e.target.scrollTop;
+           return;
+        }
         const { scrollTop, clientHeight, scrollHeight } = e.target;
+        this.savedScrollTop = scrollTop;
         if (scrollTop + clientHeight >= scrollHeight - 50) {
            this.loadMoreShops();
         }
@@ -638,6 +651,7 @@ export default {
 
 /* Image Container */
 .shop-card-img {
+    position: relative;
     width: 88px;
     height: 88px;
     border-radius: 8px;

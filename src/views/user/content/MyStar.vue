@@ -177,7 +177,9 @@ const processItem = (item) => {
     }
     return {
         ...item,
-        userAvatar: avatar
+        userAvatar: avatar,
+        imgLoaded: false,
+        imgError: false
     };
 };
 
@@ -340,7 +342,8 @@ watch(loading, (val) => {
              <div v-else class="list-content">
                 <div v-for="item in list" :key="item.id" class="shop-item" @click="toShopDetail(item)">
                     <div class="shop-img-box">
-                         <img :src="getFirstShopImage(item.shopLogo || item.images || item.image)" class="shop-cover" loading="lazy" @error="$event.target.src='/imgs/default-shop.png'">
+                         <img :src="getFirstShopImage(item.shopLogo || item.images || item.image)" :class="{ 'is-loaded': item.imgLoaded }" class="shop-cover" loading="lazy" @error="item.imgError = true; $event.target.src='/imgs/default-shop.png'" @load="item.imgLoaded = true">
+                         <div class="img-skeleton" v-if="!item.imgError && !item.imgLoaded"></div>
                     </div>
                     <div class="shop-main">
                          <div class="shop-title">{{ item.name || 'Unknown Shop' }}</div>
@@ -387,7 +390,9 @@ watch(loading, (val) => {
                     <!-- Note: In real waterfall, we should separate list into colArrays. Here simply using odd/even index -->
                     <div class="waterfall-item" v-for="b in list.filter((_, index) => index % 2 === i)" :key="b.id" @click="toBlogDetail(b)">
                         <div class="card-img-box">
-                            <img :src="getFirstImage(b.images)" class="work-cover" loading="lazy" @error="handleImgError">
+                            <img :src="getFirstImage(b.images)" :class="{ 'is-loaded': b.imgLoaded }" class="work-cover" loading="lazy" @error="b.imgError = true; handleImgError($event)" @load="b.imgLoaded = true">
+                            <div class="img-skeleton" v-if="!b.imgError && !b.imgLoaded"></div>
+                            <div class="img-placeholder" v-if="b.imgError">图片加载失败</div>
                         </div>
                         <div class="card-info">
                             <div class="card-title">{{ b.title }}</div>
@@ -505,6 +510,7 @@ watch(loading, (val) => {
     border-bottom: 1px solid #f5f5f5;
 }
 .shop-img-box {
+    position: relative;
     width: 80px;
     height: 80px;
     margin-right: 12px;
@@ -605,6 +611,9 @@ watch(loading, (val) => {
 }
 .waterfall-item:hover {
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.card-img-box {
+    position: relative;
 }
 
 /* ===== New Voucher Card V2 Styles ===== */

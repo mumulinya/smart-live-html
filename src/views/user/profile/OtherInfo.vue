@@ -104,7 +104,8 @@
                                  @click="toNoteDetail(b)"
                             >
                                <div class="card-img-box" style="position: relative;">
-                                   <img :src="getImage(b.images)" class="work-cover" loading="lazy" @error="handleImgError">
+                                   <img :src="getImage(b.images)" class="work-cover" :class="{ 'is-loaded': b.imgLoaded }" loading="lazy" @error="handleImgError($event, b)" @load="b.imgLoaded=true">
+                                   <div class="img-skeleton" v-if="!b.imgError && !b.imgLoaded"></div>
                                    <div class="pinned-tag" v-if="b.pin || b.isTop">置顶</div>
                                </div>
                                <div class="card-info">
@@ -149,7 +150,8 @@
                                  @click="toNoteDetail(b)"
                             >
                                <div class="card-img-box">
-                                   <img :src="getImage(b.images)" class="work-cover" loading="lazy">
+                                   <img :src="getImage(b.images)" class="work-cover" :class="{ 'is-loaded': b.imgLoaded }" loading="lazy" @error="handleImgError($event, b)" @load="b.imgLoaded=true">
+                                   <div class="img-skeleton" v-if="!b.imgError && !b.imgLoaded"></div>
                                </div>
                                <div class="card-info">
                                    <div class="card-title">{{ b.title }}</div>
@@ -193,7 +195,8 @@
                               @click="toNoteDetail(b)"
                          >
                             <div class="card-img-box">
-                                <img :src="getImage(b.images)" class="work-cover" loading="lazy">
+                                <img :src="getImage(b.images)" class="work-cover" :class="{ 'is-loaded': b.imgLoaded }" loading="lazy" @error="handleImgError($event, b)" @load="b.imgLoaded=true">
+                                <div class="img-skeleton" v-if="!b.imgError && !b.imgLoaded"></div>
                             </div>
                             <div class="card-info">
                                 <div class="card-title">{{ b.title }}</div>
@@ -384,8 +387,9 @@ export default {
        }
        return age;
     },
-    handleImgError(e) {
+    handleImgError(e, b) {
        e.target.src = '/imgs/icons/default-icon.png';
+       if (b) b.imgError = true;
     },
     getImage(imgs) {
        if(!imgs) return '';

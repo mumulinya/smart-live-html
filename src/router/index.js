@@ -233,11 +233,6 @@ const routes = [
         component: () => import('@/views/chat/ChatHistoryCalendar.vue')
     },
     {
-        path: '/comment/list',
-        name: 'CommentList',
-        component: () => import('@/views/comment/List.vue')
-    },
-    {
         path: '/review/detail',
         name: 'ReviewDetail',
         component: () => import('@/views/review/Detail.vue')
@@ -255,7 +250,14 @@ const routes = [
 
 const router = createRouter({
     history: createWebHistory(),
-    routes
+    routes,
+    scrollBehavior(to, from, savedPosition) {
+        if (savedPosition) {
+            return savedPosition;
+        } else if (to.path !== from.path) {
+            return { top: 0 };
+        }
+    }
 })
 
 export default router

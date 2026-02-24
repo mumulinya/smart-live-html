@@ -244,7 +244,8 @@
                          <div class="waterfall-column" v-for="(col, i) in collectionColumns" :key="'collection-col-' + i">
                             <div class="waterfall-item" v-for="b in col" :key="b.id" @click="toBlogDetail(b)">
                                 <div class="card-img-box">
-                                    <img :src="getFirstImage(b.images)" class="work-cover" loading="lazy" @error="handleImgError">
+                                    <img :src="getFirstImage(b.images)" class="work-cover" :class="{ 'is-loaded': b.imgLoaded }" loading="lazy" @error="handleImgError($event, b)" @load="b.imgLoaded=true">
+                                    <div class="img-skeleton" v-if="!b.imgError && !b.imgLoaded"></div>
                                 </div>
                                 <div class="card-info">
                                     <div class="card-title">{{ b.title }}</div>
@@ -282,7 +283,8 @@
                          <div class="waterfall-column" v-for="(col, i) in likeColumns" :key="'like-col-' + i">
                             <div class="waterfall-item" v-for="b in col" :key="b.id" @click="toBlogDetail(b)">
                                 <div class="card-img-box">
-                                    <img :src="getFirstImage(b.images)" class="work-cover" loading="lazy" @error="handleImgError">
+                                    <img :src="getFirstImage(b.images)" class="work-cover" :class="{ 'is-loaded': b.imgLoaded }" loading="lazy" @error="handleImgError($event, b)" @load="b.imgLoaded=true">
+                                    <div class="img-skeleton" v-if="!b.imgError && !b.imgLoaded"></div>
                                 </div>
                                 <div class="card-info">
                                     <div class="card-title">{{ b.title }}</div>

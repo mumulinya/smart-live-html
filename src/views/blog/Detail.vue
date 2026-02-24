@@ -141,7 +141,28 @@
 
           <!-- 评论区域 -->
           <div class="comments-section" ref="commentsSection">
-             <div class="comments-header">网友评论 ({{blog.comments || 0}})</div>
+             <div class="comments-header-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div class="comments-header" style="margin-bottom: 0;">网友评论 ({{blog.comments || 0}})</div>
+                <div class="comments-sort-group" style="display: flex; gap: 15px; font-size: 14px; color: #999;">
+                    <span
+                      class="comments-sort-btn"
+                      :class="{ 'active': commentSortType === 'latest' }"
+                      style="cursor: pointer;"
+                      @click="onCommentSortChange('latest')"
+                    >
+                      最新
+                    </span>
+                    <span style="width: 1px; height: 14px; background: #ddd; margin: 3px 0;"></span>
+                    <span
+                      class="comments-sort-btn"
+                      :class="{ 'active': commentSortType === 'hot' }"
+                      style="cursor: pointer;"
+                      @click="onCommentSortChange('hot')"
+                    >
+                      最热
+                    </span>
+                </div>
+             </div>
              
              <div class="comment-list" v-if="(comments && comments.length > 0) || (aiComment && aiComment.content)">
                 <!-- AI 评论 -->
@@ -518,6 +539,7 @@ export default {
        comments: [],
        commentsPage: 1,
        commentsPageSize: 10,
+       commentSortType: 'hot', // 默认最热
        commentsNoMore: false,
        commentsLoading: false,
        commentLoadArmed: false,
@@ -617,6 +639,21 @@ export default {
      window.removeEventListener('scroll', this.onWindowScroll);
   },
   methods: {
+     onCommentSortChange(type) {
+         if (!type || this.commentSortType === type) return;
+         this.commentSortType = type;
+         if (!this.blog || !this.blog.id) return;
+         this.loadComments(this.blog.id, true).then(() => {
+             if (this.showReviewPopup) {
+                 this.loadAllComments(true);
+             }
+         });
+     },
+     getCommentSortParams() {
+         return {
+             sort: this.commentSortType
+         };
+     },
      goBack() { this.$router.go(-1); },
      toOtherInfo() {
         if(this.user && this.user.id === this.blog.userId) {
@@ -809,7 +846,8 @@ export default {
            sourceId: id,
            sourceType: 3,
            current: this.commentsPage,
-           size: this.commentsPageSize
+           size: this.commentsPageSize,
+           ...this.getCommentSortParams()
         }).then(res => {
            let list = [];
            if (Array.isArray(res)) list = res;
@@ -997,11 +1035,17 @@ export default {
       viewAllComments() {
          this.scrollToComments();
       },
-      loadAllComments() {
+      loadAllComments(reset = false) {
+         if(reset) {
+            this.allCommentsPage = 1;
+            this.allComments = [];
+            this.allCommentsNoMore = false;
+         }
+
          if(this.allCommentsLoading || this.allCommentsNoMore) return;
          this.allCommentsLoading = true;
          
-         getComments({ sourceId: this.blog.id, sourceType: 3, current: this.allCommentsPage }).then(res => {
+         getComments({ sourceId: this.blog.id, sourceType: 3, current: this.allCommentsPage, ...this.getCommentSortParams() }).then(res => {
             let list = [];
             if(Array.isArray(res)) list = res;
             else if(res && Array.isArray(res.list)) list = res.list;

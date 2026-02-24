@@ -375,7 +375,8 @@ export default {
       swipeThreshold: 80,
       maxVerticalTravel: 50,
 
-      pendingCategoryId: null // Add this to track pending tab restore
+      pendingCategoryId: null, // Add this to track pending tab restore
+      scrollPositions: {} // Save scroll position per category
     }
   },
   computed: {
@@ -456,7 +457,6 @@ export default {
         }
     }
 
-    // Keep-alive hook: sync tab from URL if changed (e.g. deep link)
     const tab = this.$route.query.tab;
     if (tab && tab !== this.activeCategory) {
         // Check validity
@@ -471,6 +471,20 @@ export default {
             else this.queryBlogsByCategory(tab);
         }
     }
+
+    // Restore scroll position
+    this.$nextTick(() => {
+       const activePos = this.scrollPositions[this.activeCategory] || 0;
+       if (this.$el) {
+           const containers = this.$el.querySelectorAll('.blog-list-content');
+           containers.forEach(el => {
+               // The active van-tab content is usually the one without display: none
+               if (el.parentElement && el.parentElement.style.display !== 'none') {
+                   el.scrollTop = activePos;
+               }
+           });
+       }
+    });
   },
 
   methods: {
@@ -734,6 +748,9 @@ export default {
                 
                 // Important: map targetId to id for navigation (fallback to id)
                 item.id = item.targetId || item.id;
+                
+                item.imgLoaded = false;
+                item.imgError = false;
 
                 item.imgError = !item.img;
                 item.imgLoaded = false;
@@ -839,6 +856,8 @@ export default {
       onScroll(e) {
          // Infinite scroll logic
          const { scrollTop, scrollHeight, clientHeight } = e.target;
+         this.scrollPositions[this.activeCategory] = scrollTop;
+         
          if (scrollHeight - scrollTop - clientHeight < 50 && !this.isLoading) {
              if (this.activeCategory === 'follow') {
                if (!this.noMoreFollowData) this.queryFollowedFeeds();
