@@ -1370,9 +1370,17 @@ export default {
     cursor: pointer;
 }
 .header-title {
-    font-size: 17px;
-    font-weight: 600;
-    color: #333;
+  font-size: 17px;
+  font-weight: 600;
+  color: #333;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 60%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
 }
 .header-right {
     width: 40px;

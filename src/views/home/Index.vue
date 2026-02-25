@@ -91,6 +91,53 @@
       </div>
     </div>
 
+    <!-- 横向滑动推荐区 -->
+    <div class="top-shops-panel" v-if="topShops.length > 0">
+      <div class="panel-header-rank">
+        <div class="rank-tabs-group">
+          <!-- 团购 -->
+          <div class="rank-tab-item" :class="{ active: activeHotTab === 'groupBuy' }" @click="switchHotTab('groupBuy')">
+            <span v-if="activeHotTab === 'groupBuy'">🔥 本地团购榜</span>
+            <span v-else>本地团购</span>
+          </div>
+          <span class="rank-tab-divider">|</span>
+          <!-- 店铺 -->
+          <div class="rank-tab-item" :class="{ active: activeHotTab === 'shop' }" @click="switchHotTab('shop')">
+            <span v-if="activeHotTab === 'shop'">🔥 本地必吃榜</span>
+            <span v-else>必吃好店</span>
+          </div>
+          <span class="rank-tab-divider">|</span>
+          <!-- 优惠券 -->
+          <div class="rank-tab-item" :class="{ active: activeHotTab === 'voucher' }" @click="switchHotTab('voucher')">
+            <span v-if="activeHotTab === 'voucher'">🔥 抢手好券榜</span>
+            <span v-else>抢手好券</span>
+          </div>
+        </div>
+        <div class="panel-more" @click="goToTopList">查看完整榜单 <i class="el-icon-arrow-right"></i></div>
+      </div>
+      <div class="scroll-view-wrapper">
+        <div class="shop-card" v-for="(shop, idx) in topShops" :key="shop.id" @click="toHotDetail(shop)">
+          <div class="shop-img-box">
+             <img :src="shop.displayImg" v-if="shop.displayImg && !shop.imgError" @error="shop.imgError = true" @load="shop.imgLoaded = true" :class="{'is-loaded': shop.imgLoaded}" alt="">
+             <div class="img-fallback" v-else><i class="el-icon-goods"></i></div>
+             <div class="heat-tag">🔥 {{ formatTopScore(shop.hotScore) }}</div>
+          </div>
+          <div class="shop-name-trunc">
+            <span v-if="shop.activityType === 1" class="seckill-tag" style="background: linear-gradient(135deg, #ff416c, #ff4b2b); color: white; font-size: 10px; padding: 1px 4px; border-radius: 3px; margin-right: 4px; vertical-align: middle;">秒杀</span>
+            {{ shop.name || shop.title }}
+          </div>
+          <!-- 店铺显示人均和距离，券展示价格 -->
+          <div class="shop-desc-trunc" v-if="activeHotTab === 'shop'">
+            {{ shop.avgPrice ? '人均 ￥' + shop.avgPrice : '' }}{{ shop.avgPrice && shop.distance ? ' | ' : '' }}{{ shop.distance ? formatTopDistance(shop.distance) : '' }}
+          </div>
+          <div class="shop-desc-price" v-else>
+            <span class="price-symbol">￥</span><span class="price-now">{{ formatPrice(shop.price || shop.payValue) }}</span>
+            <span class="price-old" v-if="shop.originalPrice || shop.actualValue">￥{{ formatPrice(shop.originalPrice || shop.actualValue) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Van Tabs with Swipeable -->
     <van-tabs v-model:active="activeCategory" swipeable animated sticky offset-top="50px" color="#ff6633" title-active-color="#ff6633" :ellipsis="false" @change="onTabChange">
         <!-- Follow Tab (First) -->
@@ -302,26 +349,29 @@
 </template>
 
 <script>
-import { locationUtil } from '@/utils/location';
-// import request, { fileURL, util } from '@/utils/request';
-import { getShopTypes } from '@/api/shop';
-import { getHotBlogs, getBlogsByCategory } from '@/api/blog';
-import { likeBlog, getFeedList } from '@/api/interaction';
+import { getHotBlogs, getBlogsByCategory } from "@/api/blog";
+import { likeBlog, getFeedList } from "@/api/interaction";
+import { getShopTypes, getHotRank } from "@/api/shop";
+import { getProductHotRank } from "@/api/product";
+import { locationUtil } from "@/utils/location";
 import FootBar from '@/components/FootBar.vue';
-import { Lightning, Present } from '@element-plus/icons-vue';
+import { Lightning } from '@element-plus/icons-vue';
 
 export default {
   name: 'HomeIndex',
   components: {
     FootBar,
-    Lightning,
-    Present
+    Lightning
   },
   data() {
     return {
       isReachBottom: false,
       types: [],
       activeTypePage: 0,
+      
+      activeHotTab: 'shop', // 'shop', 'voucher', 'groupBuy'
+      
+      topShops: [],
       blogs: [],
       current: 1,
       isLoading: false,
@@ -503,6 +553,99 @@ export default {
         query: { type: id, name: name }
       });
     },
+    toDetail(id) {
+      this.$router.push({ path: '/shop/detail', query: { id } });
+    },
+    toHotDetail(item) {
+      if (this.activeHotTab === 'shop') {
+        this.$router.push({ path: '/shop/detail', query: { id: item.id } });
+      } else {
+        // handle voucher / groupBuy
+        this.$router.push({ path: '/product/detail', query: { id: item.id } });
+      }
+    },
+    switchHotTab(tab) {
+      if (this.activeHotTab === tab) return;
+      this.activeHotTab = tab;
+      this.loadTopShops();
+    },
+    goToTopList() {
+      if (this.activeHotTab === 'shop') {
+        this.$router.push('/shop/top');
+      } else {
+        // Product top list (creates soon)
+        this.$router.push({ path: '/product/top', query: { type: this.activeHotTab } });
+      }
+    },
+    formatPrice(value) {
+      const num = Number(value);
+      if (!Number.isFinite(num)) return '0.00';
+      if (Number.isInteger(num)) return String(num);
+      return num.toFixed(2).replace(/\.?0+$/, '');
+    },
+    loadTopShops() {
+      if (this.activeHotTab === 'shop') {
+        getHotRank({
+          current: 1,
+          x: this.userLocation.x,
+          y: this.userLocation.y
+        }).then(res => {
+          let list = [];
+          if (Array.isArray(res)) list = res;
+          else if (res && Array.isArray(res.list)) list = res.list;
+          else if (res && res.data && Array.isArray(res.data.list)) list = res.data.list;
+          else if (res && Array.isArray(res.data)) list = res.data;
+
+          list = list.slice(0, 10);
+          this.processShopImages(list);
+          this.topShops = list;
+        }).catch(err => {
+          console.error('加载Top店铺失败', err);
+        });
+      } else {
+        let category = this.activeHotTab === 'voucher' ? 1 : 2;
+        getProductHotRank({
+          current: 1,
+          size: 10,
+          category: category
+        }).then(res => {
+          let list = [];
+          if (Array.isArray(res)) list = res;
+          else if (res && Array.isArray(res.list)) list = res.list;
+          else if (res && res.data && Array.isArray(res.data.list)) list = res.data.list;
+          else if (res && Array.isArray(res.data)) list = res.data;
+
+          list = list.slice(0, 10);
+          this.processShopImages(list);
+          this.topShops = list;
+        }).catch(err => {
+          console.error('加载Top商品失败', err);
+        });
+      }
+    },
+    processShopImages(list) {
+      list.forEach(s => {
+        let img = s.shopLogo || s.images || '';
+        if (img && !img.startsWith('http')) {
+          img = (this.$fileURL || '') + img.split(',')[0];
+        } else if (img) {
+          img = img.split(',')[0];
+        }
+        s.displayImg = img;
+        s.imgLoaded = false;
+        s.imgError = false;
+      });
+    },
+    formatTopScore(hotScore) {
+      const n = Number(hotScore);
+      if (!Number.isFinite(n) || n <= 0) return '0.0';
+      return n.toFixed(1);
+    },
+    formatTopDistance(distance) {
+      const n = Number(distance);
+      if (!Number.isFinite(n) || n <= 0) return '';
+      return n < 1000 ? `${n.toFixed(0)}m` : `${(n / 1000).toFixed(1)}km`;
+    },
     getTypeIconSrc(icon) {
       if (!icon) return '/imgs/types/ms.png';
 
@@ -623,14 +766,50 @@ export default {
       return categories;
     },
     queryHotBlogsScroll() {
-       this.queryBlogsByCategory('hot');
+       if (this.isLoading || this.noMoreData) return;
+       this.isLoading = true;
+       getHotBlogs({ current: this.current, status: 0 })
+         .then((res) => {
+            // Handle paginated or list response
+            let list = [];
+            if (Array.isArray(res)) {
+               list = res;
+            } else if (res && Array.isArray(res.records)) {
+               list = res.records;
+            } else if (res && Array.isArray(res.data)) {
+                // In case it's nested
+                list = res.data;
+            }
+            
+           if (!list || list.length === 0) {
+             this.noMoreData = true;
+           } else {
+              list.forEach(b => {
+               b.img = b.images ? (this.$fileURL + b.images.split(",")[0]) : '';
+               b.icon = b.icon ? (this.$fileURL + b.icon) : '';
+               // If no image URL, set error true immediately so placeholder shows
+               b.imgError = !b.img;
+               b.imgLoaded = false;
+               
+              if (!b.liked) b.liked = 0; // Ensure liked count exists
+             });
+             this.blogs = this.blogs.concat(list);
+             this.current++;
+           }
+         })
+         .catch(err => {
+           console.error('博客请求错误:', err);
+         })
+         .finally(() => {
+           this.isLoading = false;
+           this.isReachBottom = false;
+           this.isRequesting = false;
+           this.onDataLoaded();
+         });
     },
     queryBlogsByCategory(categoryId) {
-        if (this.isLoading && this.current > 1) return; // Allow first load
-        if (this.isRequesting) return;
-
+        if (this.isLoading || this.noMoreData) return; // Allow first load
         this.isLoading = true;
-        this.isRequesting = true;
         
         const apiCall = categoryId === 'hot' ? getHotBlogs({ current: this.current, status: 0 }) : getBlogsByCategory(categoryId, this.current);
         
@@ -674,11 +853,8 @@ export default {
           });
     },
     queryFollowedFeeds() {
-        if (this.isLoading && this.followParams.offset > 0) return;
-        if (this.isRequesting) return;
-
+        if (this.isLoading || this.noMoreFollowData) return;
         this.isLoading = true;
-        this.isRequesting = true;
         
         // Use time/offset based pagination for feeds
         const lastId = this.followParams.minTime || new Date().getTime();
@@ -792,6 +968,7 @@ export default {
          }).catch(err => {
             console.error(err);
             this.currentCity = '杭州';
+            this.loadTopShops();
          });
        },
        updateLocationState(loc) {
@@ -803,6 +980,7 @@ export default {
             } else if (loc.region && loc.region.province) {
                this.currentCity = loc.region.province.replace('省', '').replace('市', '');
             }
+            this.loadTopShops();
        },
        switchCategory(categoryId) {
          if (this.activeCategory === categoryId) return;
@@ -1663,5 +1841,153 @@ export default {
   font-size: 60px;
   color: #ddd;
   margin-bottom: 20px;
+}
+
+/* Top 10 Shops Panel */
+.top-shops-panel {
+  background: #fff;
+  margin: 12px 10px;
+  border-radius: 16px;
+  padding: 16px 0;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+}
+.top-shops-panel .panel-header-rank {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0 12px 12px;
+}
+
+/* Tabs merged into header */
+.rank-tabs-group {
+  display: flex;
+  align-items: baseline;
+  gap: 0;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+.rank-tab-item {
+  font-size: 12px;
+  color: #999;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.rank-tab-item.active {
+  font-size: 15px;
+  font-weight: 800;
+  color: #333;
+}
+.rank-tab-divider {
+  color: #eee;
+  margin: 0 6px;
+  font-size: 10px;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.top-shops-panel .panel-more {
+  font-size: 12px;
+  color: #999;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.scroll-view-wrapper {
+  display: flex;
+  overflow-x: auto;
+  gap: 12px;
+  padding: 0 16px;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+}
+.scroll-view-wrapper::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+.scroll-view-wrapper .shop-card {
+  flex-shrink: 0;
+  width: 140px;
+  display: flex;
+  flex-direction: column;
+}
+.scroll-view-wrapper .shop-img-box {
+  width: 140px;
+  height: 100px;
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+  margin-bottom: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+.scroll-view-wrapper .shop-img-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.scroll-view-wrapper .heat-tag {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  background: linear-gradient(135deg, #ff4b2b, #ff416c);
+  color: #fff;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 6px 0 6px 0;
+  font-weight: 800;
+  box-shadow: 0 2px 4px rgba(255, 65, 108, 0.4);
+  letter-spacing: 0.5px;
+}
+.scroll-view-wrapper .shop-name-trunc {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2c3e50;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+}
+.scroll-view-wrapper .shop-desc-trunc {
+  font-size: 11px;
+  color: #95a5a6;
+  margin-top: 4px;
+}
+.scroll-view-wrapper .shop-desc-price {
+  margin-top: 4px;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.scroll-view-wrapper .price-symbol {
+  font-size: 10px;
+  color: #ff416c;
+  font-weight: 600;
+}
+.scroll-view-wrapper .price-now {
+  font-size: 16px;
+  color: #ff416c;
+  font-weight: 700;
+  font-family: Arial, sans-serif;
+  letter-spacing: -0.5px;
+}
+.scroll-view-wrapper .price-old {
+  font-size: 11px;
+  color: #b2bec3;
+  text-decoration: line-through;
+  margin-left: 2px;
+}
+.scroll-view-wrapper .img-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #eee;
+  color: #ccc;
+  font-size: 24px;
 }
 </style>

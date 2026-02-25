@@ -54,8 +54,29 @@
       @touchmove.capture.passive="onTouchMove"
       @touchend.capture="onTouchEnd"
     >
-        <!-- Filter Dropdowns (Global Overlay) -->
-        <div class="filter-content" :class="{show: !!activeFilterTab}">
+        <van-tabs v-model:active="activeTab" swipeable type="line" animated sticky offset-top="54px" color="#ff6633" title-active-color="#ff6633" :ellipsis="false" @click-tab="onTabChange">
+            
+            <!-- SHOP TAB -->
+            <van-tab title="店铺" name="shop">
+                <div class="tab-content">
+                    <!-- Shop Filter Bar -->
+                    <div class="filter-wrapper">
+                        <div class="meituan-filter-bar">
+                        <div class="filter-item" :class="{active: activeFilterTab==='type'}" @click="toggleFilterTab('type')">
+                            <div class="filter-text">{{selectedShopType ? getShopTypeName(selectedShopType) : '分类'}} <i class="el-icon-arrow-down"></i></div>
+                        </div>
+                        <div class="filter-item" :class="{active: activeFilterTab==='distance'}" @click="toggleFilterTab('distance')">
+                            <div class="filter-text">{{selectedDistance || '距离'}} <i class="el-icon-arrow-down"></i></div>
+                        </div>
+                        <div class="filter-item" :class="{active: activeFilterTab==='score'}" @click="toggleFilterTab('score')">
+                            <div class="filter-text">{{selectedScore || '评分'}} <i class="el-icon-arrow-down"></i></div>
+                        </div>
+                         <div class="filter-item" :class="{active: activeFilterTab==='sort'}" @click="toggleFilterTab('sort')">
+                             <div class="filter-text">{{selectedSort ? getSortLabel(selectedSort) : '智能排序'}} <i class="el-icon-arrow-down"></i></div>
+                         </div>
+                    </div>
+                    
+                                        <div class="filter-content" :class="{show: ['type','distance','score','sort'].includes(activeFilterTab)}">
               <!-- Shop Type -->
               <div v-if="activeFilterTab==='type'" class="shop-type-panel">
                  <div class="shop-type-grid">
@@ -74,55 +95,20 @@
                     <div class="score-option" :class="{active: selectedScore===s.label}" v-for="s in scoreOptions" :key="s.value" @click="selectScore(s)">{{s.label}}</div>
                  </div>
               </div>
-              <!-- Voucher Type -->
-              <div v-if="activeFilterTab==='pType'" class="score-panel">
-                 <div class="score-options">
-                     <div class="score-option" :class="{active: selectedProductType===t.value}" v-for="t in productTypeOptions" :key="t.value" @click="selectProductType(t)">{{t.label}}</div>
-                 </div>
-              </div>
-              <!-- Product Status -->
-              <div v-if="activeFilterTab==='status'" class="score-panel">
-                 <div class="score-options">
-                     <div class="score-option" :class="{active: selectedStatus===s.value}" v-for="s in statusOptions" :key="s.value" @click="selectStatus(s)">{{s.label}}</div>
-                 </div>
-              </div>
-              <!-- Product Shop Type -->
-              <div v-if="activeFilterTab==='pShopType'" class="shop-type-panel">
-                 <div class="shop-type-grid">
-                     <div class="shop-type-item" :class="{active: selectedProductShopType===type.id}" v-for="type in shopTypes" :key="type.id" @click="selectProductShopType(type.id)">{{type.name}}</div>
-                 </div>
-              </div>
-              <!-- Blog Type -->
-              <div v-if="activeFilterTab==='blogType'" class="shop-type-panel">
-                 <div class="shop-type-grid">
-                    <div class="shop-type-item" :class="{active: selectedBlogType===type.id}" v-for="type in shopTypes" :key="type.id" @click="selectBlogType(type.id)">{{type.name}}</div>
-                 </div>
-              </div>
-        </div>
-
-        <van-tabs v-model:active="activeTab" swipeable type="line" animated sticky offset-top="54px" color="#ff6633" title-active-color="#ff6633" :ellipsis="false" @click-tab="onTabChange">
-            
-            <!-- SHOP TAB -->
-            <van-tab title="店铺" name="shop">
-                <div class="tab-content">
-                    <!-- Shop Filter Bar -->
-                    <div class="meituan-filter-bar">
-                        <div class="filter-item" :class="{active: activeFilterTab==='type'}" @click="toggleFilterTab('type')">
-                            <div class="filter-text">{{selectedShopType ? getShopTypeName(selectedShopType) : '分类'}} <i class="el-icon-arrow-down"></i></div>
-                        </div>
-                        <div class="filter-item" :class="{active: activeFilterTab==='distance'}" @click="toggleFilterTab('distance')">
-                            <div class="filter-text">{{selectedDistance || '距离'}} <i class="el-icon-arrow-down"></i></div>
-                        </div>
-                        <div class="filter-item" :class="{active: activeFilterTab==='score'}" @click="toggleFilterTab('score')">
-                            <div class="filter-text">{{selectedScore || '评分'}} <i class="el-icon-arrow-down"></i></div>
-                        </div>
+               <!-- Sort -->
+               <div v-if="activeFilterTab==='sort'" class="score-panel">
+                  <div class="score-options">
+                     <div class="score-option" :class="{active: selectedSort===s.value}" v-for="s in sortOptions" :key="s.value" @click="selectSort(s)">{{s.label}}</div>
+                  </div>
+               </div>
                     </div>
-                    
+                    </div>
                     <!-- Selected Tags -->
-                    <div class="selected-filters" v-if="selectedShopType || selectedDistance || selectedScore">
+                    <div class="selected-filters" v-if="selectedShopType || selectedDistance || selectedScore || (selectedSort && selectedSort !== 'hot')">
                           <div class="selected-filter-tag" v-if="selectedShopType">{{getShopTypeName(selectedShopType)}} <span class="close" @click="selectShopType(selectedShopType)">×</span></div>
                           <div class="selected-filter-tag" v-if="selectedDistance">{{selectedDistance}} <span class="close" @click="selectedDistance=null;triggerSearch()">×</span></div>
                           <div class="selected-filter-tag" v-if="selectedScore">{{selectedScore}} <span class="close" @click="selectedScore=null;triggerSearch()">×</span></div>
+                           <div class="selected-filter-tag" v-if="selectedSort && selectedSort !== 'hot'">{{getSortLabel(selectedSort)}} <span class="close" @click="selectedSort='hot';triggerSearch()">×</span></div>
                           <div class="clear-all" @click="clearAllFilters">清除全部</div>
                     </div>
 
@@ -158,25 +144,24 @@
                     </div>
                 </div>
             </van-tab>
-        <div class="filter-content" :class="{show: !!activeFilterTab}">
-              <!-- Shop Type -->
-              <div v-if="activeFilterTab==='type'" class="shop-type-panel">
-                 <div class="shop-type-grid">
-                    <div class="shop-type-item" :class="{active: selectedShopType===type.id}" v-for="type in shopTypes" :key="type.id" @click="selectShopType(type.id)">{{type.name}}</div>
-                 </div>
-              </div>
-              <!-- Distance -->
-              <div v-if="activeFilterTab==='distance'" class="distance-panel">
-                 <div class="distance-options">
-                    <div class="distance-option" :class="{active: selectedDistance===d.label}" v-for="d in distanceOptions" :key="d.value" @click="selectDistance(d)">{{d.label}}</div>
-                 </div>
-              </div>
-              <!-- Score -->
-               <div v-if="activeFilterTab==='score'" class="score-panel">
-                 <div class="score-options">
-                    <div class="score-option" :class="{active: selectedScore===s.label}" v-for="s in scoreOptions" :key="s.value" @click="selectScore(s)">{{s.label}}</div>
-                 </div>
-              </div>
+            <!-- VOUCHER TAB -->
+            <van-tab title="代金券" name="voucher">
+                 <div class="tab-content">
+                      <!-- Product Filter Bar (Reused) -->
+                      <div class="filter-wrapper">
+                        <div class="meituan-filter-bar">
+                          <div class="filter-item" :class="{active: activeFilterTab==='pType'}" @click="toggleFilterTab('pType')">
+                              <div class="filter-text">{{selectedProductType !== null ? getProductTypeName(selectedProductType) : '类型'}} <i class="el-icon-arrow-down"></i></div>
+                           </div>
+                           <div class="filter-item" :class="{active: activeFilterTab==='status'}" @click="toggleFilterTab('status')">
+                              <div class="filter-text">{{ selectedStatus ? getStatusName(selectedStatus) : '状态' }} <i class="el-icon-arrow-down"></i></div>
+                           </div>
+                           <div class="filter-item" :class="{active: activeFilterTab==='pShopType'}" @click="toggleFilterTab('pShopType')">
+                              <div class="filter-text">{{selectedProductShopType ? getShopTypeName(selectedProductShopType) : '分类'}} <i class="el-icon-arrow-down"></i></div>
+                           </div>
+                      </div>
+                      
+                                          <div class="filter-content" :class="{show: ['pType','status','pShopType'].includes(activeFilterTab)}">
               <!-- Voucher Type -->
               <div v-if="activeFilterTab==='pType'" class="score-panel">
                  <div class="score-options">
@@ -195,31 +180,9 @@
                      <div class="shop-type-item" :class="{active: selectedProductShopType===type.id}" v-for="type in shopTypes" :key="type.id" @click="selectProductShopType(type.id)">{{type.name}}</div>
                  </div>
               </div>
-              <!-- Blog Type -->
-              <div v-if="activeFilterTab==='blogType'" class="shop-type-panel">
-                 <div class="shop-type-grid">
-                    <div class="shop-type-item" :class="{active: selectedBlogType===type.id}" v-for="type in shopTypes" :key="type.id" @click="selectBlogType(type.id)">{{type.name}}</div>
-                 </div>
-              </div>
-        </div>
-
-            <!-- VOUCHER TAB -->
-            <van-tab title="代金券" name="voucher">
-                 <div class="tab-content">
-                      <!-- Product Filter Bar (Reused) -->
-                      <div class="meituan-filter-bar">
-                          <div class="filter-item" :class="{active: activeFilterTab==='pType'}" @click="toggleFilterTab('pType')">
-                              <div class="filter-text">{{selectedProductType !== null ? getProductTypeName(selectedProductType) : '类型'}} <i class="el-icon-arrow-down"></i></div>
-                           </div>
-                           <div class="filter-item" :class="{active: activeFilterTab==='status'}" @click="toggleFilterTab('status')">
-                              <div class="filter-text">{{ selectedStatus ? getStatusName(selectedStatus) : '状态' }} <i class="el-icon-arrow-down"></i></div>
-                           </div>
-                           <div class="filter-item" :class="{active: activeFilterTab==='pShopType'}" @click="toggleFilterTab('pShopType')">
-                              <div class="filter-text">{{selectedProductShopType ? getShopTypeName(selectedProductShopType) : '分类'}} <i class="el-icon-arrow-down"></i></div>
-                           </div>
-                      </div>
-                      
-                      <!-- Selected Tags -->
+                    </div>
+                    </div>
+                    <!-- Selected Tags -->
                      <div class="selected-filters" v-if="selectedProductType !== null || selectedStatus || selectedProductShopType">
                            <div class="selected-filter-tag" v-if="selectedProductType !== null">{{getProductTypeName(selectedProductType)}} <span class="close" @click="selectedProductType=null;triggerSearch()">×</span></div>
                            <div class="selected-filter-tag" v-if="selectedStatus">{{getStatusName(selectedStatus)}} <span class="close" @click="selectedStatus=null;triggerSearch()">×</span></div>
@@ -333,7 +296,8 @@
             <van-tab title="团购" name="group">
                  <div class="tab-content">
                       <!-- Product Filter Bar (Reused or Simplified) -->
-                      <div class="meituan-filter-bar">
+                      <div class="filter-wrapper">
+                        <div class="meituan-filter-bar">
                            <div class="filter-item" :class="{active: activeFilterTab==='status'}" @click="toggleFilterTab('status')">
                               <div class="filter-text">{{ selectedStatus ? getStatusName(selectedStatus) : '状态' }} <i class="el-icon-arrow-down"></i></div>
                            </div>
@@ -342,7 +306,8 @@
                            </div>
                       </div>
                       
-                      <!-- Selected Tags -->
+                      </div>
+                    <!-- Selected Tags -->
                      <div class="selected-filters" v-if="selectedStatus || selectedProductShopType">
                            <div class="selected-filter-tag" v-if="selectedStatus">{{getStatusName(selectedStatus)}} <span class="close" @click="selectedStatus=null;triggerSearch()">×</span></div>
                            <div class="selected-filter-tag" v-if="selectedProductShopType">{{getShopTypeName(selectedProductShopType)}} <span class="close" @click="selectedProductShopType=null;triggerSearch()">×</span></div>
@@ -382,13 +347,23 @@
             <van-tab title="笔记" name="blog">
                 <div class="tab-content">
                     <!-- Blog Filters -->
-                     <div class="meituan-filter-bar">
+                     <div class="filter-wrapper">
+                        <div class="meituan-filter-bar">
                           <div class="filter-item" :class="{active: activeFilterTab==='blogType'}" @click="toggleFilterTab('blogType')">
                              <div class="filter-text">{{selectedBlogType ? getShopTypeName(selectedBlogType) : '全部类型'}} <i class="el-icon-arrow-down"></i></div>
                           </div>
                      </div>
                      
-                      <!-- Selected Tags -->
+                                          <div class="filter-content" :class="{show: activeFilterTab==='blogType'}">
+              <!-- Blog Type -->
+              <div v-if="activeFilterTab==='blogType'" class="shop-type-panel">
+                 <div class="shop-type-grid">
+                    <div class="shop-type-item" :class="{active: selectedBlogType===type.id}" v-for="type in shopTypes" :key="type.id" @click="selectBlogType(type.id)">{{type.name}}</div>
+                 </div>
+              </div>
+                    </div>
+                    </div>
+                    <!-- Selected Tags -->
                     <div class="selected-filters" v-if="selectedBlogType">
                           <div class="selected-filter-tag">{{getShopTypeName(selectedBlogType)}} <span class="close" @click="selectBlogType(selectedBlogType)">×</span></div>
                           <div class="clear-all" @click="clearAllFilters">清除全部</div>
@@ -523,6 +498,7 @@ export default {
       selectedShopType: null,
       selectedDistance: null,
       selectedScore: null,
+      selectedSort: 'hot',
       
       selectedProductType: null,
       selectedStatus: null,
@@ -543,6 +519,12 @@ export default {
         { label: "4.0分以上", value: 40 },
         { label: "3.5分以上", value: 35 },
         { label: "全部", value: 0 },
+      ],
+      sortOptions: [
+        { label: "智能排序", value: "hot" },
+        { label: "距离优先", value: "distance" },
+        { label: "好评优先", value: "score" },
+        { label: "低价优先", value: "price" }
       ],
       productTypeOptions: [
          { label: "普通", value: 0 },
@@ -584,6 +566,7 @@ export default {
         this.selectedShopType ||
         this.selectedDistance ||
         this.selectedScore ||
+        (this.selectedSort && this.selectedSort !== 'hot') ||
         this.selectedProductType ||
         this.selectedBlogType
       );
@@ -622,6 +605,7 @@ export default {
     if (q.st) this.selectedShopType = Number(q.st);
     if (q.sd) this.selectedDistance = q.sd;
     if (q.ss) this.selectedScore = q.ss;
+    if (q.sort) this.selectedSort = q.sort;
 
     // Restore Product Filters
     if (q.vt !== undefined) this.selectedProductType = Number(q.vt);
@@ -835,6 +819,11 @@ export default {
          this.shopTypes = data || [];
       });
     },
+    getSortLabel(val) {
+      if (!val || val === 'hot') return '智能排序';
+      const f = this.sortOptions.find((o) => o.value === val);
+      return f ? f.label : '智能排序';
+    },
     getShopTypeName(id) {
       const t = this.shopTypes.find((t) => t.id === id);
       return t ? t.name : "";
@@ -891,6 +880,11 @@ export default {
       this.activeFilterTab = "";
       this.triggerSearch();
     },
+    selectSort(s) {
+      this.selectedSort = s.value;
+      this.activeFilterTab = "";
+      this.triggerSearch();
+    },
     selectProductType(t) {
         this.selectedProductType = t.label === "全部" ? null : t.value;
         this.activeFilterTab = "";
@@ -900,6 +894,7 @@ export default {
       this.selectedShopType = null;
       this.selectedDistance = null;
       this.selectedScore = null;
+      this.selectedSort = 'hot';
       this.selectedScore = null;
       this.selectedProductType = null;
       this.selectedBlogType = null;
@@ -957,6 +952,7 @@ export default {
           st: this.selectedShopType || undefined,
           sd: this.selectedDistance || undefined,
           ss: this.selectedScore || undefined,
+          sort: this.selectedSort !== 'hot' ? this.selectedSort : undefined,
           vt: this.selectedProductType !== null ? this.selectedProductType : undefined,
           vs: this.selectedStatus !== null ? this.selectedStatus : undefined,
           vst: this.selectedProductShopType || undefined,
@@ -1019,6 +1015,7 @@ export default {
           if (score) filters.minScore = score.value;
         }
 
+
         const data = {
           keyword: this.keyword,
           filters,
@@ -1027,7 +1024,8 @@ export default {
           lon: this.userLocation ? this.userLocation.x : undefined,
           distance: this.selectedDistance
             ? (this.distanceOptions.find(o => o.label === this.selectedDistance)?.value || "all")
-            : "all"
+            : "all",
+          sortBy: this.selectedSort !== 'hot' ? this.selectedSort : undefined
         };
 
         requestPromise = searchShops(data).then((res) => {
@@ -1493,6 +1491,9 @@ export default {
 }
 .filter-item.active { color: #F63; }
 .filter-text i { margin-left: 4px; font-size: 12px; }
+
+/* Filter Dropdown Content */
+.filter-wrapper { position: relative; z-index: 100; }
 
 /* Filter Dropdown Content */
 .filter-content {
@@ -2625,18 +2626,7 @@ export default {
   color: #999;
 }
 
-/* Fixed Filter Dropdown Overlay */
-.filter-content {
-    position: fixed;
-    top: 98px; /* 54px Header + 44px Tabs */
-    left: 0;
-    right: 0;
-    z-index: 200 !important;
-    background: white;
-}
-.filter-content.show {
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
+
 
 /* ===== Voucher Card V2 Styles ===== */
 .voucher-card-v2 {

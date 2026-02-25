@@ -244,6 +244,14 @@ export default {
   font-size: 17px;
   font-weight: 600;
   color: #333;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 60%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
 }
 .header-placeholder {
   width: 20px;

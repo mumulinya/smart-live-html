@@ -163,11 +163,16 @@ export default {
   margin-left: -10px;
 }
 .header-title {
-  flex: 1;
-  text-align: center;
   font-weight: bold;
   font-size: 16px;
-  margin-right: 24px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 60%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
 }
 
 .form-container {

@@ -201,10 +201,16 @@ export default {
 }
 
 .header-title {
-  flex: 1;
-  text-align: center;
   font-size: 16px;
   font-weight: 600;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 60%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
 }
 
 .header-right {

@@ -409,7 +409,19 @@ export default {
 <style scoped>
 .chat-list-page { height: 100vh; display: flex; flex-direction: column; background: #fff; overflow-x: hidden; }
 .header { height: 50px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; justify-content: center; position: relative; background: #fff; }
-.header-title { font-weight: 600; font-size: 17px; color: #000; }
+.header-title {
+  font-weight: 600;
+  font-size: 17px;
+  color: #000;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 60%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
 .header-search { position: absolute; right: 15px; font-size: 20px; cursor: pointer; color: #333; }
 .connection-status { padding: 5px; text-align: center; color: white; font-size: 12px; }
 .connection-status.connected { background: #67C23A; }

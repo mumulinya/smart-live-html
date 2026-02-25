@@ -945,7 +945,18 @@ export default {
 <style scoped>
 .chat-detail-page { height: 100vh; display: flex; flex-direction: column; background: #ededed; overflow-x: hidden; }
 .header { height: 50px; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; border-bottom: 1px solid #d9d9d9; background: #ededed; z-index: 10; position: relative; }
-.header-title { font-weight: bold; font-size: 17px; }
+.header-title {
+  font-weight: bold;
+  font-size: 17px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 60%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
 .header-back-btn { font-size: 20px; cursor: pointer; }
 .header-more-btn { font-size: 20px; cursor: pointer; color: #333; padding: 4px; }
 .header-more-btn:hover { color: #07c160; }

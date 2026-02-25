@@ -553,11 +553,14 @@ export default {
   font-size: 17px;
   font-weight: bold;
   color: #333;
-  flex: 1;
-  text-align: center;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 60%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-align: center;
 }
 .header-right {
     flex-shrink: 0;

@@ -167,9 +167,19 @@ const routes = [
         component: () => import('@/views/shop/List.vue')
     },
     {
+        path: '/shop/top',
+        name: 'TopShops',
+        component: () => import('@/views/shop/TopList.vue')
+    },
+    {
         path: '/shop/detail',
         name: 'ShopDetail',
         component: () => import('@/views/shop/Detail.vue')
+    },
+    {
+        path: '/product/top',
+        name: 'ProductTopList',
+        component: () => import('@/views/product/TopList.vue')
     },
 
     // Blog Module

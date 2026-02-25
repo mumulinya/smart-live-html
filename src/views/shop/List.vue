@@ -34,6 +34,10 @@
          <div class="filter-item" :class="{active: activeFilterTab==='score'}" @click="toggleFilterTab('score')">
              <div class="filter-text">{{selectedScore || '评分'}} <i class="el-icon-arrow-down"></i></div>
          </div>
+         <!-- Sort -->
+         <div class="filter-item" :class="{active: activeFilterTab==='sort'}" @click="toggleFilterTab('sort')">
+             <div class="filter-text">{{selectedSort ? getSortLabel(selectedSort) : '智能排序'}} <i class="el-icon-arrow-down"></i></div>
+         </div>
     </div>
     
     <!-- Filter Dropdowns -->
@@ -56,11 +60,16 @@
                  <div class="score-option" :class="{active: selectedScore===s.label}" v-for="s in scoreOptions" :key="s.value" @click="selectScore(s)">{{s.label}}</div>
              </div>
          </div>
+         <!-- Sort -->
+         <div v-if="activeFilterTab==='sort'" class="score-panel">
+             <div class="score-options">
+                 <div class="score-option" :class="{active: selectedSort===s.value}" v-for="s in sortOptions" :key="s.value" @click="selectSort(s)">{{s.label}}</div>
+             </div>
+         </div>
     </div>
     </div>
     
-    <!-- Mask -->
-    <div class="type-dropdown-mask" v-if="activeFilterTab" @click="activeFilterTab=''"></div>
+    
 
     <!-- Search Suggestion Panel Removed -->
 
@@ -135,6 +144,7 @@ export default {
        selectedTypeId: 0,
        selectedDistance: null,
        selectedScore: null,
+       selectedSort: 'hot',
        
        // Options
        distanceOptions: [
@@ -149,6 +159,12 @@ export default {
          { label: "4.0分以上", value: 40 },
          { label: "3.5分以上", value: 35 },
          { label: "全部", value: 0 },
+       ],
+       sortOptions: [
+         { label: "智能排序", value: "hot" },
+         { label: "距离优先", value: "distance" },
+         { label: "好评优先", value: "score" },
+         { label: "低价优先", value: "price" }
        ],
        
        shops: [],
@@ -191,6 +207,9 @@ export default {
      if (this.$route.query.score) {
          this.selectedScore = this.$route.query.score;
      }
+     if (this.$route.query.sort) {
+         this.selectedSort = this.$route.query.sort;
+     }
 
      this.loadTypes();
      this.initLocation();
@@ -225,6 +244,13 @@ export default {
      const score = q.score || null;
      if (score !== this.selectedScore) {
          this.selectedScore = score;
+         changed = true;
+     }
+
+     // Sync Sort
+     const sort = q.sort || 'hot';
+     if (sort !== this.selectedSort) {
+         this.selectedSort = sort;
          changed = true;
      }
 
@@ -331,11 +357,15 @@ export default {
          this.updateRouteQuery();
          this.triggerSearch();
      },
-     selectScore(s) {
-         this.selectedScore = s.label === '全部' ? null : s.label;
+     selectSort(s) {
+         this.selectedSort = s.value;
          this.activeFilterTab = '';
          this.updateRouteQuery();
          this.triggerSearch();
+     },
+     getSortLabel(val) {
+         const option = this.sortOptions.find(o => o.value === val);
+         return option ? option.label : '智能排序';
      },
      updateRouteQuery() {
         // Remove 'name' from query as we rely on typeId to determine title
@@ -344,7 +374,8 @@ export default {
             ...this.$route.query,
             type: this.selectedTypeId || undefined,
             distance: this.selectedDistance || undefined,
-            score: this.selectedScore || undefined
+            score: this.selectedScore || undefined,
+            sort: this.selectedSort !== 'hot' ? this.selectedSort : undefined
         };
 
         // Update name param if type is selected
@@ -453,6 +484,8 @@ export default {
          const filters = {};
          if (this.selectedTypeId) filters.typeId = this.selectedTypeId;
 
+         
+
          if (this.selectedScore) {
             const s = this.scoreOptions.find(o => o.label === this.selectedScore);
             if (s) filters.minScore = s.value;
@@ -465,7 +498,8 @@ export default {
              size: 20,
              lat: this.params.y,
              lon: this.params.x,
-             distance: this.resolveDistanceValue(this.selectedDistance)
+             distance: this.resolveDistanceValue(this.selectedDistance),
+             sortBy: this.selectedSort
          };
 
          searchShops(searchParams).then(res => {
@@ -528,7 +562,8 @@ export default {
            size: 10,
            lat: this.params.y,
            lon: this.params.x,
-           distance: this.resolveDistanceValue(this.selectedDistance)
+           distance: this.resolveDistanceValue(this.selectedDistance),
+           sortBy: this.selectedSort
         };
 
         searchShops(searchPayload).then(res => {
@@ -603,7 +638,7 @@ export default {
   padding: 0 10px;
 }
 .header-back-btn { width: 30px; font-size: 20px; cursor: pointer; color: #333; display: flex; align-items: center; justify-content: center; }
-.header-title { flex: 1; text-align: center; font-size: 18px; font-weight: 500; color: #333; margin-right: 30px; /* Balance back btn */ }
+.header-title { position: absolute; left: 50%; transform: translateX(-50%); font-size: 18px; font-weight: 500; color: #333; pointer-events: none; white-space: nowrap; }
 
 .header-search-input { flex: 1; margin: 0 10px; position: relative; display: flex; align-items: center; }
 .header-search-input input { width: 100%; height: 32px; background: #f5f5f5; border: none; border-radius: 16px; padding: 0 30px; font-size: 14px; outline: none; }
@@ -811,16 +846,13 @@ export default {
 
 /* Filter Dropdown Content */
 .filter-content {
-  position: absolute;
-  top: 100%; /* Relative to filter-wrapper */
+  position: relative;
+  /* Relative to filter-wrapper */
   left: 0;
-  right: 0;
   background: white;
   max-height: 0;
   overflow: hidden;
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.5, 1);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-  border-radius: 0 0 12px 12px;
   z-index: 99;
 }
 .filter-content.show {

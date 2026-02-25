@@ -570,7 +570,18 @@ export default {
 <style scoped>
 .map-page { position: relative; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 .header { height: 50px; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; background: white; border-bottom: 1px solid #eee; z-index: 200; position: relative; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-.header-title { font-size: 16px; font-weight: 600; }
+.header-title {
+  font-size: 16px;
+  font-weight: 600;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 60%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
 .header-location { color: #409EFF; font-size: 18px; cursor: pointer; }
 
 .map-wrapper { flex: 1; position: relative; overflow: hidden; }

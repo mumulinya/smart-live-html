@@ -752,11 +752,15 @@ export default {
   font-weight: 600;
   color: #333;
   line-height: 1;
-  text-align: center;
   padding: 0 8px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 60%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-align: center;
 }
 
 .header-back-btn {

@@ -127,7 +127,7 @@
         </div>
       </div>
     </div>
-    <div class="type-dropdown-mask" v-if="activeFilterTab" @click="activeFilterTab = ''"></div>
+    
 
     <div class="deal-list" @scroll.passive="onScroll">
       <div v-if="loading && deals.length === 0" class="state-box">加载中...</div>
@@ -706,12 +706,14 @@ export default {
 }
 
 .header-title {
-  flex: 1;
-  text-align: center;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
   font-size: 17px;
   font-weight: 600;
   color: #333;
-  margin-right: 30px;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 .header-search-input {
@@ -865,16 +867,11 @@ export default {
 }
 
 .filter-content {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
+  position: relative;
   background: #fff;
   max-height: 0;
   overflow: hidden;
   transition: max-height 0.25s ease;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-  border-radius: 0 0 12px 12px;
   z-index: 30;
 }
 

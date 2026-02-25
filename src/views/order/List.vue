@@ -405,7 +405,17 @@ export default {
 <style scoped>
 .orders-page { min-height: 100vh; background: #f2f4f8; box-sizing: border-box; }
 .header { height: 44px; background: white; display: flex; align-items: center; padding: 0 12px; position: sticky; top: 0; z-index: 10; font-size: 16px; border-bottom: 1px solid #eee; }
-.header-title { flex: 1; text-align: center; font-weight: 600; }
+.header-title {
+  font-weight: 600;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 60%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
 
 .orders-container { padding: 12px; }
 

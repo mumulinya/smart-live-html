@@ -8,6 +8,10 @@ export function getShopList(params) {
     return request.get('/app/shop/of/type', { params });
 }
 
+export function getHotRank(params) {
+    return request.get('/app/shop/hot/rank', { params });
+}
+
 export function getShopDetail(id) {
     return request.get(`/app/shop/${id}`);
 }

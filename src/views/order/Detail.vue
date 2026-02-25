@@ -294,7 +294,18 @@ export default {
 <style scoped>
 .order-detail-page { min-height: 100vh; background: white; padding-bottom: 70px; }
 .header { height: 50px; background: white; display: flex; align-items: center; padding: 0 15px; border-bottom: 1px solid #eee; position: sticky; top: 0; z-index: 10; }
-.header-title { flex: 1; text-align: center; font-weight: bold; font-size: 18px; }
+.header-title {
+  font-weight: bold;
+  font-size: 18px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 60%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
 
 .detail-content { padding: 20px; }
 .status-card { background: linear-gradient(135deg, #ff9966, #ff5e62); color: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(255, 94, 98, 0.3); }

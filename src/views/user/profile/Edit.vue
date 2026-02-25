@@ -643,7 +643,18 @@ export default {
     height: calc(50px + env(safe-area-inset-top));
     box-shadow: 0 1px 2px rgba(0,0,0,0.03); 
 }
-.header-title { flex: 1; text-align: center; font-weight: bold; font-size: 16px; }
+.header-title {
+  font-weight: bold;
+  font-size: 16px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 60%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
 .edit-container { padding: 15px; }
 
 .info-box { background: white; border-radius: 12px; overflow: hidden; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
