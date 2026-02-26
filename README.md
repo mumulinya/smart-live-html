@@ -6,16 +6,32 @@
 [![Element Plus](https://img.shields.io/badge/Element_Plus-2.x-409eff)](https://element-plus.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-## 项目简介
+## 文档导航
+- [项目定位](#项目定位)
+- [功能全景](#功能全景)
+- [页面路由清单](#页面路由清单)
+- [技术架构](#技术架构)
+- [快速开始](#快速开始)
+- [环境变量](#环境变量)
+- [联调文档](#联调文档)
+- [项目结构](#项目结构)
+- [常见问题](#常见问题)
+
+## 项目定位
 Smart Live App 是一个基于 `Vue 3 + Vite` 的本地生活类 H5 前端项目，覆盖“找店 -> 搜索 -> 领券/团购 -> 下单支付 -> 评价 -> 社交互动 -> IM -> AI 助手”的完整业务链路。
 
-项目主要面向移动端，包含真实业务模块拆分、通用网络层、WebSocket 实时通信、SSE 流式 AI 对话、钱包与积分体系等能力，适合用于：
+项目面向移动端场景，包含：
+- 通用请求层（Axios 拦截器 + 登录态处理）
+- 实时通信（WebSocket 会话与全局未读）
+- 流式 AI 对话（SSE）
+- 钱包、积分、订单、支付、社交等完整业务模块
 
+适合用于：
 - 本地生活类业务前端项目
-- Vue 3 中大型页面与路由实践
-- 联调项目作品集（搜索、交易、社交、IM、AI）
+- Vue 3 中大型工程实践
+- 前后端联调演示项目
 
-## 功能总览
+## 功能全景
 
 ### 1. 首页与发现
 - 城市定位入口、搜索入口、底部主导航
@@ -57,8 +73,7 @@ Smart Live App 是一个基于 `Vue 3 + Vite` 的本地生活类 H5 前端项目
 ### 6. 评价系统
 - 待评价订单列表（从订单侧发起）
 - 发布/编辑评价：总体评分 + 口味/环境/服务分
-- 图文/视频上传
-- 匿名评价
+- 图文/视频上传、匿名评价
 - 草稿保存与草稿箱管理
 - 我的评价列表（全部/店铺/商品）
 - 评价详情：点赞、收藏、评论、回复、删除
@@ -69,7 +84,6 @@ Smart Live App 是一个基于 `Vue 3 + Vite` 的本地生活类 H5 前端项目
 - 笔记详情：点赞、收藏、关注作者、评论与多级回复
 - 笔记分享（系统分享/复制链接）
 - 作者能力：置顶、编辑、删除
-- 首页/搜索/个人页的笔记瀑布流展示
 
 ### 8. 社交关系与个人内容
 - 加好友（搜索用户 + 关注/取消关注）
@@ -113,7 +127,9 @@ Smart Live App 是一个基于 `Vue 3 + Vite` 的本地生活类 H5 前端项目
 - 积分明细列表
 - 积分抽奖
 
-## 页面路由清单（完整）
+## 页面路由清单
+
+### 核心入口
 | 路由 | 功能 |
 | --- | --- |
 | `/` | 首页信息流与榜单 |
@@ -121,65 +137,90 @@ Smart Live App 是一个基于 `Vue 3 + Vite` 的本地生活类 H5 前端项目
 | `/search/user` | 用户搜索页 |
 | `/map` | 地图找店 |
 | `/ai` | AI 对话页 |
+
+### 用户与账户
+| 路由 | 功能 |
+| --- | --- |
 | `/user/login` | 登录页（验证码/密码） |
 | `/user/profile` | 我的主页（别名：`/info`、`/user/info`） |
 | `/user/profile/:id` | 他人主页（别名：`/user-info/:id`） |
 | `/user/edit` | 编辑资料 |
-| `/user/add-friend` | 添加好友 |
-| `/user/star` | 我的收藏 |
-| `/user/follow` | 我的关注 |
-| `/user/interactions` | 我的互动 |
-| `/review/mine` | 我的评价 |
-| `/review/drafts` | 评价草稿页 |
-| `/drafts` | 草稿箱聚合页（评价+笔记） |
-| `/user/list` | 关注/粉丝/共同关注列表 |
-| `/user/moments` | 我的动态 |
 | `/user/password/update` | 修改密码 |
 | `/user/password/set` | 设置密码 |
+| `/user/add-friend` | 添加好友 |
+| `/user/list` | 关注/粉丝/共同关注列表 |
+| `/user/follow` | 我的关注 |
+| `/user/interactions` | 我的互动 |
+| `/user/star` | 我的收藏 |
+| `/user/moments` | 我的动态 |
+
+### 交易与资金
+| 路由 | 功能 |
+| --- | --- |
+| `/order/list` | 订单列表 |
+| `/order/detail` | 订单详情 |
+| `/pay/checkout` | 收银台 |
+| `/pay/result` | 支付结果页 |
 | `/user/wallet` | 钱包主页 |
 | `/user/wallet/recharge` | 钱包充值 |
 | `/user/wallet/bill` | 钱包账单 |
 | `/user/wallet/payment-record` | 支付明细 |
-| `/pay/checkout` | 收银台 |
-| `/pay/result` | 支付结果页 |
 | `/user/points` | 积分主页 |
 | `/user/points/detail` | 积分明细 |
 | `/user/points/lottery` | 积分抽奖 |
+
+### 店铺、商品与内容
+| 路由 | 功能 |
+| --- | --- |
 | `/shop/list` | 店铺列表 |
 | `/shop/top` | 店铺榜单 |
 | `/shop/detail` | 店铺详情 |
 | `/product/top` | 商品榜单 |
-| `/blog/detail` | 笔记详情 |
-| `/blog/edit` | 发笔记/编辑笔记 |
-| `/order/list` | 订单列表 |
-| `/order/detail` | 订单详情 |
 | `/product/detail` | 商品详情 |
 | `/deal/list` | 优惠聚合页（代金券/团购） |
+| `/blog/detail` | 笔记详情 |
+| `/blog/edit` | 发笔记/编辑笔记 |
+| `/drafts` | 草稿箱聚合页（评价+笔记） |
+| `/review/mine` | 我的评价 |
+| `/review/drafts` | 评价草稿页 |
+| `/review/detail` | 评价详情 |
+| `/review/publish` | 发布/编辑评价 |
+
+### 聊天与通知
+| 路由 | 功能 |
+| --- | --- |
 | `/chat/list` | 聊天会话列表 |
 | `/chat/detail` | 私聊详情 |
 | `/chat/info` | 聊天设置 |
 | `/chat/system` | 系统通知 |
 | `/chat/history-calendar` | 聊天历史日历 |
-| `/review/detail` | 评价详情 |
-| `/review/publish` | 发布/编辑评价 |
+
+### 重定向路由
+| 路由 | 功能 |
+| --- | --- |
 | `/user/my-reviews` | 重定向到 `/review/mine` |
 | `/review/wait` | 重定向到 `/review/mine?tab=pending` |
 
-## 技术栈
+## 技术架构
 | 类别 | 技术 |
 | --- | --- |
 | 核心框架 | Vue 3 |
 | 构建工具 | Vite 4 |
 | 路由 | Vue Router 4 |
 | UI 组件 | Vant 4、Element Plus 2 |
-| 网络请求 | Axios |
+| 网络请求 | Axios（统一拦截器） |
+| 实时通信 | WebSocket（全局管理器） |
+| 流式输出 | SSE（AI 对话） |
 | 富文本渲染 | markdown-it |
 | 二维码 | qrcode.vue |
 | 登录验证 | vue3-puzzle-vcode |
-| 实时通信 | WebSocket（自定义管理器） |
-| 流式输出 | SSE（AI 对话） |
 
 ## 快速开始
+
+### 环境要求
+- Node.js `>=16`
+- npm `>=7`
+
 ### 1. 安装依赖
 ```bash
 npm install
@@ -202,22 +243,34 @@ npm run preview
 ```
 
 ## 环境变量
-复制 `.env.example` 为 `.env.local`，并按需修改：
 
+### 新建本地配置
+macOS / Linux:
 ```bash
 cp .env.example .env.local
 ```
 
-| 变量名 | 说明 | 示例 |
+Windows PowerShell:
+```powershell
+Copy-Item .env.example .env.local
+```
+
+### 变量说明
+| 变量名 | 说明 | 默认值/示例 |
 | --- | --- | --- |
 | `VITE_API_BASE_URL` | 前端 API 前缀 | `/app-dev-api` |
 | `VITE_MINIO_URL` | 文件服务地址 | `http://127.0.0.1` |
 | `VITE_MINIO_PORT` | 文件服务端口 | `9000` |
 | `VITE_FILE_PREFIX` | 文件服务路径前缀 | `/smart-live` |
-| `VITE_FILE_URL` | 可选，完整文件访问地址（优先级高） | `http://127.0.0.1:9000/smart-live` |
-| `VITE_WS_HOST` | WebSocket 主机（默认拼成 `ws://host:8888/ws`） | `localhost` |
-| `VITE_WS_URL` | 可选，完整 WebSocket 地址（优先级高） | `ws://localhost:8888/ws` |
-| `VITE_AMAP_KEY` | 可选，高德地图 Key | `your_amap_key` |
+| `VITE_FILE_URL` | 完整文件访问地址（可选，优先级最高） | `http://127.0.0.1:9000/smart-live` |
+| `VITE_WS_HOST` | WS 主机（默认拼成 `ws://host:8888/ws`） | `localhost` |
+| `VITE_WS_URL` | 完整 WS 地址（可选，优先级最高） | `ws://localhost:8888/ws` |
+| `VITE_AMAP_KEY` | 高德地图 Key（地图页需要） | `your_amap_key` |
+
+## 联调文档
+- 支付模块对接文档：[docs/PAYMENT_MODULE_BACKEND.md](./docs/PAYMENT_MODULE_BACKEND.md)
+- 钱包模块对接文档：[docs/WALLET_MODULE_BACKEND.md](./docs/WALLET_MODULE_BACKEND.md)
+- 商品模块迁移说明：[docs/22.md](./docs/22.md)
 
 ## 项目结构
 ```text
@@ -231,16 +284,25 @@ smart-live-app/
 │  ├─ store/              # 轻量状态（用户、聊天未读）
 │  ├─ utils/              # 请求封装、WebSocket、SSE、工具函数
 │  └─ views/              # 页面模块（home/search/map/shop/product/order/review/blog/chat/ai/user）
+├─ docs/                  # 业务对接文档
 ├─ public/                # 公共静态资源
-├─ docs/                  # 对接说明文档（支付/钱包等）
 ├─ .env.example           # 环境变量模板
 ├─ vite.config.js         # Vite 与代理配置
 └─ package.json
 ```
 
-## 说明
-- 当前开发代理在 `vite.config.js` 中默认转发到 `http://127.0.0.1:8080`。
-- 项目内部分模块带本地兜底逻辑（如历史记录、草稿），便于联调阶段独立验证。
+## 常见问题
+### 1. 本地接口请求不到后端？
+- 检查 `vite.config.js` 的代理目标（默认 `http://127.0.0.1:8080`）是否与你后端一致。
+- 检查 `.env.local` 中 `VITE_API_BASE_URL` 是否与代理前缀一致。
+
+### 2. 聊天收不到实时消息？
+- 确认 `token` 已写入本地存储并完成 WebSocket 鉴权。
+- 检查 `VITE_WS_HOST` / `VITE_WS_URL` 是否正确。
+
+### 3. 地图页面不显示？
+- 配置 `VITE_AMAP_KEY`。
+- 检查浏览器定位权限是否开启。
 
 ## 许可证
 本项目基于 [MIT](./LICENSE) 开源协议。
