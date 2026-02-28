@@ -1,4 +1,8 @@
-﻿# Smart Live App
+﻿<div align="center">
+
+# 🏙️ SmartLive Web — 用户端前台
+
+**SmartLive 智评生活 · Vue 3 响应式用户端（兼容移动端）**
 
 [![Vue](https://img.shields.io/badge/Vue-3.x-42b883?logo=vue.js&logoColor=white)](https://vuejs.org/)
 [![Vite](https://img.shields.io/badge/Vite-4.x-646cff?logo=vite&logoColor=white)](https://vitejs.dev/)
@@ -6,14 +10,33 @@
 [![Element Plus](https://img.shields.io/badge/Element_Plus-2.x-409eff)](https://element-plus.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-## 文档导航
+</div>
+
+## 📦 项目仓库
+
+| 仓库 | 说明 | 链接 |
+|:---:|:---:|:---:|
+| **smartLive-Cloud** | 后端微服务 | [GitHub](https://github.com/mumulinya/smart-live) |
+| **smartLive-admin** | 后台管理端（Vue + Element UI） | [GitHub](https://github.com/mumulinya/smartLive-admin) |
+| **smartLive-web** | 用户端前台（本仓库） | [GitHub](https://github.com/mumulinya/smartLive-web) |
+
+## 🎨 效果预览
+
+> 📷 截图占位 — 替换为实际项目截图后删除本行
+
+| 首页信息流 | 店铺详情 | 商品详情 |
+|:---:|:---:|:---:|
+| ![home](docs/screenshots/home.png) | ![shop](docs/screenshots/shop.png) | ![product](docs/screenshots/product.png) |
+| **AI 助手** | **即时聊天** | **钱包支付** |
+| ![ai](docs/screenshots/ai.png) | ![chat](docs/screenshots/chat.png) | ![wallet](docs/screenshots/wallet.png) |
+
+## 📋 文档导航
 - [项目定位](#项目定位)
 - [功能全景](#功能全景)
 - [页面路由清单](#页面路由清单)
 - [技术架构](#技术架构)
 - [快速开始](#快速开始)
 - [环境变量](#环境变量)
-- [联调文档](#联调文档)
 - [项目结构](#项目结构)
 - [常见问题](#常见问题)
 
@@ -202,18 +225,33 @@ Smart Live App 是一个基于 `Vue 3 + Vite` 的本地生活类 H5 前端项目
 | `/review/wait` | 重定向到 `/review/mine?tab=pending` |
 
 ## 技术架构
-| 类别 | 技术 |
-| --- | --- |
-| 核心框架 | Vue 3 |
-| 构建工具 | Vite 4 |
-| 路由 | Vue Router 4 |
-| UI 组件 | Vant 4、Element Plus 2 |
-| 网络请求 | Axios（统一拦截器） |
-| 实时通信 | WebSocket（全局管理器） |
-| 流式输出 | SSE（AI 对话） |
-| 富文本渲染 | markdown-it |
-| 二维码 | qrcode.vue |
-| 登录验证 | vue3-puzzle-vcode |
+
+| 类别 | 技术 | 说明 |
+|:---|:---|:---|
+| 核心框架 | Vue 3.3 | Composition API + 响应式系统 |
+| 构建工具 | Vite 4 | 极速 HMR，自动导入插件 |
+| 路由 | Vue Router 4 | 懒加载 + keepAlive 页面缓存 |
+| 移动端 UI | Vant 4 | 自动按需导入（unplugin-vue-components） |
+| 桌面端 UI | Element Plus 2 | 日期选择 / 评分 / 级联等复杂组件 |
+| 网络请求 | Axios | 统一拦截器、Token 自动注入、401 自动跳转 |
+| 实时通信 | WebSocket | 双类架构（ChatWebSocket + GlobalWebSocketManager），心跳保活 + 断线重连 |
+| 流式输出 | SSE | AI 对话打字机效果，EventSource 封装 |
+| 地图服务 | 高德地图 JS API | 动态加载、定位、Marker 联动 |
+| 富文本 | markdown-it | AI 回复 Markdown 渲染 |
+| 二维码 | qrcode.vue | 订单核销二维码 |
+| 登录验证 | vue3-puzzle-vcode | 滑块拼图验证 |
+| 性能优化 | 自实现 | 防抖 / 节流 / 懒加载 / 滚动状态保留 |
+
+### 🛠️ 工程化亮点
+
+- 🔌 **WebSocket 双层架构** — `ChatWebSocket` 封装连接/鉴权/心跳/重连，`GlobalWebSocketManager` 管理多页面回调分发
+- 📡 **SSE 流式封装** — EventSource 统一封装，支持打字机效果、错误重试、手动中断
+- 📣 **系统通知引擎** — `systemNotice.js`（9.4KB）独立封装未读计数/消息路由/图片预览/业务跳转
+- 🌐 **定位服务** — `location.js`（3.9KB）封装浏览器定位 + 高德地图逆地理编码
+- ⚡ **性能工具** — 自实现 `debounce` / `throttle`，速度优先无第三方依赖
+- 🔒 **登录态广播** — `auth-event.js` 全局事件总线，登录/登出触发 WS 重连与页面缓存清理
+- 🎴 **全局 AI 悬浮入口** — `GlobalAIEntry.vue`（12KB）支持快捷提问 + 拖拽定位
+- 📰 **Feed 流组件** — `FeedItem.vue`（25KB）封装点赞/收藏/评论/分享交互、懒加载、滚动保留
 
 ## 快速开始
 
@@ -267,23 +305,61 @@ Copy-Item .env.example .env.local
 | `VITE_WS_URL` | 完整 WS 地址（可选，优先级最高） | `ws://localhost:8888/ws` |
 | `VITE_AMAP_KEY` | 高德地图 Key（地图页需要） | `your_amap_key` |
 
-## 联调文档
-- 支付模块对接文档：[docs/PAYMENT_MODULE_BACKEND.md](./docs/PAYMENT_MODULE_BACKEND.md)
-- 钱包模块对接文档：[docs/WALLET_MODULE_BACKEND.md](./docs/WALLET_MODULE_BACKEND.md)
-- 商品模块迁移说明：[docs/22.md](./docs/22.md)
 
 ## 项目结构
 ```text
 smart-live-app/
 ├─ src/
-│  ├─ api/                # 接口模块（AI/订单/支付/评论/用户/钱包等）
+│  ├─ api/                # 接口层（16 个模块）
+│  │  ├─ ai.js             #   AI 对话 / 会话 / 推荐
+│  │  ├─ chat.js           #   私聊消息
+│  │  ├─ interaction.js    #   点赞 / 收藏 / 评论 / 关注 / Feed
+│  │  ├─ order.js          #   订单 CRUD
+│  │  ├─ pay.js            #   统一支付
+│  │  ├─ points.js         #   积分 / 签到 / 抽奖
+│  │  ├─ product.js        #   商品查询
+│  │  ├─ reviews.js        #   评价 CRUD
+│  │  ├─ search.js         #   搜索 / 历史 / 热词
+│  │  ├─ shop.js           #   店铺查询
+│  │  ├─ systemNotice.js   #   系统通知
+│  │  ├─ user.js           #   用户 / 资料 / 关注
+│  │  ├─ wallet.js         #   钱包 / 充值 / 账单
+│  │  └─ ...               #   blog / common / userSearch
 │  ├─ assets/             # 静态资源与样式
-│  ├─ components/         # 通用组件（底栏、FeedItem、PageLayout、AI入口）
-│  ├─ config/             # 业务配置（如 Feed 状态映射）
-│  ├─ router/             # 路由配置
-│  ├─ store/              # 轻量状态（用户、聊天未读）
-│  ├─ utils/              # 请求封装、WebSocket、SSE、工具函数
-│  └─ views/              # 页面模块（home/search/map/shop/product/order/review/blog/chat/ai/user）
+│  ├─ components/         # 通用组件
+│  │  ├─ GlobalAIEntry.vue #   AI 全局悬浮入口（12KB）
+│  │  ├─ FeedItem.vue      #   Feed 流卡片组件（25KB）
+│  │  ├─ FootBar.vue       #   底部导航栏
+│  │  └─ PageLayout/       #   页面布局框架
+│  ├─ config/             # 业务配置（Feed 状态映射等）
+│  ├─ router/             # 路由配置（60+ 路由）
+│  ├─ store/              # 轻量状态（用户 / 聊天未读）
+│  ├─ utils/              # 工具函数
+│  │  ├─ request.js        #   Axios 封装 + Token 拦截
+│  │  ├─ websocket.js      #   WebSocket 双层架构（315 行）
+│  │  ├─ sse.js            #   SSE 流式封装
+│  │  ├─ systemNotice.js   #   系统通知引擎
+│  │  ├─ location.js       #   定位服务封装
+│  │  ├─ debounce.js       #   防抖工具
+│  │  ├─ throttle.js       #   节流工具
+│  │  └─ auth-event.js     #   登录态事件总线
+│  └─ views/              # 页面模块（16 个）
+│     ├─ home/             #   首页信息流 + 榜单
+│     ├─ search/           #   全局搜索 + 用户搜索
+│     ├─ map/              #   地图找店
+│     ├─ shop/             #   店铺列表 / 榜单 / 详情
+│     ├─ product/          #   商品详情 / 榜单
+│     ├─ deal/             #   优惠聚合（代金券/团购）
+│     ├─ voucher/          #   代金券详情
+│     ├─ order/            #   订单列表 / 详情
+│     ├─ pay/              #   收银台 / 支付结果
+│     ├─ review/           #   评价发布 / 详情 / 草稿
+│     ├─ blog/             #   笔记发布 / 详情
+│     ├─ comment/          #   评论组件
+│     ├─ draft/            #   草稿箱聚合
+│     ├─ chat/             #   聊天 / 系统通知 / 历史日历
+│     ├─ ai/               #   AI 对话
+│     └─ user/             #   登录 / 资料 / 钱包 / 积分 / 社交
 ├─ docs/                  # 业务对接文档
 ├─ public/                # 公共静态资源
 ├─ .env.example           # 环境变量模板
@@ -304,6 +380,16 @@ smart-live-app/
 - 配置 `VITE_AMAP_KEY`。
 - 检查浏览器定位权限是否开启。
 
-## 许可证
-本项目基于 [MIT](./LICENSE) 开源协议。
+## 📄 开源协议
 
+本项目基于 [MIT License](./LICENSE) 开源。
+
+---
+
+<div align="center">
+
+**如果觉得不错，请给我们一个 ⭐ Star 吧!**
+
+Made with ❤️ by SmartLive Team
+
+</div>
