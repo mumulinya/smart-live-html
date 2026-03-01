@@ -426,12 +426,14 @@ export default {
       maxVerticalTravel: 50,
 
       pendingCategoryId: null, // Add this to track pending tab restore
-      scrollPositions: {} // Save scroll position per category
+      scrollPositions: {}, // Save scroll position per category
+      
+      categoryPageSize: 8 // default 8 for mobile (2 rows of 4)
     }
   },
   computed: {
     featuredTypePages() {
-      const pageSize = 8;
+      const pageSize = this.categoryPageSize; 
       const list = Array.isArray(this.types) ? this.types : [];
       const pages = [];
 
@@ -536,8 +538,27 @@ export default {
        }
     });
   },
+  mounted() {
+    this.calculateCategorySize();
+    window.addEventListener('resize', this.calculateCategorySize);
+  },
+  beforeUnmount() {
+    window.removeEventListener('resize', this.calculateCategorySize);
+  },
 
   methods: {
+    calculateCategorySize() {
+      const width = document.documentElement.clientWidth || window.innerWidth;
+      const totalLen = this.types && this.types.length > 0 ? this.types.length : 10;
+      
+      // On wide screens (web/tablet), show all of them at once without swiping.
+      // Mobile keeps it at 8 for standard swiping.
+      if (width >= 768) {
+         this.categoryPageSize = Math.max(totalLen, 10);
+      } else {
+         this.categoryPageSize = 8;
+      }
+    },
     toSearchPage() {
       this.$router.push("/search");
     },
@@ -721,6 +742,7 @@ export default {
          });
 
          this.types = list;
+         this.calculateCategorySize();
          this.categories = this.generateCategoriesFromTypes(this.types);
 
          this.$nextTick(() => {
@@ -1191,6 +1213,7 @@ export default {
 
 .type-pager {
   display: flex;
+  width: 100%;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
@@ -1205,12 +1228,22 @@ export default {
 .type-page {
   flex: 0 0 100%;
   width: 100%;
+  box-sizing: border-box;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px 10px;
+  justify-items: center; /* keep icons centered in their column track */
+  justify-content: space-between; /* spread the 4 column tracks across the full width */
+  align-items: center;
+  gap: 16px 0;
   scroll-snap-align: start;
 }
 
+@media screen and (min-width: 768px) {
+  .type-page {
+    grid-template-columns: repeat(10, minmax(0, 1fr)); /* Desktop can afford all 10 per row */
+    gap: 20px 0;
+  }
+}
 .type-box {
   border: none;
   background: transparent;
