@@ -16,12 +16,12 @@
        <div ref="topSentinel" class="top-sentinel"></div>
 
        <div v-if="loadingOld" class="loading-tip">
-         <span>闂傚倸鍊搁崐鎼佸磹妞嬪海鐭嗗〒姘ｅ亾妤犵偛顦甸崹楣冨箛娴ｅ湱绋佺紓鍌氬€烽悞锕佹懌闂佸憡鐟ョ换姗€寮婚悢纰辨晬闁挎繂娲ｅЧ妤呮偡濠婂懎顣奸悽顖涘浮閹瑦绻濋崶銊у帾婵犵數鍊埀顒勫磻閹剧粯鐓?..</span>
+         <span>加载更早历史消息...</span>
        </div>
 
        <div v-if="messages.length === 0 && !loading" class="empty-messages">
           <i class="el-icon-chat-round"></i>
-          <div>No messages yet, start a chat</div>
+          <div>暂无消息，开始聊天吧</div>
        </div>
 
        <template v-for="(group, index) in groupedMessages">
@@ -37,7 +37,7 @@
                 <img v-if="msg.isSelf && user.icon" :src="user.icon" class="avatar-image">
                 <img v-else-if="!msg.isSelf && contactAvatar" :src="contactAvatar" class="avatar-image">
                 <div v-else class="avatar-fallback">
-                   {{ msg.isSelf ? (user.nickname || 'Me').charAt(0) : (contactName || 'Ta').charAt(0) }}
+                   {{ msg.isSelf ? (user.nickname || '我').charAt(0) : (contactName || 'Ta').charAt(0) }}
                 </div>
              </div>
 
@@ -45,14 +45,14 @@
                 <div v-if="!msg.isSystem" class="message" :class="{'message-left': !msg.isSelf, 'message-right': msg.isSelf, 'message-image': msg.messageType === 1}">
                    <span v-if="!msg.messageType || msg.messageType === 0">{{msg.content}}</span>
                    <img v-else-if="msg.messageType === 1" :src="msg.content" class="msg-img" @click="previewImage(msg.content)">
-                   <span v-else>[Unknown message type]</span>
+                   <span v-else>[未知消息类型]</span>
                 </div>
                 <!-- Status outside bubble -->
                 <div v-if="msg.isSelf && !msg.isSystem" class="message-status-outer">
-                   <span v-if="msg.status=='sending'" class="status-sending">Sending</span>
-                   <span v-else-if="msg.status=='failed'" class="status-failed">Failed</span>
-                   <span v-else-if="Number(msg.status)===1" class="status-read">Read</span>
-                   <span v-else class="status-unread">Unread</span>
+                   <span v-if="msg.status=='sending'" class="status-sending">发送中</span>
+                   <span v-else-if="msg.status=='failed'" class="status-failed">发送失败</span>
+                   <span v-else-if="Number(msg.status)===1" class="status-read">已读</span>
+                   <span v-else class="status-unread">未读</span>
                 </div>
                 <div v-if="msg.isSystem" class="system-message">{{msg.content}}</div>
              </div>
@@ -69,7 +69,7 @@
           </div>
           
           <!-- Text Input -->
-          <input type="text" v-model="messageInput" @keyup.enter="sendMessage" placeholder="闂傚倸鍊搁崐椋庣矆娓氣偓楠炴牠顢曚綅閸ヮ剦鏁嶉柣鎰綑娴滆鲸绻濋悽闈浶㈡繛灞傚€楃划缁樺鐎涙鍘甸梻鍌氬€搁顓⑺囬敃鍌涚厽妞ゆ挾鍣ュ▓婊堟煛鐏炲墽娲撮柛鈺佸瀹曟﹢鏁傜捄銊﹀礋濠电姷顣介崜婵娿亹閸愵喗鍋嬮柟鎹愵嚙閽冪喐绻涢幋娆忕労闁轰礁鍟撮弻鏇㈠醇濠靛洤娅ら梺璇叉唉濞咃絿妲?.." @focus="hideAllPanels">
+          <input type="text" v-model="messageInput" @keyup.enter="sendMessage" placeholder="输入消息..." @focus="hideAllPanels">
           
           <!-- Emoji Icon -->
           <div class="input-icon emoji-icon" @click="toggleEmojiPanel">
@@ -79,7 +79,7 @@
           </div>
           
           <!-- Plus/Send Icon -->
-          <div v-if="messageInput.trim()" class="send-btn" @click="sendMessage">Send</div>
+          <div v-if="messageInput.trim()" class="send-btn" @click="sendMessage">发送</div>
           <div v-else class="input-icon" @click="toggleMorePanel">
              <i class="el-icon-circle-plus-outline" :class="{ 'active': showMorePanel }"></i>
           </div>
@@ -98,19 +98,19 @@
        <div class="more-panel" v-if="showMorePanel">
           <div class="panel-item" @click="selectImage">
              <div class="panel-icon"><i class="el-icon-picture-outline"></i></div>
-             <div class="panel-text">Album</div>
+             <div class="panel-text">相册</div>
           </div>
           <div class="panel-item">
              <div class="panel-icon"><i class="el-icon-camera"></i></div>
-             <div class="panel-text">Camera</div>
+             <div class="panel-text">拍摄</div>
           </div>
           <div class="panel-item">
              <div class="panel-icon"><i class="el-icon-location-outline"></i></div>
-             <div class="panel-text">Location</div>
+             <div class="panel-text">位置</div>
           </div>
           <div class="panel-item">
              <div class="panel-icon"><i class="el-icon-folder-opened"></i></div>
-             <div class="panel-text">File</div>
+             <div class="panel-text">文件</div>
           </div>
        </div>
     </div>
@@ -121,7 +121,7 @@
     <!-- Back to Latest Button -->
     <div v-if="isHistoryMode" class="back-to-latest" @click="resetToLatest">
       <i class="el-icon-arrow-down"></i>
-      <span>Back to latest</span>
+      <span>回到最新位置</span>
     </div>
     
 
@@ -144,15 +144,15 @@ export default {
     return {
        sessionId: 0,
        toUserId: 0,
-       user: { id: 0, nickname: 'Me', icon: '' },
-       contactName: '闂傚倸鍊搁崐椋庣矆娓氣偓楠炲鍨鹃幇浣圭稁缂傚倷鐒﹁摫闁告瑥绻橀弻鐔碱敍閿濆洣姹楅悷婊呭鐢帡鎮欐繝鍥ㄧ厪濠电倯鈧崑鎾绘煛?..',
+       user: { id: 0, nickname: '我', icon: '' },
+       contactName: '加载中...',
        contactAvatar: '',
        messages: [],
        messageInput: '',
        loading: false,
        wsStatus: 'disconnected',
        showConnectionStatus: false,
-       connectionStatusText: '闂傚倸鍊风粈渚€骞栭位鍥敃閿曗偓閻ょ偓绻濋棃娑卞剰缁炬儳顭烽弻锝夊箛椤掑倷绮甸梺鍝勬缁捇骞冨Δ鈧埥澶娾枎濡厧濮洪梻?..',
+       connectionStatusText: '连接断开...',
        isSending: false,
        
        // Refactored state
@@ -216,7 +216,7 @@ export default {
          this.sessionId = newSessionId;
          this.targetDate = this.$route.query.targetDate || null;
          this.messages = [];
-         this.contactName = '闂傚倸鍊搁崐椋庣矆娓氣偓楠炲鍨鹃幇浣圭稁缂傚倷鐒﹁摫闁告瑥绻橀弻鐔碱敍閿濆洣姹楅悷婊呭鐢帡鎮欐繝鍥ㄧ厪濠电倯鈧崑鎾绘煛?..';
+         this.contactName = '加载中...';
          this.contactAvatar = '';
 
          // NOTE: removed corrupted comment.
@@ -317,7 +317,7 @@ export default {
      },
      handleConnectionChange(status) {
         this.wsStatus = status;
-        this.connectionStatusText = status === 'connected' ? 'Connected' : 'Disconnected';
+        this.connectionStatusText = status === 'connected' ? '已连接' : '已断开';
         this.showConnectionStatus = status !== 'connected';
         if(status === 'connected') {
            setTimeout(() => this.showConnectionStatus = false, 2000);
@@ -343,7 +343,7 @@ export default {
         } else if (message.type === 'MESSAGE_STATUS_UPDATE') {
            this.handleMessageStatusUpdate(message.data);
         } else if (message.type === 'ERROR') {
-           this.$message.error('Send failed: ' + (message.data.msg || 'unknown error'));
+           this.$message.error('发送失败: ' + (message.data.msg || '未知错误'));
            // Mark latest sending message as failed
            const sendingMsg = this.messages.slice().reverse().find(m => m.status === 'sending');
            if (sendingMsg) {

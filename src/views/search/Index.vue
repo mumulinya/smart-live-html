@@ -54,7 +54,7 @@
       @touchmove.capture.passive="onTouchMove"
       @touchend.capture="onTouchEnd"
     >
-        <van-tabs v-model:active="activeTab" swipeable type="line" animated sticky offset-top="54px" color="#ff6633" title-active-color="#ff6633" :ellipsis="false" @click-tab="onTabChange">
+        <van-tabs v-model:active="activeTab" swipeable type="line" animated sticky offset-top="54px" color="#ff6633" title-active-color="#ff6633" :ellipsis="false" @change="onTabChange">
             
             <!-- SHOP TAB -->
             <van-tab title="店铺" name="shop">
@@ -743,10 +743,8 @@ export default {
 
       if (deltaX < 0 && currentIndex < this.tabOrder.length - 1) {
         this.activeTab = this.tabOrder[currentIndex + 1];
-        this.onTabChange(this.activeTab);
       } else if (deltaX > 0 && currentIndex > 0) {
         this.activeTab = this.tabOrder[currentIndex - 1];
-        this.onTabChange(this.activeTab);
       }
     },
     checkLogin() {

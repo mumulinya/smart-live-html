@@ -18,6 +18,8 @@
       :offset-top="46"
       color="#ff2442"
       :ellipsis="false"
+      swipeable
+      animated
     >
       <van-tab title="我赞过的" name="likes">
         <div class="inner-page">
@@ -40,48 +42,150 @@
             @load="loadLikes"
           >
             <div v-if="likeState.items.length > 0">
-              <div
-                v-for="(item, idx) in likeState.items"
-                :key="`like-${item.id || item.sourceId || idx}`"
-                class="interaction-card"
-                @click="openLikeTarget(item)"
-              >
-                <div class="card-head">
-                  <div class="card-user">
+                <div
+                  v-for="(item, idx) in likeState.items"
+                  :key="`like-${item.id || item.sourceId || idx}`"
+                  class="interaction-card"
+                  :class="{ 'comment-style-card': [5, 7, 2, 4].includes(getLikeSourceType(item)) }"
+                  @click="openLikeTarget(item)"
+                >
+                <!-- 情况 A：如果是评论 (Type 5)，使用 Feed 流布局 -->
+                <template v-if="getLikeSourceType(item) === 5">
+                  <!-- 顶部：作者信息 -->
+                  <div class="card-author-header">
                     <img
-                      class="user-avatar"
+                      class="author-avatar-small"
                       :src="getLikeAvatar(item)"
                       alt=""
                       @error="handleAvatarError"
                     />
-                    <div class="user-meta">
-                      <div class="user-line">
-                        <span class="user-name">{{ getLikeAuthorName(item) }}</span>
-                        <span class="type-badge">{{ getLikeTypeLabel(item) }}</span>
+                    <div class="author-info-right">
+                      <span class="author-name-small">{{ getLikeAuthorName(item) }}</span>
+                      
+                      <!-- 次层：行为与关联内容 (移到头像右侧) -->
+                      <div class="card-context" @click.stop="openLikeBaseTarget(item)">
+                        <span class="action-label">在 </span>
+                        <span class="target-title-link">《{{ getLikeTargetTitle(item) || '未知内容' }}》</span>
+                        <span class="action-label"> 下评论</span>
                       </div>
-                      <span class="time-text">{{ formatTime(getItemTime(item)) || '刚刚' }}</span>
                     </div>
                   </div>
-                </div>
-                <div class="card-body">
-                  <div class="card-main">
-                    <div class="card-target">{{ getLikeActionText(item) }}</div>
-                    <div v-if="getLikeContentText(item)" class="card-title">{{ getLikeContentText(item) }}</div>
-                    <div v-else-if="getLikePrimaryText(item)" class="card-title">{{ getLikePrimaryText(item) }}</div>
-                    <div v-if="getLikeContentText(item) && getLikePrimaryText(item)" class="card-sub">{{ getLikePrimaryText(item) }}</div>
-                    <div v-if="showStats(item)" class="card-stats">
-                      <span>点赞 {{ formatCount(getLikeCount(item)) }}</span>
-                      <span>评论 {{ formatCount(getCommentCount(item)) }}</span>
+
+                  <!-- 内容区 (带缩进) -->
+                  <div class="card-content-box indented-content">
+                    <div 
+                      class="content-text" 
+                      :class="{ 'is-short': (getLikeContentText(item) || '').length < 8 }"
+                    >
+                      {{ getLikeContentText(item) || '暂无内容' }}
                     </div>
                   </div>
-                  <img
-                    v-if="getLikeCover(item)"
-                    class="card-cover"
-                    :src="getLikeCover(item)"
-                    alt=""
-                    @error="handleCoverError"
-                  />
-                </div>
+
+                  <!-- 底部：数据与时间 (带缩进) -->
+                  <div class="card-footer-info indented-content">
+                    <div class="stats-left" v-if="showStats(item)">
+                      <span class="stat-item">
+                        <van-icon name="like" color="#ff2442" />
+                        {{ formatCount(getLikeCount(item)) }}
+                      </span>
+                      <span class="stat-item">
+                        <van-icon name="comment-o" />
+                        {{ formatCount(getCommentCount(item)) }}
+                      </span>
+                    </div>
+                    <div class="date-right">
+                      {{ formatTime(getItemTime(item))?.split(' ')[0] || '刚刚' }}
+                    </div>
+                  </div>
+                </template>
+
+                <!-- 情况 B：如果是 评价 (Type 7, 2, 4)，使用专属评价布局 -->
+                <template v-else-if="[7, 2, 4].includes(getLikeSourceType(item))">
+                  <!-- 顶部：作者信息与关联店铺 -->
+                  <div class="card-author-header">
+                    <img
+                      class="author-avatar-small"
+                      :src="getLikeAvatar(item)"
+                      alt=""
+                      @error="handleAvatarError"
+                    />
+                    <div class="author-info-right flex-center-y">
+                      <span class="author-name-small">{{ getLikeAuthorName(item) }}</span>
+                      
+                      <div class="card-context rating-context" @click.stop="openLikeBaseTarget(item)">
+                        <span v-if="getLikeScore(item) > 0" class="rating-stars">
+                          <van-rate :model-value="getLikeScore(item)" readonly :size="10" color="#ffb800" void-icon="star" void-color="#eee" />
+                        </span>
+                        <span class="target-title-link shop-title-link">{{ getLikePrimaryText(item) || '未知店铺' }} <van-icon name="arrow" /></span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 内容区 (带图或不带图，带缩进) -->
+                  <div class="card-content-box indented-content review-content-box">
+                    <div class="review-text-wrapper">
+                      <div class="content-text review-text" :class="{ 'has-image': getLikeCover(item) }">
+                        {{ getLikeContentText(item) || '暂无文字评价' }}
+                      </div>
+                    </div>
+                    
+                    <div class="review-image-wrapper" v-if="getLikeCover(item)">
+                      <img class="review-thumb-image" :src="getLikeCover(item)" alt="" @error="handleCoverError" />
+                    </div>
+                  </div>
+
+                  <!-- 底部：数据与时间 (带缩进) -->
+                  <div class="card-footer-info indented-content">
+                    <div class="stats-left" v-if="showStats(item)">
+                      <span class="stat-item">
+                        <van-icon name="like" color="#ff2442" />
+                        {{ formatCount(getLikeCount(item)) }}
+                      </span>
+                      <span class="stat-item">
+                        <van-icon name="comment-o" />
+                        {{ formatCount(getCommentCount(item)) }}
+                      </span>
+                    </div>
+                    <div class="date-right">
+                      {{ formatTime(getItemTime(item))?.split(' ')[0] || '刚刚' }}
+                    </div>
+                  </div>
+                </template>
+
+                <!-- 情况 C：如果是笔记 (Type 3)，使用经典 封面+标题 布局 -->
+                <template v-else>
+                  <!-- 上半部分：封面图 + 标题/副标题 -->
+                  <div class="card-top">
+                    <img
+                      v-if="getLikeCover(item)"
+                      class="card-cover"
+                      :src="getLikeCover(item)"
+                      alt=""
+                      @error="handleCoverError"
+                    />
+                    <div class="card-text">
+                      <div v-if="getLikeContentText(item)" class="card-title">{{ getLikeContentText(item) }}</div>
+                      <div v-else-if="getLikePrimaryText(item)" class="card-title">{{ getLikePrimaryText(item) }}</div>
+                      <div v-if="getLikeContentText(item) && getLikePrimaryText(item)" class="card-sub">{{ getLikePrimaryText(item) }}</div>
+                    </div>
+                  </div>
+                  <!-- 下半部分：作者信息 + 点赞/评论 -->
+                  <div class="card-bottom">
+                    <div class="card-author">
+                      <img
+                        class="author-avatar"
+                        :src="getLikeAvatar(item)"
+                        alt=""
+                        @error="handleAvatarError"
+                      />
+                      <span class="author-name">{{ getLikeAuthorName(item) }}</span>
+                    </div>
+                    <div class="card-stats" v-if="showStats(item)">
+                      <span class="stat-item"><van-icon name="like" color="#ff2442"/> {{ formatCount(getLikeCount(item)) }}</span>
+                      <span class="stat-item"><van-icon name="comment-o"/> {{ formatCount(getCommentCount(item)) }}</span>
+                    </div>
+                  </div>
+                </template>
               </div>
             </div>
             <van-empty v-else-if="!likeState.loading" description="暂无赞评记录" />
@@ -113,45 +217,61 @@
               <div
                 v-for="(item, idx) in commentState.items"
                 :key="`comment-${item.id || idx}`"
-                class="interaction-card"
+                class="interaction-card comment-card"
                 @click="openCommentTarget(item)"
               >
-                <div class="card-head">
-                  <div class="card-user">
-                    <img
-                      class="user-avatar"
-                      :src="getCommentAvatar(item)"
-                      alt=""
-                      @error="handleAvatarError"
-                    />
-                    <div class="user-meta">
-                      <div class="user-line">
-                        <span class="user-name">{{ getCommentAuthorName(item) }}</span>
-                        <span class="type-badge">{{ getCommentTypeLabel(item) }}</span>
-                      </div>
-                      <span class="time-text">{{ formatTime(getItemTime(item)) || '刚刚' }}</span>
-                    </div>
+                <!-- 顶部：关联内容标题 -->
+                <div class="card-head-simple">
+                  <div class="target-link">
+                    <span class="action-text">评论了</span>
+                    <span class="target-title">《{{ getCommentTargetTitle(item) || '未知内容' }}》</span>
                   </div>
                 </div>
-                <div class="card-body">
-                  <div class="card-main">
-                    <div v-if="getCommentTargetTitle(item)" class="card-target">
-                      评论于：{{ getCommentTargetTitle(item) }}
-                    </div>
-                    <div class="card-title">{{ getCommentPrimaryText(item) }}</div>
-                    <div v-if="getCommentSecondaryText(item)" class="card-sub">{{ getCommentSecondaryText(item) }}</div>
-                    <div v-if="showStats(item)" class="card-stats">
-                      <span>点赞 {{ formatCount(getLikeCount(item)) }}</span>
-                      <span>评论 {{ formatCount(getCommentCount(item)) }}</span>
+
+                <!-- 时间与状态 -->
+                <div class="card-time-row">
+                  <span class="time-text">{{ formatTime(getItemTime(item)) || '刚刚' }}</span>
+                  <div class="audit-status" v-if="item.status === 0 || item.status === 2 || item.status === 3">
+                    <span class="status-tag-mini status-pending" v-if="item.status === 0">审核中</span>
+                    <span class="status-tag-mini status-rejected" v-if="item.status === 2 || item.status === 3">审核未通过</span>
+                  </div>
+                </div>
+
+                <!-- 评论内容 -->
+                <div class="card-body-simple">
+                  <div class="comment-content">{{ getCommentPrimaryText(item) }}</div>
+                  <div v-if="getCommentSecondaryText(item)" class="comment-reply-to">
+                    回复: {{ getCommentSecondaryText(item) }}
+                  </div>
+                </div>
+
+                <!-- 底部操作按钮 -->
+                <div class="card-actions-row" @click.stop>
+                  <div class="action-left">
+                    <div v-if="showStats(item)" class="card-stats-simple">
+                      <span class="stat-item"><van-icon name="like-o" /> {{ formatCount(getLikeCount(item)) }}</span>
+                      <span class="stat-item"><van-icon name="comment-o" /> {{ formatCount(getCommentCount(item)) }}</span>
                     </div>
                   </div>
-                  <img
-                    v-if="getCommentCover(item)"
-                    class="card-cover"
-                    :src="getCommentCover(item)"
-                    alt=""
-                    @error="handleCoverError"
-                  />
+                  <div class="action-right">
+                    <van-button 
+                      v-if="item.status === 2 || item.status === 3"
+                      size="mini" 
+                      plain 
+                      type="default" 
+                      round 
+                      class="btn-action edit-btn"
+                      @click="onEditComment(item)"
+                    >修改</van-button>
+                    <van-button 
+                      size="mini" 
+                      plain 
+                      type="danger" 
+                      round 
+                      class="btn-action"
+                      @click="onDeleteComment(item)"
+                    >删除</van-button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -172,9 +292,10 @@ defineOptions({
 import { reactive, ref, watch, onMounted, onActivated, onBeforeUnmount, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { getCurrentUser } from '@/api/user';
-import { likeRecord, getUserComments } from '@/api/interaction';
+import { likeRecord, getUserComments, removeComment } from '@/api/interaction';
 import { fileURL } from '@/utils/request';
 import PageLayout from '@/components/PageLayout/PageLayout.vue';
+import { showToast, showConfirmDialog } from 'vant';
 
 const router = useRouter();
 const route = useRoute();
@@ -395,7 +516,14 @@ const ensureTabLoaded = () => {
 };
 
 const getLikeSourceType = (item) => {
-  return toNumber(item.sourceType ?? item.targetType ?? item.type ?? item.bizType ?? item.dataType);
+  const t = toNumber(item.sourceType ?? item.targetType ?? item.type ?? item.bizType ?? item.dataType);
+  if (t !== 5 && activeTab.value === 'likes' && likeType.value === '5') {
+    return 5; // Force type 5 when specifically viewing liked comments
+  }
+  if (t !== 7 && activeTab.value === 'likes' && likeType.value === '7') {
+    return 7; // Force type 7 when specifically viewing liked reviews
+  }
+  return t;
 };
 
 const getLikeSourceId = (item) => {
@@ -412,7 +540,7 @@ const getLikeTypeLabel = (item) => {
   if (t === 5) return '评论';
   if (t === 7) return '评价';
   if (t === 2) return '店铺评价';
-  if (t === 4) return '商品评价';
+  if (t === 4) return '订单评价';
   return '内容';
 };
 
@@ -433,7 +561,40 @@ const getLikeCover = (item) => {
 };
 
 const getLikePrimaryText = (item) => {
-  return toText(item.title || item.noteTitle || item.targetTitle || item.reviewTitle || item.shopName || item.productName);
+  return toText(
+    item.sourceName ||
+      item.title ||
+      item.noteTitle ||
+      item.targetTitle ||
+      item.reviewTitle ||
+      item.shopName ||
+      item.productName
+  );
+};
+
+const getLikeTargetTitle = (item) => {
+  return toText(
+    item.sourceName ||
+      item.targetTitle ||
+      item.blogTitle ||
+      item.reviewTitle ||
+      item.noteTitle ||
+      item.title ||
+      item.shopName ||
+      item.productName ||
+      item.parentTitle
+  );
+};
+
+const openLikeBaseTarget = (item) => {
+  const targetId = item.blogId || item.targetId || item.parentId || item.sourceId || item.reviewId;
+  if (!targetId) return;
+  const isReview = item.reviewId || item.reviewTitle || item.baseType === 7 || item.targetSourceType === 7 || item.parentSourceType === 7;
+  if (isReview) {
+    router.push({ path: '/review/detail', query: { id: item.reviewId || targetId } });
+  } else {
+    router.push({ path: '/blog/detail', query: { id: item.blogId || item.noteId || targetId } });
+  }
 };
 
 const getLikeContentText = (item) => {
@@ -441,6 +602,10 @@ const getLikeContentText = (item) => {
   if (!content) return '';
   if (content === getLikePrimaryText(item)) return '';
   return content;
+};
+
+const getLikeScore = (item) => {
+  return toNumber(item.score || item.rating || item.star || 0);
 };
 
 const openLikeTarget = (item) => {
@@ -499,7 +664,8 @@ const getCommentPrimaryText = (item) => {
 
 const getCommentTargetTitle = (item) => {
   return toText(
-    item.targetTitle ||
+    item.sourceName ||
+      item.targetTitle ||
       item.blogTitle ||
       item.reviewTitle ||
       item.noteTitle ||
@@ -760,6 +926,29 @@ const loadComments = async () => {
   }
 };
 
+const onDeleteComment = async (item) => {
+  try {
+    await showConfirmDialog({
+      title: '提示',
+      message: '确定删除这条评论吗？',
+    });
+    await removeComment({ id: item.id || item.commentId });
+    showToast('删除成功');
+    resetListState(commentState);
+    loadComments();
+  } catch (err) {
+    if (err && err !== 'cancel') {
+      console.error('delete comment failed', err);
+      showToast('删除失败');
+    }
+  }
+};
+
+const onEditComment = (item) => {
+  // Redirect to target to edit
+  openCommentTarget(item);
+};
+
 const initUser = async () => {
   pageLoading.value = true;
   try {
@@ -899,20 +1088,367 @@ onBeforeUnmount(() => {
 .interaction-card {
   background: #fff;
   border-radius: 10px;
-  padding: 12px 12px 10px;
+  padding: 12px;
   margin-bottom: 10px;
 }
 
-.card-head {
+.card-top {
+  display: flex;
+  gap: 10px;
   margin-bottom: 10px;
 }
 
-.card-user {
+.card-top .card-cover {
+  width: 80px;
+  height: 80px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #f2f3f5;
+}
+
+.card-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.card-title {
+  font-size: 14px;
+  color: #333;
+  line-height: 1.5;
+  font-weight: 600;
+  word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.card-sub {
+  font-size: 12px;
+  color: #999;
+  line-height: 1.4;
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  word-break: break-word;
+}
+
+.card-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-author {
   display: flex;
   align-items: center;
   min-width: 0;
 }
 
+.author-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  margin-right: 6px;
+  background: #f2f3f5;
+}
+
+.author-name {
+  font-size: 12px;
+  color: #666;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 120px;
+}
+
+.card-stats {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
+  color: #999;
+}
+
+.stat-item svg {
+  flex-shrink: 0;
+}
+
+/* 评论卡片新样式 */
+.comment-card {
+  padding: 16px;
+}
+
+.card-head-simple {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 4px;
+}
+
+.target-link {
+  flex: 1;
+  font-size: 13px;
+  color: #666;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.action-text {
+  color: #999;
+}
+
+.target-title {
+  color: #576b95; /* 类似链接的颜色 */
+  font-weight: 500;
+}
+
+.card-time-row {
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.card-time-row .time-text {
+  font-size: 11px;
+  color: #ccc;
+}
+
+.card-body-simple {
+  margin-bottom: 16px;
+}
+
+.comment-content {
+  font-size: 15px;
+  color: #333;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.comment-reply-to {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: #f7f8fa;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #666;
+  border-left: 3px solid #eee;
+}
+
+.card-actions-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-stats-simple {
+  display: flex;
+  gap: 12px;
+}
+
+.card-stats-simple .stat-item {
+  font-size: 13px;
+  color: #999;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 评论专项样式 (仅在点赞列表中的评论类型展现) */
+.comment-style-card {
+  padding: 14px 16px !important;
+}
+
+.comment-style-card .card-author-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.comment-style-card .author-avatar-small {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-right: 4px;
+  background: #f2f3f5;
+}
+
+.comment-style-card .author-info-right {
+  display: flex;
+  flex-direction: column;
+}
+
+.comment-style-card .author-name-small {
+  font-size: 13px;
+  color: #333;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.comment-style-card .card-context {
+  font-size: 11px;
+  color: #999;
+  line-height: 1.4;
+}
+
+.comment-style-card .target-title-link {
+  color: #576b95;
+  font-weight: 500;
+}
+
+.indented-content {
+  padding-left: 20px; /* 缩进与头像对齐差不多 */
+}
+
+.comment-style-card .content-text {
+  font-size: 15px;
+  color: #333;
+  line-height: 1.6;
+  word-break: break-all;
+  white-space: pre-wrap;
+  margin-top: 8px;
+  margin-bottom: 12px;
+}
+
+.comment-style-card .card-footer-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 8px;
+}
+
+/* 评价专区样式 */
+.flex-center-y {
+  justify-content: center;
+}
+
+.rating-context {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.rating-context .target-title-link.shop-title-link {
+  color: #666; /* 降低蓝色链接突兀感，用中性灰色 */
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.review-content-box {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.review-text-wrapper {
+  flex: 1;
+  min-width: 0;
+}
+
+.review-image-wrapper {
+  flex-shrink: 0;
+}
+
+.review-thumb-image {
+  width: 60px;
+  height: 60px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: #f2f3f5;
+  border: 1px solid #f0f0f0;
+}
+
+.content-text.review-text {
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  display: -webkit-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  -webkit-box-orient: vertical;
+}
+
+.comment-style-card .stats-left {
+  display: flex;
+  gap: 12px;
+}
+
+.comment-style-card .stats-left .stat-item {
+  font-size: 12px;
+  color: #bfbfbf;
+}
+
+.comment-style-card .date-right {
+  font-size: 11px;
+  color: #ccc;
+}
+
+.action-right {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-action {
+  height: 24px !important;
+  padding: 0 12px !important;
+  font-size: 12px !important;
+}
+
+.btn-action.edit-btn {
+  color: #666 !important;
+  border-color: #ccc !important;
+}
+
+.status-tag-mini {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.status-tag-mini.status-pending {
+  background: #faad14;
+}
+
+.status-tag-mini.status-rejected {
+  background: #ff4d4f;
+}
+
+/* 评论 Tab 保留的旧样式 */
+.card-head {
+  margin-bottom: 10px;
+}
+.card-user {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
 .user-avatar {
   width: 38px;
   height: 38px;
@@ -922,19 +1458,16 @@ onBeforeUnmount(() => {
   margin-right: 10px;
   background: #f2f3f5;
 }
-
 .user-meta {
   min-width: 0;
   flex: 1;
 }
-
 .user-line {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-bottom: 4px;
 }
-
 .user-name {
   max-width: 150px;
   overflow: hidden;
@@ -944,7 +1477,6 @@ onBeforeUnmount(() => {
   color: #333;
   font-weight: 600;
 }
-
 .type-badge {
   background: #fff2f0;
   color: #ff4d4f;
@@ -953,48 +1485,18 @@ onBeforeUnmount(() => {
   font-size: 11px;
   line-height: 1.4;
 }
-
 .time-text {
   font-size: 11px;
   color: #999;
 }
-
 .card-body {
   display: flex;
   gap: 10px;
 }
-
 .card-main {
   flex: 1;
   min-width: 0;
 }
-
-.card-title {
-  font-size: 14px;
-  color: #333;
-  line-height: 1.5;
-  margin-bottom: 6px;
-  font-weight: 600;
-  word-break: break-word;
-}
-
-.card-sub,
-.card-title {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-}
-
-.card-title {
-  -webkit-line-clamp: 2;
-}
-
-.card-sub {
-  -webkit-line-clamp: 2;
-  word-break: break-word;
-}
-
 .card-target {
   font-size: 12px;
   color: #7f8c9b;
@@ -1004,22 +1506,7 @@ onBeforeUnmount(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
-.card-sub {
-  font-size: 12px;
-  color: #999;
-  line-height: 1.4;
-}
-
-.card-stats {
-  margin-top: 8px;
-  font-size: 11px;
-  color: #999;
-  display: flex;
-  gap: 10px;
-}
-
-.card-cover {
+.card-body .card-cover {
   width: 74px;
   height: 74px;
   border-radius: 8px;
@@ -1028,5 +1515,20 @@ onBeforeUnmount(() => {
   background: #f2f3f5;
 }
 
-</style>
+/* Status Badges */
+.interaction-status-tag {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    color: #fff;
+    font-weight: 500;
+    line-height: 1.2;
+}
+.status-pending {
+    background: rgba(255, 153, 0, 0.85);
+}
+.status-rejected {
+    background: rgba(255, 36, 66, 0.85);
+}
 
+</style>

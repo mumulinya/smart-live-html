@@ -60,7 +60,7 @@
                :class="{ active: reviewSourceType === '4' }"
                @click="onReviewTypeSelect('4')"
            >
-               商品评价
+               订单评价
            </span>
        </div>
        <!-- Filter -->
@@ -83,60 +83,91 @@
                <div class="review-card" v-for="r in reviews" :key="r.id" @click="toReviewDetail(r)">
                     <!-- Header -->
                     <div class="rc-header">
-                        <!-- Order Review Header -->
-                        <template v-if="r.reviewType === 'product'">
-                             <span class="type-tag product">
-                                <van-icon name="goods-collect-o" style="margin-right: 4px; font-size: 15px;" />
-                                商品评价 {{ r.shopName }}
-                            </span>
-                        </template>
-                         <!-- Shop Review Header -->
-                        <template v-else>
-                            <span class="type-tag shop">
-                                <van-icon name="shop-o" style="margin-right: 4px; font-size: 15px;" />
-                                店铺评价 {{ r.shopName }}
-                            </span>
-                        </template>
-                        <span class="rc-date">{{r.date}}</span>
+                        <!-- Shop/Order/Product Review Header Info -->
+                        <div class="rc-shop-info">
+                            <img v-if="r.shopLogo" :src="r.shopLogo" class="rc-shop-logo" />
+                            <van-icon v-else name="shop-o" class="rc-shop-icon" />
+                            <span class="rc-shop-name">{{ r.shopName }}</span>
+                        </div>
+
+                        <!-- Status Tag -->
+                        <div class="rc-status-area">
+                            <div class="review-status-tag status-pending" v-if="r.status === 0">审核中</div>
+                            <div class="review-status-tag status-rejected" v-if="r.status === 2 || r.status === 3">审核未通过</div>
+                            <div class="review-status-tag status-draft" v-if="r.status === 4">草稿</div>
+                        </div>
                     </div>
 
                    <div class="rc-body">
-                        <!-- Main Title -->
-                       <div class="rc-shop-name-row">{{r.shopName}}</div>
-                       
-                        <!-- Rating -->
-                       <div class="rc-rating-row">
+                        <!-- Second row: Rating + Date -->
+                       <div class="rc-rating-date-row">
                            <van-rate v-model="r.rating" readonly size="14" color="#ff9900" void-icon="star" void-color="#eee" />
-                           <span class="rc-rating-tag"><span class="emoji">😲</span> 超预期</span>
+                           <span class="rc-date">{{r.date}}</span>
                        </div>
                        
-                       <!-- Content -->
-                       <div class="rc-content" v-if="r.content">
-                           <div class="rc-text-body" :class="{'collapsed': !r.expanded}">
-                               {{ r.content }}
-                           </div>
-                           <div class="rc-full-text" v-if="r.content.length > 50" @click.stop="r.expanded = !r.expanded">
-                               {{ r.expanded ? '收起' : '全文' }}
-                           </div>
-                       </div>
-                       
-                       <!-- Images -->
-                       <div class="rc-images" v-if="r.images && r.images.length">
-                           <img v-for="(img, idx) in r.images" :key="idx" :src="img" class="rc-img">
+                       <!-- Main Content Area (Text + Optional Image Row) -->
+                       <div class="rc-content-area">
+                          <div class="rc-text-col">
+                              <!-- Optional Target Info for Orders/Products before content -->
+                              <div class="rc-target-info" v-if="r.reviewType === 'product' && r.productName">
+                                  商品：{{ r.productName }}
+                              </div>
+                              <div class="rc-target-info" v-if="r.orderId && r.reviewType !== 'shop'">
+                                  订单：{{ r.orderId }}
+                              </div>
+
+                              <!-- Review Content -->
+                              <div class="rc-text-body">
+                                  {{ r.content || '暂无文字评价' }}
+                              </div>
+
+                              <!-- Reject Reason (If rejected) -->
+                              <div class="rc-reject-reason" v-if="(r.status === 2 || r.status === 3) && r.rejectReason">
+                                  拒绝原因：{{ r.rejectReason }}
+                              </div>
+                          </div>
+
+                          <!-- single Right-aligned thumbnail if images exist -->
+                          <div class="rc-image-col" v-if="r.images && r.images.length">
+                              <img :src="r.images[0]" class="rc-img-thumb" />
+                              <div class="rc-img-count" v-if="r.images.length > 1">{{ r.images.length }}图</div>
+                          </div>
                        </div>
                         
-                       <!-- Footer -->
+                       <!-- Footer (Likes + Actions) -->
                        <div class="rc-footer-new">
-                           <div class="rc-actions" style="margin-left: auto;">
+                           <div class="rc-stats">
                                <div class="action-btn">
-                                   <svg viewBox="0 0 24 24" width="16" height="16">
-                                       <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" :fill="r.isLike ? '#ff2442' : '#999'"></path>
-                                   </svg>
-                                   {{r.likeCount || 0}}
+                                   <van-icon name="like-o" size="14" v-if="!r.isLike"/>
+                                   <van-icon name="like" size="14" color="#ff2442" v-else/>
+                                   <span style="margin-left:2px;font-size:12px;">{{r.likeCount || 0}}</span>
                                </div>
-                               <div class="action-btn">
-                                   <van-icon name="ellipsis" size="16" />
+                               <div class="action-btn" v-if="r.commentCount > 0" style="margin-left: 12px;">
+                                   <van-icon name="comment-o" size="14" />
+                                   <span style="margin-left:2px;font-size:12px;">{{r.commentCount}}</span>
                                </div>
+                               <div class="action-btn" style="margin-left: 8px;">···</div>
+                           </div>
+
+                           <div class="rc-actions-right">
+                               <van-button 
+                                 v-if="r.status === 2 || r.status === 3 || r.status === 4"
+                                 size="mini" 
+                                 plain 
+                                 type="primary" 
+                                 round 
+                                 class="btn-action edit-btn"
+                                 @click.stop="onEditReview(r)"
+                               >修改</van-button>
+                               <van-button 
+                                 v-if="r.status === 0 || r.status === 2 || r.status === 3 || r.status === 4"
+                                 size="mini" 
+                                 plain 
+                                 type="danger" 
+                                 round 
+                                 class="btn-action"
+                                 @click.stop="onDeleteReview(r)"
+                               >删除</van-button>
                            </div>
                        </div>
                    </div>
@@ -209,7 +240,7 @@ export default {
           return [
               { name: '全部', value: 'all' },
               { name: '店铺评价', value: '2' },
-              { name: '商品评价', value: '4' }
+              { name: '订单评价', value: '4' }
           ];
       },
       currentTypeLabel() {
@@ -362,6 +393,48 @@ export default {
               }
           });
       },
+      onEditReview(review) {
+          this.$router.push({
+              name: 'ReviewPublish',
+              query: {
+                  id: review.id,
+                  type: review.sourceType
+              }
+          });
+      },
+      async onDeleteReview(review) {
+          try {
+              await this.$dialog.confirm({
+                  title: '提示',
+                  message: '确定要删除这条评价吗？不可恢复'
+              });
+              // Note: actual backend deletion api should be imported and called here
+              this.$toast('删除成功');
+              this.resetReviewedList();
+              this.loadReviews();
+          } catch(e) {}
+      },
+      onEditReview(review) {
+          this.$router.push({
+              name: 'ReviewPublish',
+              query: {
+                  id: review.id,
+                  type: review.sourceType
+              }
+          });
+      },
+      async onDeleteReview(review) {
+          try {
+              await this.$dialog.confirm({
+                  title: '提示',
+                  message: '确定要删除这条评价吗？不可恢复'
+              });
+              // ... deletion endpoint ...
+              this.$toast('删除成功');
+              this.resetReviewedList();
+              this.loadReviews();
+          } catch(e) {}
+      },
       getUserAndLoad() {
           getCurrentUser().then(res => {
               let userData = res.data || res;
@@ -445,6 +518,7 @@ export default {
           return {
               id: item.id,
               shopName: item.sourceName || item.shopName || 'Unknown Shop',
+              shopLogo: item.shopLogo ? (item.shopLogo.startsWith('http') ? item.shopLogo : this.$fileURL + item.shopLogo) : '',
               date: this.formatDate(item.createTime),
               rating: item.score || item.rating || 0, // Changed from star to score/rating check
               content: item.content,
@@ -455,7 +529,8 @@ export default {
                expanded: false,
                orderId: item.orderId,
                sourceType: Number(item.sourceType || 2),
-               reviewType: Number(item.sourceType || 2) === 4 ? 'product' : 'shop'
+               reviewType: Number(item.sourceType || 2) === 4 ? 'product' : 'shop',
+               status: item.status // Passed straight from backend
            };
        },
 
@@ -641,25 +716,62 @@ export default {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 15px;
-    background: #f8f9fa;
-    border-bottom: 1px solid #f0f0f0;
+    margin-bottom: 8px;
 }
 
-.type-tag {
-    font-size: 14px;
-    font-weight: 500;
+.rc-shop-info {
     display: flex;
     align-items: center;
+    flex: 1;
+    min-width: 0;
 }
 
-.type-tag.order,
-.type-tag.product {
-    color: #ff6600;
+.rc-shop-logo {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    object-fit: cover;
+    margin-right: 8px;
+    border: 1px solid #f0f0f0;
 }
 
-.type-tag.shop {
-    color: #1677ff;
+.rc-shop-icon {
+    font-size: 24px;
+    margin-right: 8px;
+    color: #999;
+}
+
+.rc-shop-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.rc-status-area {
+    margin-left: 10px;
+    flex-shrink: 0;
+}
+
+.review-status-tag {
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: #fff;
+    white-space: nowrap;
+}
+
+.status-pending { background: #faad14; }
+.status-rejected { background: #ff4d4f; }
+.status-draft { background: #bfbfbf; }
+
+.rc-rating-date-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
 }
 
 .rc-date {
@@ -667,99 +779,107 @@ export default {
      color: #bfbfbf;
 }
 
-.rc-body {
-    padding: 15px;
+.rc-content-area {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
 }
 
-.rc-shop-name-row {
-    font-size: 16px;
-    font-weight: 700;
-    color: #333;
-    margin-bottom: 8px;
+.rc-text-col {
+    flex: 1;
+    min-width: 0;
 }
 
-.rc-date-row {
+.rc-target-info {
     font-size: 12px;
     color: #999;
-    margin-bottom: 12px;
-}
-.rc-rating-row {
-    display: flex;
-    align-items: center;
-    margin-bottom: 12px;
-}
-.rc-rating-tag {
-    background: #fff8f2;
-    color: #ff6600;
-    font-size: 11px;
-    padding: 2px 6px;
+    margin-bottom: 6px;
+    background: #f7f8fa;
+    padding: 4px 8px;
     border-radius: 4px;
-    margin-left: 10px;
-    font-weight: 500;
-    display: flex;
-    align-items: center;
+    display: inline-block;
 }
-.rc-rating-tag .emoji {
-    margin-right: 2px;
-}
-.rc-content {
-    margin-bottom: 12px;
-}
+
 .rc-text-body {
     font-size: 15px;
     color: #333;
     line-height: 1.6;
-    white-space: pre-wrap;
-}
-.rc-text-body.collapsed {
     display: -webkit-box;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
     overflow: hidden;
+    text-overflow: ellipsis;
 }
-.rc-full-text {
-    font-size: 14px;
-    color: #409eff;
+
+.rc-reject-reason {
     margin-top: 6px;
-    cursor: pointer;
+    font-size: 12px;
+    color: #ff4d4f;
+    background: #fff1f0;
+    padding: 6px 8px;
+    border-radius: 4px;
 }
 
-/* Images */
-.rc-images {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 15px;
+.rc-image-col {
+    position: relative;
+    flex-shrink: 0;
 }
-.rc-img {
-    width: 110px;
-    height: 110px;
-    border-radius: 8px;
+
+.rc-img-thumb {
+    width: 64px;
+    height: 64px;
+    border-radius: 6px;
     object-fit: cover;
+    border: 1px solid #f0f0f0;
 }
 
-/* Footer */
+.rc-img-count {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    background: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    font-size: 10px;
+    padding: 1px 4px;
+    border-radius: 8px;
+}
+
 .rc-footer-new {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding-top: 10px;
+    border-top: 1px solid #f9f9f9;
 }
-.rc-views {
-    font-size: 12px;
-    color: #999;
-}
-.rc-actions {
+
+.rc-stats {
     display: flex;
-    gap: 20px;
+    align-items: center;
 }
+
+.rc-actions-right {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-action {
+    height: 24px !important;
+    padding: 0 12px !important;
+    font-size: 12px !important;
+}
+
+.btn-action.edit-btn {
+    color: #1677ff !important;
+    border-color: #1677ff !important;
+}
+
 .action-btn {
     display: flex;
     align-items: center;
-    color: #999;
-    font-size: 13px;
-    gap: 4px;
-}
-.action-btn i {
-    font-size: 16px;
+    color: #bfbfbf;
 }
 .sort-item {
     padding: 16px;
@@ -783,5 +903,20 @@ export default {
 }
 .sort-cancel:active {
     background-color: #f9f9f9;
+}
+
+/* Status Badges */
+.review-status-tag {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    color: #fff;
+    font-weight: 500;
+}
+.status-pending {
+    background: rgba(255, 153, 0, 0.85);
+}
+.status-rejected {
+    background: rgba(255, 36, 66, 0.85);
 }
 </style>

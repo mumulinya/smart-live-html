@@ -44,15 +44,15 @@
           <!-- Stats -->
           <div class="stats-box">
              <div class="stat-item">
-                <div class="stat-num">{{ formatCount(stats.likeCount || 0) }}</div>
+                <div class="stat-num">{{ formatCount(info?.liked || 0) }}</div>
                 <div class="stat-label">获赞</div>
              </div>
              <div class="stat-item" @click="toFollows">
-                <div class="stat-num">{{ formatCount(stats.followCount || 0) }}</div>
+                <div class="stat-num">{{ formatCount(info?.followee || 0) }}</div>
                 <div class="stat-label">关注</div>
              </div>
              <div class="stat-item" @click="toFans">
-                <div class="stat-num">{{ formatCount(stats.fansCount || 0) }}</div>
+                <div class="stat-num">{{ formatCount(info?.fans || 0) }}</div>
                 <div class="stat-label">粉丝</div>
              </div>
           </div>
@@ -207,6 +207,8 @@
                                     <div class="img-skeleton" v-if="!b.imgError && !b.imgLoaded"></div>
                                     <div class="img-placeholder" v-if="b.imgError">图片加载失败</div>
                                     <div class="pinned-tag" v-if="b.pin || b.isTop">置顶</div>
+                                    <div class="status-tag status-pending" v-if="b.status === 0">审核中</div>
+                                    <div class="status-tag status-rejected" v-if="b.status === 2 || b.status === 3">审核未通过</div>
                                 </div>
                                 <div class="card-info">
                                     <div class="card-title">{{ b.title }}</div>
@@ -1668,6 +1670,27 @@ export default {
 .bg-cyan { background-color: rgba(0, 188, 212, 0.1); }
 .bg-pink { background-color: rgba(255, 64, 129, 0.1); }
 .bg-grayblue { background-color: rgba(96, 125, 139, 0.1); }
+
+/* Status Tags */
+.status-tag {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    color: #fff;
+    font-weight: 500;
+    z-index: 2;
+    backdrop-filter: blur(4px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.status-pending {
+    background: rgba(255, 153, 0, 0.85);
+}
+.status-rejected {
+    background: rgba(255, 36, 66, 0.85);
+}
 
 </style>
 

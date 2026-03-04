@@ -895,10 +895,6 @@ onUnmounted(() => {
                  <i class="el-icon-star-on" :style="{color: info.isCollected?'#ff9900':'#333'}"></i>
                  <span>{{info.isCollected?'已收藏':'收藏'}}</span>
              </div>
-             <div class="icon-btn" @click="writeCommentFromPopup">
-                 <i class="el-icon-chat-dot-round"></i>
-                 <span>评价</span>
-             </div>
         </div>
         <div class="action-btn-group">
             <van-button 

@@ -92,7 +92,11 @@
 
           <!-- 博客文字内容 -->
           <div class="blog-content-section">
-            <h1 class="blog-title" v-if="blog.title">{{blog.title}}</h1>
+            <div class="title-with-status">
+               <h1 class="blog-title" v-if="blog.title">{{blog.title}}</h1>
+               <div class="detail-status-tag status-pending" v-if="user && user.id === blog.userId && blog.status === 0">审核中</div>
+               <div class="detail-status-tag status-rejected" v-if="user && user.id === blog.userId && (blog.status === 2 || blog.status === 3)">审核未通过</div>
+            </div>
             <div class="blog-text" v-html="blog.content"></div>
             <div class="blog-meta">
                <span class="meta-time">{{formatDate(blog.createTime)}}</span>
@@ -2086,5 +2090,31 @@ export default {
 :deep(.custom-delete-dialog .van-dialog__header) {
   padding-top: 20px;
   font-weight: 600;
+}
+
+/* Status Badges */
+.title-with-status {
+   display: flex;
+   align-items: center;
+   flex-wrap: wrap;
+   gap: 8px;
+   margin-bottom: 8px;
+}
+.title-with-status .blog-title {
+   margin-bottom: 0;
+}
+.detail-status-tag {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    color: #fff;
+    font-weight: 500;
+    line-height: 1.2;
+}
+.status-pending {
+    background: rgba(255, 153, 0, 0.85);
+}
+.status-rejected {
+    background: rgba(255, 36, 66, 0.85);
 }
 </style>

@@ -355,13 +355,14 @@ import { getShopTypes, getHotRank } from "@/api/shop";
 import { getProductHotRank } from "@/api/product";
 import { locationUtil } from "@/utils/location";
 import FootBar from '@/components/FootBar.vue';
-import { Lightning } from '@element-plus/icons-vue';
+import { Lightning, Present } from '@element-plus/icons-vue';
 
 export default {
   name: 'HomeIndex',
   components: {
     FootBar,
-    Lightning
+    Lightning,
+    Present
   },
   data() {
     return {

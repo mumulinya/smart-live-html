@@ -37,6 +37,12 @@
             <!-- Removed more-btn as per request -->
         </div>
 
+        <!-- Status Badges -->
+        <div class="review-status-row" v-if="isMe && (review.status === 0 || review.status === 2 || review.status === 3)">
+            <div class="detail-status-tag status-pending" v-if="review.status === 0">审核中</div>
+            <div class="detail-status-tag status-rejected" v-if="review.status === 2 || review.status === 3">审核未通过</div>
+        </div>
+
         <!-- Rating & Tags -->
         <div class="rating-section">
             <span class="rating-tag"><span class="emoji">🎁</span> 超预期</span>
@@ -614,7 +620,8 @@ export default {
                   isCollect: data.isStared || false,
                   // Shop POI Data
                   avgScore: data.avgScore || data.shopScore || 4.7,
-                  avgPrice: data.avgPrice || data.shopPrice || 188
+                  avgPrice: data.avgPrice || data.shopPrice || 188,
+                  status: data.status // Included from backend
               };
 
               // 如果是代金券评价，加载代金券详情
@@ -1670,5 +1677,46 @@ export default {
 .reply-expand i {
     margin-left: 4px;
     font-size: 12px;
+}
+
+/* Status Badges */
+.review-status-row {
+    margin: 0 15px 12px;
+    display: flex;
+    align-items: center;
+}
+.detail-status-tag {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    color: #fff;
+    font-weight: 500;
+    line-height: 1.2;
+}
+.status-pending {
+    background: rgba(255, 153, 0, 0.85);
+}
+.status-rejected {
+    background: rgba(255, 36, 66, 0.85);
+}
+/* Status Badges */
+.review-status-row {
+    margin: 0 15px 12px;
+    display: flex;
+    align-items: center;
+}
+.detail-status-tag {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    color: #fff;
+    font-weight: 500;
+    line-height: 1.2;
+}
+.status-pending {
+    background: rgba(255, 153, 0, 0.85);
+}
+.status-rejected {
+    background: rgba(255, 36, 66, 0.85);
 }
 </style>

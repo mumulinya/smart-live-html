@@ -92,11 +92,11 @@
 
     <!-- Actions -->
     <div class="footer-actions" v-if="order.id">
-       <button class="btn btn-primary big-btn" v-if="order.status===1" @click="toPay">立即支付</button>
        <button class="btn btn-outline big-btn" v-if="order.status===1" @click="doCancel">取消订单</button>
+       <button class="btn btn-primary big-btn" v-if="order.status===1" @click="toPay">立即支付</button>
        
-       <button class="btn btn-primary big-btn" v-if="order.status===2" @click="showQrCode">立即使用</button>
        <button class="btn btn-danger big-btn" v-if="order.status===2" @click="doRefund">申请退款</button>
+       <button class="btn btn-primary big-btn" v-if="order.status===2" @click="showQrCode">立即使用</button>
        
        <button class="btn btn-outline big-btn" v-if="order.status===3" disabled>已完成</button>
        <button class="btn btn-outline big-btn" v-if="order.status===4" disabled>已取消</button>

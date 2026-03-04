@@ -32,15 +32,15 @@
            
            <div class="stats-row">
              <div class="stat-item">
-               <div class="stat-num">{{ formatCount(stats.likeCount || 0) }}</div>
+               <div class="stat-num">{{ formatCount(info?.liked || 0) }}</div>
                <div class="stat-lbl">获赞</div>
              </div>
              <div class="stat-item" @click="toFollows">
-               <div class="stat-num">{{ formatCount(stats.followCount || 0) }}</div>
+               <div class="stat-num">{{ formatCount(info?.followee || 0) }}</div>
                <div class="stat-lbl">关注</div>
              </div>
              <div class="stat-item" @click="toFans">
-               <div class="stat-num">{{ formatCount(stats.fansCount || 0) }}</div>
+               <div class="stat-num">{{ formatCount(info?.fans || 0) }}</div>
                <div class="stat-lbl">粉丝</div>
              </div>
            </div>
@@ -605,8 +605,8 @@ export default {
           this.$message.success(newStatus ? '关注成功' : '已取消关注');
           
           // Update stats locally
-          if(newStatus) this.stats.fansCount = (this.stats.fansCount || 0) + 1;
-          else this.stats.fansCount = Math.max(0, (this.stats.fansCount || 0) - 1);
+          if(newStatus) this.info.fans = (this.info.fans || 0) + 1;
+          else this.info.fans = Math.max(0, (this.info.fans || 0) - 1);
           
           this.queryUserStats(); // Refresh stats from server to be sure
        });

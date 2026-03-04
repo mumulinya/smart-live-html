@@ -19,9 +19,9 @@
       color="#ff5000" 
       :ellipsis="false"
       title-active-color="#333"
-      @click-tab="handleTabClick"
+      @change="handleTabChange"
     >
-      <van-tab :title="'关注 ' + (stats.followCount || 0)" name="follow">
+      <van-tab :title="'关注 ' + (info?.followee || 0)" name="follow">
           <div class="list-container" v-infinite-scroll="loadMore" :infinite-scroll-disabled="loading || noMore" :infinite-scroll-distance="10">
              <div v-if="userList.length > 0">
                  <div v-for="u in userList" :key="u.id" class="user-item" @click="toUserDetail(u)">
@@ -45,7 +45,7 @@
           </div>
       </van-tab>
 
-      <van-tab :title="'粉丝 ' + (stats.fansCount || 0)" name="fans">
+      <van-tab :title="'粉丝 ' + (info?.fans || 0)" name="fans">
            <div class="list-container" v-infinite-scroll="loadMore" :infinite-scroll-disabled="loading || noMore" :infinite-scroll-distance="10">
              <div v-if="userList.length > 0">
                  <div v-for="u in userList" :key="u.id" class="user-item" @click="toUserDetail(u)">
@@ -97,7 +97,7 @@
 </template>
 
 <script>
-import { getCurrentUser, getUserStats, getUserInfo } from '@/api/user';
+import { getCurrentUser, getUserStats, getUserInfo, getFullUserInfo } from '@/api/user';
 import { getFollows, getFans, getCommonFollows, followUser } from '@/api/interaction';
 
 import PageLayout from '@/components/PageLayout/PageLayout.vue';
@@ -109,6 +109,7 @@ export default {
   data() {
     return {
       user: {},
+      info: {},
       stats: { followCount: 0, fansCount: 0, commonFollowCount: 0 },
       isMe: true,
       targetUserId: null,
@@ -159,10 +160,9 @@ export default {
     goBack() {
       this.$router.back();
     },
-    handleTabClick(name) {
-        // Vant tabs emit name/index directly in newer versions or object in older
-        // If it's the tab name string:
-        this.activeTab = name.name || name; 
+    handleTabChange(name) {
+        // @change 直接传递 tab 的 name 值
+        this.activeTab = name;
         this.resetList();
         this.refreshTabs();
     },
@@ -190,12 +190,17 @@ export default {
               this.isMe = true;
               const meRes = await getCurrentUser();
               this.user = meRes.data || {};
+              const infoRes = await getFullUserInfo(myId);
+              this.info = infoRes.data || {};
               const statsRes = await getUserStats(myId);
               this.stats = statsRes.data || {};
           } else {
               this.isMe = false;
               const otherRes = await getUserInfo(targetId);
               this.user = otherRes.data || {};
+
+              const infoRes = await getFullUserInfo(targetId);
+              this.info = infoRes.data || {};
 
               const statsRes = await getUserStats(targetId);
               this.stats = statsRes.data || {};
@@ -300,10 +305,10 @@ export default {
         u.isFollow = newStatus;
         if(newStatus) {
             this.$message.success('关注成功');
-            if(this.isMe) this.stats.followCount++;
+            if(this.isMe) this.info.followee = (this.info.followee || 0) + 1;
         } else {
             this.$message.success('已取消关注');
-            if(this.isMe) this.stats.followCount--;
+            if(this.isMe) this.info.followee = Math.max(0, (this.info.followee || 0) - 1);
         }
       });
     },
