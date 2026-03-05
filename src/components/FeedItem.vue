@@ -80,94 +80,13 @@
         </div>
       </div>
 
-      <!-- Type 1: 秒杀代金券 (渐变样色) -->
-      <div v-if="isSeckill" class="seckill-body" @click.stop="handleButtonClick">
-         <div class="seckill-top">
-            <div class="price-box">
-                <span class="symbol">¥</span>
-                <span class="amount">{{ item.price }}</span>
-                <span class="orig">¥{{ item.originalPrice }}</span>
-                <span class="discount-tag" v-if="item.price && item.originalPrice">
-                    {{ (item.price / item.originalPrice * 10).toFixed(1) }}折
-                </span>
-            </div>
-            <div class="grab-btn" :class="{ disabled: buttonState.disabled }">
-                {{ buttonState.disabled ? buttonState.text : '抢购中' }}
-            </div>
-         </div>
-         
-         <div class="seckill-mid">
-             <span class="white-tag">商品</span>
-             <span class="seckill-title">{{ item.voucherName || item.name || item.title }}</span>
-         </div>
-         
-         <!-- 已售/剩余 进度条区域 -->
-          <div class="voucher-progress-section">
-              <div class="progress-label left">已售{{ item.sold || 0 }}张</div>
-              <div class="progress-bar-track">
-                  <div class="progress-bar-fill" :style="{ width: getProgress(item) + '%' }"></div>
-              </div>
-              <div class="progress-label right">剩余{{ item.stock || 0 }}张</div>
-          </div>
-          
-          <div class="seckill-bottom">
-              <div class="time-info">
-                  <van-icon name="clock-o" color="#fff" size="12" style="margin-right: 2px;" />
-                  {{ seckillTimeText }}
-              </div>
-          </div>
-         <div class="seckill-bottom" v-if="getValidityText(item)">
-             <div class="time-info">
-                 <van-icon name="calendar-o" color="#fff" size="12" style="margin-right: 2px;" />
-                 {{ getValidityText(item) }}
-             </div>
-         </div>
-      </div>
-
-      <!-- 非秒杀代金券 - 使用秒杀券同款样式 -->
-      <div v-if="!isSeckill" class="seckill-body normal-voucher" @click.stop="handleButtonClick">
-         <div class="seckill-top">
-            <div class="price-box">
-                <span class="symbol">¥</span>
-                <span class="amount">{{ item.price }}</span>
-                <span class="orig">¥{{ item.originalPrice }}</span>
-                <span class="discount-tag" v-if="item.price && item.originalPrice">
-                    {{ (item.price / item.originalPrice * 10).toFixed(1) }}折
-                </span>
-            </div>
-            <div class="grab-btn" :class="{ disabled: buttonState.disabled }">
-                {{ buttonState.disabled ? buttonState.text : '去看看' }}
-            </div>
-         </div>
-         
-         <div class="seckill-mid">
-             <span class="white-tag">商品</span>
-             <span class="seckill-title">{{ item.voucherName || item.name || item.title || (item.originalPrice + '元商品') }}</span>
-         </div>
-         
-         <!-- 已售/剩余 进度条区域 -->
-         <div class="voucher-progress-section">
-             <div class="progress-label left">已售{{ item.sold || 0 }}张</div>
-             <div class="progress-bar-track">
-                 <div class="progress-bar-fill" :style="{ width: getProgress(item) + '%' }"></div>
-             </div>
-             <div class="progress-label right">剩余{{ item.stock || 0 }}张</div>
-         </div>
-         
-         <div class="seckill-bottom" v-if="item.subTitle">
-             <div class="time-info">
-                 <van-icon name="clock-o" color="#fff" size="12" style="margin-right: 2px;" />
-                 {{ item.subTitle }}
-             </div>
-         </div>
-         <!-- 有效期信息 -->
-         <div class="seckill-bottom" v-if="getValidityText(item)">
-             <div class="time-info">
-                 <van-icon name="calendar-o" color="#fff" size="12" style="margin-right: 2px;" />
-                 {{ getValidityText(item) }}
-             </div>
-         </div>
-      </div>
+      <DealCard
+        :item="item"
+        :biz="item.productType === 2 ? 'group' : 'voucher'"
+        :is-seckill="isSeckill"
+        @click="handleButtonClick"
+        @action="handleButtonClick"
+      />
     </template>
   </div>
 </template>
@@ -175,6 +94,7 @@
 <script setup>
 import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { getEventConfig, getButtonState } from '@/config/feedStatus';
+import DealCard from '@/components/DealCard.vue';
 
 const props = defineProps({
   item: { type: Object, required: true }

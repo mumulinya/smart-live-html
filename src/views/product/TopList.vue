@@ -9,45 +9,17 @@
 
     <!-- Product List -->
     <div class="top-list-content" ref="listContainer" @scroll.passive="onScroll">
-      <div class="rank-card" v-for="(shop, index) in shops" :key="shop.id" @click="toDetail(shop.id)">
-        <div class="rank-badge" :class="{'gold': index === 0, 'silver': index === 1, 'bronze': index === 2}">
-          {{ index + 1 }}
-        </div>
-        <div class="rank-img">
-          <img :src="shop.displayImg" v-if="shop.displayImg && !shop.imageError" :class="{'is-loaded': shop.imgLoaded}" loading="lazy" @error="shop.imageError = true" @load="shop.imgLoaded = true" alt="">
-          <div class="img-placeholder" v-else></div>
-        </div>
-        <div class="rank-info-new">
-          <!-- First Row: Title with optional tag -->
-          <div class="row-title">
-            <span v-if="shop.activityType === 1" class="seckill-tag">秒杀</span>
-            <span class="title-text">{{ shop.title || shop.name }}</span>
-          </div>
-          
-          <!-- Second Row: Generic Subtitle (Fallback if not provided) -->
-          <div class="row-subtitle">
-            <span class="sub-text">{{ shop.subTitle || '全城多店通用 | 随时退' }}</span>
-          </div>
-
-          <!-- Third Row: Price & Sold Count -->
-          <div class="row-price-sold">
-            <div class="price-area">
-              <span class="price-symbol">￥</span>
-              <span class="price-now">{{ formatPrice(shop.price || shop.payValue) }}</span>
-              <span class="price-old" v-if="shop.originalPrice || shop.actualValue">￥{{ formatPrice(shop.originalPrice || shop.actualValue) }}</span>
-            </div>
-            <div class="sold-cnt" v-if="shop.sold">已抢 {{ shop.sold }}+</div>
-          </div>
-          <!-- Hot Score moved here -->
-          <div class="rank-heat-new">
-            <span class="heat-flame">🔥</span>
-            <span class="heat-score">{{ formatScore(shop.hotScore) }}</span>
-          </div>
-        </div>
-
-        <div class="rank-right-action">
-          <button class="grab-btn">去抢购</button>
-        </div>
+      <div class="deal-list-container" style="padding: 0 12px 12px;">
+        <DealCard 
+          v-for="(item, index) in shops" 
+          :key="item.id" 
+          :item="item" 
+          :biz="sourceType === 2 ? 'group' : 'voucher'"
+          :rank="index + 1"
+          :hot-score="formatScore(item.hotScore)"
+          @click="toDetail(item.id)"
+          @action="toDetail(item.id)"
+        />
       </div>
 
       <!-- Loading / No More -->
@@ -71,9 +43,11 @@
 import { searchShops } from '@/api/search';
 import { getProductHotRank } from '@/api/product';
 import { locationUtil } from '@/utils/location';
+import DealCard from '@/components/DealCard.vue';
 
 export default {
   name: 'TopList',
+  components: { DealCard },
   data() {
     return {
       shops: [],
@@ -230,6 +204,8 @@ export default {
   background: #fff;
   border-bottom: 1px solid rgba(0,0,0,0.05);
   flex-shrink: 0;
+  position: relative;
+  z-index: 10;
 }
 .header-back {
   width: 36px;
@@ -252,156 +228,7 @@ export default {
 .top-list-content {
   flex: 1;
   overflow-y: auto;
-  padding: 12px;
-}
-
-/* Rank Card */
-.rank-card {
-  display: flex;
-  align-items: center;
-  background: #fff;
-  border-radius: 14px;
-  padding: 14px;
-  margin-bottom: 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.04);
-  position: relative;
-  transition: transform 0.15s;
-}
-.rank-card:active {
-  transform: scale(0.98);
-}
-
-/* Rank Badge */
-.rank-badge {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: #e0e0e0;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  margin-right: 12px;
-}
-.rank-badge.gold { background: linear-gradient(135deg, #FFD700, #FFA500); box-shadow: 0 2px 6px rgba(255, 165, 0, 0.4); }
-.rank-badge.silver { background: linear-gradient(135deg, #C0C0C0, #A8A8A8); box-shadow: 0 2px 6px rgba(168, 168, 168, 0.4); }
-.rank-badge.bronze { background: linear-gradient(135deg, #CD7F32, #B87333); box-shadow: 0 2px 6px rgba(184, 115, 51, 0.4); }
-
-/* Rank Image */
-.rank-img {
-  width: 72px;
-  height: 72px;
-  border-radius: 10px;
-  overflow: hidden;
-  flex-shrink: 0;
-  margin-right: 12px;
-  background: #f5f5f5;
-  position: relative;
-}
-.rank-img img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.rank-img .img-placeholder {
-  width: 100%;
-  height: 100%;
-  display: block;
-  background: linear-gradient(135deg, #f0f0f0, #e0e0e0);
-}
-
-/* New Rank Info Layout (Center) */
-.rank-info-new {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-.row-title {
-  display: flex;
-  align-items: center;
-  font-size: 15px;
-  font-weight: 700;
-  color: #222;
-  margin-bottom: 6px;
-  line-height: 1.2;
-}
-.title-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.row-subtitle {
-  font-size: 11px;
-  color: #888;
-  margin-bottom: 8px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.row-price-sold {
-  display: flex;
-  align-items: baseline;
-  justify-content: flex-start;
-  gap: 8px;
-}
-.price-area {
-  display: flex;
-  align-items: baseline;
-}
-.price-symbol {
-  font-size: 12px;
-  color: #ff416c;
-  font-weight: 600;
-}
-.price-now {
-  font-size: 18px;
-  color: #ff416c;
-  font-weight: 700;
-  font-family: Arial, sans-serif;
-  letter-spacing: -0.5px;
-}
-.price-old {
-  font-size: 11px;
-  color: #b2bec3;
-  text-decoration: line-through;
-  margin-left: 4px;
-}
-.sold-cnt {
-  font-size: 11px;
-  color: #999;
-}
-
-.seckill-tag {
-  background: linear-gradient(135deg, #ff416c, #ff4b2b);
-  color: white;
-  font-size: 10px;
-  padding: 1px 4px;
-  border-radius: 4px;
-  margin-right: 6px;
-  vertical-align: middle;
-  font-weight: normal;
-  flex-shrink: 0;
-}
-
-.rank-right-action {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  justify-content: flex-end;
-  margin-left: 8px;
-  min-width: 60px;
-  height: 72px; /* match image height roughly */
-}
-.rank-heat-new {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  margin-top: 4px;
+  padding-top: 12px;
 }
 .heat-flame { 
   font-size: 11px; 

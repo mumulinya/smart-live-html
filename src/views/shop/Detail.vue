@@ -60,95 +60,16 @@
           </div>
        <div class="voucher-list" v-if="products && products.length>0">
           
-          <!-- Seckill Products -->
-          <template v-for="v in products.filter(x => x && x.activityType === 1)" :key="'seckill-' + v.id">
-             <div class="voucher-card-v2 seckill" @click="goToProductDetail(v)">
-                <div class="voucher-card-header">
-                   <div class="voucher-title-row">
-                      <span class="voucher-title">{{v.name || (v.originalPrice + '元商品')}}</span>
-                      <span class="voucher-flash-tag"><i class="el-icon-time"></i> 限时抢</span>
-                   </div>
-                   <div class="voucher-shops" v-if="v.shopName || shop.name">
-                      <span class="shop-label">适用商铺：</span>
-                      <span class="shop-names">{{v.shopName || shop.name}}</span>
-                   </div>
-                   <div class="voucher-time" v-if="v.beginTime && v.endTime">
-                      <i class="el-icon-time"></i> {{formatSeckillTime(v)}}
-                   </div>
-                   <div class="voucher-validity" v-if="getValidityText(v)">
-                      <i class="el-icon-calendar"></i> {{getValidityText(v)}}
-                   </div>
-                </div>
-                <div class="voucher-card-body gradient-pink">
-                   <div class="voucher-price-section">
-                      <div class="voucher-current-price">
-                         <span class="price-symbol">¥</span>
-                         <span class="price-value">{{v.price}}</span>
-                      </div>
-                      <div class="voucher-original-info">
-                         <span class="original-price">¥{{v.originalPrice}}</span>
-                         <span class="discount-badge">{{(v.price/v.originalPrice*10).toFixed(1)}}折</span>
-                      </div>
-                      <div class="voucher-sold-info">
-                         已售{{v.sold || 0}}张
-                      </div>
-                      <div class="voucher-progress-bar">
-                         <div class="progress-fill" :style="{width: getStockPercent(v) + '%'}"></div>
-                      </div>
-                   </div>
-                   <div class="voucher-action-section">
-                      <button class="voucher-buy-btn" @click.stop="doSeckill(v)" :disabled="isNotBegin(v) || isEnd(v) || v.stock < 1">
-                         {{ isEnd(v) ? '已结束' : (isNotBegin(v) ? '待开始' : (v.stock < 1 ? '已抢光' : '限时抢购')) }}
-                      </button>
-                      <div class="voucher-stock">剩{{v.stock}}张</div>
-                   </div>
-                </div>
-             </div>
-          </template>
-          
-          <!-- Normal Products -->
-          <template v-for="v in products.filter(x => x && x.activityType !== 1)" :key="'normal-' + v.id">
-             <div class="voucher-card-v2 normal" @click="goToProductDetail(v)">
-                <div class="voucher-card-header">
-                   <div class="voucher-title-row">
-                      <span class="voucher-title">{{v.name || (v.originalPrice + '元商品')}}</span>
-                   </div>
-                   <div class="voucher-shops" v-if="v.shopName || shop.name">
-                      <span class="shop-label">适用商铺：</span>
-                      <span class="shop-names">{{v.shopName || shop.name}}</span>
-                   </div>
-                   <div class="voucher-subtitle">
-                      <span>{{v.subTitle || '周一至周五均可使用'}}</span>
-                   </div>
-                   <div class="voucher-usage-time">
-                      <i class="el-icon-time"></i> {{v.subTitle || '周一至周五均可使用'}}
-                   </div>
-                   <div class="voucher-validity" v-if="getValidityText(v)">
-                      <i class="el-icon-calendar"></i> {{getValidityText(v)}}
-                   </div>
-                </div>
-                <div class="voucher-card-body gradient-orange">
-                   <div class="voucher-price-section">
-                      <div class="voucher-current-price">
-                         <span class="price-symbol">¥</span>
-                         <span class="price-value">{{v.price}}</span>
-                      </div>
-                      <div class="voucher-original-info">
-                         <span class="original-price">¥{{v.originalPrice}}</span>
-                         <span class="discount-badge">{{(v.price/v.originalPrice*10).toFixed(1)}}折</span>
-                      </div>
-                      <div class="voucher-sold-info">
-                         已售{{v.sold || 0}}张
-                      </div>
-                  <div class="voucher-sold-info">
-                         已售{{v.sold || 0}}张
-                      </div>
-                   </div>
-                   <div class="voucher-action-section">
-                      <button class="voucher-buy-btn" @click.stop="doBuy(v)">立即抢购</button>
-                   </div>
-                </div>
-             </div>
+          <!-- Use DealCard -->
+          <template v-for="v in products" :key="'product-' + v.id">
+              <DealCard
+                 v-if="v"
+                 :item="v"
+                 biz="voucher"
+                 :is-seckill="v.activityType === 1"
+                 @click="goToProductDetail(v)"
+                 @action="v.activityType === 1 ? doSeckill(v) : doBuy(v)"
+              />
           </template>
        </div>
        <div class="voucher-list" v-else>
@@ -168,35 +89,15 @@
           </div>
           <div class="empty-placeholder" v-if="!groupBuyProducts || groupBuyProducts.length===0" style="padding: 20px 0; text-align: center; color: #999;">暂无团购套餐</div>
           <div class="voucher-list" v-else>
-              <div class="voucher-card-v2 normal" v-for="v in groupBuyProducts.filter(x => x)" :key="v.id" @click="goToProductDetail(v)">
-                 <div class="voucher-card-header">
-                    <div class="voucher-title-row">
-                       <span class="voucher-title">{{v.name || ((v.originalPrice || 0) + '元套餐')}}</span>
-                    </div>
-                    <div class="voucher-shops" v-if="v.shopName || shop.name">
-                       <span class="shop-label">适用商铺：</span>
-                       <span class="shop-names">{{v.shopName || shop.name}}</span>
-                    </div>
-                    <div class="voucher-subtitle">
-                       <span>{{v.subTitle || '超值团购套餐'}}</span>
-                    </div>
-                 </div>
-                 <div class="voucher-card-body gradient-orange">
-                    <div class="voucher-price-section">
-                       <div class="voucher-current-price">
-                          <span class="price-symbol">¥</span>
-                          <span class="price-value">{{v.price}}</span>
-                       </div>
-                       <div class="voucher-original-info">
-                          <span class="original-price">¥{{v.originalPrice || 0}}</span>
-                          <span class="discount-badge" v-if="v.originalPrice">{{(v.price/v.originalPrice*10).toFixed(1)}}折</span>
-                       </div>
-                    </div>
-                    <div class="voucher-action-section">
-                       <button class="voucher-buy-btn" @click.stop="doBuy(v)">立即抢购</button>
-                    </div>
-                 </div>
-              </div>
+              <DealCard
+                 v-for="v in groupBuyProducts.filter(x => x)"
+                 :key="'groupbuy-' + v.id"
+                 :item="v"
+                 biz="group"
+                 :is-seckill="v.activityType === 1"
+                 @click="goToProductDetail(v)"
+                 @action="v.activityType === 1 ? doSeckill(v) : doBuy(v)"
+              />
           </div>
        </div>
        
@@ -598,10 +499,11 @@ import { throttle } from '@/utils/throttle';
 import '@/assets/css/blog-detail.css'; // Import blog styles to reuse reply CSS
 
 import PageLayout from '@/components/PageLayout/PageLayout.vue';
+import DealCard from '@/components/DealCard.vue';
 
 export default {
   name: 'ShopDetail',
-  components: { PageLayout },
+  components: { PageLayout, DealCard },
   data() {
     return {
        isLoading: true,

@@ -218,65 +218,27 @@
                     @click="handleRecommendationClick(item)"
                   >
 	                    <template v-if="isVoucherRecommendation(item)">
-	                      <div class="voucher-card-v2" :class="{ seckill: isVoucherSeckill(item), normal: !isVoucherSeckill(item) }">
-	                        <div class="voucher-header-section">
-	                          <div class="voucher-recommend-pill">推荐</div>
-	                          <div v-if="getVoucherRecommendationTotal(msg.shopList) > 1" class="voucher-order-badge">
-	                            {{ idx + 1 }} / {{ getVoucherRecommendationTotal(msg.shopList) }}
-	                          </div>
-	                          <template v-if="isVoucherSeckill(item)">
-	                            <div class="voucher-title-row">
-	                              <span class="voucher-title">{{ item.name || item.title || `${item.originalPrice || item.actualValue/100 || '--'}元商品` }}</span>
-	                              <span class="voucher-flash-tag"><i class="el-icon-time"></i> 限时抢</span>
-	                            </div>
-	                            <div class="voucher-shop-row" v-if="item.shopName">
-	                              <span class="shop-label">适用商铺：</span>
-	                              <span class="shop-name-text">{{ item.shopName }}</span>
-	                            </div>
-	                            <div class="voucher-time-row" v-if="item.beginTime || item.endTime">
-	                              <i class="el-icon-time"></i>
-	                              <span>{{ formatSeckillTimeRange(item.beginTime, item.endTime) }}</span>
-	                            </div>
-	                          </template>
-	                          <template v-else>
-	                            <div class="voucher-title-row">
-	                              <span class="voucher-title">{{ item.name || item.title || `${item.originalPrice || item.actualValue/100 || '--'}元商品` }}</span>
-	                            </div>
-	                            <div class="voucher-subtitle-row">{{ item.subTitle || '周一至周日均可使用' }}</div>
-	                            <div class="voucher-time-row normal">
-	                              <i class="el-icon-time"></i>
-	                              <span>{{ item.subTitle || '周一至周日均可使用' }}</span>
-	                            </div>
-	                          </template>
-	                          <div class="voucher-validity-row" v-if="getVoucherValidityText(item)">
-	                            {{ getVoucherValidityText(item) }}
-	                          </div>
-	                          <p v-if="item.aiSuggestion" class="voucher-ai-suggestion">{{ item.aiSuggestion }}</p>
-	                        </div>
-	                        <div class="voucher-price-section" :class="{ seckill: isVoucherSeckill(item) }">
-	                          <div class="price-main">
-	                            <div class="price-row">
-	                              <span class="currency">¥</span>
-	                              <span class="price-value">{{ formatVoucherAmount(item.price || item.payValue) }}</span>
-	                            </div>
-	                            <div class="price-sub-row">
-	                              <span class="orig-price">¥{{ formatVoucherAmount(item.originalPrice || item.actualValue) }}</span>
-	                              <span class="discount-badge" v-if="getVoucherDiscountText(item)">{{ getVoucherDiscountText(item) }}</span>
-	                            </div>
-	                            <div class="progress-row" v-if="isVoucherSeckill(item)">
-	                              <span class="sold-text">已售{{ getVoucherSoldPercent(item) }}%</span>
-	                              <div class="progress-bar">
-	                                <div class="progress-fill" :style="{ width: `${getVoucherSoldPercent(item)}%` }"></div>
-	                              </div>
-	                            </div>
-	                          </div>
-	                          <div class="voucher-action-group">
-	                            <button class="voucher-buy-btn" :disabled="isVoucherPurchaseDisabled(item)" @click.stop="handleVoucherPurchase(item)">
-	                              {{ getVoucherActionText(item) }}
-	                            </button>
-	                            <div class="voucher-stock" v-if="isVoucherSeckill(item)">剩{{ item.stock ?? 0 }}张</div>
-	                          </div>
-	                        </div>
+	                      <div style="position: relative;">
+                            <div class="voucher-recommend-pill" style="position: absolute; top:0; left:0; z-index: 10; background: linear-gradient(135deg, #FF9900, #FF5500); color: white; border-radius: 8px 0 8px 0; padding: 2px 8px; font-size: 10px;">推荐</div>
+                            <DealCard
+                              :item="{
+                                ...item, 
+                                name: item.name || item.title || `${item.originalPrice || item.actualValue/100 || '--'}元商品`,
+                                price: formatVoucherAmount(item.price || item.payValue),
+                                originalPrice: formatVoucherAmount(item.originalPrice || item.actualValue),
+                                subTitle: item.subTitle || '周一至周日均可使用'
+                              }"
+                              biz="voucher"
+                              :is-seckill="isVoucherSeckill(item)"
+                              @action="handleVoucherPurchase(item)"
+                            >
+                                <template #extra>
+                                     <div v-if="getVoucherRecommendationTotal(msg.shopList) > 1" class="voucher-order-badge" style="position: absolute; top: 12px; right: 12px; font-size: 12px; color: #999; border: 1px solid #eee; padding: 2px 6px; border-radius: 10px; background: rgba(255,255,255,0.8); z-index: 10;">
+                                         {{ idx + 1 }} / {{ getVoucherRecommendationTotal(msg.shopList) }}
+                                     </div>
+                                     <p v-if="item.aiSuggestion" class="voucher-ai-suggestion" style="padding: 8px 12px; font-size: 12px; color: #666; background: #FFF8F1; margin: 0;">{{ item.aiSuggestion }}</p>
+                                </template>
+                            </DealCard>
 	                      </div>
 	                    </template>
 
@@ -380,6 +342,7 @@ import { buyProductAPI, seckillProductAPI } from '@/api/shop';
 import { locationUtil } from '@/utils/location';
 import { fileURL } from '@/utils/request';
 import PageLayout from '@/components/PageLayout/PageLayout.vue';
+import DealCard from '@/components/DealCard.vue';
 
 const router = useRouter();
 const route = useRoute();

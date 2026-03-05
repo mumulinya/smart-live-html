@@ -176,43 +176,15 @@
         </div>
       </div>
 
-      <div
-        class="deal-card"
-        :class="isSeckillMode ? 'seckill-card' : 'normal-card'"
+      <DealCard
         v-for="(item, idx) in displayDeals"
         :key="'deal-' + (item.id || idx)"
-        @click="toProductDetail(item)"
-      >
-        <div class="card-main">
-          <div class="card-title">{{ item.name || getDefaultTitle(item) }}</div>
-          <div class="card-shop">{{ item.shopName || '通用商户' }}</div>
-          <div class="card-meta">
-            <span v-if="getDistanceText(item)">{{ getDistanceText(item) }}</span>
-            <span v-if="item.shopTypeName">{{ item.shopTypeName }}</span>
-          </div>
-          <div class="card-price-row">
-            <span class="price-now">¥{{ formatPrice(item.price) }}</span>
-            <span class="price-origin" v-if="item.originalPrice">¥{{ formatPrice(item.originalPrice) }}</span>
-            <span class="price-discount" v-if="getDiscountText(item)">{{ getDiscountText(item) }}</span>
-          </div>
-          <div class="seckill-progress-wrap" v-if="isSeckillMode">
-            <div class="seckill-progress-track">
-              <span class="seckill-progress-fill" :style="{ width: getSeckillProgress(item) + '%' }"></span>
-            </div>
-            <span class="seckill-progress-text">抢购中 {{ getSeckillProgress(item) }}%</span>
-          </div>
-        </div>
-        <div class="card-side" v-if="!isSeckillMode">
-          <div class="scene-tag" :class="{ seckill: getItemType(item) === 1 }">
-            {{ getItemType(item) === 1 ? '秒杀' : '普通' }}
-          </div>
-          <div class="enter-text">查看</div>
-        </div>
-        <div class="card-side seckill-side" v-else>
-          <div class="seckill-tag">限时抢</div>
-          <div class="seckill-btn">马上抢</div>
-        </div>
-      </div>
+        :item="item"
+        :biz="biz"
+        :is-seckill="isSeckillMode"
+        @click="toProductDetail"
+        @action="toProductDetail"
+      />
 
       <div v-if="deals.length > 0" class="load-more-tip">
         <span v-if="loadingMore">加载中...</span>
@@ -223,6 +195,7 @@
 </template>
 
 <script>
+import DealCard from '@/components/DealCard.vue';
 import { searchProducts } from '@/api/search';
 import { getShopTypes } from '@/api/shop';
 import { locationUtil } from '@/utils/location';
@@ -230,6 +203,9 @@ import { throttle } from '@/utils/throttle';
 
 export default {
   name: 'DealListIndex',
+  components: {
+    DealCard
+  },
   data() {
     return {
       biz: 'voucher',
@@ -579,15 +555,10 @@ export default {
       else if (res && res.data && res.data.data && Array.isArray(res.data.data.records)) list = res.data.data.records;
 
       return (list || []).map(item => {
-        const rawImage = item.coverImg || item.images || item.image || item.shopLogo || '';
-        let image = '';
-        if (rawImage) {
-          const first = String(rawImage).split(',')[0];
-          image = first.startsWith('http') ? first : this.$fileURL + first;
-        }
         return {
           ...item,
-          image,
+          // DealCard handles image resolution internally, 
+          // but we provide a fallback for safety
           price: Number(item.price || item.payValue || 0),
           originalPrice: Number(item.originalPrice || item.actualValue || 0)
         };
@@ -1133,171 +1104,6 @@ export default {
   border: none;
   color: #fff;
   background: linear-gradient(90deg, #ff9c00 0%, #ff6633 100%);
-}
-
-.deal-card {
-  background: #fff;
-  border-radius: 10px;
-  padding: 12px;
-  margin-bottom: 10px;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
-}
-
-.deal-card.seckill-card {
-  border: 1px solid #ffd7e1;
-  background: linear-gradient(180deg, #fff 0%, #fff6f8 100%);
-}
-
-.card-main {
-  flex: 1;
-  min-width: 0;
-}
-
-.card-title {
-  font-size: 14px;
-  color: #333;
-  font-weight: 600;
-  line-height: 1.35;
-  margin-bottom: 4px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.card-shop {
-  font-size: 12px;
-  color: #999;
-  margin-bottom: 4px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.card-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-  color: #999;
-  font-size: 11px;
-}
-
-.card-price-row {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-}
-
-.price-now {
-  color: #ff2442;
-  font-size: 20px;
-  font-weight: 700;
-}
-
-.price-origin {
-  color: #999;
-  font-size: 12px;
-  text-decoration: line-through;
-}
-
-.price-discount {
-  color: #ff2442;
-  background: #ffeef1;
-  font-size: 11px;
-  border-radius: 10px;
-  padding: 1px 6px;
-}
-
-.card-side {
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
-}
-
-.scene-tag {
-  min-width: 44px;
-  height: 20px;
-  border-radius: 10px;
-  background: #f5f5f5;
-  color: #666;
-  font-size: 11px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.scene-tag.seckill {
-  background: #fff0f3;
-  color: #ff2d55;
-}
-
-.seckill-progress-wrap {
-  margin-top: 8px;
-}
-
-.seckill-progress-track {
-  height: 6px;
-  border-radius: 999px;
-  background: #ffe5eb;
-  overflow: hidden;
-}
-
-.seckill-progress-fill {
-  display: block;
-  height: 100%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #ff5a7a 0%, #ff2d55 100%);
-}
-
-.seckill-progress-text {
-  margin-top: 4px;
-  display: inline-block;
-  font-size: 11px;
-  color: #ff2d55;
-}
-
-.card-side.seckill-side {
-  align-items: flex-end;
-  justify-content: center;
-  gap: 7px;
-}
-
-.seckill-tag {
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 11px;
-  color: #ff2d55;
-  background: #ffe9ef;
-}
-
-.seckill-btn {
-  min-width: 58px;
-  height: 24px;
-  border-radius: 12px;
-  background: linear-gradient(90deg, #ff4d6d 0%, #ff2d55 100%);
-  color: #fff;
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.deal-page.seckill-mode .header {
-  background: #fff6f8;
-}
-
-.deal-page.seckill-mode .header-search-btn {
-  color: #ff2d55;
-}
-
-.deal-page.seckill-mode .biz-tab.active::after {
-  background: linear-gradient(90deg, #ff5a7a 0%, #ff2d55 100%);
 }
 
 .enter-text {
