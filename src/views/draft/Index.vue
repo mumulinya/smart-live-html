@@ -25,91 +25,7 @@
       @touchend="onTouchEnd"
     >
     <van-tabs v-model:active="activeTab" sticky offset-top="0" background="#f5f6f8">
-      <van-tab :title="`全部(${totalCount})`">
-        <div class="draft-list" :class="{ 'has-footer': isMultiSelect }">
-           <div v-if="allDrafts.length === 0" class="empty-state">
-                <van-icon name="description" class="empty-icon" />
-                <div class="empty-text">暂无草稿</div>
-            </div>
-            <div
-            v-for="item in allDrafts"
-            :key="item.id"
-            class="draft-item"
-            :class="{ 'selected': selectedIds.includes(item.id), 'multi-select-mode': isMultiSelect }"
-            @click="handleItemClick(item)"
-          >
-            <van-checkbox
-              v-if="isMultiSelect"
-              :model-value="selectedIds.includes(item.id)"
-              class="draft-checkbox"
-              @click.stop="toggleSelect(item.id)"
-            />
-                <div class="item-content-wrapper">
-                    <div class="item-top-row">
-                        <div class="left-info">
-                            <!-- Order Review Header -->
-                            <template v-if="item.reviewType === 'order'">
-                                <span class="type-tag order">
-                                    <van-icon name="bag-o" style="margin-right: 2px; font-size: 14px;" />
-                                    订单评价 {{  item.orderId ? '#' + (item.orderId.length > 6 ? item.orderId.slice(-6) : item.orderId) : '' }}
-                                </span>
-                            </template>
-                            <!-- Shop Review Header -->
-                            <template v-else-if="item.reviewType === 'shop'">
-                                <span class="type-tag shop">
-                                    <van-icon name="shop-o" style="margin-right: 2px; font-size: 14px;" />
-                                    店铺评价 {{ item.shopName }}
-                                </span>
-                            </template>
-                            <!-- Note Draft Header -->
-                            <template v-else>
-                                <span class="type-tag note">笔记草稿</span>
-                            </template>
-                        </div>
-                        <!-- More icon removed or replaced by delete button in footer -->
-                        <!-- Status Badge (Fixed position) -->
-                        <span class="status-badge" :class="item.type === 'review' ? item.reviewType : 'note'">草稿</span>
-                    </div>
-
-                    <!-- Body Content -->
-                    <div class="item-body-content">
-                        <!-- Main Title (Shop Name for Order Review) -->
-                        <h3 class="item-main-title truncate">{{ item.mainTitle }}</h3>
-
-                         <!-- Rating -->
-                         <div class="item-rating-row" v-if="item.type === 'review'">
-                             <van-rate readonly v-model="item.rating" :size="12" color="#ff9900" void-icon="star" void-color="#eee" />
-                         </div>
-
-                        <!-- Text Content -->
-                        <div class="item-content-text line-clamp-2" v-if="item.content">
-                            {{ item.content }}
-                        </div>
-
-                        <!-- Images -->
-                        <div v-if="item.images && item.images.length" class="image-grid">
-                            <van-image
-                                v-for="(img, index) in item.images.slice(0, 3)"
-                                :key="index"
-                                class="grid-image"
-                                fit="cover"
-                                :src="img"
-                                radius="4"
-                            />
-                        </div>
-                    </div>
-
-                    <div class="item-footer">
-                        <span class="date-text">{{ item.date }}</span>
-                        <div v-if="!isMultiSelect" class="action-btns">
-                           <van-button round size="small" plain class="btn-delete" @click.stop="handleDelete(item)">删除</van-button>
-                           <van-button round size="small" class="btn-publish" type="primary" color="#ff6600" icon="guide-o" @click.stop="handlePublish(item)">发布</van-button>
-                        </div>
-                    </div>
-                </div>
-          </div>
-        </div>
-      </van-tab>
+      
       
       <van-tab :title="`评价(${reviewCount})`">
          <div class="draft-list" :class="{ 'has-footer': isMultiSelect }">
@@ -137,14 +53,14 @@
                         <template v-if="item.reviewType === 'order'">
                             <span class="type-tag order">
                                 <van-icon name="bag-o" style="margin-right: 2px; font-size: 14px;" />
-                                订单评价 {{  item.orderId ? '#' + (item.orderId.length > 6 ? item.orderId.slice(-6) : item.orderId) : '' }}
+                                订单评价 
                             </span>
                         </template>
                          <!-- Shop Review Header -->
                         <template v-else>
                             <span class="type-tag shop">
                                 <van-icon name="shop-o" style="margin-right: 2px; font-size: 14px;" />
-                                店铺评价 {{ item.shopName }}
+                                店铺评价 
                             </span>
                         </template>
                     </div>
@@ -154,7 +70,6 @@
                               User said "Delete button is needed".
                          -->
                         <!-- Status Badge (Fixed position) -->
-                        <span class="status-badge" :class="item.reviewType">草稿</span>
                     </div>
                
                <!-- Body Content -->
@@ -183,9 +98,12 @@
                 </div>
 
                 <div class="item-footer">
-                    <span class="date-text">{{ item.date }}</span>
+                        <div class="footer-left-info">
+                            <span class="date-text">{{ item.date }}</span>
+                            <span class="status-badge" :class="item.reviewType">草稿</span>
+                        </div>
                     <div v-if="!isMultiSelect" class="action-btns">
-                        <van-button round size="small" plain class="btn-delete" @click.stop="handleDelete(item)">删除</van-button>
+                        <van-button round size="small" plain type="danger" class="btn-delete" @click.stop="handleDelete(item)">删除</van-button>
                         <van-button round size="small" class="btn-publish" type="primary" color="#ff6600" icon="guide-o" @click.stop="handlePublish(item)">发布</van-button>
                     </div>
                 </div>
@@ -218,7 +136,7 @@
                  <div class="left-info">
                       <span class="type-tag note">笔记草稿</span>
                  </div>
-                 <span class="status-badge note">草稿</span>
+                 
                </div>
 
                <h3 class="item-main-title truncate">{{ item.mainTitle }}</h3>
@@ -239,9 +157,12 @@
                 </div>
             </div>
             <div class="item-footer">
-              <span class="date-text">{{ item.date }}</span>
+                        <div class="footer-left-info">
+                            <span class="date-text">{{ item.date }}</span>
+                            <span class="status-badge note">草稿</span>
+                        </div>
               <div v-if="!isMultiSelect" class="action-btns">
-                <van-button round size="small" plain class="btn-delete" @click.stop="handleDelete(item)">删除</van-button>
+                <van-button round size="small" plain type="danger" class="btn-delete" @click.stop="handleDelete(item)">删除</van-button>
                   <van-button round size="small" class="btn-publish" type="primary" color="#ff6600" icon="guide-o" @click.stop="handlePublish(item)">发布</van-button>
               </div>
             </div>
@@ -272,8 +193,8 @@ const router = useRouter()
 const activeTab = ref(0)
 const isMultiSelect = ref(false)
 const selectedIds = ref([])
-const TAB_TO_TYPE = ['all', 'review', 'note']
-const tabOrder = [0, 1, 2]
+const TAB_TO_TYPE = ['review', 'note']
+const tabOrder = [0, 1]
 const touchStartX = ref(0)
 const touchStartY = ref(0)
 const touchEndX = ref(0)
@@ -283,13 +204,12 @@ const maxVerticalTravel = 50
 
 const parseRouteTab = () => {
   const type = String(route.query.type || '')
-  if (type === 'note') return 2
-  if (type === 'review') return 1
-  if (type === 'all') return 0
+  if (type === 'note') return 1
+  if (type === 'review') return 0
 
   if (route.query.tab !== undefined) {
     const tabIndex = Number(route.query.tab)
-    if (Number.isInteger(tabIndex) && tabIndex >= 0 && tabIndex <= 2) {
+    if (Number.isInteger(tabIndex) && tabIndex >= 0 && tabIndex <= 1) {
       return tabIndex
     }
   }
@@ -301,7 +221,7 @@ const syncRouteTab = (tabIndex) => {
     query: {
       ...route.query,
       tab: String(tabIndex),
-      type: TAB_TO_TYPE[tabIndex] || 'all'
+      type: TAB_TO_TYPE[tabIndex] || 'review'
     }
   })
 }
@@ -345,8 +265,7 @@ const selectedCount = computed(() => selectedIds.value.length)
 
 // 获取当前tab的数据
 const currentTabData = computed(() => {
-  if (activeTab.value === 0) return allDrafts.value
-  if (activeTab.value === 1) return reviewDrafts.value
+  if (activeTab.value === 0) return reviewDrafts.value
   return noteDrafts.value
 })
 
@@ -920,6 +839,12 @@ const handleBatchDelete = () => {
   color: #999;
 }
 
+.footer-left-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .action-btns {
   display: flex;
   gap: 8px;
@@ -927,8 +852,6 @@ const handleBatchDelete = () => {
 
 .btn-delete {
   padding: 0 12px;
-  border-color: #ebedf0;
-  color: #999;
   font-size: 13px;
   height: 30px;
 }
@@ -1018,8 +941,6 @@ const handleBatchDelete = () => {
     padding: 2px 6px;
     border-radius: 4px;
     color: white;
-    /* Static position to avoid overlap */
-    margin-left: auto; /* Push to right */
     white-space: nowrap;
 }
 

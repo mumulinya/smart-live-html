@@ -647,7 +647,7 @@ export default {
     },
     processShopImages(list) {
       list.forEach(s => {
-        let img = s.shopLogo || s.images || '';
+        let img = s.coverImg || s.shopLogo || s.images || '';
         if (img && !img.startsWith('http')) {
           img = (this.$fileURL || '') + img.split(',')[0];
         } else if (img) {
@@ -661,7 +661,13 @@ export default {
     formatTopScore(hotScore) {
       const n = Number(hotScore);
       if (!Number.isFinite(n) || n <= 0) return '0.0';
-      return n.toFixed(1);
+      if (n >= 100000000) {
+        return (n / 100000000).toFixed(1) + '亿';
+      }
+      if (n >= 10000) {
+        return (n / 10000).toFixed(1) + '万';
+      }
+      return String(n);
     },
     formatTopDistance(distance) {
       const n = Number(distance);
@@ -1198,6 +1204,10 @@ export default {
   font-size: 14px;
   color: #999;
 }
+.hot-stats .fire-icon {
+  margin-right: 2px;
+  font-size: 12px;
+}
 .header-icon {
   margin-left: 15px;
   display: flex;
@@ -1384,6 +1394,12 @@ export default {
   font-size: 15px;
   font-weight: 700;
   color: inherit;
+}
+
+.hot-stats .hot-score {
+  font-size: 11px;
+  color: #ff4b2b;
+  font-weight: 500;
 }
 
 .deal-tab-desc {

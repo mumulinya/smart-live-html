@@ -325,7 +325,7 @@
                       
                           <div class="shop-box" v-for="v in productList" :key="v.id" @click="toProductDetail(v)">
                               <div class="shop-img">
-                                  <img :src="v.images || v.image || '/imgs/default-goods.png'" :class="{ 'is-loaded': v.imgLoaded }" loading="lazy" decoding="async" @error="handleImgError($event, v)" @load="v.imgLoaded=true" />
+                                  <img :src="v.coverImg || v.images || v.image || '/imgs/default-goods.png'" :class="{ 'is-loaded': v.imgLoaded }" loading="lazy" decoding="async" @error="handleImgError($event, v)" @load="v.imgLoaded=true" />
                                   <div class="img-skeleton" v-if="!v.imgError && !v.imgLoaded"></div>
                               </div>
                               <div class="shop-info">
@@ -1042,10 +1042,12 @@ export default {
           });
           applyList('shopList', list);
         });
-      } else if (requestTab === "product") {
+      } else if (requestTab === "product" || requestTab === "voucher" || requestTab === "group") {
         const filters = {};
+        if (requestTab === "group") filters.category = 2; // 2 for group
+        if (requestTab === "voucher") filters.category = 1; // 1 for voucher
         if (this.selectedProductShopType) filters.shopTypeId = this.selectedProductShopType;
-        if (this.selectedProductType !== null) filters.type = this.selectedProductType;
+        if (this.selectedProductType !== null) filters.activityType = this.selectedProductType;
         if (this.selectedStatus !== null) filters.status = this.selectedStatus;
 
         const data = {
@@ -1053,8 +1055,7 @@ export default {
           keyword: this.keyword,
           lat: this.userLocation ? this.userLocation.y : undefined,
           lon: this.userLocation ? this.userLocation.x : undefined,
-          filters,
-          category: null
+          filters
         };
 
         requestPromise = searchProducts(data).then((res) => {
@@ -1063,6 +1064,14 @@ export default {
           list.forEach((item) => {
              item.imgLoaded = false;
              item.imgError = false;
+             const rawImg = item.coverImg || item.shopLogo || item.images || item.image;
+             if (rawImg && typeof rawImg === 'string') {
+                 if (rawImg.startsWith('http')) {
+                     item.images = rawImg;
+                 } else {
+                     item.images = this.$fileURL + rawImg.split(",")[0];
+                 }
+             }
           });
           applyList('productList', list);
         });
@@ -1116,29 +1125,6 @@ export default {
             if (user.icon) user.icon = this.$fileURL + user.icon;
           });
           applyList('userList', list);
-        });
-      } else if (requestTab === "voucher" || requestTab === "group") {
-        const filters = {};
-        if (this.selectedProductType !== null) filters.type = this.selectedProductType;
-        if (this.selectedStatus !== null) filters.status = this.selectedStatus;
-        if (this.selectedProductShopType !== null) filters.shopTypeId = this.selectedProductShopType;
-        filters.category = requestTab === "voucher" ? 1 : 2;
-
-        requestPromise = searchProducts({ keyword: this.keyword, filters, ...pageParams }).then((res) => {
-          if (isStale()) return;
-          const list = extractList(res);
-          list.forEach((item) => {
-            item.imgLoaded = false;
-            item.imgError = false;
-            const rawImg = item.shopLogo || item.images || item.image;
-            if (!rawImg) return;
-            if (rawImg.startsWith('http')) {
-              item.images = rawImg;
-            } else {
-              item.images = this.$fileURL + rawImg.split(",")[0];
-            }
-          });
-          applyList('productList', list);
         });
       }
 

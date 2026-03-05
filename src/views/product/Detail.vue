@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { showToast, showConfirmDialog } from 'vant';
-import { getProductDetail, buyProductAPI, seckillProductAPI } from '@/api/shop'; 
+import { getProductDetail, buyProductAPI, seckillProductAPI, getShopsByIds } from '@/api/shop'; 
 import { checkOrderCreateStatus } from '@/api/order';
 import { toggleStar, likeComment, getComments, followUser } from '@/api/interaction';
 import { getReviewList, addReview, removeReview } from '@/api/reviews';
@@ -17,6 +17,7 @@ const router = useRouter();
 
 const info = ref({});
 const user = ref({});
+const applicableShops = ref([]);
 
 // Comments
 const comments = ref([]);
@@ -53,32 +54,56 @@ const validityTextSimple = computed(() => {
 
 const isSeckill = computed(() => info.value.activityType === 1);
 
-const isSeckillStarted = computed(() => {
-    if(!info.value.beginTime) return false;
-    return new Date(info.value.beginTime).getTime() <= Date.now();
-});
-const isSeckillEnded = computed(() => {
-    if(!info.value.endTime) return false;
-    return new Date(info.value.endTime).getTime() <= Date.now();
-});
-
-const remainingEndTime = computed(() => {
-    if(!info.value.endTime) return 0;
-    return new Date(info.value.endTime).getTime() - Date.now();
-});
-
 const formatSeckillRange = (v) => {
     if(!v.beginTime || !v.endTime) return '';
     const format = (str) => {
         const d = new Date(str);
         const m = String(d.getMonth() + 1).padStart(2, '0');
         const day = String(d.getDate()).padStart(2, '0');
-        const h = String(d.getHours()).padStart(2, '0');
-        const min = String(d.getMinutes()).padStart(2, '0');
-        return `${m}.${day} ${h}:${min}`;
+        return `${m}月${day}日`;
     };
-    return `${format(v.beginTime)} - ${format(v.endTime)}`;
+    return `活动时间：${format(v.beginTime)} - ${format(v.endTime)}`;
 };
+
+const currTime = ref(Date.now());
+let timer = null;
+
+onMounted(() => {
+    // Start a timer for countdown
+    timer = setInterval(() => {
+        currTime.value = Date.now();
+    }, 1000);
+});
+
+onUnmounted(() => {
+    if (timer) clearInterval(timer);
+});
+
+const isSeckillStarted = computed(() => {
+    if(!info.value.beginTime) return false;
+    return new Date(info.value.beginTime).getTime() <= currTime.value;
+});
+const isSeckillEnded = computed(() => {
+    if(!info.value.endTime) return false;
+    return new Date(info.value.endTime).getTime() <= currTime.value;
+});
+
+const remainingEndTimeStr = computed(() => {
+    if(!info.value.endTime) return '';
+    const diff = new Date(info.value.endTime).getTime() - currTime.value;
+    if (diff <= 0) return '00:00:00';
+    
+    let totalSeconds = Math.floor(diff / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    totalSeconds %= 3600;
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    
+    const h = String(hours).padStart(2, '0');
+    const m = String(mins).padStart(2, '0');
+    const s = String(secs).padStart(2, '0');
+    return `${h}:${m}:${s}`;
+});
 
 const getErrorMessage = (err, fallback = '抢购失败') => {
     if (!err) return fallback;
@@ -98,6 +123,16 @@ const loadData = async () => {
         const data = res.data || res;
         if(data) {
             info.value = data;
+            
+            // Format images array
+            let rawImages = data.images || data.image || data.coverImg;
+            if (rawImages) {
+                let imgArr = typeof rawImages === 'string' ? rawImages.split(',') : (Array.isArray(rawImages) ? rawImages : [rawImages]);
+                info.value.imageList = imgArr.filter(x => x).map(img => img.startsWith('http') ? img : fileURL + (img.startsWith('/') ? '' : '/') + img);
+            } else {
+                info.value.imageList = [];
+            }
+            
             // No division needed for new API
             
             if (data.isStar !== undefined) {
@@ -114,10 +149,24 @@ const loadData = async () => {
             } else {
                 info.value.isFollow = false;
             }
+
+            // Fetch applicable shops
+            if (data.shopId) {
+                fetchApplicableShops(data.shopId);
+            }
         }
     } catch (e) {
         console.error(e);
         showToast('加载失败');
+    }
+};
+
+const fetchApplicableShops = async (ids) => {
+    try {
+        const res = await getShopsByIds(ids);
+        applicableShops.value = res.data || res || [];
+    } catch (e) {
+        console.error('Failed to fetch applicable shops', e);
     }
 };
 
@@ -235,40 +284,6 @@ const handleBuy = async () => {
 };
 
 const btnStatus = computed(() => {
-    // 1. Seckill Logic
-    if (isSeckill.value) {
-        if (isSeckillEnded.value) {
-            return {
-                text: info.value.isFollow ? '已关注提醒' : '关注提醒', 
-                disabled: false,
-                type: 'collect',
-                action: handleFollow
-            };
-        }
-        if (!isSeckillStarted.value) {
-            return {
-                text: info.value.isFollow ? '已设置提醒' : '设置提醒', // "Set Reminder" - maps to Follow
-                disabled: false,
-                type: 'collect',
-                action: handleFollow
-            };
-        }
-        if (info.value.stock < 1) {
-            return {
-                text: info.value.isFollow ? '已设置缺货提醒' : '缺货提醒', // "Restock Reminder" - maps to Follow
-                disabled: false,
-                type: 'collect',
-                action: handleFollow
-            };
-        }
-        return {
-            text: '🔥 立即抢购',
-            disabled: false,
-            type: 'buy',
-            action: handleBuy
-        };
-    }
-
     // 2. Normal Product Logic
     return {
         text: '¥' + (info.value.price || '') + ' 立即抢购',
@@ -276,6 +291,19 @@ const btnStatus = computed(() => {
         type: 'buy',
         action: handleBuy
     };
+});
+
+const seckillRightBtn = computed(() => {
+    if (isSeckillEnded.value) {
+        return { text: '已结束', disabled: true, action: () => {} };
+    }
+    if (!isSeckillStarted.value) {
+        return { text: '未开始', disabled: true, action: () => {} };
+    }
+    if (info.value.stock < 1) {
+        return { text: '已抢完', disabled: true, action: () => {} };
+    }
+    return { text: '🔥 立即抢购', disabled: false, action: handleBuy };
 });
 
 const openShopList = () => {
@@ -581,12 +609,22 @@ onUnmounted(() => {
   <PageLayout :loading="false" skeleton-type="detail" class="voucher-detail-page">
     <van-nav-bar title="商品详情" left-arrow @click-left="$router.back()" fixed placeholder z-index="99" />
 
+    <!-- Image Banner (16:9) -->
+    <div class="product-banner" v-if="info.imageList && info.imageList.length > 0">
+        <van-swipe class="banner-swipe" :autoplay="3000" indicator-color="white">
+            <van-swipe-item v-for="(img, idx) in info.imageList" :key="idx">
+                <img :src="img" class="banner-img" />
+            </van-swipe-item>
+        </van-swipe>
+    </div>
+
     <!-- Main Card -->
     <div class="main-card">
        <div class="price-row">
           <span class="currency">¥</span>
           <span class="amount">{{ info.price }}</span>
-          <span class="original">¥{{ info.originalPrice }}</span>
+          <span class="discount-tag" v-if="info.originalPrice && info.price < info.originalPrice">{{ (info.price / info.originalPrice * 10).toFixed(1).replace('.0', '') }}折</span>
+          <span class="original" v-if="info.originalPrice">¥{{ info.originalPrice }}</span>
        </div>
        <div class="card-title">
           {{ info.name || '商品详情' }}
@@ -595,16 +633,17 @@ onUnmounted(() => {
        </div>
        
        <!-- Countdown Bar -->
-       <div class="countdown-bar" v-if="isSeckill && !isSeckillEnded">
+       <div class="countdown-bar" v-if="isSeckill && isSeckillStarted && !isSeckillEnded">
            <span class="lightning-icon">⚡</span>
            <span>倒计时: </span>
-           <van-count-down :time="remainingEndTime" format="DD天HH小时mm分钟" class="custom-countdown" />
+           <span class="custom-countdown">{{ remainingEndTimeStr }}</span>
        </div>
     </div>
 
     <!-- Validity Time Range -->
     <div class="validity-range-bar" v-if="isSeckill">
-        {{ formatSeckillRange(info) }}
+        <div class="v-main"><span class="v-label">秒杀时段：</span>{{ formatSeckillRange(info).replace('活动时间：', '') }}</div>
+        <div class="v-hint">温馨提示：仅在此活动时间段内，可按展示的秒杀价购买</div>
     </div>
 
     <!-- Info Cells -->
@@ -615,7 +654,7 @@ onUnmounted(() => {
             </div>
             <div class="cell-content">
                 <div class="cell-title">适用门店</div>
-                <div class="cell-sub">3家门店可用</div>
+                <div class="cell-sub">{{ applicableShops.length }}家门店可用</div>
             </div>
             <i class="el-icon-arrow-right cell-arrow"></i>
         </div>
@@ -625,8 +664,8 @@ onUnmounted(() => {
                 <i class="el-icon-time"></i>
             </div>
             <div class="cell-content">
-                <div class="cell-title">有效期</div>
-                <div class="cell-sub">{{ validityTextSimple }}</div>
+                <div class="cell-title">商品有效期</div>
+                <div class="cell-sub">抢购成功后：{{ validityTextSimple.replace('购买后 ', '') }}</div>
             </div>
         </div>
     </div>
@@ -644,16 +683,16 @@ onUnmounted(() => {
     <div class="section-card">
         <div class="section-header">适用门店列表</div>
         <div class="shop-list-group">
-            <!-- Mock Data for Display as requested by UI design -->
-            <div class="shop-item" @click="goToShop(info.shopId)">
-                <div class="shop-name">{{ info.shopName || '家味道家常菜馆' }}</div>
-                <div class="shop-addr"><i class="el-icon-location-outline"></i> {{ info.shopAddress || '佛山市禅城区张槎街道' }}</div>
+            <div class="shop-item" v-for="shop in applicableShops" :key="shop.id" @click="goToShop(shop.id)">
+                <div class="shop-name">{{ shop.name }}</div>
+                <div class="shop-addr">
+                    <i class="el-icon-location-outline"></i> 
+                    <span class="addr-text">{{ shop.address }}</span>
+                </div>
                 <i class="el-icon-arrow-right shop-arrow"></i>
             </div>
-            <div class="shop-item" v-for="i in 2" :key="i">
-                <div class="shop-name">{{ i===1?'蜀香坊川菜':'坤坤蜀味轩' }}</div>
-                <div class="shop-addr"><i class="el-icon-location-outline"></i> 佛山市禅城区张槎街道</div>
-                 <i class="el-icon-arrow-right shop-arrow"></i>
+            <div v-if="applicableShops.length === 0" class="empty-shops">
+                暂无门店信息
             </div>
         </div>
     </div>
@@ -897,7 +936,28 @@ onUnmounted(() => {
              </div>
         </div>
         <div class="action-btn-group">
+            <div v-if="isSeckill" style="display: flex; gap: 8px;">
+                 <van-button 
+                     :type="info.isFollow ? 'primary' : 'warning'" 
+                     :plain="!info.isFollow"
+                     style="width: 50%;"
+                     round 
+                     @click="handleFollow"
+                 >
+                     {{ info.isFollow ? '已关注提醒' : '关注提醒' }}
+                 </van-button>
+                 <van-button 
+                     type="danger" 
+                     style="width: 50%;"
+                     round 
+                     :disabled="seckillRightBtn.disabled"
+                     @click="seckillRightBtn.action"
+                 >
+                     {{ seckillRightBtn.text }}
+                 </van-button>
+            </div>
             <van-button 
+                v-else
                 :type="btnStatus.type === 'collect' ? 'warning' : 'danger'" 
                 block 
                 round 
@@ -918,12 +978,33 @@ onUnmounted(() => {
     padding-bottom: 80px;
 }
 
+.product-banner {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #f0f0f0;
+    overflow: hidden;
+}
+
+.banner-swipe {
+    width: 100%;
+    height: 100%;
+}
+
+.banner-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
 .main-card {
     background: #fff;
-    margin: 12px;
+    margin: -16px 12px 12px;
     padding: 20px 16px;
     border-radius: 16px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    position: relative;
+    z-index: 2;
 }
 
 .price-row {
@@ -945,10 +1026,22 @@ onUnmounted(() => {
     margin: 0 4px;
 }
 
+.discount-tag {
+    background: #ff4d4f;
+    color: #fff;
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 8px;
+    vertical-align: bottom;
+}
+
 .original {
     font-size: 14px;
-    color: #999;
+    color: #666;
     text-decoration: line-through;
+    text-decoration-color: #666;
+    margin-left: 8px;
 }
 
 .card-title {
@@ -1006,6 +1099,22 @@ onUnmounted(() => {
     border-radius: 12px;
     font-size: 13px;
     color: #666;
+}
+
+.v-main {
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.v-label {
+    color: #ff4d4f;
+    font-weight: 600;
+}
+
+.v-hint {
+    font-size: 11px;
+    color: #999;
 }
 
 .info-group {
@@ -1095,25 +1204,38 @@ onUnmounted(() => {
 }
 
 .shop-item {
-    padding: 12px;
-    background: #f9f9f9;
+    padding: 16px;
+    background: #fff;
     border-radius: 12px;
     position: relative;
+    border: 1px solid #f0f0f0;
 }
 
 .shop-name {
-    font-size: 15px;
-    font-weight: 600;
+    font-size: 16px;
+    font-weight: bold;
     color: #333;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
+    padding-right: 20px;
 }
 
 .shop-addr {
-    font-size: 12px;
+    font-size: 13px;
     color: #999;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 4px;
+    line-height: 1.4;
+    padding-right: 20px;
+}
+
+.addr-text {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
 }
 
 .shop-arrow {
@@ -1122,6 +1244,13 @@ onUnmounted(() => {
     top: 50%;
     transform: translateY(-50%);
     color: #ccc;
+}
+
+.empty-shops {
+    padding: 20px;
+    text-align: center;
+    color: #999;
+    font-size: 14px;
 }
 
 .comments-section .count {

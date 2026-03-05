@@ -17,21 +17,22 @@
           <img :src="shop.displayImg" v-if="shop.displayImg && !shop.imageError" :class="{'is-loaded': shop.imgLoaded}" loading="lazy" @error="shop.imageError = true" @load="shop.imgLoaded = true" alt="">
           <div class="img-placeholder" v-else><i class="el-icon-goods"></i></div>
         </div>
-        <div class="rank-info">
+        <div class="rank-info-new">
           <div class="rank-name">{{ shop.name }}</div>
-          <div class="rank-meta">
-            <span class="rank-score">{{ (Number(shop.score || 0) / 10).toFixed(1) }}分</span>
-            <van-rate :model-value="Number(shop.score || 0) / 10" readonly allow-half color="#F63" void-icon="star" void-color="#eee" size="11px" />
-          </div>
-          <div class="rank-extra">
+          <div class="rank-meta-row">
+            <span class="rank-score">{{ (Number(shop.score || 0) / 10).toFixed(1) }}</span>
+            <van-rate :model-value="Number(shop.score || 0) / 10" readonly allow-half color="#F63" void-icon="star" void-color="#eee" size="11px" class="rank-stars" />
             <span v-if="shop.avgPrice" class="rank-price">人均 ￥{{ shop.avgPrice }}</span>
-            <span v-if="shop.distance" class="rank-distance">{{ formatDistance(shop.distance) }}</span>
-            <span v-if="shop.area" class="rank-area">{{ shop.area }}</span>
           </div>
-        </div>
-        <div class="rank-heat">
-          <div class="heat-flame">🔥</div>
-          <div class="heat-score">{{ formatScore(shop.hotScore) }}</div>
+          <div class="rank-addr-row">
+            <span class="addr-icon"><i class="el-icon-location-information"></i></span>
+            <span v-if="shop.area" class="rank-area">{{ shop.area }}</span>
+            <span v-if="shop.distance" class="rank-distance">{{ formatDistance(shop.distance) }}</span>
+          </div>
+          <div class="rank-heat-new">
+            <span class="heat-flame">🔥</span>
+            <span class="heat-score">{{ formatScore(shop.hotScore) }}</span>
+          </div>
         </div>
       </div>
 
@@ -165,7 +166,13 @@ export default {
     formatScore(hotScore) {
       const n = Number(hotScore);
       if (!Number.isFinite(n) || n <= 0) return '0.0';
-      return n.toFixed(1);
+      if (n >= 100000000) {
+        return (n / 100000000).toFixed(1) + '亿';
+      }
+      if (n >= 10000) {
+        return (n / 10000).toFixed(1) + '万';
+      }
+      return String(n);
     },
     formatDistance(distance) {
       const n = Number(distance);
@@ -280,54 +287,85 @@ export default {
   background: #eee;
 }
 
-/* Rank Info */
-.rank-info {
+/* New Rank Info */
+.rank-info-new {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 .rank-name {
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
   color: #222;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   margin-bottom: 4px;
+  min-width: 8em; /* Ensure at least 8 chars visually if possible, though nowrap/ellipsis handles the rest */
 }
-.rank-meta {
+.rank-meta-row {
   display: flex;
   align-items: center;
-  gap: 4px;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
+  flex-wrap: nowrap;
 }
 .rank-score {
   font-size: 13px;
   font-weight: 700;
   color: #ff6633;
+  margin-right: 8px;
+  flex-shrink: 0;
 }
-.rank-extra {
+.rank-stars {
+  margin-right: 12px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.rank-price { 
+  font-size: 11px;
+  color: #666; 
+  flex-shrink: 0;
+  white-space: nowrap;
+  margin-left: -4px;
+}
+
+.rank-addr-row {
   display: flex;
   align-items: center;
-  gap: 8px;
   font-size: 11px;
   color: #999;
+  overflow: hidden;
+  white-space: nowrap;
 }
-.rank-price { color: #666; }
-
-/* Heat Indicator */
-.rank-heat {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+.addr-icon {
+  margin-right: 2px;
+}
+.rank-area {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+.rank-distance {
+  margin-left: 6px;
   flex-shrink: 0;
-  margin-left: 8px;
 }
-.heat-flame { font-size: 20px; }
+
+.rank-heat-new {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-top: 6px;
+}
+.heat-flame { 
+  font-size: 11px; 
+}
 .heat-score {
-  font-size: 14px;
-  font-weight: 800;
+  font-size: 11px;
+  font-weight: 500;
   color: #ff4b2b;
-  margin-top: 2px;
 }
 
 /* Status */

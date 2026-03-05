@@ -12,6 +12,10 @@ export function getHotRank(params) {
     return request.get('/app/shop/hot/rank', { params });
 }
 
+export function getShopsByIds(ids) {
+    return request.get('/app/shop/listByIds', { params: { ids } });
+}
+
 export function getShopDetail(id) {
     return request.get(`/app/shop/${id}`);
 }

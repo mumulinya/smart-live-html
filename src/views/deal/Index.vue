@@ -23,7 +23,7 @@
       </div>
     </div>
 
-    <div class="biz-tabs">
+    <div class="biz-tabs" v-if="!isSeckillMode">
       <button
         class="biz-tab"
         :class="{ active: biz === 'voucher' }"
@@ -41,7 +41,7 @@
     </div>
 
     <div class="filter-wrapper">
-      <div class="meituan-filter-bar">
+      <div class="meituan-filter-bar" v-if="!isSeckillMode">
         <div class="filter-item" :class="{ active: activeFilterTab === 'distance' }" @click="toggleFilterTab('distance')">
           <div class="filter-text">{{ getDistanceLabel() }} <i class="el-icon-arrow-down"></i></div>
         </div>
@@ -62,8 +62,16 @@
           </div>
         </div>
       </div>
+      <div class="meituan-filter-bar seckill-filter-bar" v-if="isSeckillMode">
+         <div class="filter-item" :class="{ active: activeFilterTab === 'timeSlot' }" @click="toggleFilterTab('timeSlot')">
+          <div class="filter-text">{{ getSeckillTimeLabel() }} <i class="el-icon-arrow-down"></i></div>
+         </div>
+         <div class="filter-item" :class="{ active: activeFilterTab === 'shopType' }" @click="toggleFilterTab('shopType')">
+          <div class="filter-text">{{ getShopTypeLabel() }} <i class="el-icon-arrow-down"></i></div>
+         </div>
+      </div>
       <div class="filter-content" :class="{ show: !!activeFilterTab }">
-        <div v-if="activeFilterTab === 'distance'" class="distance-panel">
+        <div v-if="activeFilterTab === 'distance' && !isSeckillMode" class="distance-panel">
           <div class="distance-options">
             <div
               class="distance-option"
@@ -76,6 +84,22 @@
             </div>
           </div>
         </div>
+        
+        <div v-if="activeFilterTab === 'timeSlot' && isSeckillMode" class="time-slot-panel">
+          <div class="panel-title">秒杀时段</div>
+          <div class="time-slot-options">
+            <div
+              class="time-slot-option"
+              :class="{ active: selectedTimeSlot === item.value }"
+              v-for="item in timeSlotOptions"
+              :key="item.value || 'all'"
+              @click="selectTimeSlot(item.value)"
+            >
+              {{ item.label }}
+            </div>
+          </div>
+        </div>
+
         <div v-if="activeFilterTab === 'shopType'" class="shop-type-panel">
           <div class="panel-title">商户分类</div>
           <div class="shop-type-grid">
@@ -132,11 +156,20 @@
     <div class="deal-list" @scroll.passive="onScroll">
       <div v-if="loading && deals.length === 0" class="state-box">加载中...</div>
       <div v-else-if="displayDeals.length === 0" class="empty-state">
-        <div class="empty-illustration">
-          <span class="ticket-icon">🎫</span>
-        </div>
-        <div class="empty-title">暂无{{ biz === 'voucher' ? '代金券' : '团购' }}</div>
-        <div class="empty-subtitle">换个筛选试试，或者先去逛逛热门商家</div>
+        <template v-if="isSeckillMode">
+          <div class="empty-illustration">
+            <span class="ticket-icon" style="font-size: 52px; line-height: 1;">⚡</span>
+          </div>
+          <div class="empty-title">暂无秒杀活动</div>
+          <div class="empty-subtitle">当前时段暂无秒杀商品，敬请期待</div>
+        </template>
+        <template v-else>
+          <div class="empty-illustration">
+            <span class="ticket-icon">🎫</span>
+          </div>
+          <div class="empty-title">暂无{{ biz === 'voucher' ? '代金券' : '团购' }}</div>
+          <div class="empty-subtitle">换个筛选试试，或者先去逛逛热门商家</div>
+        </template>
         <div class="empty-actions">
           <button class="empty-btn primary" @click="goHome">去首页逛逛</button>
           <button class="empty-btn" @click="goHotShops">查看热门商家</button>
@@ -220,6 +253,14 @@ export default {
       isCompactHeader: false,
       lastScrollTop: 0,
       userLocation: null,
+      selectedTimeSlot: '',
+      timeSlotOptions: [
+        { label: '全部时段', value: '' },
+        { label: '10:00 场', value: '10:00' },
+        { label: '12:00 场', value: '12:00' },
+        { label: '18:00 场', value: '18:00' },
+        { label: '20:00 场', value: '20:00' }
+      ],
       distanceOptions: [
         { label: '全部距离', value: '' },
         { label: '1km内', value: '1' },
@@ -374,14 +415,15 @@ export default {
         this.isCompactHeader = false;
       }
     },
-    selectDistance(value) {
-      if (this.selectedDistance === value) {
-        this.activeFilterTab = '';
-        return;
-      }
-      this.selectedDistance = value;
+    selectDistance(val) {
+      this.selectedDistance = val;
       this.activeFilterTab = '';
-      this.$router.replace({ path: '/deal/list', query: this.buildQuery() });
+      this.fetchDeals(true);
+    },
+    selectTimeSlot(val) {
+      this.selectedTimeSlot = val;
+      this.activeFilterTab = '';
+      this.fetchDeals(true);
     },
     selectShopType(value) {
       if (this.selectedShopType === value) {
@@ -430,9 +472,14 @@ export default {
       return found ? found.name : '分类';
     },
     getSortLabel() {
-      if (!this.selectedSort || this.selectedSort === 'default') return '排序';
-      const found = this.sortOptions.find(item => item.value === this.selectedSort);
-      return found ? found.label : '排序';
+      if (!this.selectedSort || this.selectedSort === 'default') return '默认排序';
+      const opt = this.sortOptions.find(o => o.value === this.selectedSort);
+      return opt ? opt.label : '默认排序';
+    },
+    getSeckillTimeLabel() {
+      if (!this.selectedTimeSlot) return '全部时段';
+      const opt = this.timeSlotOptions.find(o => o.value === this.selectedTimeSlot);
+      return opt ? opt.label : '全部时段';
     },
     getServiceFilterLabel() {
       if (!this.selectedServiceFilter) return '筛选';
@@ -532,7 +579,7 @@ export default {
       else if (res && res.data && res.data.data && Array.isArray(res.data.data.records)) list = res.data.data.records;
 
       return (list || []).map(item => {
-        const rawImage = item.images || item.image || item.shopLogo || '';
+        const rawImage = item.coverImg || item.images || item.image || item.shopLogo || '';
         let image = '';
         if (rawImage) {
           const first = String(rawImage).split(',')[0];
@@ -565,7 +612,7 @@ export default {
         status: 1
       };
       if (this.sceneType === 0 || this.sceneType === 1) {
-        filters.type = this.sceneType;
+        filters.activityType = this.sceneType;
       }
       if (this.selectedShopType !== null && this.selectedShopType !== undefined) {
         filters.shopTypeId = this.selectedShopType;
@@ -778,6 +825,18 @@ export default {
   transform: translateY(0.5px);
 }
 
+.meituan-filter-bar {
+  display: flex;
+  align-items: center;
+  height: 40px;
+  background: #fff;
+  border-bottom: 1px solid #f2f2f2;
+}
+.seckill-filter-bar {
+  justify-content: flex-start;
+  padding: 0 16px;
+  gap: 24px;
+}
 .biz-tabs {
   display: flex;
   align-items: center;
@@ -867,23 +926,43 @@ export default {
 }
 
 .filter-content {
-  position: relative;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
   background: #fff;
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
   max-height: 0;
   overflow: hidden;
-  transition: max-height 0.25s ease;
-  z-index: 30;
+  transition: max-height 0.3s ease;
+  z-index: 10;
 }
-
 .filter-content.show {
-  max-height: 300px;
+  max-height: 400px;
   overflow-y: auto;
 }
-
 .panel-title {
-  font-size: 12px;
+  font-size: 13px;
   color: #999;
-  margin-bottom: 10px;
+  padding: 12px 16px 8px;
+}
+.distance-options, .sort-options, .service-option-group, .time-slot-options {
+  padding: 0 16px 16px;
+}
+.distance-option, .sort-option, .service-option, .time-slot-option {
+  padding: 12px 0;
+  font-size: 14px;
+  color: #333;
+  border-bottom: 1px solid #f5f5f5;
+}
+.distance-option:last-child, .sort-option:last-child, .service-option:last-child, .time-slot-option:last-child {
+  border-bottom: none;
+}
+.distance-option.active, .sort-option.active, .service-option.active, .time-slot-option.active {
+  color: #ff416c;
+  font-weight: 500;
 }
 
 .shop-type-panel,

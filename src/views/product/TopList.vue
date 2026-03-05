@@ -15,7 +15,7 @@
         </div>
         <div class="rank-img">
           <img :src="shop.displayImg" v-if="shop.displayImg && !shop.imageError" :class="{'is-loaded': shop.imgLoaded}" loading="lazy" @error="shop.imageError = true" @load="shop.imgLoaded = true" alt="">
-          <div class="img-placeholder" v-else><i class="el-icon-goods"></i></div>
+          <div class="img-placeholder" v-else></div>
         </div>
         <div class="rank-info-new">
           <!-- First Row: Title with optional tag -->
@@ -38,13 +38,14 @@
             </div>
             <div class="sold-cnt" v-if="shop.sold">已抢 {{ shop.sold }}+</div>
           </div>
-        </div>
-
-        <div class="rank-right-action">
+          <!-- Hot Score moved here -->
           <div class="rank-heat-new">
             <span class="heat-flame">🔥</span>
             <span class="heat-score">{{ formatScore(shop.hotScore) }}</span>
           </div>
+        </div>
+
+        <div class="rank-right-action">
           <button class="grab-btn">去抢购</button>
         </div>
       </div>
@@ -136,7 +137,7 @@ export default {
         } else {
           list.forEach(s => {
             // Resolve images
-            let img = s.shopLogo || s.images || '';
+            let img = s.coverImg || s.shopLogo || s.images || '';
             if (img && !img.startsWith('http')) {
               img = (this.$fileURL || '') + img.split(',')[0];
             } else if (img) {
@@ -189,7 +190,13 @@ export default {
     formatScore(hotScore) {
       const n = Number(hotScore);
       if (!Number.isFinite(n) || n <= 0) return '0.0';
-      return n.toFixed(1);
+      if (n >= 100000000) {
+        return (n / 100000000).toFixed(1) + '亿';
+      }
+      if (n >= 10000) {
+        return (n / 10000).toFixed(1) + '万';
+      }
+      return String(n);
     },
     formatDistance(distance) {
       const n = Number(distance);
@@ -302,12 +309,8 @@ export default {
 .rank-img .img-placeholder {
   width: 100%;
   height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #ccc;
-  font-size: 24px;
-  background: #eee;
+  display: block;
+  background: linear-gradient(135deg, #f0f0f0, #e0e0e0);
 }
 
 /* New Rank Info Layout (Center) */
@@ -385,12 +388,11 @@ export default {
   flex-shrink: 0;
 }
 
-/* Right Action Section */
 .rank-right-action {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  justify-content: space-between;
+  justify-content: flex-end;
   margin-left: 8px;
   min-width: 60px;
   height: 72px; /* match image height roughly */
@@ -399,13 +401,14 @@ export default {
   display: flex;
   align-items: center;
   gap: 2px;
+  margin-top: 4px;
 }
 .heat-flame { 
-  font-size: 14px; 
+  font-size: 11px; 
 }
 .heat-score {
-  font-size: 15px;
-  font-weight: 800;
+  font-size: 11px;
+  font-weight: 500;
   color: #ff4b2b;
 }
 .grab-btn {
