@@ -90,15 +90,26 @@ export default {
                     current: this.page,
                     size: this.size,
                     status: 3, // Used
-                    commentStatus: 0 // Unreviewed
+                    reviewStatus: 0 // Unreviewed
                 };
                 
                 const res = await getOrderList(params);
-                let data = res.data || res || [];
-                if(data.records) data = data.records;
+                console.log("WaitReview getOrderList raw:", res);
+                
+                let data = [];
+                // request.js 拦截器已经 return response.data，所以 res 在这里通常是那个包含 success, data 的对象
+                if (res && res.data && Array.isArray(res.data)) {
+                    data = res.data;
+                } else if (res && res.records && Array.isArray(res.records)) {
+                    data = res.records;
+                } else if (res && res.rows && Array.isArray(res.rows)) {
+                    data = res.rows;
+                } else if (Array.isArray(res)) {
+                    data = res;
+                }
                 
                 // Client-side filter to be safe
-                data = data.filter(item => !item.commentStatus || item.commentStatus === 0);
+                data = data.filter(item => item.reviewStatus == 0 || item.reviewStatus == null);
                 
                 this.list.push(...data);
                 this.loadingMore = false;
@@ -109,6 +120,7 @@ export default {
                     this.page++;
                 }
             } catch (error) {
+                console.error("WaitReview onLoad error:", error);
                 this.loadingMore = false;
                 this.finished = true;
             } finally {

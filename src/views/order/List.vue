@@ -92,8 +92,8 @@
                    <button class="action-btn btn-solid-blue" v-if="order.status===2" @click="useOrder(order)">立即使用</button>
                    <button class="action-btn btn-outline" v-if="order.status===2" @click="refundOrder(order)">申请退款</button>
                    
-                   <button class="action-btn btn-outline" v-if="order.status===3 && (!order.commentStatus || order.commentStatus===0)" @click="toReview(order)">去评价</button>
-                   <button class="action-btn btn-outline" v-if="order.status===3 && order.commentStatus===1" @click="toReview(order)">查看评价</button>
+                   <button class="action-btn btn-outline" v-if="order.status===3 && (!order.reviewStatus || order.reviewStatus===0)" @click="toReview(order)">去评价</button>
+                   <button class="action-btn btn-outline" v-if="order.status===3 && order.reviewStatus===1" @click="toReviewDetail(order)">查看评价</button>
                    
                    <!-- Show text for other states if needed, or just view detail -->
                 </div>
@@ -220,8 +220,8 @@ export default {
         if (this.activeTab !== 'all') {
             params.status = Number(this.activeTab);
         }
-        if (this.$route.query.commentStatus !== undefined) {
-            params.commentStatus = this.$route.query.commentStatus;
+        if (this.$route.query.reviewStatus !== undefined) {
+            params.reviewStatus = this.$route.query.reviewStatus;
         }
         
         getOrderList(params).then(res => {
@@ -395,6 +395,14 @@ export default {
             name: 'ReviewPublish',
             query: {
                 orderId: order.id
+            }
+        });
+     },
+     toReviewDetail(order) {
+        this.$router.push({
+            name: 'ReviewDetail',
+            query: {
+                id: order.reviewId
             }
         });
      }

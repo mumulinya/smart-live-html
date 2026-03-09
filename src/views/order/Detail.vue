@@ -292,39 +292,38 @@ export default {
 </script>
 
 <style scoped>
-.order-detail-page { min-height: 100vh; background: white; padding-bottom: 70px; }
-.header { height: 50px; background: white; display: flex; align-items: center; padding: 0 15px; border-bottom: 1px solid #eee; position: sticky; top: 0; z-index: 10; }
+.order-detail-page { min-height: 100vh; background: #f8f9fa; padding-bottom: 90px; }
+.header { height: 50px; background: white; display: flex; align-items: center; padding: 0 16px; border-bottom: 1px solid #f0f0f0; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+.header-back-btn { font-size: 20px; color: #333; cursor: pointer; }
 .header-title {
-  font-weight: bold;
-  font-size: 18px;
+  font-weight: 600;
+  font-size: 17px;
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  max-width: 60%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-align: center;
+  color: #333;
 }
 
-.detail-content { padding: 20px; }
-.status-card { background: linear-gradient(135deg, #ff9966, #ff5e62); color: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(255, 94, 98, 0.3); }
-.status-text { font-size: 20px; font-weight: bold; margin-bottom: 10px; }
-.status-desc { font-size: 14px; opacity: 0.9; }
+.detail-content { padding: 16px; width: 100%; box-sizing: border-box; }
+.status-card { background: linear-gradient(135deg, #ff9966, #ff5e62); color: white; padding: 24px 20px; border-radius: 12px; margin-bottom: 16px; box-shadow: 0 4px 15px rgba(255, 94, 98, 0.2); }
+.status-text { font-size: 22px; font-weight: bold; margin-bottom: 8px; }
+.status-desc { font-size: 14px; opacity: 0.95; }
 .count-down { display: flex; align-items: center; }
-.count-down i { margin-right: 5px; }
+.count-down i { margin-right: 6px; }
 
-.info-section { margin-bottom: 20px; }
-.section-title { font-size: 16px; font-weight: bold; color: #333; margin-bottom: 15px; }
+.info-section { background: white; padding: 20px 16px; border-radius: 12px; margin-bottom: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); }
+.section-title { font-size: 16px; font-weight: bold; color: #1a1a1a; margin-bottom: 16px; display: flex; align-items: center; }
+.section-title::before { content: ''; width: 4px; height: 16px; background: #ff6633; border-radius: 2px; margin-right: 8px; }
 
-.info-list { margin-bottom: 10px; }
-.info-item { display: flex; margin-bottom: 10px; font-size: 14px; line-height: 1.5; }
-.label { width: 80px; color: #666; flex-shrink: 0; }
-.value { flex: 1; color: #333; }
+.info-list { }
+.info-item { display: flex; margin-bottom: 12px; font-size: 14px; line-height: 1.6; align-items: flex-start; }
+.info-item:last-child { margin-bottom: 0; }
+.label { width: 85px; color: #888; flex-shrink: 0; }
+.value { flex: 1; color: #333; word-break: break-all; }
 
-.divider { height: 1px; background: #eee; margin: 20px 0; }
+.divider { display: none; }
 
-.footer-actions { position: fixed; bottom: 0; left: 0; right: 0; padding: 15px; background: white; border-top: 1px solid #eee; display: flex; gap: 10px; }
+.footer-actions { position: fixed; bottom: 0; left: 0; right: 0; padding: 16px 20px; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-top: 1px solid #f0f0f0; display: flex; gap: 12px; padding-bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 100; }
 .big-btn { flex: 1; height: 40px; border: none; border-radius: 20px; font-size: 16px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 .btn-primary { background: linear-gradient(90deg, #ff6633, #ff8c66); color: white; }
 .btn-outline { background: white; border: 1px solid #ddd; color: #666; }

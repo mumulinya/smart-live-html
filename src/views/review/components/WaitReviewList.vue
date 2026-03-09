@@ -22,16 +22,16 @@
                          <div class="card-body" @click="toReview(order)">
                              <!-- Image -->
                              <div class="product-img">
-                                 <img :src="getImage(order)" alt="Shop Image" v-if="getImage(order)">
-                                 <div class="img-placeholder" v-else>
-                                     <van-icon name="shop-o" size="24" color="#ccc"/>
+                                 <img :src="getImage(order)" alt="Product Image" v-if="getImage(order)">
+                                 <div class="waitlist-img-placeholder" v-else>
+                                     <van-icon name="bag-o" size="24" color="#ccc"/>
                                  </div>
                              </div>
                              
                              <!-- Details -->
                              <div class="product-info">
-                                 <div class="shop-name-row">{{order.shopName || '未知店铺'}}</div>
-                                 <div class="product-desc-row">商品编号: {{order.voucherId || (order.id && order.id.length > 4 ? order.id.slice(-4) : order.id)}}</div>
+                                 <div class="shop-name-row">{{order.title || order.shopName || '未知商品'}}</div>
+                                 <div class="product-desc-row">{{order.subTitle || ('订单号: ' + (order.id && order.id.length > 4 ? order.id.slice(-4) : order.id))}}</div>
                                  <div class="price-row">
                                      <span class="price-val">¥{{formatPrice(order.price || order.payValue)}}</span>
                                      <span class="quantity">x1</span>
@@ -73,9 +73,8 @@ export default {
     },
     methods: {
         getImage(order) {
-            // Priority: shopIcon -> image -> shopImage?
-            // User said: backend sends "shop image"
-            let img = order.shopIcon || order.image || order.shopImage;
+            // Priority: coverImg -> shopIcon -> image -> shopImage
+            let img = order.coverImg || order.shopIcon || order.image || order.shopImage;
             if (img && typeof img === 'string') {
                 if (img.startsWith('http')) return img;
                 return this.fileURL + img;
@@ -100,11 +99,22 @@ export default {
                 };
                 
                 const res = await getOrderList(params);
-                let data = res.data || res || [];
-                if(data.records) data = data.records;
+                console.log("WaitReviewList getOrderList raw:", res);
+                
+                let data = [];
+                // request.js 拦截器已经 return response.data，所以 res 在这里通常是那个包含 success, data 的对象
+                if (res && res.data && Array.isArray(res.data)) {
+                    data = res.data;
+                } else if (res && res.records && Array.isArray(res.records)) {
+                    data = res.records;
+                } else if (res && res.rows && Array.isArray(res.rows)) {
+                    data = res.rows;
+                } else if (Array.isArray(res)) {
+                    data = res;
+                }
                 
                 // Client-side filter to be safe
-                data = data.filter(item => !item.reviewStatus || item.reviewStatus === 0);
+                data = data.filter(item => item.reviewStatus == 0 || item.reviewStatus == null);
                 
                 this.list.push(...data);
                 this.loadingMore = false;
@@ -115,6 +125,7 @@ export default {
                     this.page++;
                 }
             } catch (error) {
+                console.error("WaitReviewList onLoad error:", error);
                 this.loadingMore = false;
                 this.finished = true;
             }
@@ -176,9 +187,10 @@ export default {
     background: #f8f8f8;
     margin-right: 12px;
     flex-shrink: 0;
+    position: relative;
 }
 .product-img img { width: 100%; height: 100%; object-fit: cover; }
-.img-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+.waitlist-img-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
 
 .product-info { flex: 1; display: flex; flex-direction: column; justify-content: space-between; height: 64px; }
 .shop-name-row { font-size: 15px; font-weight: bold; color: #333; margin-bottom: 4px; }

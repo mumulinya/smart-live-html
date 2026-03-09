@@ -15,6 +15,23 @@
     </div>
 
     <div class="scroll-content">
+      <!-- Product Info Card -->
+      <div class="card product-info-card" v-if="orderInfo && orderInfo.title">
+        <div class="product-img">
+            <img :src="orderInfo.image" v-if="orderInfo.image" alt="商品图片" />
+            <div class="product-img-placeholder" v-else>
+                <van-icon name="goods-collect-o" size="24" color="#ccc" />
+            </div>
+        </div>
+        <div class="product-details">
+            <div class="product-title">{{ orderInfo.title }}</div>
+            <div class="product-price" v-if="orderInfo.price !== undefined && orderInfo.price !== null">
+                <span class="currency">￥</span>
+                <span class="amount">{{ formatPrice(orderInfo.price) }}</span>
+            </div>
+        </div>
+      </div>
+
       <!-- Overall Rating Card -->
       <div class="card overall-card">
         <div class="mood-labels">
@@ -163,6 +180,8 @@ export default {
       createTime: null,
       userId: null,
 
+      orderInfo: null, // Title, image, price from order detail
+
       overallRating: 5,
       tasteScore: 5,
       envScore: 5,
@@ -243,6 +262,12 @@ export default {
           if (score >= 3) return '一般';
           return texts[Math.max(0, score - 1)] || '';
       },
+      formatPrice(value) {
+          const num = Number(value);
+          if (!Number.isFinite(num)) return '0.00';
+          if (Number.isInteger(num)) return String(num);
+          return num.toFixed(2).replace(/\.?0+$/, '');
+      },
       loadShop(shopId) {
           getShopDetail(shopId).then(res => {
              const data = res.data || res;
@@ -267,6 +292,20 @@ export default {
                   if (data.shopId) {
                       this.shopId = data.shopId;
                       this.loadShop(this.shopId);
+                  }
+
+                  // Extract product info for display
+                  this.orderInfo = {
+                      title: data.title || data.itemTitle || data.voucherName || '商品名称加载中...',
+                      image: '',
+                      price: data.actualValue || data.payValue || null
+                  };
+
+                  let rawImg = data.coverImg || data.itemImage || data.voucherImage;
+                  if (!rawImg && data.images) rawImg = Array.isArray(data.images) ? data.images[0] : data.images.split(',')[0];
+                  
+                  if (rawImg) {
+                      this.orderInfo.image = rawImg.startsWith('http') ? rawImg : this.fileURL + rawImg;
                   }
               }
           });
@@ -511,6 +550,31 @@ export default {
     background: white; border-radius: 12px; padding: 16px;
     margin-bottom: 12px;
 }
+
+/* Product Info Card */
+.product-info-card {
+    display: flex; gap: 12px; padding: 12px 16px;
+    align-items: center;
+}
+.product-img {
+    width: 48px; height: 48px; border-radius: 8px; overflow: hidden;
+    flex-shrink: 0; background: #f5f5f5; display: flex; justify-content: center; align-items: center;
+    position: relative;
+}
+.product-img img { width: 100%; height: 100%; object-fit: cover; }
+.product-img-placeholder { display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; }
+
+.product-details {
+    flex: 1; display: flex; flex-direction: column; justify-content: space-between;
+    height: 44px; overflow: hidden;
+}
+.product-title {
+    font-size: 14px; font-weight: 500; color: #333;
+    display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;
+}
+.product-price { color: #ff5622; display: flex; align-items: baseline; }
+.product-price .currency { font-size: 12px; font-weight: 500; }
+.product-price .amount { font-size: 16px; font-weight: 600; }
 
 /* Overall Rating */
 .mood-labels {

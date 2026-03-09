@@ -254,7 +254,8 @@ const routes = [
     },
     {
         path: '/review/wait',
-        redirect: '/review/mine?tab=pending'
+        name: 'WaitReview',
+        component: () => import('@/views/review/WaitReview.vue')
     }
 ]
 

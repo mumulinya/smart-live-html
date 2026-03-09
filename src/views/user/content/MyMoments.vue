@@ -257,11 +257,8 @@ const onLoad = async () => {
                 // We rely on detail object having activityType
                 
                 if (item.productType === undefined) {
-                    // API type 0 = 代金券, type 1 = 秒杀券 (also a voucher type)
-                    // If activityType is 1, it is Seckill (Voucher)
-                    // Check if we can distinguish "Group Deal" vs "Voucher"
-                    // Usually Group Deal has distinct structure or type
-                    item.productType = 1; // Default to Voucher for now as per previous logic
+                    // category: 1 = 代金券, 2 = 团购套餐
+                    item.productType = item.category === 2 ? 2 : 1;
                 }
             }
 

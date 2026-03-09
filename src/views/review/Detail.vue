@@ -73,46 +73,40 @@
             </div>
         </div>
 
-        <!-- 消费项目（仅订单评价显示） -->
-        <div class="consume-item" v-if="review.sourceType === 4 && voucher">
-            <span class="consume-icon">🛒</span>
-             <div class="consume-text">消费项目：{{ voucher.originalPrice }}元商品（{{ voucher.name || voucher.title || '全场通用' }}）</div>
+        <!-- 订单评价卡片：商品主 + 店铺副 -->
+        <div class="order-card" v-if="voucher && voucher.name">
+          <div class="order-product-row" @click="toVoucherDetail">
+            <div class="order-product-img">
+              <img :src="voucher.image ? (voucher.image.startsWith('http') ? voucher.image : imgPrefix + voucher.image) : ''" v-if="voucher.image" @error="(e) => e.target.style.display='none'">
+              <i class="el-icon-goods" v-if="!voucher.image" style="font-size:24px;color:#aaa;"></i>
+            </div>
+            <div class="order-product-info">
+              <div class="order-product-name">{{ voucher.name }}</div>
+              <div class="order-product-price">¥{{ Number(voucher.price || 0).toFixed(2) }}</div>
+            </div>
+            <button class="order-buy-btn" @click.stop="buyVoucher">去购买</button>
+          </div>
+          <div class="order-shop-row" @click.stop="toShopDetail">
+            <div class="order-shop-icon">
+              <img :src="formatShopLogo(voucher.shopLogo)" v-if="voucher.shopLogo" @error="(e) => e.target.style.display='none'">
+              <i class="el-icon-s-shop" v-if="!voucher.shopLogo" style="font-size:13px;color:#66bb6a;"></i>
+            </div>
+            <span class="order-shop-name">{{ voucher.shopName }}</span>
+            <span class="order-shop-link">进店看看 ›</span>
+          </div>
         </div>
 
-        <!-- Shop Link -->
-        <!-- 代金券卡片（订单评价 sourceType=4） -->
-        <div class="voucher-card" v-if="review.sourceType === 4 && voucher" @click="toVoucherDetail">
-             <div class="voucher-thumbnail">
-                <img :src="voucher.image ? (voucher.image.startsWith('http') ? voucher.image : imgPrefix + voucher.image) : defaultAvatar" @error="(e) => e.target.src = defaultAvatar">
-             </div>
-             <div class="voucher-info">
-                <div class="voucher-title">{{ voucher.price }}代{{ voucher.originalPrice }}元{{ voucher.name || voucher.title || '商品' }}</div>
-                <div class="voucher-shop">{{ voucher.shopName || review.shopName }}</div>
-             </div>
-             <button class="voucher-buy-btn" @click.stop="buyVoucher">去购买</button>
-        </div>
-
-        <!-- 商户卡片（普通评价） -->
-        <!-- Shop Link (POI Card Style) -->
-        <div class="poi-card" v-else-if="review.shopId" @click="toShopDetail">
-             <div class="poi-thumbnail">
-                <img :src="(review.shopImages && review.shopImages.length) ? review.shopImages[0] : defaultAvatar" @error="(e) => e.target.src = defaultAvatar">
-             </div>
-             <div class="poi-info">
-                <div class="poi-name">{{ review.shopName }}</div>
-                <div class="poi-rating">
-                   <div class="star-icons">
-                      <!-- Assuming 5 is max score, display stars -->
-                      <i class="el-icon-star-on" v-for="n in Math.floor(review.avgScore || 4.5)" :key="'f'+n"></i>
-                      <i class="el-icon-star-off" v-for="n in (5 - Math.floor(review.avgScore || 4.5))" :key="'e'+n"></i>
-                   </div>
-                   <span class="rating-score">{{ Number(review.avgScore || 4.7).toFixed(1) }}</span>
-                </div>
-                <div class="poi-price">¥{{ review.avgPrice || '-' }}/人</div>
-             </div>
-             <div class="poi-arrow">
-                <i class="el-icon-arrow-right"></i>
-             </div>
+        <!-- 店铺评价卡片：单独展示店铺信息 -->
+        <div class="shop-card" v-else-if="review.shopId" @click="toShopDetail">
+          <div class="shop-card-img">
+            <img :src="(review.shopImages && review.shopImages.length) ? review.shopImages[0] : ''" v-if="review.shopImages && review.shopImages.length" @error="(e) => e.target.style.display='none'">
+            <i class="el-icon-s-shop" v-else style="font-size:24px;color:#66bb6a;"></i>
+          </div>
+          <div class="shop-card-info">
+            <div class="shop-card-name">{{ review.shopName }}</div>
+            <div class="shop-card-sub">📍 {{ review.shopAddress || review.shopCategory || '' }}</div>
+          </div>
+          <button class="shop-card-btn" @click.stop="toShopDetail">进店看看</button>
         </div>
 
         <!-- Views -->
@@ -610,9 +604,9 @@ export default {
                   images: data.images ? data.images.split(',').map(url => url.startsWith('http') ? url : this.imgPrefix + (url.startsWith('/')?'':'/') + url) : [],
                   sourceType: data.sourceType,  // 保存来源类型
                   sourceId: data.sourceId,      // 保存原始 sourceId
-                  shopId: data.sourceId,
-                  shopName: data.sourceName || 'Unknown Shop',
-                  shopImages: data.shopImages ? data.shopImages.split(',').map(url => url.startsWith('http') ? url : this.imgPrefix + (url.startsWith('/')?'':'/') + url) : [],
+                  shopId: data.shopId,
+                  shopName: data.shopName || data.sourceName || '',
+                  shopImages: data.shopLogo ? data.shopLogo.split(',').map(url => url.startsWith('http') ? url : this.imgPrefix + (url.startsWith('/')?'':'/') + url) : (data.shopImages ? data.shopImages.split(',').map(url => url.startsWith('http') ? url : this.imgPrefix + (url.startsWith('/')?'':'/') + url) : []),
                   viewCount: data.viewCount || 0,
                   likeCount: data.liked || 0,
                   collectCount: data.stared || 0,
@@ -624,28 +618,31 @@ export default {
                   status: data.status // Included from backend
               };
 
-              // 如果是代金券评价，加载代金券详情
-              if (data.sourceType === 4 && data.sourceId) {
-                  this.loadVoucherDetail(data.sourceId);
+              // 商品评价卡片：直接从评价数据获取商品信息
+              if (data.productName) {
+                  this.voucher = {
+                      id: data.sourceId,
+                      shopName: data.shopName || data.sourceName || '',
+                      shopLogo: data.shopLogo || '',
+                      name: data.productName,
+                      price: data.productPrice || 0,
+                      image: data.productCoverImg || ''
+                  };
               }
 
               // Load comments/replies
               this.loadComments(id);
           });
       },
-      async loadVoucherDetail(voucherId) {
-          try {
-              const res = await getProductDetail(voucherId);
-              if (res && res.data) {
-                  this.voucher = res.data;
-              }
-          } catch (e) {
-              console.error('加载代金券详情失败', e);
-          }
+      formatShopLogo(logos) {
+          if (!logos) return '';
+          let firstLogo = logos.split(',')[0];
+          return firstLogo.startsWith('http') ? firstLogo : this.imgPrefix + firstLogo;
       },
       toVoucherDetail() {
-          if (this.voucher && this.voucher.id) {
-              this.$router.push({ path: '/product/detail', query: { id: this.voucher.id } });
+          const id = this.review?.sourceId || (this.voucher && this.voucher.id);
+          if (id) {
+              this.$router.push({ path: '/product/detail', query: { id } });
           }
       },
       buyVoucher() {
@@ -1201,157 +1198,162 @@ export default {
 <style scoped>
 /* Inherit standard page wrapper styles */
 
-/* 消费项目样式 */
-.consume-item {
-    display: flex;
-    align-items: center;
-    padding: 10px 12px;
+/* ===== 订单评价卡片：商品主 + 店铺副 ===== */
+.order-card {
     background: #fafafa;
-    border-radius: 6px;
-    margin: 12px 15px;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 15px;
 }
-.consume-icon {
-    margin-right: 8px;
-}
-.consume-text {
-    font-size: 13px;
-    color: #666;
-}
-
-/* 代金券卡片样式 */
-.voucher-card {
+.order-product-row {
     display: flex;
     align-items: center;
-    background: white;
-    border: 1px solid #f0f0f0;
-    border-radius: 8px;
-    padding: 12px;
-    margin: 15px 15px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    gap: 10px;
+    padding: 10px;
     cursor: pointer;
 }
-.voucher-thumbnail {
-    width: 60px;
-    height: 60px;
-    border-radius: 6px;
-    overflow: hidden;
-    margin-right: 12px;
+.order-product-img {
+    width: 52px;
+    height: 52px;
+    border-radius: 8px;
+    background: #f0f0f0;
     flex-shrink: 0;
-    background: #fff5f5;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
-.voucher-thumbnail img {
+.order-product-img img {
     width: 100%;
     height: 100%;
     object-fit: cover;
 }
-.voucher-info {
+.order-product-info {
     flex: 1;
-    overflow: hidden;
+    min-width: 0;
 }
-.voucher-title {
-    font-size: 15px;
+.order-product-name {
+    font-size: 13px;
     font-weight: 600;
-    color: #333;
-    margin-bottom: 4px;
+    color: #111;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
-.voucher-shop {
+.order-product-price {
     font-size: 13px;
-    color: #999;
+    color: #ff4d4f;
+    margin-top: 4px;
+    font-weight: 600;
 }
-.voucher-buy-btn {
-    padding: 6px 14px;
-    background: linear-gradient(135deg, #ff6b6b, #ee5a5a);
-    color: white;
-    border: none;
+.order-buy-btn {
+    background: #ff6b35;
+    color: #fff;
+    font-size: 12px;
+    padding: 6px 10px;
     border-radius: 16px;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
+    white-space: nowrap;
     flex-shrink: 0;
-    margin-left: 10px;
+    border: none;
+    cursor: pointer;
 }
-.voucher-buy-btn:active {
-    opacity: 0.9;
+.order-buy-btn:active {
+    opacity: 0.85;
 }
-
-/* POI Card (Shop) */
-.poi-card {
+/* 店铺副信息行 */
+.order-shop-row {
     display: flex;
     align-items: center;
-    background: white;
-    border: 1px solid #f0f0f0;
-    border-radius: 8px;
-    padding: 12px;
-    margin: 15px 15px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    gap: 6px;
+    padding: 7px 10px;
+    border-top: 1px solid #eee;
+    background: #fff;
     cursor: pointer;
 }
-.poi-thumbnail {
-    width: 60px;
-    height: 60px;
-    border-radius: 6px;
-    overflow: hidden;
-    margin-right: 12px;
+.order-shop-icon {
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    background: #f0f0f0;
     flex-shrink: 0;
-    background: #f5f5f5;
-}
-.poi-thumbnail img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-.poi-info {
-    flex: 1;
     display: flex;
-    flex-direction: column;
+    align-items: center;
     justify-content: center;
     overflow: hidden;
 }
-.poi-name {
-    font-size: 15px;
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 4px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+.order-shop-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
-.poi-rating {
+.order-shop-name {
+    font-size: 11px;
+    color: #888;
+    flex: 1;
+}
+.order-shop-link {
+    font-size: 11px;
+    color: #ff6b35;
+}
+
+/* ===== 店铺评价卡片 ===== */
+.shop-card {
     display: flex;
     align-items: center;
-    margin-bottom: 4px;
+    gap: 10px;
+    background: #fafafa;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    padding: 10px;
+    margin: 15px;
+    cursor: pointer;
 }
-.star-icons {
+.shop-card-img {
+    width: 52px;
+    height: 52px;
+    border-radius: 8px;
+    background: #f0f0f0;
+    flex-shrink: 0;
+    overflow: hidden;
     display: flex;
-    gap: 1px;
-    margin-right: 6px;
+    align-items: center;
+    justify-content: center;
 }
-.star-icons i {
-    font-size: 11px;
+.shop-card-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
-.star-icons i.el-icon-star-on {
-    color: #ff9900;
+.shop-card-info {
+    flex: 1;
+    min-width: 0;
 }
-.star-icons i.el-icon-star-off {
-    color: #ddd;
-}
-.rating-score {
+.shop-card-name {
     font-size: 13px;
-    color: #ff4400;
-    font-weight: 500;
+    font-weight: 600;
+    color: #111;
 }
-.poi-price {
+.shop-card-sub {
+    font-size: 11px;
+    color: #aaa;
+    margin-top: 3px;
+}
+.shop-card-btn {
+    background: #fff;
+    color: #ff6b35;
     font-size: 12px;
-    color: #666;
+    padding: 6px 10px;
+    border-radius: 16px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    border: 1px solid #ff6b35;
+    cursor: pointer;
 }
-.poi-arrow {
-    color: #ccc;
-    font-size: 16px;
-    margin-left: 8px;
+.shop-card-btn:active {
+    background: #fff5f0;
 }
+
 
 /* Original Styles */
 .review-detail-wrapper {

@@ -1,7 +1,7 @@
 import request from '@/utils/request';
 
 /**
- * 发送消息给AI助手
+ * 发送消息给助手
  * @param {Object} data - 消息数据
  * @param {string} data.sessionId - 会话ID
  * @param {string} data.content - 消息内容
@@ -13,7 +13,7 @@ export function sendMessage(data) {
 }
 
 /**
- * 流式发送消息给AI助手（SSE）- 支持事件分流
+ * 流式发送消息给助手（SSE）- 支持事件分流
  * @param {Object} data - 消息数据
  * @param {string} data.sessionId - 会话ID
  * @param {string} data.content - 消息内容
@@ -176,7 +176,7 @@ export function sendMessageStream(data, onMessage, onError, onComplete, onStatus
 }
 
 /**
- * 创建新的AI会话
+ * 创建新的会话
  * @param {Object} data - 会话数据
  * @param {string} data.title - 会话标题（可选）
  * @returns {Promise}
@@ -186,7 +186,7 @@ export function createSession(data = {}) {
 }
 
 /**
- * 获取用户的AI会话列表
+ * 获取用户的会话列表
  * @param {Object} params - 查询参数
  * @param {number} params.pageNum - 页码
  * @param {number} params.pageSize - 每页数量
@@ -218,7 +218,7 @@ export function getMessageList(params) {
 }
 
 /**
- * 删除AI会话
+ * 删除会话
  * @param {string} sessionId - 会话ID
  * @returns {Promise}
  */
@@ -246,7 +246,7 @@ export function clearSessionMessages(sessionId) {
 }
 
 /**
- * 获取AI推荐的快捷问题
+ * 获取推荐的快捷问题
  * @returns {Promise}
  */
 export function getSuggestions() {
@@ -254,7 +254,7 @@ export function getSuggestions() {
 }
 
 /**
- * 上传文件到AI会话
+ * 上传文件到会话
  * @param {FormData} formData - 包含文件的FormData对象
  * @param {string} sessionId - 会话ID
  * @returns {Promise}
@@ -289,7 +289,7 @@ export function getSessionStats() {
 }
 
 /**
- * 搜索用户的AI会话列表
+ * 搜索用户的会话列表
  * @param {Object} params - 查询参数
  * @param {string} params.keyword - 搜索关键词
  * @param {number} params.current - 当前页码

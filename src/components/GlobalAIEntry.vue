@@ -10,7 +10,7 @@
       >
         <!-- Tooltip Bubble -->
         <div class="ai-bubble" v-if="showBubble">
-           <span class="bubble-text">哈！我不仅会唱跳rap和篮球<br>还会为你解答</span>
+           <span class="bubble-text">哈！我不仅会唱跳rap and 篮球<br>还会为你解答</span>
            <div class="bubble-arrow"></div>
         </div>
         
@@ -28,7 +28,7 @@
       <!-- Minimized/Docked Mode -->
       <div class="ai-docked" v-if="isMinimized" @click="restore">
           <img src="@/assets/ai-avatar-lite.jpg" class="dock-avatar-img" draggable="false" />
-          <div class="dock-text">AI</div>
+          <div class="dock-text">助手</div>
       </div>
 
       <!-- New AI Assistant Overlay -->
@@ -41,9 +41,9 @@
              </div>
 
              <div class="mascot-section">
-                 <img src="@/assets/ai-avatar-lite.jpg" class="breathing-mascot" />
-                 <h2 class="mascot-greeting">Hello, 我是小只因!</h2>
-                 <p class="mascot-sub">您的智能生活助手，帮您找店、找优惠。</p>
+                  <img src="@/assets/ai-avatar-lite.jpg" class="breathing-mascot" />
+                  <h2 class="mascot-greeting">Hello, 我是小只因!</h2>
+                  <p class="mascot-sub">您的生活助手，帮您找店、找优惠。</p>
              </div>
 
              <div class="suggestion-chips">

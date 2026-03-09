@@ -538,10 +538,13 @@ export default {
            });
        }
     });
+    window.addEventListener('resize', this.calculateCategorySize);
+  },
+  deactivated() {
+    window.removeEventListener('resize', this.calculateCategorySize);
   },
   mounted() {
     this.calculateCategorySize();
-    window.addEventListener('resize', this.calculateCategorySize);
   },
   beforeUnmount() {
     window.removeEventListener('resize', this.calculateCategorySize);

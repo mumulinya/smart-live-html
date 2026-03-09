@@ -108,12 +108,11 @@
                        <!-- Main Content Area (Text + Optional Image Row) -->
                        <div class="rc-content-area">
                           <div class="rc-text-col">
-                              <!-- Optional Target Info for Orders/Products before content -->
-                              <div class="rc-target-info" v-if="r.reviewType === 'product' && r.productName">
-                                  商品：{{ r.productName }}
-                              </div>
-                              <div class="rc-target-info" v-if="r.orderId && r.reviewType !== 'shop'">
-                                  订单：{{ r.orderId }}
+                              <!-- 商品信息（订单评价时显示） -->
+                              <div class="rc-product-info" v-if="r.reviewType === 'product' && r.productName">
+                                  <img v-if="r.productCoverImg" :src="r.productCoverImg" class="rc-product-img" />
+                                  <span class="rc-product-name">{{ r.productName }}</span>
+                                  <span class="rc-product-price" v-if="r.productPrice">¥{{ Number(r.productPrice).toFixed(2) }}</span>
                               </div>
 
                               <!-- Review Content -->
@@ -122,8 +121,9 @@
                               </div>
 
                               <!-- Reject Reason (If rejected) -->
-                              <div class="rc-reject-reason" v-if="(r.status === 2 || r.status === 3) && r.rejectReason">
-                                  拒绝原因：{{ r.rejectReason }}
+                              <div class="rc-reject-reason" v-if="r.status === 2 || r.status === 3">
+                                  <van-icon name="warning-o" size="12" style="margin-right:3px;vertical-align:middle;" />
+                                  {{ r.rejectReason || '内容未通过审核，请修改后重新提交' }}
                               </div>
                           </div>
 
@@ -159,15 +159,11 @@
                                  class="btn-action edit-btn"
                                  @click.stop="onEditReview(r)"
                                >修改</van-button>
-                               <van-button 
+                               <span
                                  v-if="r.status === 0 || r.status === 2 || r.status === 3 || r.status === 4"
-                                 size="mini" 
-                                 plain 
-                                 type="danger" 
-                                 round 
-                                 class="btn-action"
+                                 class="btn-delete-text"
                                  @click.stop="onDeleteReview(r)"
-                               >删除</van-button>
+                               >删除</span>
                            </div>
                        </div>
                    </div>
@@ -515,22 +511,25 @@ export default {
               });
           }
           
-          return {
+           return {
               id: item.id,
-              shopName: item.sourceName || item.shopName || 'Unknown Shop',
+              shopName: item.shopName || item.sourceName || 'Unknown Shop',
               shopLogo: item.shopLogo ? (item.shopLogo.startsWith('http') ? item.shopLogo : this.$fileURL + item.shopLogo) : '',
               date: this.formatDate(item.createTime),
-              rating: item.score || item.rating || 0, // Changed from star to score/rating check
+              rating: item.score || item.rating || 0,
               content: item.content,
               images: images,
               viewCount: item.viewCount || 0,
-               likeCount: item.liked || item.likeCount || 0,
-               isLike: item.isLike === true || item.isLike === 1 || item.isLike === '1' || item.isLike === 'true',
-               expanded: false,
-               orderId: item.orderId,
-               sourceType: Number(item.sourceType || 2),
-               reviewType: Number(item.sourceType || 2) === 4 ? 'product' : 'shop',
-               status: item.status // Passed straight from backend
+              likeCount: item.liked || item.likeCount || 0,
+              isLike: item.isLike === true || item.isLike === 1 || item.isLike === '1' || item.isLike === 'true',
+              expanded: false,
+              sourceType: Number(item.sourceType || 2),
+              reviewType: Number(item.sourceType || 2) === 4 ? 'product' : 'shop',
+              productName: item.productName || '',
+              productPrice: item.productPrice || 0,
+              productCoverImg: item.productCoverImg ? (item.productCoverImg.startsWith('http') ? item.productCoverImg : this.$fileURL + item.productCoverImg) : '',
+              rejectReason: item.rejectReason || '',
+              status: item.status
            };
        },
 
@@ -742,9 +741,9 @@ export default {
 }
 
 .rc-shop-name {
-    font-size: 14px;
-    font-weight: 600;
-    color: #333;
+    font-size: 15px;
+    font-weight: 700;
+    color: #111;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -763,7 +762,7 @@ export default {
     white-space: nowrap;
 }
 
-.status-pending { background: #faad14; }
+.status-pending { background: #8c8c8c; }
 .status-rejected { background: #ff4d4f; }
 .status-draft { background: #bfbfbf; }
 
@@ -792,14 +791,37 @@ export default {
     min-width: 0;
 }
 
-.rc-target-info {
+.rc-product-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-size: 12px;
-    color: #999;
-    margin-bottom: 6px;
+    color: #666;
+    margin-bottom: 8px;
     background: #f7f8fa;
-    padding: 4px 8px;
-    border-radius: 4px;
-    display: inline-block;
+    padding: 6px 10px;
+    border-radius: 6px;
+}
+.rc-product-img {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 1px solid #eee;
+}
+.rc-product-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #333;
+}
+.rc-product-price {
+    flex-shrink: 0;
+    color: #ff4d4f;
+    font-weight: 600;
 }
 
 .rc-text-body {
@@ -876,6 +898,17 @@ export default {
     border-color: #1677ff !important;
 }
 
+.btn-delete-text {
+    font-size: 12px;
+    color: #999;
+    cursor: pointer;
+    line-height: 24px;
+    padding: 0 4px;
+}
+.btn-delete-text:active {
+    color: #ff4d4f;
+}
+
 .action-btn {
     display: flex;
     align-items: center;
@@ -914,9 +947,9 @@ export default {
     font-weight: 500;
 }
 .status-pending {
-    background: rgba(255, 153, 0, 0.85);
+    background: #8c8c8c;
 }
 .status-rejected {
-    background: rgba(255, 36, 66, 0.85);
+    background: #ff4d4f;
 }
 </style>

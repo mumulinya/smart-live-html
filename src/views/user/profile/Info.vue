@@ -481,9 +481,13 @@ export default {
          this.activeTab = tab;
          this.loadTabData(tab);
      }
+     window.addEventListener('scroll', this.handleWindowScroll, { passive: true });
+  },
+  deactivated() {
+      window.removeEventListener('scroll', this.handleWindowScroll);
   },
   mounted() {
-      window.addEventListener('scroll', this.handleWindowScroll, { passive: true });
+      // Listener moved to activated for keep-alive support
   },
   beforeUnmount() {
       window.removeEventListener('scroll', this.handleWindowScroll);

@@ -68,12 +68,7 @@
         </div>
       </div>
 
-      <!-- 底部按钮 -->
       <div class="v-row-bottom">
-        <button v-if="isSeckill" class="action-follow" :class="{ 'followed': isFollowed }" @click.stop="toggleFollow">
-          <span class="follow-icon" :class="{ 'bell-anim': bellAnim }">{{ isFollowed ? '✓' : '🔔' }}</span>
-          {{ isFollowed ? '已关注' : '关注提醒' }}
-        </button>
         <button class="action-btn" :style="btnStyle" :disabled="statusConfig.disabled" @click.stop="onActionClick">
           {{ statusConfig.label }}
         </button>
@@ -117,10 +112,6 @@
             <span class="g-discount-tag" v-if="discountText">{{ discountText }}</span>
           </div>
           <div class="g-btn-group">
-            <button v-if="isSeckill" class="action-follow small" :class="{ 'followed': isFollowed }" @click.stop="toggleFollow">
-              <span class="follow-icon" :class="{ 'bell-anim': bellAnim }">{{ isFollowed ? '✓' : '🔔' }}</span>
-              {{ isFollowed ? '已关注' : '关注提醒' }}
-            </button>
             <button class="action-btn small" :style="btnStyle" :disabled="statusConfig.disabled" @click.stop="onActionClick">
               {{ statusConfig.label }}
             </button>
@@ -163,8 +154,6 @@ export default {
   },
   data() {
     return {
-      isFollowed: false,
-      bellAnim: false,
       now: Date.now(),
       timer: null
     };
@@ -282,23 +271,14 @@ export default {
     if (this.isSeckill) {
       this.timer = setInterval(() => { this.now = Date.now(); }, 1000);
     }
-    if (this.item.isFollowed !== undefined) this.isFollowed = this.item.isFollowed;
-    else if (this.item.isFollow !== undefined) this.isFollowed = this.item.isFollow;
   },
   beforeUnmount() {
     if (this.timer) clearInterval(this.timer);
   },
   methods: {
-    onClick() { this.$emit('click', this.item); },
     onActionClick() {
       if (this.statusConfig.disabled) return;
       this.$emit('action', this.item);
-    },
-    toggleFollow() {
-      this.isFollowed = !this.isFollowed;
-      this.bellAnim = true;
-      setTimeout(() => { this.bellAnim = false; }, 600);
-      this.$emit('follow', this.item, this.isFollowed);
     }
   }
 };
@@ -483,24 +463,6 @@ export default {
 }
 
 /* Buttons */
-.action-follow {
-  height: 38px; padding: 0 14px;
-  border-radius: 19px;
-  border: 1.5px solid #eaeaea;
-  background: #fff; color: #666;
-  font-size: 13px; font-weight: 600;
-  display: flex; align-items: center; justify-content: center; gap: 4px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-.action-follow.followed {
-  border-color: #FF6B00; background: #fff8f5; color: #FF6B00;
-}
-.action-follow:active { transform: scale(0.96); }
-.action-follow.small { height: 34px; padding: 0 12px; font-size: 12px; flex: none; }
-.follow-icon { font-size: 14px; }
-.bell-anim { animation: bellShake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both; }
-
 .action-btn {
   flex: 1; height: 38px; border-radius: 19px; border: none;
   font-size: 14px; font-weight: 800; letter-spacing: 0.5px;
