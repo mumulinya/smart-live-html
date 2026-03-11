@@ -41,6 +41,9 @@
 </template>
 
 <script setup>
+defineOptions({
+  name: 'MyMoments'
+});
 import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { getFeedList } from '@/api/interaction';

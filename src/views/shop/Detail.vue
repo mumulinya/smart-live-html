@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <PageLayout :loading="isLoading" skeleton-type="detail" class="shop-detail-page">
 
     <!-- Static Header (Match Image) -->

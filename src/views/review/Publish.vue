@@ -81,13 +81,29 @@
 
       <!-- Editor Card -->
       <div class="card editor-card">
+        <AiReviewGenerate 
+            :shop-id="shopId"
+            :order-id="orderId"
+            :source-type="sourceType"
+            :source-id="sourceId"
+            :score="overallRating"
+            :taste-score="tasteScore"
+            :env-score="envScore"
+            :service-score="serviceScore"
+            @generated="handleAiGenerated"
+        />
         <textarea 
             v-model="content" 
             class="review-textarea" 
             placeholder="口味：&#10;服务：&#10;性价比：&#10;环境："
             rows="8"
+            @input="onContentInput"
         ></textarea>
-        <div class="word-count">已写{{ content.length }}个字</div>
+        <div class="word-count" style="display: flex; justify-content: space-between; align-items: center;">
+            <span v-if="aiWordCount > 0" style="color: #ff8e00; font-size: 12px;">已由 AI 生成 {{ aiWordCount }} 字，可在上方修改</span>
+            <span v-else></span>
+            <span>已写{{ content.length }}个字</span>
+        </div>
 
         <div class="media-section">
             <div class="media-list">
@@ -160,12 +176,16 @@ import { addReview, updateReview, getReview } from '@/api/reviews';
 import { getShopDetail } from '@/api/shop';
 import { getOrderDetail } from '@/api/order';
 import { uploadFile } from '@/api/common';
+import AiReviewGenerate from './AiReviewGenerate.vue';
 
 import { fileURL } from '@/utils/request';
 import { getCurrentUser } from '@/api/user';
 
 export default {
   name: 'ReviewPublish',
+  components: {
+    AiReviewGenerate
+  },
   data() {
     return {
       isEdit: false,
@@ -196,7 +216,8 @@ export default {
       
       overallLabels: ['很糟糕', '较差', '一般', '还可以', '很棒'],
       moodIcons: ['😖', '😞', '😐', '🙂', '😍'],
-      showExitDialog: false
+      showExitDialog: false,
+      aiWordCount: 0 // AI 生成的字数提示
     };
   },
   computed: {
@@ -209,7 +230,7 @@ export default {
       this.shopId = shopId;
       this.orderId = orderId;
       this.voucherId = voucherId;
-      this.sourceId = sourceId;
+      this.sourceId = sourceId || voucherId; // Fallback to voucherId if sourceId is null
 
       // Determine implicit source type
       if (sourceType) {
@@ -244,6 +265,15 @@ export default {
               this.showExitDialog = true;
           } else {
               this.$router.go(-1);
+          }
+      },
+      handleAiGenerated(content) {
+          this.content = content || '';
+          this.aiWordCount = this.content.length;
+      },
+      onContentInput() {
+          if (this.content.length !== this.aiWordCount && this.aiWordCount > 0) {
+              this.aiWordCount = 0; // 手动修改后取消字数提示
           }
       },
       confirmExit() {
@@ -320,10 +350,11 @@ export default {
                   this.envScore = data.envScore || 5;
                   this.serviceScore = data.serviceScore || 5;
 
-                  this.shopId = data.shopId || data.sourceId;
+                  this.shopId = data.shopId;
                   this.createTime = data.createTime;
                   
                   // Restore source info
+                  this.sourceId = data.sourceId; // Ensure sourceId is captured
                   if (data.sourceType) this.sourceType = data.sourceType;
                   else if (data.orderId) this.sourceType = 4;
                   

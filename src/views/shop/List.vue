@@ -196,84 +196,35 @@ export default {
   created() {
      this.onScroll = throttle(this.onScroll, 120);
      this.searchDebouncedRunner = debounce(() => this.doSearch(), 180);
-     this.typeName = this.$route.query.name || '';
-     this.params.typeId = parseInt(this.$route.query.type || 0);
-     this.selectedTypeId = this.params.typeId; // sync selected type
 
-     // Restore filters from Route
-     if (this.$route.query.distance) {
-         this.selectedDistance = this.$route.query.distance;
-     }
-     if (this.$route.query.score) {
-         this.selectedScore = this.$route.query.score;
-     }
-     if (this.$route.query.sort) {
-         this.selectedSort = this.$route.query.sort;
-     }
+     this.syncStateFromRouteQuery();
 
      this.loadTypes();
-     this.initLocation();
      this.loadUser();
+      this.initLocation();
   },
   mounted() {
      this.$nextTick(() => {
         this.setupShopSentinelObserver();
+        this.restoreScrollPosition();
      });
   },
   activated() {
-     // Keep-alive hook: sync state from URL if changed
-     const q = this.$route.query;
-     let changed = false;
-
-     // Sync Type
-     const typeId = parseInt(q.type || 0);
-     if (typeId !== this.selectedTypeId) {
-         this.selectedTypeId = typeId;
-         this.typeName = this.getShopTypeName(typeId);
-         changed = true;
-     }
-
-     // Sync Distance (Label)
-     const dist = q.distance || null;
-     if (dist !== this.selectedDistance) {
-         this.selectedDistance = dist;
-         changed = true;
-     }
-
-     // Sync Score (Label)
-     const score = q.score || null;
-     if (score !== this.selectedScore) {
-         this.selectedScore = score;
-         changed = true;
-     }
-
-     // Sync Sort
-     const sort = q.sort || 'hot';
-     if (sort !== this.selectedSort) {
-         this.selectedSort = sort;
-         changed = true;
-     }
-
-     if (changed) {
-         this.doSearch();
-     }
      this.$nextTick(() => {
         this.setupShopSentinelObserver();
-        if (this.$refs.shopListContainer) {
-            this.$refs.shopListContainer.scrollTop = this.savedScrollTop;
-        }
+        this.restoreScrollPosition();
      });
   },
   deactivated() {
+     this.captureScrollPosition();
      this.destroyShopSentinelObserver();
-     if (typeof this.onScroll?.cancel === 'function') {
-        this.onScroll.cancel();
-     }
-     if (typeof this.searchDebouncedRunner?.cancel === 'function') {
-        this.searchDebouncedRunner.cancel();
-     }
+  },
+  beforeRouteLeave(to, from, next) {
+     this.captureScrollPosition();
+     next();
   },
   beforeUnmount() {
+     this.captureScrollPosition();
      this.destroyShopSentinelObserver();
      if (typeof this.onScroll?.cancel === 'function') {
         this.onScroll.cancel();
@@ -283,7 +234,45 @@ export default {
      }
   },
   methods: {
-     triggerSearch(immediate = false) {
+     captureScrollPosition() {
+         const container = this.$refs.shopListContainer;
+         if (!container) return;
+         const top = Number(container.scrollTop);
+         if (Number.isFinite(top) && top >= 0) {
+            this.savedScrollTop = top;
+         }
+     },
+     restoreScrollPosition() {
+         const container = this.$refs.shopListContainer;
+         if (!container) return;
+         const targetTop = Number(this.savedScrollTop);
+         if (!Number.isFinite(targetTop) || targetTop < 0) return;
+
+         const apply = () => {
+            container.scrollTop = targetTop;
+         };
+
+         // Apply repeatedly to avoid late layout changes (images/skeleton) pulling it back to top.
+         apply();
+         if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(() => {
+               apply();
+               requestAnimationFrame(() => {
+                  apply();
+               });
+            });
+         }
+     },
+     syncStateFromRouteQuery() {
+         const q = this.$route.query || {};
+         this.typeName = q.name || '';
+         this.params.typeId = parseInt(q.type || 0);
+         this.selectedTypeId = this.params.typeId;
+         this.selectedDistance = q.distance || null;
+         this.selectedScore = q.score || null;
+         this.selectedSort = q.sort || 'hot';
+     },
+      triggerSearch(immediate = false) {
          if (immediate) {
             if (typeof this.searchDebouncedRunner?.cancel === 'function') {
                this.searchDebouncedRunner.cancel();
@@ -324,13 +313,13 @@ export default {
            const list = (res && res.data) || [];
            this.shopTypeList = [{ id: 0, name: '全部分类' }, ...list];
            
-           // Init selected type from route
+           // Sync route type only when this is a fresh enter (not one-time restore).
            const routeTypeId = parseInt(this.$route.query.type || 0);
            this.selectedTypeId = routeTypeId;
-        }).catch(err => {
-           console.error("Failed to load shop types", err);
-           this.shopTypeList = [{ id: 0, name: '全部分类' }];
-        });
+         }).catch(err => {
+            console.error("Failed to load shop types", err);
+            this.shopTypeList = [{ id: 0, name: 'All' }];
+         });
      },
      getShopTypeName(id) {
          if(!id) return '全部分类';
@@ -886,4 +875,3 @@ export default {
 .type-dropdown-mask { position: fixed; top: 90px; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 90; }
 
 </style>
-

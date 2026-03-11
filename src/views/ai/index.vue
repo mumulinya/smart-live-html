@@ -7,7 +7,7 @@
       </div>
       <div class="header-center">
         <span class="header-logo-icon"></span>
-        <span class="logo-text">{{ sessionTitle || '助手' }}</span>
+        <span class="logo-text">{{ sessionTitle || '小只因' }}</span>
       </div>
       <div class="header-right">
         <div class="tools">
@@ -50,7 +50,8 @@
                  :class="{ active: currentSessionId === item.id }"
                  @click="loadSession(item)">
               <div class="chat-item-content">
-                <div class="chat-title">{{ item.title }}</div>
+                <div class="chat-title" v-if="editingSessionId !== item.id" @click.stop="startEditTitle(item)">{{ item.title }}</div>
+                <input v-else class="chat-title-input" v-model="editingTitle" @blur="saveTitle(item)" @keyup.enter="saveTitle(item)" @click.stop />
                 <div class="chat-time">{{ formatTime(item.updateTime || item.createTime) }}</div>
               </div>
               <el-icon class="delete-icon" @click.stop="deleteHistory(item.id)"><Delete /></el-icon>
@@ -119,26 +120,24 @@
                <div class="hi-bubble">Hi</div>
             </div>
          </div>
-         <h3 class="welcome-title">Hello，我是助手</h3>
+         <h3 class="welcome-title">Hello，我是小只因</h3>
          <p class="welcome-desc">我是您的生活助手，我可以帮您查询附近的热门店铺<br>搜索超值商品服务，还能直接为您下单特惠商品，让生活更省心</p>
          
 	         <div class="suggestion-area">
 	            <div class="s-header">
 	               <span class="s-header-text">试试这样问我:</span>
-	               <span class="refresh-btn" :class="{ disabled: isSending }" @click="refreshSuggestions"><i class="el-icon-refresh-right"></i> 换一换</span>
+	               <span class="refresh-btn" :class="{ disabled: isSending || isRefreshingSuggestions }" @click="refreshSuggestions">
+                   <i :class="isRefreshingSuggestions ? 'el-icon-loading' : 'el-icon-refresh-right'"></i> 换一换
+                 </span>
 	            </div>
 	            <div class="suggestion-list">
-	               <div class="suggestion-card" :class="{ disabled: isSending }" @click="quickAsk('帮我找附近评分最高的火锅店')">
+	               <div class="suggestion-card" 
+                      v-for="(sug, sIndex) in suggestionsData" 
+                      :key="sIndex"
+                      :class="{ disabled: isSending }" 
+                      @click="quickAsk(sug)">
 	                  <div class="card-icon"><i class="el-icon-search"></i></div>
-	                  <span class="card-text">帮我找附近评分最高的火锅店</span>
-	               </div>
-	               <div class="suggestion-card" :class="{ disabled: isSending }" @click="quickAsk('查询附近的可用商品')">
-	                  <div class="card-icon"><i class="el-icon-search"></i></div>
-	                  <span class="card-text">查询附近的可用商品</span>
-	               </div>
-	               <div class="suggestion-card" :class="{ disabled: isSending }" @click="quickAsk('帮我下一单首选基础套餐券')">
-	                  <div class="card-icon"><i class="el-icon-search"></i></div>
-	                  <span class="card-text">帮我下一单首选基础套餐券</span>
+	                  <span class="card-text">{{ sug }}</span>
 	               </div>
 	            </div>
 	         </div>
@@ -437,6 +436,49 @@ const messageCurrent = ref(1);
 const isLoadingMoreMessages = ref(false);
 const noMoreMessages = ref(false);
 
+// 编辑标题相关
+const editingSessionId = ref(null);
+const editingTitle = ref('');
+
+const startEditTitle = (item) => {
+  editingSessionId.value = item.id;
+  editingTitle.value = item.title;
+  nextTick(() => {
+    // 聚焦输入框
+    const inputs = document.querySelectorAll('.chat-title-input');
+    if (inputs.length > 0) {
+      inputs[0].focus();
+    }
+  });
+};
+
+const saveTitle = async (item) => {
+  if (!editingSessionId.value) return;
+  const newTitle = editingTitle.value.trim();
+  
+  if (!newTitle || newTitle === item.title) {
+    editingSessionId.value = null;
+    return;
+  }
+  
+  try {
+    const res = await updateSessionTitle(item.id, newTitle);
+    if (res.success || res.code === 200) {
+      item.title = newTitle;
+      if (currentSessionId.value === item.id) {
+        sessionTitle.value = newTitle;
+      }
+      ElMessage.success('修改成功');
+    } else {
+      ElMessage.error(res.message || '修改失败');
+    }
+  } catch (error) {
+    console.error('修改标题失败:', error);
+    ElMessage.error('修改失败');
+  } finally {
+    editingSessionId.value = null;
+  }
+};
 
 // 切换侧边栏
 const toggleSidebar = () => {
@@ -564,7 +606,7 @@ const handleSend = async () => {
   // 检查登录状态
   const token = localStorage.getItem('token');
   if (!token) {
-    ElMessage.warning('请先登录后再使用助手');
+    ElMessage.warning('请先登录后再使用小只因');
     router.push('/user/login');
     return;
   }
@@ -757,11 +799,44 @@ const quickAsk = (text) => {
   handleSend();
 };
 
+const suggestionsData = ref([]);
+const isRefreshingSuggestions = ref(false);
+
+// 加载推荐提问
+const loadSuggestions = async () => {
+  try {
+    isRefreshingSuggestions.value = true;
+    const res = await getSuggestions();
+    if (res.success || res.code === 200) {
+      if (Array.isArray(res.data) && res.data.length > 0) {
+        suggestionsData.value = res.data;
+      } else {
+        // Fallback to defaults if empty
+        suggestionsData.value = [
+          '帮我找附近评分最高的火锅店',
+          '查询附近的可用商品',
+          '帮我下一单首选基础套餐券'
+        ];
+      }
+    }
+  } catch (error) {
+    console.error('获取推荐提问失败', error);
+    if(suggestionsData.value.length === 0) {
+       suggestionsData.value = [
+          '帮我找附近评分最高的火锅店',
+          '查询附近的可用商品',
+          '帮我下一单首选基础套餐券'
+       ];
+    }
+  } finally {
+    isRefreshingSuggestions.value = false;
+  }
+};
+
 // 刷新建议
 const refreshSuggestions = () => {
-  if (isSending.value) return;
-  ElMessage.info('正在刷新建议...');
-  // 待办：可调用 API 获取新的建议
+  if (isSending.value || isRefreshingSuggestions.value) return;
+  loadSuggestions();
 };
 
 // 创建新会话
@@ -769,37 +844,27 @@ const createSession = async () => {
   // 检查登录状态
   const token = localStorage.getItem('token');
   if (!token) {
-    ElMessage.warning('请先登录后再使用助手');
+    ElMessage.warning('请先登录后再使用小只因');
     router.push('/user/login');
     return;
   }
 
-  try {
-    // 停止当前流式传输
-    if (currentEventSource.value) {
-      currentEventSource.value.close();
-      currentEventSource.value = null;
-    }
+  // 停止当前流式传输
+  if (currentEventSource.value) {
+    currentEventSource.value.close();
+    currentEventSource.value = null;
+  }
 
-    const res = await createSessionAPI({ title: '新对话' });
-    if (res.success || res.code === 200) {
-      // 兼容 data 为对象或直接为 ID 的情况
-      const id = (res.data && typeof res.data === 'object')
-        ? (res.data.sessionId || res.data.id)
-        : res.data;
-
-      currentSessionId.value = id;
-      messages.value = [];
-      currentTopic.value = ''; // 重置话题
-      sessionTitle.value = ''; // 重置会话标题
-      sidebarVisible.value = false; // 关闭侧边栏
-      ElMessage.success('新会话已创建');
-    } else {
-      ElMessage.error(res.message || '创建会话失败');
-    }
-  } catch (error) {
-    console.error('创建会话失败:', error);
-    ElMessage.error('创建会话失败');
+  // 纯前端重置状态，回到无会话的欢迎页
+  currentSessionId.value = null;
+  messages.value = [];
+  currentTopic.value = ''; // 重置话题
+  sessionTitle.value = ''; // 重置会话标题
+  sidebarVisible.value = false; // 关闭侧边栏
+  
+  // 确保处于主对话界面
+  if (route.path !== '/ai') {
+    router.push('/ai');
   }
 };
 
@@ -1688,6 +1753,7 @@ const goToMap = (shop) => {
 onMounted(() => {
   scrollToBottom();
   checkLoginStatus();
+  loadSuggestions(); // 首次加载推荐
   document.addEventListener('fullscreenchange', handleFullscreenChange);
 
   // 如果 URL 带 query，自动发送
@@ -1919,6 +1985,18 @@ onUnmounted(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
   margin-bottom: 4px;
+}
+.chat-title-input {
+  font-size: 14px;
+  color: #1f2937;
+  font-weight: 500;
+  width: 100%;
+  border: 1px solid #3b82f6;
+  border-radius: 4px;
+  padding: 2px 4px;
+  margin-bottom: 2px;
+  outline: none;
+  background: white;
 }
 .chat-time {
   font-size: 12px;

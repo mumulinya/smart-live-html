@@ -31,9 +31,15 @@
         <div class="input-section">
             <div class="title-input-box">
                 <input v-model="params.title" type="text" placeholder="填写标题更容易上首页哦~" @input="checkSubmitStatus" class="title-input">
+                <div class="ai-titles-row" v-if="aiTitles && aiTitles.length > 0">
+                    <span class="ai-title-tag" v-for="(t, idx) in aiTitles" :key="idx" @click="selectAiTitle(t)">
+                        {{ t }}
+                    </span>
+                </div>
             </div>
             <div class="content-input-box">
                 <textarea v-model="params.content" placeholder="最近打卡了什么地方，有什么新奇体验呢？" @input="checkSubmitStatus" class="content-input"></textarea>
+                <div class="word-count" v-if="aiWordCount > 0">已由 AI 生成 {{ aiWordCount }} 字，可在上方修改</div>
             </div>
         </div>
 
@@ -50,6 +56,13 @@
                 </div>
             </div>
         </div>
+
+        <!-- AI 博客生成组件 -->
+        <AiBlogGenerate 
+          :shop-id="selectedShop.id" 
+          :shop-name="selectedShop.name"
+          @generated="handleAiGenerated" 
+        />
 
         <!-- Footer Actions -->
         <div class="footer-action">
@@ -136,9 +149,13 @@ import { saveBlog, getBlogDetail, updateBlog } from "@/api/blog";
 import { searchShopsByName, getShopDetail } from "@/api/shop";
 import { getCurrentUser } from "@/api/user";
 import { locationUtil } from "@/utils/location";
+import AiBlogGenerate from "./AiBlogGenerate.vue";
 
 export default {
   name: "BlogEdit",
+  components: {
+    AiBlogGenerate
+  },
   data() {
     return {
       fileList: [], // Display URLs
@@ -165,7 +182,9 @@ export default {
       originalData: null, // Store original data for comparison
       currentArea: '佛山', // 默认为佛山，实际可从定位或缓存获取
       showCityDialog: false,
-      hotCities: ['佛山','上海','北京','深圳','广州','成都','南京','武汉','西安','杭州']
+      hotCities: ['佛山','上海','北京','深圳','广州','成都','南京','武汉','西安','杭州'],
+      aiWordCount: 0, // AI 生成的字数提示
+      aiTitles: [] // AI 生成的候选标题
     };
   },
   created() {
@@ -243,7 +262,28 @@ export default {
         showClose: true
       });
     },
+    handleAiGenerated(data) {
+      if (typeof data === 'object' && data !== null && data.titles) {
+          this.params.content = data.content || '';
+          this.aiWordCount = data.content ? data.content.length : 0;
+          this.aiTitles = data.titles || [];
+          if (this.aiTitles.length > 0 && !this.params.title) {
+              this.params.title = this.aiTitles[0];
+          }
+      } else {
+          this.params.content = data || '';
+          this.aiWordCount = data ? data.length : 0;
+      }
+      this.checkSubmitStatus();
+    },
+    selectAiTitle(t) {
+        this.params.title = t;
+        this.checkSubmitStatus();
+    },
     checkSubmitStatus() {
+      if (this.params.content.length !== this.aiWordCount && this.aiWordCount > 0) {
+          this.aiWordCount = 0; // 手动修改后取消字数提示
+      }
       this.canSubmit = this.params.title.trim() !== '' &&
               this.params.content.trim() !== '' &&
               this.fileList.length > 0;
@@ -658,6 +698,27 @@ export default {
 }
 .title-input::placeholder { color: #ccc; font-weight: normal; }
 
+.ai-titles-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+.ai-title-tag {
+    background: #fff2e8;
+    color: #ff4d4f;
+    border: 1px solid #ffd8bf;
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.ai-title-tag:active {
+    background: #ffd8bf;
+    transform: scale(0.98);
+}
+
 .content-input {
     width: 100%;
     border: none;
@@ -669,6 +730,8 @@ export default {
     line-height: 1.6;
 }
 .content-input::placeholder { color: #ccc; }
+
+.word-count { text-align: right; color: #ff4d4f; font-size: 12px; margin-top: 5px; }
 
 /* Options Section */
 .options-section {

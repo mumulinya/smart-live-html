@@ -6,17 +6,28 @@ const routes = [
         path: '/',
         name: 'Home',
         component: () => import('@/views/home/Index.vue'),
-        meta: { keepAlive: true }
+        meta: {
+            keepAliveViewName: 'HomeIndex',
+            keepAliveFor: ['ShopList', 'ShopDetail', 'ProductDetail', 'BlogDetail', 'TopShops', 'ProductTopList', 'DealList', 'Search']
+        }
     },
     {
         path: '/search',
         name: 'Search',
-        component: () => import('@/views/search/Index.vue')
+        component: () => import('@/views/search/Index.vue'),
+        meta: {
+            keepAliveViewName: 'SearchIndex',
+            keepAliveScrollEl: '.search-page',
+            keepAliveFor: ['ShopDetail', 'ProductDetail', 'BlogDetail', 'OtherProfile', 'UserProfile']
+        }
     },
     {
         path: '/search/user',
         name: 'UserSearch',
-        component: () => import('@/views/search/UserSearch.vue')
+        component: () => import('@/views/search/UserSearch.vue'),
+        meta: {
+            keepAliveFor: ['BlogDetail', 'ShopDetail', 'ProductDetail']
+        }
     },
     {
         path: '/map',
@@ -40,13 +51,20 @@ const routes = [
         name: 'UserProfile',
         alias: ['/info', '/user/info'],
         component: () => import('@/views/user/profile/Info.vue'),
-        meta: { keepAlive: true }
+        meta: {
+            keepAliveViewName: 'UserInfo',
+            keepAliveFor: ['BlogDetail', 'ShopDetail', 'ProductDetail', 'OtherProfile', 'UserEdit', 'UserList', 'UserSearch', 'MyFollow', 'MyInteractions', 'MyReviews', 'Drafts', 'OrderList', 'UserWallet', 'UserPoints', 'MyMoments', 'AddFriend']
+        }
     },
     {
         path: '/user/profile/:id',
         name: 'OtherProfile',
         alias: '/user-info/:id',
-        component: () => import('@/views/user/profile/OtherInfo.vue')
+        component: () => import('@/views/user/profile/OtherInfo.vue'),
+        meta: {
+            keepAliveViewName: 'OtherInfo',
+            keepAliveFor: ['BlogDetail', 'ShopDetail', 'ProductDetail', 'UserList', 'OtherProfile', 'UserProfile']
+        }
     },
     {
         path: '/user/edit',
@@ -61,22 +79,35 @@ const routes = [
     {
         path: '/user/star',
         name: 'UserStar',
-        component: () => import('@/views/user/content/MyStar.vue')
+        component: () => import('@/views/user/content/MyStar.vue'),
+        meta: {
+            keepAliveViewName: 'MyStar',
+            keepAliveFor: ['BlogDetail', 'ShopDetail', 'ProductDetail', 'OtherProfile', 'UserProfile']
+        }
     },
     {
         path: '/user/follow',
         name: 'MyFollow',
-        component: () => import('@/views/user/social/MyFollow.vue')
+        component: () => import('@/views/user/social/MyFollow.vue'),
+        meta: {
+            keepAliveFor: ['ShopDetail', 'ProductDetail', 'OtherProfile', 'UserProfile']
+        }
     },
     {
         path: '/user/interactions',
         name: 'MyInteractions',
-        component: () => import('@/views/user/social/MyInteractions.vue')
+        component: () => import('@/views/user/social/MyInteractions.vue'),
+        meta: {
+            keepAliveFor: ['BlogDetail', 'ReviewDetail', 'ShopDetail', 'ProductDetail', 'OtherProfile', 'UserProfile']
+        }
     },
     {
         path: '/review/mine',
         name: 'MyReviews',
-        component: () => import('@/views/review/MyReviews.vue')
+        component: () => import('@/views/review/MyReviews.vue'),
+        meta: {
+            keepAliveFor: ['ReviewDetail', 'ReviewPublish']
+        }
     },
     {
         path: '/review/drafts',
@@ -86,7 +117,10 @@ const routes = [
     {
         path: '/drafts',
         name: 'Drafts',
-        component: () => import('@/views/draft/Index.vue')
+        component: () => import('@/views/draft/Index.vue'),
+        meta: {
+            keepAliveFor: ['ReviewPublish', 'BlogEdit']
+        }
     },
     {
         path: '/user/my-reviews',
@@ -96,13 +130,18 @@ const routes = [
         path: '/user/list',
         name: 'UserList',
         component: () => import('@/views/user/social/UserList.vue'),
-        props: route => ({ type: route.query.type })
+        props: route => ({ type: route.query.type }),
+        meta: {
+            keepAliveFor: ['OtherProfile', 'UserProfile']
+        }
     },
     {
         path: '/user/moments',
         name: 'MyMoments',
         component: () => import('@/views/user/content/MyMoments.vue'),
-        meta: { keepAlive: true }
+        meta: {
+            keepAliveFor: ['BlogDetail', 'ProductDetail', 'OtherProfile', 'UserProfile']
+        }
     },
     {
         path: '/user/password/update',
@@ -164,29 +203,44 @@ const routes = [
     {
         path: '/shop/list',
         name: 'ShopList',
-        component: () => import('@/views/shop/List.vue')
+        component: () => import('@/views/shop/List.vue'),
+        meta: { keepAliveFor: ['ShopDetail'], keepAliveScrollEl: '.shop-list-content' }
     },
     {
         path: '/shop/top',
         name: 'TopShops',
-        component: () => import('@/views/shop/TopList.vue')
+        component: () => import('@/views/shop/TopList.vue'),
+        meta: {
+            keepAliveViewName: 'TopList',
+            keepAliveScrollEl: '.top-list-content',
+            keepAliveFor: ['ShopDetail']
+        }
     },
     {
         path: '/shop/detail',
         name: 'ShopDetail',
-        component: () => import('@/views/shop/Detail.vue')
+        component: () => import('@/views/shop/Detail.vue'),
+        meta: { keepAliveFor: ['ProductDetail', 'ReviewDetail', 'ReviewPublish', 'OtherProfile', 'UserProfile'] }
     },
     {
         path: '/product/top',
         name: 'ProductTopList',
-        component: () => import('@/views/product/TopList.vue')
+        component: () => import('@/views/product/TopList.vue'),
+        meta: {
+            keepAliveViewName: 'TopList',
+            keepAliveScrollEl: '.top-list-content',
+            keepAliveFor: ['ProductDetail']
+        }
     },
 
     // Blog Module
     {
         path: '/blog/detail',
         name: 'BlogDetail',
-        component: () => import('@/views/blog/Detail.vue')
+        component: () => import('@/views/blog/Detail.vue'),
+        meta: {
+            keepAliveFor: ['ShopDetail', 'ReviewDetail', 'BlogEdit']
+        }
     },
     {
         path: '/blog/edit',
@@ -198,22 +252,36 @@ const routes = [
     {
         path: '/order/list',
         name: 'OrderList',
-        component: () => import('@/views/order/List.vue')
+        component: () => import('@/views/order/List.vue'),
+        meta: {
+            keepAliveFor: ['OrderDetail', 'ReviewPublish', 'ReviewDetail', 'PayCheckout']
+        }
     },
     {
         path: '/order/detail',
         name: 'OrderDetail',
-        component: () => import('@/views/order/Detail.vue')
+        component: () => import('@/views/order/Detail.vue'),
+        meta: {
+            keepAliveFor: ['ReviewPublish', 'PayCheckout']
+        }
     },
     {
         path: '/product/detail',
         name: 'ProductDetail',
-        component: () => import('@/views/product/Detail.vue')
+        component: () => import('@/views/product/Detail.vue'),
+        meta: {
+            keepAliveFor: ['ShopDetail', 'OrderDetail', 'ReviewDetail', 'OtherProfile', 'UserProfile']
+        }
     },
     {
         path: '/deal/list',
         name: 'DealList',
-        component: () => import('@/views/deal/Index.vue')
+        component: () => import('@/views/deal/Index.vue'),
+        meta: {
+            keepAliveViewName: 'DealListIndex',
+            keepAliveScrollEl: '.deal-list',
+            keepAliveFor: ['ProductDetail']
+        }
     },
 
     // Social (Chat/Comment) Module
@@ -265,9 +333,23 @@ const router = createRouter({
     scrollBehavior(to, from, savedPosition) {
         if (savedPosition) {
             return savedPosition;
-        } else if (to.path !== from.path) {
+        }
+
+        const toAllowedChildren = Array.isArray(to.meta?.keepAliveFor)
+            ? to.meta.keepAliveFor.map((name) => String(name))
+            : [];
+        const fromName = from?.name ? String(from.name) : '';
+
+        // Back to an allowed parent list/detail route: keep current window scroll.
+        if (fromName && toAllowedChildren.includes(fromName)) {
+            return false;
+        }
+
+        if (to.path !== from.path) {
             return { top: 0 };
         }
+
+        return false;
     }
 })
 

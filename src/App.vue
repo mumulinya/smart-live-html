@@ -8,6 +8,7 @@ import { getUserSessions } from '@/api/chat';
 import { AUTH_CHANGED_EVENT } from '@/utils/auth-event';
 import { getSystemNoticeUnreadCount, resolveSystemNoticeUnreadCount } from '@/api/systemNotice';
 import { addSystemNotice, getSystemUnreadCount } from '@/utils/systemNotice';
+import SmartKeepAlive from '@/components/SmartKeepAlive.vue';
 
 let currentUserId = null;
 const keepAliveVersion = ref(0);
@@ -130,11 +131,7 @@ const handleAuthChanged = (event) => {
 </script>
 
 <template>
-  <router-view v-slot="{ Component }">
-    <keep-alive :key="keepAliveVersion" include="OrderList,MyStar,MyFollow,MyInteractions,Drafts,ListPage,MyReviews,UserInfo,HomeIndex,SearchIndex,UserSearch,ShopList">
-      <component :is="Component" />
-    </keep-alive>
-  </router-view>
+  <SmartKeepAlive :cache-version="keepAliveVersion" />
   <GlobalAIEntry v-if="showAIEntry" />
 </template>
 

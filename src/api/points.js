@@ -7,7 +7,7 @@ export function getPointsInfo() {
 
 // 获取积分明细列表
 export function getPointsRecordList(params) {
-    return request.get('/app/points/record/list', { params });
+    return request.get('/app/points/record/listByUserId', { params });
 }
 
 // 执行签到

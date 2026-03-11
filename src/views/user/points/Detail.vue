@@ -9,13 +9,13 @@
     />
 
     <div class="detail-content">
-      <van-tabs v-model:active="activeTab" animated swipeable color="#ff7a00" @change="handleTabChange">
-        <van-tab title="全部" name="all" />
-        <van-tab title="收入" name="in" />
-        <van-tab title="支出" name="out" />
+      <van-tabs v-model:active="activeTab" animated swipeable color="#ff7a00" title-active-color="#ff7a00" @change="handleTabChange">
+        <van-tab title="全部" :name="0" />
+        <van-tab title="收入" :name="1" />
+        <van-tab title="支出" :name="2" />
       </van-tabs>
 
-      <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
+      <van-pull-refresh v-model="refreshing" @refresh="onRefresh" success-text="刷新成功">
         <van-list
           v-model:loading="loading"
           :finished="finished"
@@ -23,24 +23,23 @@
           @load="onLoad"
         >
           <div v-if="records.length === 0 && !loading" class="empty-state">
-            <van-icon name="points" class="empty-icon" />
+            <div class="empty-emoji">📝</div>
             <div class="empty-text">快去签到或消费赚积分吧~</div>
           </div>
-          <div v-else class="timeline">
+          <div v-else class="record-list">
             <div
-              v-for="(item, index) in records"
+              v-for="item in records"
               :key="item.id"
-              class="timeline-item"
+              class="record-item"
             >
-              <div class="timeline-left">
-                <div class="dot"></div>
-                <div v-if="index !== records.length - 1" class="line"></div>
+              <div class="record-icon-wrap" :class="item.type === 1 ? 'income' : 'expense'">
+                <span class="record-emoji">{{ item.type === 1 ? '📥' : '📤' }}</span>
               </div>
-              <div class="timeline-content">
-                <div class="item-time">{{ item.date }}</div>
-                <div class="item-desc">{{ item.desc }}</div>
+              <div class="record-content">
+                <div class="record-desc">{{ item.desc }}</div>
+                <div class="record-time">{{ item.date }}</div>
               </div>
-              <div class="timeline-amount" :class="item.type === 'in' ? 'in' : 'out'">
+              <div class="record-amount" :class="item.type === 1 ? 'in' : 'out'">
                 {{ formatAmount(item) }}
               </div>
             </div>
@@ -61,7 +60,7 @@ export default {
   data() {
     return {
       pageLoading: false,
-      activeTab: 'all',
+      activeTab: 0,
       refreshing: false,
       loading: false,
       finished: false,
@@ -86,41 +85,43 @@ export default {
       this.loading = true;
       if (isRefresh) {
         this.refreshing = true;
-        this.records = []; // Clear immediately on refresh
+        this.records = [];
       }
       this.onLoad();
     },
     async onLoad() {
-      if (this.refreshing) {
-          // If refreshing, we might have cleared records, but if not, logic is same.
-      }
-      
       try {
         const params = {
           page: this.page,
-          pageSize: this.pageSize,
-          type: this.activeTab
+          pageSize: this.pageSize
         };
+        // type: 1=收入, 2=消费, 不传=全部
+        if (this.activeTab) {
+          params.type = this.activeTab;
+        }
         const res = await getPointsRecordList(params);
         if (res.success) {
-          const newRecords = res.data.records || [];
+          // 适配可能直接返回数组或对象中包含 list/records 的情况
+          const newRecords = Array.isArray(res.data) ? res.data : (res.data.list || res.data.records || []);
+          
           if (this.page === 1) {
             this.records = newRecords;
           } else {
             this.records = this.records.concat(newRecords);
           }
-          
+
           this.loading = false;
           this.refreshing = false;
 
-          if (this.records.length >= res.data.total) { // Or check newRecords.length < pageSize
+          // 如果返回的数据少于每页大小，或者没有更多数据（适配 List 直接返回的情况）
+          if (newRecords.length < this.pageSize || (res.data.total !== undefined && this.records.length >= res.data.total)) {
             this.finished = true;
           } else {
             this.page += 1;
           }
         } else {
-           this.loading = false;
-           this.finished = true;
+          this.loading = false;
+          this.finished = true;
         }
       } catch (error) {
         console.error('Fetch points records failed', error);
@@ -129,20 +130,9 @@ export default {
       }
     },
     formatAmount(item) {
-      // Backend might return signed value or we handle it here. 
-      // Assumption: backend returns absolute value and type.
-      const sign = item.type === 'in' || item.type === 1 ? '+' : '-';
-      return `${sign}${item.value || item.amount}`; 
-      // Compatible with 'value' (mock) or 'amount' (db) if map happens in backend or here.
-      // Based on API doc: data.records item has `value`.
+      const sign = item.type == 1 ? '+' : '-';
+      return `${sign}${item.value || item.amount}`;
     }
-  },
-  mounted() {
-    // Initial load handled by van-list or manual call? 
-    // van-list with v-model:loading="loading" will trigger load if not enough content.
-    // But safely we can call it if list is empty.
-    // Because immediate-check is true by default for van-list, it might auto trigger.
-    // Let's rely on van-list immediate check or set it manually.
   }
 };
 </script>
@@ -153,68 +143,91 @@ export default {
   background: #f5f5f5;
 }
 .detail-content {
-  padding: 8px 12px 16px;
+  padding: 0 0 16px;
 }
-.timeline {
-  padding: 8px 0;
+
+/* ===== 列表样式 ===== */
+.record-list {
+  padding: 8px 12px;
 }
-.timeline-item {
+.record-item {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 12px 0;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #fff;
+  border-radius: 14px;
+  margin-bottom: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  transition: transform 0.2s ease;
 }
-.timeline-left {
-  width: 12px;
+.record-item:active {
+  transform: scale(0.98);
+}
+
+.record-icon-wrap {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.record-icon-wrap.income {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+}
+.record-icon-wrap.expense {
+  background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+}
+.record-emoji {
+  font-size: 20px;
+}
+
+.record-content {
+  flex: 1;
+  min-width: 0;
+}
+.record-desc {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+  margin-bottom: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.record-time {
+  font-size: 11px;
+  color: #bbb;
+}
+
+.record-amount {
+  font-size: 16px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.record-amount.in {
+  color: #00b578;
+}
+.record-amount.out {
+  color: #ff4d4f;
+}
+
+/* ===== 空状态 ===== */
+.empty-state {
+  padding: 60px 0;
+  text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 12px;
 }
-.dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #ffb74d;
-  margin-top: 3px;
-}
-.line {
-  width: 2px;
-  flex: 1;
-  background: #ffe0b2;
-  margin-top: 6px;
-}
-.timeline-content {
-  flex: 1;
-}
-.item-time {
-  font-size: 12px;
-  color: #999;
-  margin-bottom: 4px;
-}
-.item-desc {
-  font-size: 14px;
-  color: #333;
-}
-.timeline-amount {
-  font-size: 14px;
-  font-weight: 600;
-}
-.timeline-amount.in {
-  color: #00b578;
-}
-.timeline-amount.out {
-  color: #ff4d4f;
-}
-.empty-state {
-  padding: 40px 0;
-  text-align: center;
-  color: #999;
-}
-.empty-icon {
-  font-size: 32px;
-  margin-bottom: 8px;
+.empty-emoji {
+  font-size: 48px;
 }
 .empty-text {
-  font-size: 13px;
+  font-size: 14px;
+  color: #bbb;
 }
 </style>

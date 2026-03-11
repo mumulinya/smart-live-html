@@ -614,23 +614,32 @@ export default {
          return this.user && this.blog && this.user.id === this.blog.userId;
      }
   },
+  watch: {
+     '$route.query.id'(newId, oldId) {
+        const nextId = newId === null || newId === undefined ? '' : String(newId);
+        const prevId = oldId === null || oldId === undefined ? '' : String(oldId);
+        if (!nextId || nextId === prevId) return;
+        this.loadByRouteId(nextId, { resetScroll: true });
+     }
+  },
   created() {
      this.onPopupScroll = throttle(this.onPopupScroll, 120);
-     const id = this.$route.query.id;
-     if(id) {
-        this.pageLoading = true;
-        this.queryBlogById(id).finally(() => this.pageLoading = false);
-        this.loadComments(id);
-
-        const token = localStorage.getItem("token");
-        if(token) {
-           this.queryLoginUser();
-        }
+     const id = this.normalizeRouteBlogId();
+     if (id) {
+        this.loadByRouteId(id);
      }
   },
   mounted() {
      this.setupCommentObserver();
      window.addEventListener('scroll', this.onWindowScroll, { passive: true });
+  },
+  activated() {
+     const routeId = this.normalizeRouteBlogId();
+     if (!routeId) return;
+     const currentBlogId = this.blog && this.blog.id !== null && this.blog.id !== undefined ? String(this.blog.id) : '';
+     if (routeId !== currentBlogId) {
+        this.loadByRouteId(routeId, { resetScroll: true });
+     }
   },
   beforeUnmount() {
      if (this.commentObserver) {
@@ -643,6 +652,53 @@ export default {
      window.removeEventListener('scroll', this.onWindowScroll);
   },
   methods: {
+     normalizeRouteBlogId(route = this.$route) {
+        const rawId = route && route.query ? route.query.id : '';
+        if (rawId === null || rawId === undefined || rawId === '') return '';
+        return String(rawId);
+     },
+     loadByRouteId(id, options = {}) {
+        const routeId = id === null || id === undefined ? '' : String(id);
+        if (!routeId) return Promise.resolve();
+
+        const { resetScroll = false } = options;
+        this.pageLoading = true;
+        this.blog = {};
+        this.shop = {};
+        this.likes = [];
+        this.comments = [];
+        this.aiComment = null;
+        this.commentsPage = 1;
+        this.commentsNoMore = false;
+        this.commentLoadArmed = false;
+        this.currentImageIndex = 0;
+        this.showMenu = false;
+
+        if (resetScroll) {
+          this.$nextTick(() => {
+            if (this.$refs.scrollContainer) {
+              this.$refs.scrollContainer.scrollTop = 0;
+            }
+            if (typeof window !== 'undefined') {
+              window.scrollTo(0, 0);
+            }
+          });
+        }
+
+        const tasks = [
+          this.queryBlogById(routeId),
+          this.loadComments(routeId, true)
+        ];
+
+        const token = localStorage.getItem('token');
+        if (token && (!this.user || !this.user.id)) {
+          tasks.push(this.queryLoginUser());
+        }
+
+        return Promise.allSettled(tasks).finally(() => {
+          this.pageLoading = false;
+        });
+     },
      onCommentSortChange(type) {
          if (!type || this.commentSortType === type) return;
          this.commentSortType = type;
@@ -776,7 +832,7 @@ export default {
         });
      },
      queryLoginUser() {
-        getCurrentUser().then(res => {
+        return getCurrentUser().then(res => {
            this.user = res.data || res || {};
            if (this.user.data) this.user = this.user.data; // Double check
            

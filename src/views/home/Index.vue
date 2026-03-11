@@ -558,7 +558,7 @@ export default {
       // On wide screens (web/tablet), show all of them at once without swiping.
       // Mobile keeps it at 8 for standard swiping.
       if (width >= 768) {
-         this.categoryPageSize = Math.max(totalLen, 10);
+         this.categoryPageSize = totalLen;
       } else {
          this.categoryPageSize = 8;
       }
@@ -1254,8 +1254,9 @@ export default {
 
 @media screen and (min-width: 768px) {
   .type-page {
-    grid-template-columns: repeat(10, minmax(0, 1fr)); /* Desktop can afford all 10 per row */
-    gap: 20px 0;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); /* Desktop wraps nicely */
+    gap: 20px 10px;
+    justify-content: start;
   }
 }
 .type-box {

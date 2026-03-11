@@ -298,3 +298,32 @@ export function getSessionStats() {
 export function searchSession(params) {
     return request.get('/app/ai/session/search', { params });
 }
+
+/**
+ * AI 生成博客正文
+ * @param {Object} data 
+ * @param {number} data.shopId 店铺ID (必填)
+ * @param {string} data.description 用户简短描述 (选填)
+ * @param {number} data.style 风格0=探店,1=种草,2=避雷 (选填)
+ * @returns {Promise}
+ */
+export function generateBlog(data) {
+    return request.post('/app/ai/generate/blog', data, { timeout: 180000 });
+}
+
+/**
+ * AI 生成评价正文
+ * @param {Object} data 
+ * @param {number} data.shopId 店铺ID (必填)
+ * @param {number} data.orderId 订单ID (选填)
+ * @param {number} data.sourceType 来源类型 1=店铺 2=商品 (选填)
+ * @param {number} data.score 自评总分 (选填)
+ * @param {number} data.tasteScore 口味分 (选填)
+ * @param {number} data.envScore 环境分 (选填)
+ * @param {number} data.serviceScore 服务分 (选填)
+ * @param {string} data.description 体验描述 (选填)
+ * @returns {Promise}
+ */
+export function generateReview(data) {
+    return request.post('/app/ai/generate/review', data, { timeout: 180000 });
+}

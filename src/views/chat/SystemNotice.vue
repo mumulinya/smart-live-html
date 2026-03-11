@@ -47,6 +47,32 @@
             </div>
           </div>
 
+          <div class="product-brief" v-if="item.productView" @click.stop="openNotice(item)">
+            <DealCard 
+              :item="item.productView.data" 
+              :biz="item.productView.biz"
+              :isSeckill="item.productView.isSeckill"
+            />
+          </div>
+
+          <div class="order-brief" v-if="item.orderView" @click.stop="openNotice(item)">
+            <div class="order-main">
+              <div class="order-cover" v-if="item.orderView.cover">
+                <img :src="item.orderView.cover" alt="order" />
+              </div>
+              <div class="order-info">
+                <div class="order-title">{{ item.orderView.title }}</div>
+                <div class="order-id">订单号：{{ item.orderView.orderId }}</div>
+                <div class="order-expire" v-if="item.orderView.expireTime">到期时间：{{ item.orderView.expireTime }}</div>
+                <div class="order-action">
+                  <span>立即使用</span>
+                  <i class="el-icon-arrow-right"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+
+
           <div class="review-brief" v-if="item.reviewView">
             <div class="review-score-main" v-if="item.reviewView.showScore">{{ item.reviewView.scoreText }}</div>
             <div class="review-content" v-if="item.reviewView.content">
@@ -117,6 +143,7 @@
 
 <script>
 import { showImagePreview } from 'vant';
+import DealCard from '@/components/DealCard.vue';
 import { wsManager } from '@/utils/websocket';
 import { chatStore } from '@/store/chat';
 import {
@@ -138,6 +165,9 @@ import {
 
 export default {
   name: 'SystemNotice',
+  components: {
+    DealCard
+  },
   data() {
     return {
       notices: [],
@@ -172,6 +202,8 @@ export default {
       this.notices = list.map((item) => ({
         ...item,
         voucherView: this.buildVoucherView(item),
+        productView: this.buildProductView(item),
+        orderView: this.buildOrderView(item),
         reviewView: this.buildReviewView(item),
         noteView: this.buildNoteView(item)
       }));
@@ -262,6 +294,8 @@ export default {
       return '';
     },
     resolveNoticeOpenPath(item) {
+      if (item?.productView?.targetPath) return item.productView.targetPath;
+      if (item?.orderView?.targetPath) return item.orderView.targetPath;
       if (item?.reviewView?.targetPath) return item.reviewView.targetPath;
       if (item?.noteView?.targetPath) return item.noteView.targetPath;
       const sourcePath = this.resolveSourceTargetPath(item);
@@ -282,6 +316,9 @@ export default {
     buildVoucherView(item) {
       const extra = item?.extraData;
       if (!extra || typeof extra !== 'object') return null;
+
+      const isOrderExpire = extra.action === 'order_expire' || (item.title && (item.title.includes('订单过期') || item.title.includes('订单提醒')));
+      if (isOrderExpire) return null;
 
       const sourceType = Number(item.sourceType || 0);
       const extraSourceType = Number(extra.sourceType || 0);
@@ -354,7 +391,85 @@ export default {
         targetPath
       };
     },
+    buildProductView(item) {
+      const extra = item?.extraData;
+      if (!extra || typeof extra !== 'object') return null;
+
+      const isProductNew = item.title && (item.title.includes('商品上新') || item.title.includes('新品推荐') || item.title.includes('商品新品'));
+      const isActionNew = extra.action === 'new' || extra.subType === 'new' || extra.dataType === 'shop_new';
+
+      if (!isProductNew && !isActionNew) return null;
+
+      const title = extra.title || extra.content || item.content || item.title;
+      const price = extra.price ?? extra.score ?? item.score ?? 0;
+      const originalPrice = extra.originalPrice ?? 0;
+      const images = this.resolveNoticeImages(extra.images || item.images, 1);
+      const coverImg = images.length > 0 ? images[0] : '';
+      
+      const dealItem = {
+        title,
+        price,
+        originalPrice,
+        coverImg,
+        sold: extra.sold ?? 0,
+        stock: extra.stock ?? 0,
+        validDate: '新品上架',
+        status: 'active',
+        discount: extra.discount,
+        beginTime: extra.beginTime,
+        endTime: extra.endTime,
+        activityType: extra.activityType
+      };
+
+      const isGroup = extra.category === 2 || extra.productType === 2 || extra.type === 2;
+      const isSeckill = extra.activityType === 1;
+      
+      const productId = [
+        extra.productId,
+        extra.product_id,
+        extra.voucherId,
+        extra.voucher_id,
+        item.voucherId,
+        extra.targetId,
+        extra.target_id,
+        item.targetId,
+        item.target_id,
+        extra.id,
+        item.id
+      ].find(v => this.hasNoticeValue(v));
+
+      const targetPath = productId ? `/product/detail?id=${productId}` : '';
+
+      return {
+        data: dealItem,
+        biz: isGroup ? 'group' : 'voucher', // use voucher style for products by default
+        isSeckill,
+        targetPath
+      };
+    },
+    buildOrderView(item) {
+      const extra = item?.extraData;
+      if (!extra || typeof extra !== 'object') return null;
+
+      const isOrderExpire = extra.action === 'order_expire' || (item.title && (item.title.includes('订单过期') || item.title.includes('订单提醒')));
+      if (!isOrderExpire) return null;
+
+      const orderId = extra.id || extra.orderId || item.sourceId;
+      const title = extra.title || '订单商品';
+      const expireTime = extra.expireTime ? this.formatVoucherDate(extra.expireTime) : '';
+      const cover = this.resolveVoucherCover(extra.coverImg || extra.images);
+
+      return {
+        orderId,
+        title,
+        expireTime,
+        cover,
+        targetPath: orderId ? `/order/detail?id=${orderId}` : ''
+      };
+    },
     buildReviewView(item) {
+      if (this.buildProductView(item)) return null;
+      
       const extra = item?.extraData;
       if (!extra || typeof extra !== 'object') return null;
 
@@ -598,7 +713,11 @@ export default {
     },
     formatVoucherDate(value) {
       if (!value) return '';
-      const date = new Date(value);
+      // Handle numeric timestamps (including strings that consist only of digits)
+      const isNumeric = !isNaN(value) && !isNaN(parseFloat(value));
+      const dateValue = isNumeric ? Number(value) : value;
+      
+      const date = new Date(dateValue);
       if (Number.isNaN(date.getTime())) return '';
       const year = date.getFullYear();
       const month = `${date.getMonth() + 1}`.padStart(2, '0');
@@ -1131,6 +1250,69 @@ export default {
   font-size: 48px;
   margin-bottom: 10px;
   color: #ddd;
+}
+
+.order-brief {
+  margin-top: 10px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid #ebeef5;
+}
+
+.order-main {
+  display: flex;
+  align-items: center;
+}
+
+.order-cover {
+  width: 60px;
+  height: 60px;
+  margin-right: 12px;
+  border-radius: 4px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background-color: #f9f9f9;
+}
+
+.order-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.order-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.order-title {
+  font-size: 15px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.order-id, .order-expire {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 2px;
+}
+
+.order-action {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  color: #ff6600;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.order-action i {
+  margin-left: 2px;
 }
 </style>
 

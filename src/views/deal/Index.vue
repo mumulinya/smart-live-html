@@ -181,7 +181,7 @@
         :key="'deal-' + (item.id || idx)"
         :item="item"
         :biz="biz"
-        :is-seckill="isSeckillMode"
+        :is-seckill="item.activityType === 1 || isSeckillMode"
         @click="toProductDetail"
         @action="toProductDetail"
       />

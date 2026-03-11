@@ -31,7 +31,7 @@
       >
         <!-- User List (Tab 0) -->
         <template v-if="activeTab === 0">
-           <div class="user-row" v-for="item in list" :key="item.id">
+           <div class="user-row user-row-clickable" v-for="item in list" :key="item.id" @click="toUserDetail(item)">
               <div style="position: relative; width: 40px; height: 40px; margin-right: 12px; flex-shrink: 0;">
                   <van-image round width="40" height="40" :src="item.icon" class="user-avatar-img" :class="{ 'is-loaded': item.imgLoaded }" @load="item.imgLoaded = true" @error="item.imgError = true" style="margin-right: 0;" />
                   <div class="img-skeleton" style="width: 40px; height: 40px; border-radius: 50%; top: 0; left: 0;" v-if="!item.imgError && !item.imgLoaded"></div>
@@ -40,7 +40,7 @@
                  <div class="user-name">{{ item.name || item.nickName }}</div>
                  <div class="user-bio">{{ item.introduce || item.content || '暂无简介' }}</div>
               </div>
-              <van-button size="small" round color="#eee" class="followed-btn">已关注</van-button>
+              <van-button size="small" round color="#eee" class="followed-btn" @click.stop>已关注</van-button>
            </div>
         </template>
 
@@ -182,6 +182,35 @@ const toShopDetail = (item) => {
 
 const toProductDetail = (item) => {
   router.push(`/product/detail?id=${item.id}`);
+};
+
+const resolveFollowUserId = (item) => {
+    if (!item || typeof item !== 'object') return null;
+    const candidates = [
+        item.targetId,
+        item.followUserId,
+        item.followedUserId,
+        item.userId,
+        item.id,
+        item.sourceId
+    ];
+
+    for (const candidate of candidates) {
+        if (candidate === null || candidate === undefined || candidate === '') continue;
+        return String(candidate);
+    }
+    return null;
+};
+
+const toUserDetail = (item) => {
+    const targetUserId = resolveFollowUserId(item);
+    if (!targetUserId) return;
+
+    if (userId.value && String(userId.value) === targetUserId) {
+        router.push('/user/profile');
+        return;
+    }
+    router.push(`/user/profile/${targetUserId}`);
 };
 
 // Map tab to sourceType: User(1), Shop(2), Goods(4)

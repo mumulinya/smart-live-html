@@ -1,4 +1,7 @@
 <script setup>
+defineOptions({
+  name: 'ProductDetail'
+});
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { showToast, showConfirmDialog } from 'vant';
@@ -74,7 +77,6 @@ onMounted(() => {
         currTime.value = Date.now();
     }, 1000);
 });
-
 onUnmounted(() => {
     if (timer) clearInterval(timer);
 });

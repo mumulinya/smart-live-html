@@ -16,7 +16,7 @@
           :item="item" 
           :biz="sourceType === 2 ? 'group' : 'voucher'"
           :rank="index + 1"
-          :hot-score="formatScore(item.hotScore)"
+          :is-seckill="item.activityType === 1"
           @click="toDetail(item.id)"
           @action="toDetail(item.id)"
         />
@@ -161,17 +161,6 @@ export default {
     toDetail(id) {
       this.$router.push({ path: '/product/detail', query: { id } });
     },
-    formatScore(hotScore) {
-      const n = Number(hotScore);
-      if (!Number.isFinite(n) || n <= 0) return '0.0';
-      if (n >= 100000000) {
-        return (n / 100000000).toFixed(1) + '亿';
-      }
-      if (n >= 10000) {
-        return (n / 10000).toFixed(1) + '万';
-      }
-      return String(n);
-    },
     formatDistance(distance) {
       const n = Number(distance);
       if (!Number.isFinite(n) || n <= 0) return '';
@@ -229,14 +218,6 @@ export default {
   flex: 1;
   overflow-y: auto;
   padding-top: 12px;
-}
-.heat-flame { 
-  font-size: 11px; 
-}
-.heat-score {
-  font-size: 11px;
-  font-weight: 500;
-  color: #ff4b2b;
 }
 .grab-btn {
   background: linear-gradient(135deg, #ff416c, #ff4b2b);

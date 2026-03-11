@@ -18,7 +18,7 @@
               <div class="v-discount-small">折扣券</div>
             </div>
           </template>
-          <div v-if="isSeckill" class="seckill-badge-left">⚡秒杀</div>
+          <div v-if="isSeckill" class="seckill-badge-right">⚡秒杀</div>
           <!-- 排名勋章 -->
           <div v-if="rank !== null" class="v-rank-badge" :class="rankClass">
             {{ rank }}
@@ -54,10 +54,15 @@
           </div>
           
           <div class="v-countdown" v-if="isSeckill && status === 'active' && !isExpired">
-            <span class="cd-label">⏰ 距结束</span>
-            <span class="cd-box">{{ countdown.h }}</span><span class="cd-colon">:</span>
-            <span class="cd-box">{{ countdown.m }}</span><span class="cd-colon">:</span>
-            <span class="cd-box">{{ countdown.s }}</span>
+            <span class="cd-label">距结束</span>
+            <div class="cd-timer">
+              <template v-if="countdown.d > 0">
+                <span class="cd-box">{{ countdown.d }}</span><span class="cd-text">天</span>
+              </template>
+              <span class="cd-box">{{ countdown.h }}</span><span class="cd-text">时</span>
+              <span class="cd-box">{{ countdown.m }}</span><span class="cd-text">分</span>
+              <span class="cd-box">{{ countdown.s }}</span><span class="cd-text">秒</span>
+            </div>
           </div>
 
           <!-- 热度值显示 -->
@@ -87,7 +92,7 @@
         </template>
         <div class="g-overlay"></div>
         
-        <div v-if="isSeckill" class="seckill-badge-top">⚡ 秒杀</div>
+        <div v-if="isSeckill" class="seckill-badge-right-group">⚡ 秒杀</div>
         <div v-if="isHot" class="hot-badge-top">🔥 火爆</div>
 
         <!-- 排名勋章 -->
@@ -130,10 +135,15 @@
         </div>
 
         <div class="v-countdown g-countdown" v-if="isSeckill && status === 'active' && !isExpired">
-          <span class="cd-label">⏰ 距结束</span>
-          <span class="cd-box">{{ countdown.h }}</span><span class="cd-colon">:</span>
-          <span class="cd-box">{{ countdown.m }}</span><span class="cd-colon">:</span>
-          <span class="cd-box">{{ countdown.s }}</span>
+          <span class="cd-label">距结束</span>
+          <div class="cd-timer">
+            <template v-if="countdown.d > 0">
+              <span class="cd-box">{{ countdown.d }}</span><span class="cd-text">天</span>
+            </template>
+            <span class="cd-box">{{ countdown.h }}</span><span class="cd-text">时</span>
+            <span class="cd-box">{{ countdown.m }}</span><span class="cd-text">分</span>
+            <span class="cd-box">{{ countdown.s }}</span><span class="cd-text">秒</span>
+          </div>
         </div>
       </div>
     </div>
@@ -203,7 +213,7 @@ export default {
       const t = this.item.total;
       return (t !== undefined && t !== null) ? t : (this.item.stock || this.item.totalStock || 0) + Number(this.sold); 
     },
-    showStock() { return this.item.total !== undefined || this.item.stock !== undefined || this.item.totalStock !== undefined; },
+    showStock() { return this.isSeckill && (this.item.total !== undefined || this.item.stock !== undefined || this.item.totalStock !== undefined); },
     progressPct() {
       if (!this.total) return 0;
       return Math.min((this.sold / this.total) * 100, 100);
@@ -213,7 +223,8 @@ export default {
       if (this.item.validDate) return this.item.validDate;
       if (this.item.activityType === 1 && this.item.beginTime && this.item.endTime) {
         const format = (str) => {
-          const d = new Date(str);
+          const val = (!isNaN(str) && !isNaN(parseFloat(str))) ? Number(str) : str;
+          const d = new Date(val);
           return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
         };
         return `${format(this.item.beginTime)}至${format(this.item.endTime)}可用`;
@@ -222,13 +233,18 @@ export default {
       if (this.item.validDays) return `购买后${this.item.validDays}天有效`;
       return '长期有效';
     },
-    endTimeMs() { return this.item.endTime ? new Date(this.item.endTime).getTime() : 0; },
+    endTimeMs() { 
+      if (!this.item.endTime) return 0;
+      const val = (!isNaN(this.item.endTime) && !isNaN(parseFloat(this.item.endTime))) ? Number(this.item.endTime) : this.item.endTime;
+      return new Date(val).getTime() || 0;
+    },
     isExpired() { return this.endTimeMs > 0 && this.now >= this.endTimeMs; },
     status() {
       if (this.item.status === 'ended' || this.isExpired) return 'ended';
       if (this.item.status === 'soldout' || (this.total > 0 && this.sold >= this.total)) return 'soldout';
       if (this.isSeckill && this.item.beginTime) {
-          const beginTimeMs = new Date(this.item.beginTime).getTime();
+          const val = (!isNaN(this.item.beginTime) && !isNaN(parseFloat(this.item.beginTime))) ? Number(this.item.beginTime) : this.item.beginTime;
+          const beginTimeMs = new Date(val).getTime();
           if (this.now < beginTimeMs) return 'upcoming';
       }
       return 'active';
@@ -259,12 +275,13 @@ export default {
       };
     },
     countdown() {
-      if (!this.endTimeMs || this.now >= this.endTimeMs) return { h: '00', m: '00', s: '00' };
+      if (!this.endTimeMs || this.now >= this.endTimeMs) return { d: 0, h: '00', m: '00', s: '00' };
       const left = this.endTimeMs - this.now;
-      const h = String(Math.floor(left / 3600000)).padStart(2, '0');
+      const d = Math.floor(left / 86400000);
+      const h = String(Math.floor((left % 86400000) / 3600000)).padStart(2, '0');
       const m = String(Math.floor((left % 3600000) / 60000)).padStart(2, '0');
       const s = String(Math.floor((left % 60000) / 1000)).padStart(2, '0');
-      return { h, m, s };
+      return { d, h, m, s };
     }
   },
   mounted() {
@@ -373,19 +390,19 @@ export default {
 }
 
 /* Glassmorphism Badges */
-.seckill-badge-left {
+.seckill-badge-right {
   position: absolute;
-  top: 8px; left: 0;
+  top: 8px; right: 0;
   background: rgba(255, 71, 87, 0.85);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   border: 1px solid rgba(255, 255, 255, 0.4);
   color: #fff;
   font-size: 10px;
-  padding: 3px 8px 3px 6px;
-  border-radius: 0 10px 10px 0;
+  padding: 3px 6px 3px 8px;
+  border-radius: 10px 0 0 10px;
   font-weight: 800;
-  box-shadow: 0 2px 8px rgba(255, 71, 87, 0.3);
+  box-shadow: -2px 2px 8px rgba(255, 71, 87, 0.3);
 }
 
 .v-divider {
@@ -444,15 +461,42 @@ export default {
   transition: width 0.5s ease-out;
 }
 
-.v-countdown { display: flex; align-items: center; gap: 5px; margin-top: 8px; }
-.cd-label { font-size: 11px; color: #FF4757; font-weight: 600; }
+.v-countdown { 
+  display: flex; 
+  align-items: center; 
+  gap: 8px; 
+  margin-top: 10px;
+  background: rgba(255, 71, 87, 0.04);
+  padding: 6px 10px;
+  border-radius: 8px;
+  width: fit-content;
+}
+.cd-label { 
+  font-size: 11px; 
+  color: #666; 
+  font-weight: 600; 
+  flex-shrink: 0;
+}
+.cd-timer {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
 .cd-box {
   background: linear-gradient(135deg, #FF4757, #ff6b81);
-  color: #fff; font-size: 11px;
-  padding: 2px 5px; border-radius: 4px; font-weight: 800;
+  color: #fff; 
+  font-size: 11px;
+  min-width: 20px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px; 
+  font-weight: 800;
   box-shadow: 0 2px 4px rgba(255,71,87,0.2);
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
 }
-.cd-colon { color: #FF4757; font-size: 12px; font-weight: 800; }
+.cd-text { color: #888; font-size: 10px; font-weight: 500; margin: 0 1px; }
 
 .v-row-bottom {
   display: flex;
@@ -492,11 +536,11 @@ export default {
   background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
 }
 
-.seckill-badge-top {
-  position: absolute; top: 12px; left: 0;
+.seckill-badge-right-group {
+  position: absolute; top: 12px; right: 0;
   background: rgba(255, 71, 87, 0.85); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
-  border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 2px 8px rgba(255, 71, 87, 0.3);
-  color: #fff; font-size: 11px; padding: 4px 12px 4px 10px; border-radius: 0 12px 12px 0; font-weight: 800; z-index: 3;
+  border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: -2px 2px 8px rgba(255, 71, 87, 0.3);
+  color: #fff; font-size: 11px; padding: 4px 10px 4px 12px; border-radius: 12px 0 0 12px; font-weight: 800; z-index: 3;
 }
 .hot-badge-top {
   position: absolute; top: 12px; right: 12px;

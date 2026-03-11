@@ -28,7 +28,7 @@
       <!-- Minimized/Docked Mode -->
       <div class="ai-docked" v-if="isMinimized" @click="restore">
           <img src="@/assets/ai-avatar-lite.jpg" class="dock-avatar-img" draggable="false" />
-          <div class="dock-text">助手</div>
+          <div class="dock-text">小只因</div>
       </div>
 
       <!-- New AI Assistant Overlay -->
@@ -43,7 +43,7 @@
              <div class="mascot-section">
                   <img src="@/assets/ai-avatar-lite.jpg" class="breathing-mascot" />
                   <h2 class="mascot-greeting">Hello, 我是小只因!</h2>
-                  <p class="mascot-sub">您的生活助手，帮您找店、找优惠。</p>
+                  <p class="mascot-sub">您的生活助手小只因，帮您找店、找优惠。</p>
              </div>
 
              <div class="suggestion-chips">
