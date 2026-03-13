@@ -43,6 +43,33 @@
             <div class="detail-status-tag status-rejected" v-if="review.status === 2 || review.status === 3">审核未通过</div>
         </div>
 
+        <div v-if="false" class="biz-status-summary review-status-summary">
+            <div class="biz-status-summary__grid">
+                <div class="biz-status-summary__item">
+                    <span class="biz-status-summary__label">业务状态</span>
+                    <span :class="['biz-status-chip', getStatusToneClass(reviewBusinessStatusMeta.tone)]">
+                        {{ reviewBusinessStatusMeta.text }}
+                    </span>
+                </div>
+                <div class="biz-status-summary__item">
+                    <span class="biz-status-summary__label">审核状态</span>
+                    <span :class="['biz-status-chip', getStatusToneClass(reviewAuditStatusMeta.tone)]">
+                        {{ reviewAuditStatusMeta.text }}
+                    </span>
+                </div>
+            </div>
+            <div v-if="reviewRejectReason" class="biz-status-summary__reason">驳回原因：{{ reviewRejectReason }}</div>
+        </div>
+
+        <div v-if="isMe && (reviewDisplayStatusMeta.visible || reviewRejectReason)" class="review-status-summary single-status-panel">
+            <div v-if="reviewDisplayStatusMeta.visible" class="single-status-panel__row">
+                <span :class="['biz-status-chip', getStatusToneClass(reviewDisplayStatusMeta.tone)]">
+                    {{ reviewDisplayStatusMeta.text }}
+                </span>
+            </div>
+            <div v-if="reviewRejectReason" class="single-status-panel__reason">驳回原因：{{ reviewRejectReason }}</div>
+        </div>
+
         <!-- Rating & Tags -->
         <div class="rating-section">
             <span class="rating-tag"><span class="emoji">🎁</span> 超预期</span>
@@ -446,6 +473,14 @@ import { fileURL } from '@/utils/request';
 import { throttle } from '@/utils/throttle';
 import { getProductDetail } from '@/api/shop';
 import { showConfirmDialog } from 'vant';
+import {
+    getAuditStatusMeta,
+    getBusinessStatusMeta,
+    isDraftBusinessStatus,
+    getRejectReasonText,
+    getSingleDisplayStatusMeta,
+    getStatusToneClass
+} from '@/utils/contentStatus';
 import '@/assets/css/blog-detail.css'; // Import blog-detail.css for shared styles
 
 export default {
@@ -498,10 +533,26 @@ export default {
       }
   },
   computed: {
-     isMe() {
-         return this.user && this.review && this.user.id === this.review.userId;
-     },
-     menuActions() {
+      isMe() {
+          return this.user && this.review && this.user.id === this.review.userId;
+      },
+      reviewDisplayStatusMeta() {
+          const meta = getSingleDisplayStatusMeta('review', this.review?.status, this.review?.auditStatus);
+          if (meta.key === 'draft') {
+              return { ...meta, visible: false, text: '' };
+          }
+          return meta;
+      },
+      reviewBusinessStatusMeta() {
+          return getBusinessStatusMeta('review', this.review?.status);
+      },
+      reviewAuditStatusMeta() {
+          return getAuditStatusMeta(this.review?.auditStatus);
+      },
+      reviewRejectReason() {
+          return getRejectReasonText(this.review?.auditStatus, this.review?.rejectReason);
+      },
+      menuActions() {
          return [
              { text: '编辑', icon: 'edit' },
              { text: '删除', icon: 'delete', color: '#ee0a24' }
@@ -538,6 +589,7 @@ export default {
       }
   },
   methods: {
+      getStatusToneClass,
       onCommentSortChange(type) {
           if (!type || this.commentSortType === type) return;
           this.commentSortType = type;
@@ -616,7 +668,11 @@ export default {
                   // Shop POI Data
                   avgScore: data.avgScore || data.shopScore || 4.7,
                   avgPrice: data.avgPrice || data.shopPrice || 188,
-                  status: data.status // Included from backend
+                  orderId: data.orderId || 0,
+                  isAnonymous: !!data.isAnonymous,
+                  status: data.status,
+                  auditStatus: data.auditStatus,
+                  rejectReason: data.rejectReason || ''
               };
 
               // 商品评价卡片：直接从评价数据获取商品信息
@@ -1015,26 +1071,20 @@ export default {
           }
       },
       handleEditReview() {
-          // Navigate to publish page in edit mode
-          // Assuming /shop/assess?id=... or similar. Since I am not sure of the exact edit route, 
-          // I will use a generic one or check known routes.
-          // Based on user/MyReviews "写评价", it likely goes to a publish page.
-          // Let's assume '/order/evaluate' or similar? Or just re-use the publish component?
-          // For now, I'll push to a hypothetical edit route, or if I can find the publish route in prior logs.
-          // Checking `CommentList.vue` or `ShopDetail.vue` context... usually it is /shop/submit-comment or similar.
-          // Wait, the "写评价" in MyReviews banner is just text.
-          // Let's use a generic /page/edit route or alert if not found.
-          // Actually, let's try to match existing pattern: /blog/edit (for blog).
-          // Maybe /comment/edit?
-          // I'll assume '/shop/comment/publish' with query.
-          // Or strictly adhere to "只要编辑".
+          const query = {
+              edit: 'true',
+              id: this.review.id,
+              orderId: this.review.orderId || undefined,
+              sourceId: this.review.sourceId || undefined,
+              sourceType: this.review.sourceType || undefined,
+              shopId: this.review.shopId
+          };
+          if (isDraftBusinessStatus('review', this.review?.status)) {
+              query.draft = 'true';
+          }
           this.$router.push({ 
               path: '/review/publish', 
-              query: { 
-                  edit: 1, 
-                  id: this.review.id,
-                  shopId: this.review.shopId 
-              } 
+              query
           });
       },
       publishComment() {
@@ -1721,5 +1771,13 @@ export default {
 }
 .status-rejected {
     background: rgba(255, 36, 66, 0.85);
+}
+.review-status-row {
+    display: none;
+}
+.review-status-summary {
+    margin: 0 15px 12px;
+    padding: 0;
+    background: transparent;
 }
 </style>

@@ -13,3 +13,126 @@ html, body {
   width: 100%;
   height: 100%;
 }
+
+.biz-status-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+.biz-status-chip--default {
+  background: #f5f7fa;
+  color: #909399;
+}
+
+.biz-status-chip--info {
+  background: rgba(255, 255, 255, 0.85);
+  color: #666;
+}
+
+.biz-status-chip--success {
+  background: rgba(103, 194, 58, 0.14);
+  color: #67c23a;
+}
+
+.biz-status-chip--warning {
+  background: rgba(255, 165, 0, 0.15);
+  color: #ff9500;
+}
+
+.biz-status-chip--danger {
+  background: rgba(255, 0, 0, 0.1);
+  color: #ff4444;
+}
+
+.biz-status-summary {
+  border-radius: 14px;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.biz-status-summary__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.biz-status-summary__item {
+  min-width: 0;
+}
+
+.biz-status-summary__label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #909399;
+  line-height: 1.2;
+}
+
+.biz-status-summary__reason {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(245, 108, 108, 0.08);
+  color: #f56c6c;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.single-status-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.single-status-panel__row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.single-status-panel__reason {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(245, 108, 108, 0.08);
+  color: #f56c6c;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.biz-status-filter-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 0 0 2px;
+  scrollbar-width: none;
+}
+
+.biz-status-filter-row::-webkit-scrollbar {
+  display: none;
+}
+
+.biz-status-filter-chip {
+  flex-shrink: 0;
+  border: none;
+  border-radius: 999px;
+  padding: 7px 12px;
+  background: #f5f7fa;
+  color: #606266;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.biz-status-filter-chip.is-active {
+  background: rgba(255, 102, 51, 0.14);
+  color: #ff6633;
+}

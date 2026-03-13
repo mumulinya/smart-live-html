@@ -188,7 +188,12 @@
                         <span class="tab-num" v-if="stats.blogCount">{{ stats.blogCount }}</span>
                     </div>
                 </template>
-                <div class="tab-content">
+                <div
+                    class="tab-content"
+                    v-infinite-scroll="loadMoreBlogs"
+                    :infinite-scroll-disabled="activeTab !== 'note' || blogLoading || blogNoMore || blogs.length === 0"
+                    :infinite-scroll-immediate="true"
+                >
                     <div class="waterfall-container">
                         <div class="waterfall-column" v-for="(col, i) in blogColumns" :key="'blog-col-' + i">
                             <div class="waterfall-item" v-for="(b, index) in col" :key="b.id" @click="toBlogDetail(b)">
@@ -207,11 +212,15 @@
                                     <div class="img-skeleton" v-if="!b.imgError && !b.imgLoaded"></div>
                                     <div class="img-placeholder" v-if="b.imgError">图片加载失败</div>
                                     <div class="pinned-tag" v-if="b.pin || b.isTop">置顶</div>
-                                    <div class="status-tag status-pending" v-if="b.status === 0">审核中</div>
-                                    <div class="status-tag status-rejected" v-if="b.status === 2 || b.status === 3">审核未通过</div>
+                                    <div v-if="isSelf && getBlogDisplayStatusMeta(b).visible" class="profile-blog-status-tag">
+                                        <span :class="['biz-status-chip', getStatusToneClass(getBlogDisplayStatusMeta(b).tone)]">
+                                            {{ getBlogDisplayStatusMeta(b).text }}
+                                        </span>
+                                    </div>
                                 </div>
                                 <div class="card-info">
                                     <div class="card-title">{{ b.title }}</div>
+                                    <div v-if="isSelf && getBlogRejectReason(b)" class="single-status-panel__reason profile-blog-reason">驳回原因：{{ getBlogRejectReason(b) }}</div>
                                     <div class="card-bottom">
                                         <div class="card-user">
                                             <img :src="user.icon || '/imgs/icons/default-icon.png'" class="card-avatar">
@@ -241,7 +250,12 @@
                         <span class="tab-num" v-if="stats.blogStarCount">{{ stats.blogStarCount }}</span>
                     </div>
                 </template>
-                <div class="tab-content">
+                <div
+                    class="tab-content"
+                    v-infinite-scroll="loadMoreCollections"
+                    :infinite-scroll-disabled="activeTab !== 'collection' || collectionLoading || collectionNoMore || collections.length === 0"
+                    :infinite-scroll-immediate="true"
+                >
                     <div class="waterfall-container">
                          <div class="waterfall-column" v-for="(col, i) in collectionColumns" :key="'collection-col-' + i">
                             <div class="waterfall-item" v-for="b in col" :key="b.id" @click="toBlogDetail(b)">
@@ -280,7 +294,12 @@
                         <span class="tab-num" v-if="stats.blogLikeCount">{{ stats.blogLikeCount }}</span>
                     </div>
                 </template>
-                <div class="tab-content">
+                <div
+                    class="tab-content"
+                    v-infinite-scroll="loadMoreLikes"
+                    :infinite-scroll-disabled="activeTab !== 'likes' || likeLoading || likeNoMore || likes.length === 0"
+                    :infinite-scroll-immediate="true"
+                >
                     <div class="waterfall-container">
                          <div class="waterfall-column" v-for="(col, i) in likeColumns" :key="'like-col-' + i">
                             <div class="waterfall-item" v-for="b in col" :key="b.id" @click="toBlogDetail(b)">
@@ -355,6 +374,11 @@ import { likeBlog, likeRecord, starList } from '@/api/interaction';
 import { filePrefix } from '@/utils/request';
 import { locationUtil } from '@/utils/location';
 import { updateBackgroundImage } from '@/api/user'; // Import new API
+import {
+    getRejectReasonText,
+    getSingleDisplayStatusMeta,
+    getStatusToneClass
+} from '@/utils/contentStatus';
 import { emitAuthChanged } from '@/utils/auth-event';
 
 import PageLayout from '@/components/PageLayout/PageLayout.vue';
@@ -415,7 +439,8 @@ export default {
         
         tabOrder: ['note', 'collection', 'likes', 'feed'],
         scrollTicking: false,
-        scrollRafId: null
+        scrollRafId: null,
+        bottomCheckTimer: null
      }
   },
   computed: {
@@ -482,9 +507,11 @@ export default {
          this.loadTabData(tab);
      }
      window.addEventListener('scroll', this.handleWindowScroll, { passive: true });
+     this.scheduleBottomCheck(180);
   },
   deactivated() {
       window.removeEventListener('scroll', this.handleWindowScroll);
+      this.clearBottomCheckTimer();
   },
   mounted() {
       // Listener moved to activated for keep-alive support
@@ -495,11 +522,19 @@ export default {
           cancelAnimationFrame(this.scrollRafId);
           this.scrollRafId = null;
       }
+      this.clearBottomCheckTimer();
       this.scrollTicking = false;
   },
   methods: {
+    getStatusToneClass,
+    getBlogDisplayStatusMeta(item) {
+        return getSingleDisplayStatusMeta('blog', item?.status, item?.auditStatus);
+    },
+    getBlogRejectReason(item) {
+        return getRejectReasonText(item?.auditStatus, item?.rejectReason);
+    },
      splitWaterfallColumns(list) {
-         const columns = [[], []];
+          const columns = [[], []];
          if (!Array.isArray(list) || list.length === 0) return columns;
          list.forEach((item, index) => {
              columns[index % 2].push(item);
@@ -512,6 +547,34 @@ export default {
              return (num / 10000).toFixed(1).replace(/\.0$/, '') + '万';
          }
          return num;
+     },
+     clearBottomCheckTimer() {
+         if (this.bottomCheckTimer !== null) {
+             clearTimeout(this.bottomCheckTimer);
+             this.bottomCheckTimer = null;
+         }
+     },
+     scheduleBottomCheck(delay = 0) {
+         this.clearBottomCheckTimer();
+         this.bottomCheckTimer = setTimeout(() => {
+             this.bottomCheckTimer = null;
+             this.checkActiveTabLoadMore();
+         }, delay);
+     },
+     checkActiveTabLoadMore() {
+         const scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+         const scrollHeight = document.documentElement.scrollHeight || document.body.scrollHeight || 0;
+         const clientHeight = document.documentElement.clientHeight || document.body.clientHeight || 0;
+
+         this.scrollTop = scrollTop;
+
+         if (scrollTop + clientHeight < scrollHeight - 100) return;
+
+         const type = this.activeTab;
+         if (type === 'note' && !this.blogLoading && !this.blogNoMore) this.loadMoreBlogs();
+         if (type === 'collection' && !this.collectionLoading && !this.collectionNoMore) this.loadMoreCollections();
+         if (type === 'likes' && !this.likeLoading && !this.likeNoMore) this.loadMoreLikes();
+         if (type === 'feed' && !this.feedLoading && !this.feedNoMore) this.loadMoreFeeds();
      },
      handlePreview(url) {
         if(!url) return;
@@ -599,18 +662,6 @@ export default {
               this.scrollTicking = false;
               const scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop;
               this.scrollTop = scrollTop;
-              
-              // Infinite load logic
-              const scrollHeight = document.documentElement.scrollHeight || document.body.scrollHeight;
-              const clientHeight = document.documentElement.clientHeight || document.body.clientHeight;
-              
-              if(scrollTop + clientHeight >= scrollHeight - 100) {
-                  const type = this.activeTab;
-                  if(type === 'note' && !this.blogLoading && !this.blogNoMore) this.loadMoreBlogs();
-                  if(type === 'collection' && !this.collectionLoading && !this.collectionNoMore) this.loadMoreCollections();
-                  if(type === 'likes' && !this.likeLoading && !this.likeNoMore) this.loadMoreLikes();
-                  if(type === 'feed' && !this.feedLoading && !this.feedNoMore) this.loadMoreFeeds();
-              }
           });
       },
      // Data Query
@@ -749,6 +800,7 @@ export default {
         // 保存 tab 状态到路由查询参数
         this.$router.replace({ query: { ...this.$route.query, tab: name } });
         this.loadTabData(name);
+        this.scheduleBottomCheck(120);
      },
      handleTabClick(tab) {
          // Keep for compatibility if mixed usage
@@ -767,18 +819,23 @@ export default {
         this.blogCurrent = 1;
         this.blogLoading = true;
         this.blogNoMore = false;
-        getMyBlogs({ current: this.blogCurrent, status: 0 }).then(res => {
+        getMyBlogs({ current: this.blogCurrent }).then(res => {
            const list = res.data || res || [];
            this.blogs = list.map(this.processBlog);
            if(list.length < 10) this.blogNoMore = true;
-        }).finally(() => this.blogLoading = false);
+        }).finally(() => {
+            this.blogLoading = false;
+            if (this.activeTab === 'note') {
+                this.scheduleBottomCheck(80);
+            }
+        });
      },
      // ... (Keep existing loadMoreBlogs, processBlog, etc.)
      loadMoreBlogs() {
          if(this.blogLoading || this.blogNoMore) return;
          this.blogLoading = true;
          this.blogCurrent++;
-         getMyBlogs({ current: this.blogCurrent, status: 0 }).then(res => {
+         getMyBlogs({ current: this.blogCurrent }).then(res => {
              const list = res.data || res || [];
              if(list.length > 0) {
                  this.blogs = [...this.blogs, ...list.map(this.processBlog)];
@@ -786,7 +843,12 @@ export default {
              if(list.length < 10) this.blogNoMore = true;
          }).catch(() => {
              this.blogCurrent--;
-         }).finally(() => this.blogLoading = false);
+         }).finally(() => {
+             this.blogLoading = false;
+             if (this.activeTab === 'note') {
+                 this.scheduleBottomCheck(80);
+             }
+         });
      },
      processBlog(b) {
         const item = (b && typeof b === 'object') ? b : {};
@@ -904,7 +966,7 @@ export default {
         this.feedParams.minTime = new Date().getTime();
         this.feedParams.offset = 0;
         const lastId = this.feedParams.minTime;
-        getFollowedFeeds({ offset: 0, lastId, status: 0 }).then(res => {
+        getFollowedFeeds({ offset: 0, lastId, status: 1 }).then(res => {
            const data = res.data || res || {};
            const list = data.list || [];
            this.feeds = list.map(this.processBlog);
@@ -917,7 +979,7 @@ export default {
          if(this.feedLoading || this.feedNoMore) return;
          this.feedLoading = true;
          const lastId = this.feedParams.minTime || new Date().getTime();
-         getFollowedFeeds({ offset: this.feedParams.offset, lastId, status: 0 }).then(res => {
+         getFollowedFeeds({ offset: this.feedParams.offset, lastId, status: 1 }).then(res => {
             const data = res.data || res || {};
             const list = data.list || [];
             if(list.length > 0) {
@@ -1467,6 +1529,15 @@ export default {
 .card-info {
     padding: 8px 10px 12px;
 }
+.profile-blog-status-tag {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 10;
+}
+.profile-blog-reason {
+    margin: 8px 0 10px;
+}
 .card-title {
     font-size: 15px; /* Increased from 14px */
     color: #333;
@@ -1688,6 +1759,9 @@ export default {
     z-index: 2;
     backdrop-filter: blur(4px);
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.card-img-box .status-tag {
+    display: none;
 }
 .status-pending {
     background: rgba(255, 153, 0, 0.85);

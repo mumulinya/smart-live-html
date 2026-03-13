@@ -397,6 +397,9 @@ export default {
         region: {}
       },
       isRequesting: false,
+      bottomCheckTimer: null,
+      hasActivatedOnce: false,
+      shouldResumeBottomCheck: false,
       pageLoading: true,
       dataLoadedCount: 0,
       totalDataToLoad: 3,
@@ -481,6 +484,10 @@ export default {
     }
   },
   activated() {
+    const wasActivatedBefore = this.hasActivatedOnce;
+    this.hasActivatedOnce = true;
+    this.shouldResumeBottomCheck = false;
+
     // Check if token changed (User logged in or out)
     const newToken = localStorage.getItem("token") || '';
     if (this.token !== newToken) {
@@ -537,20 +544,65 @@ export default {
                }
            });
        }
+       this.shouldResumeBottomCheck = wasActivatedBefore && activePos > 0;
+       if (this.shouldResumeBottomCheck) {
+         this.scheduleBottomCheck(180);
+       }
     });
     window.addEventListener('resize', this.calculateCategorySize);
   },
   deactivated() {
+    this.shouldResumeBottomCheck = false;
+    this.clearBottomCheckTimer();
     window.removeEventListener('resize', this.calculateCategorySize);
   },
   mounted() {
     this.calculateCategorySize();
   },
   beforeUnmount() {
+    this.clearBottomCheckTimer();
     window.removeEventListener('resize', this.calculateCategorySize);
   },
 
   methods: {
+    clearBottomCheckTimer() {
+      if (this.bottomCheckTimer !== null) {
+        clearTimeout(this.bottomCheckTimer);
+        this.bottomCheckTimer = null;
+      }
+    },
+    scheduleBottomCheck(delay = 0) {
+      this.clearBottomCheckTimer();
+      this.bottomCheckTimer = setTimeout(() => {
+        this.bottomCheckTimer = null;
+        this.checkNeedLoadMore();
+      }, delay);
+    },
+    getActiveBlogListContainer() {
+      if (!this.$el) return null;
+      const containers = this.$el.querySelectorAll('.blog-list-content');
+      for (const el of containers) {
+        if (el.parentElement && el.parentElement.style.display !== 'none') {
+          return el;
+        }
+      }
+      return null;
+    },
+    checkNeedLoadMore() {
+      const el = this.getActiveBlogListContainer();
+      if (!el || this.isLoading) return;
+      if (el.scrollHeight - el.scrollTop - el.clientHeight >= 50) return;
+
+      if (this.activeCategory === 'follow') {
+        if (!this.noMoreFollowData) this.queryFollowedFeeds();
+        return;
+      }
+
+      if (!this.noMoreData) {
+        if (this.activeCategory === 'hot') this.queryHotBlogsScroll();
+        else this.queryBlogsByCategory(this.activeCategory);
+      }
+    },
     calculateCategorySize() {
       const width = document.documentElement.clientWidth || window.innerWidth;
       const totalLen = this.types && this.types.length > 0 ? this.types.length : 10;
@@ -790,7 +842,7 @@ export default {
     queryHotBlogsScroll() {
        if (this.isLoading || this.noMoreData) return;
        this.isLoading = true;
-       getHotBlogs({ current: this.current, status: 0 })
+       getHotBlogs({ current: this.current, status: 1 })
          .then((res) => {
             // Handle paginated or list response
             let list = [];
@@ -833,7 +885,7 @@ export default {
         if (this.isLoading || this.noMoreData) return; // Allow first load
         this.isLoading = true;
         
-        const apiCall = categoryId === 'hot' ? getHotBlogs({ current: this.current, status: 0 }) : getBlogsByCategory(categoryId, this.current);
+        const apiCall = categoryId === 'hot' ? getHotBlogs({ current: this.current, status: 1 }) : getBlogsByCategory(categoryId, this.current);
         
         apiCall
           .then((res) => {
@@ -977,6 +1029,9 @@ export default {
     },
       onDataLoaded() {
          this.dataLoadedCount++;
+         if (this.shouldResumeBottomCheck) {
+           this.scheduleBottomCheck(80);
+         }
          if (this.dataLoadedCount >= this.totalDataToLoad) {
            setTimeout(() => {
              this.pageLoading = false;

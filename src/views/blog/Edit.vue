@@ -4,8 +4,8 @@
       <div class="header-left" @click="goBack">取消</div>
       <div class="header-title">{{ editMode ? '编辑笔记' : '发笔记' }}</div>
       <div class="header-right">
-        <button class="publish-btn" @click="submitBlog" :disabled="!canSubmit" :class="{ 'submitting': isSubmitting }">
-          <span v-if="!isSubmitting">{{ (editMode && !isDraft) ? '保存' : '发布' }}</span>
+        <button class="publish-btn" @click="submitBlog" :disabled="!canSubmit || isSubmitting" :class="{ 'submitting': isSubmitting }">
+          <span v-if="!isSubmitting">{{ submitButtonText }}</span>
           <i v-else class="el-icon-loading"></i>
         </button>
       </div>
@@ -67,17 +67,17 @@
         <!-- Footer Actions -->
         <div class="footer-action">
             <div class="draft-actions">
-                <div class="draft-btn" @click="saveDraft" v-if="!editMode">
+                <div class="draft-btn" @click="saveDraft" v-if="!editMode || isDraft">
                     <i class="el-icon-document"></i>
-                    <span>存草稿</span>
+                    <span>{{ isDraft ? '保存' : '存草稿' }}</span>
                 </div>
-                <div class="draft-btn" @click="goDraftBox">
+                <div class="draft-btn" @click="goDraftBox" v-if="!isDraft">
                     <i class="el-icon-folder-opened"></i>
                     <span>草稿箱</span>
                 </div>
             </div>
-            <button class="publish-btn-footer" :disabled="!canSubmit" @click="submitBlog">
-                {{ (editMode && !isDraft) ? '保存' : '发布' }}
+            <button class="publish-btn-footer" :disabled="!canSubmit || isSubmitting" @click="submitBlog">
+                {{ submitButtonText }}
             </button>
         </div>
     </div>
@@ -149,6 +149,7 @@ import { saveBlog, getBlogDetail, updateBlog } from "@/api/blog";
 import { searchShopsByName, getShopDetail } from "@/api/shop";
 import { getCurrentUser } from "@/api/user";
 import { locationUtil } from "@/utils/location";
+import { isDraftBusinessStatus } from "@/utils/contentStatus";
 import AiBlogGenerate from "./AiBlogGenerate.vue";
 
 export default {
@@ -186,6 +187,11 @@ export default {
       aiWordCount: 0, // AI 生成的字数提示
       aiTitles: [] // AI 生成的候选标题
     };
+  },
+  computed: {
+    submitButtonText() {
+      return (this.editMode && !this.isDraft) ? '保存' : '发布';
+    }
   },
   created() {
     // 优先使用 locationUtil 获取定位 (false = 优先读缓存，这样能共享首页手动切换后的城市)
@@ -323,7 +329,7 @@ export default {
       this.showCityDialog = false;
     },
     submitBlog() {
-      if (!this.canSubmit) return;
+      if (!this.canSubmit || this.isSubmitting) return;
       this.isSubmitting = true;
 
       const data = {
@@ -331,7 +337,7 @@ export default {
         content: this.params.content,
         images: this.serverFilePaths.join(","),
         shopId: this.selectedShop.id,
-        status: 0  // 0=发布
+        status: 1  // 1=发布
       };
       
       // If editing, add id and use update API
@@ -342,7 +348,7 @@ export default {
             this.markUserProfileNoteCacheDirty();
             this.$message({
               type: 'success',
-              message: '修改成功！',
+              message: this.isDraft ? '发布成功！' : '修改成功！',
               duration: 1000,
               onClose: () => {
                 this.$router.push('/user/profile');
@@ -376,6 +382,7 @@ export default {
       getBlogDetail(id).then(res => {
         let blog = res;
         if (res && res.data) blog = res.data;
+        this.isDraft = isDraftBusinessStatus('blog', blog?.status) || this.isDraft;
         
         this.params.title = blog.title || '';
         this.params.content = blog.content || '';
@@ -499,6 +506,7 @@ export default {
         this.exitAction = 'back';
     },
     saveDraft() {
+        if (this.isSubmitting) return;
         if (!this.params.title && !this.params.content && !this.fileList.length) {
             this.$message.warning('写点什么再存草稿吧');
             return;
@@ -510,7 +518,7 @@ export default {
             content: this.params.content,
             images: this.serverFilePaths.join(","),
             shopId: this.selectedShop.id,
-            status: 3  // 3=草稿
+            status: 0  // 0=草稿
         };
         
         // If editing existing blog/draft
@@ -518,7 +526,7 @@ export default {
             data.id = this.blogId;
             updateBlog(data)
                 .then(() => {
-                    this.$message.success('已存入草稿箱');
+                    this.$message.success(this.isDraft ? '已保存' : '已存入草稿箱');
                     setTimeout(() => {
                         this.$router.go(-1);
                     }, 500);

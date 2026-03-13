@@ -23,7 +23,9 @@
             {{ item.content }}
           </div>
 
-          <div class="notice-reason" v-if="item.rejectReason">拒绝原因：{{ item.rejectReason }}</div>
+          <div class="notice-reason" v-if="false"></div>
+
+          <div class="notice-reason notice-reason--filtered" v-if="getNoticeRejectReason(item)">驳回原因：{{ getNoticeRejectReason(item) }}</div>
 
           <div class="voucher-brief" v-if="item.voucherView && !item.productView">
             <div class="voucher-cover" v-if="item.voucherView.cover">
@@ -162,6 +164,7 @@ import {
   markAllSystemNoticesRead,
   markSystemNoticeRead
 } from '@/utils/systemNotice';
+import { getRejectReasonText } from '@/utils/contentStatus';
 
 export default {
   name: 'SystemNotice',
@@ -190,6 +193,9 @@ export default {
     wsManager.unregisterCallback('system-notice-page');
   },
   methods: {
+    getNoticeRejectReason(item) {
+      return getRejectReasonText(item?.auditStatus, item?.rejectReason);
+    },
     bindWebSocket() {
       wsManager.registerCallback('system-notice-page', (message) => {
         if (message.type !== 'SYSTEM_MESSAGE' || !message.data) return;

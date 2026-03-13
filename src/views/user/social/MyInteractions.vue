@@ -206,7 +206,6 @@
               {{ f.label }}
             </button>
           </div>
-
           <van-list
             v-model:loading="commentState.loading"
             :finished="commentState.finished"
@@ -231,9 +230,10 @@
                 <!-- 时间与状态 -->
                 <div class="card-time-row">
                   <span class="time-text">{{ formatTime(getItemTime(item)) || '刚刚' }}</span>
-                  <div class="audit-status" v-if="item.status === 0 || item.status === 2 || item.status === 3">
-                    <span class="status-tag-mini status-pending" v-if="item.status === 0">审核中</span>
-                    <span class="status-tag-mini status-rejected" v-if="item.status === 2 || item.status === 3">审核未通过</span>
+                  <div v-if="getCommentDisplayStatusMeta(item).visible" class="comment-status-pair">
+                    <span :class="['biz-status-chip', getStatusToneClass(getCommentDisplayStatusMeta(item).tone)]">
+                      {{ getCommentDisplayStatusMeta(item).text }}
+                    </span>
                   </div>
                 </div>
 
@@ -242,6 +242,9 @@
                   <div class="comment-content">{{ getCommentPrimaryText(item) }}</div>
                   <div v-if="getCommentSecondaryText(item)" class="comment-reply-to">
                     回复: {{ getCommentSecondaryText(item) }}
+                  </div>
+                  <div v-if="getCommentRejectReason(item)" class="comment-reject-reason">
+                    驳回原因：{{ getCommentRejectReason(item) }}
                   </div>
                 </div>
 
@@ -255,7 +258,7 @@
                   </div>
                   <div class="action-right">
                     <van-button 
-                      v-if="item.status === 2 || item.status === 3"
+                      v-if="getCommentRejectReason(item)"
                       size="mini" 
                       plain 
                       type="default" 
@@ -296,6 +299,13 @@ import { likeRecord, getUserComments, removeComment } from '@/api/interaction';
 import { fileURL } from '@/utils/request';
 import PageLayout from '@/components/PageLayout/PageLayout.vue';
 import { showToast, showConfirmDialog } from 'vant';
+import {
+  getAuditStatusMeta,
+  getBusinessStatusMeta,
+  getRejectReasonText,
+  getSingleDisplayStatusMeta,
+  getStatusToneClass
+} from '@/utils/contentStatus';
 
 const router = useRouter();
 const route = useRoute();
@@ -693,6 +703,22 @@ const getCommentAvatar = (item) => {
 
 const getCommentCover = (item) => {
   return getCover(item);
+};
+
+const getCommentBusinessStatusMeta = (item) => {
+  return getBusinessStatusMeta('comment', item?.status);
+};
+
+const getCommentAuditStatusMeta = (item) => {
+  return getAuditStatusMeta(item?.auditStatus);
+};
+
+const getCommentDisplayStatusMeta = (item) => {
+  return getSingleDisplayStatusMeta('comment', item?.status, item?.auditStatus);
+};
+
+const getCommentRejectReason = (item) => {
+  return getRejectReasonText(item?.auditStatus, item?.rejectReason);
 };
 
 const getCommentBaseType = (item) => {
@@ -1226,13 +1252,21 @@ onBeforeUnmount(() => {
 .card-time-row {
   margin-bottom: 12px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 10px;
 }
 
 .card-time-row .time-text {
   font-size: 11px;
   color: #ccc;
+}
+
+.comment-status-pair {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .card-body-simple {
@@ -1255,6 +1289,16 @@ onBeforeUnmount(() => {
   font-size: 13px;
   color: #666;
   border-left: 3px solid #eee;
+}
+
+.comment-reject-reason {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(245, 108, 108, 0.08);
+  color: #f56c6c;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .card-actions-row {

@@ -5,7 +5,7 @@
       <div class="nav-left" @click="goBack">取消</div>
       <div class="nav-title">{{ shopName || '写评价' }}</div>
       <div class="nav-right" @click="saveDraft">
-        <span style="font-size: 14px; color: #666;">存草稿</span>
+        <span style="font-size: 14px; color: #666;">{{ draftActionText }}</span>
       </div>
     </div>
 
@@ -146,7 +146,7 @@
     <div class="footer-action">
         <div class="draft-btn" @click="saveDraft">
             <van-icon name="orders-o" size="20" />
-            <span>存草稿</span>
+            <span>{{ draftActionText }}</span>
         </div>
         <div class="publish-btn" :class="{ disabled: !canSubmit }" @click="submitReview">
             发布
@@ -180,6 +180,7 @@ import AiReviewGenerate from './AiReviewGenerate.vue';
 
 import { fileURL } from '@/utils/request';
 import { getCurrentUser } from '@/api/user';
+import { isDraftBusinessStatus } from '@/utils/contentStatus';
 
 export default {
   name: 'ReviewPublish',
@@ -210,6 +211,7 @@ export default {
       content: '',
       fileList: [],
       isAnonymous: false,
+      isDraft: false,
       
       submitting: false,
       fileURL: fileURL,
@@ -223,14 +225,18 @@ export default {
   computed: {
     canSubmit() {
         return this.overallRating > 0 && this.content.trim().length > 0;
+    },
+    draftActionText() {
+        return this.isEdit && this.isDraft ? '保存' : '存草稿';
     }
   },
   created() {
-      const { edit, id, shopId, orderId, voucherId, sourceId, sourceType } = this.$route.query;
+      const { edit, id, shopId, orderId, voucherId, sourceId, sourceType, draft } = this.$route.query;
       this.shopId = shopId;
       this.orderId = orderId;
       this.voucherId = voucherId;
       this.sourceId = sourceId || voucherId; // Fallback to voucherId if sourceId is null
+      this.isDraft = draft === 'true';
 
       // Determine implicit source type
       if (sourceType) {
@@ -357,14 +363,10 @@ export default {
                   this.sourceId = data.sourceId; // Ensure sourceId is captured
                   if (data.sourceType) this.sourceType = data.sourceType;
                   else if (data.orderId) this.sourceType = 4;
+                  this.isDraft = isDraftBusinessStatus('review', data.status) || this.isDraft;
                   
                   if (this.sourceType === 4 && data.sourceId) {
                       this.voucherId = data.sourceId;
-                  }
-                  
-                  // Drafts use status=1
-                  if (data.status === 0) {
-                      // If loading a published review, we might want to warn or just edit
                   }
 
                   if (this.shopId) this.loadShop(this.shopId);
@@ -431,7 +433,7 @@ export default {
           return this.orderId;
       },
       submitReview() {
-          if (!this.canSubmit) return;
+          if (!this.canSubmit || this.submitting) return;
           this.submitting = true;
           
           const images = this.fileList.map(f => {
@@ -451,7 +453,7 @@ export default {
               images: images,
               isAnonymous: this.isAnonymous,
               userId: this.userId,
-              status: 0  // 0=发布
+              status: 1  // 1=发布
           };
           
           const validOrderId = this.getValidOrderId();
@@ -464,7 +466,7 @@ export default {
               updateReview(params).then(() => {
                   this.$message({
                       type: 'success',
-                      message: '修改成功',
+                      message: this.isDraft ? '发布成功' : '修改成功',
                       duration: 1000,
                       onClose: () => {
                           this.$router.go(-1);
@@ -489,6 +491,7 @@ export default {
           }
       },
       saveDraft() {
+          if (this.submitting) return;
           if (!this.content && !this.fileList.length) {
               this.$toast('写点什么再存草稿吧');
               return;
@@ -502,7 +505,7 @@ export default {
               updateTime: Date.now()
           };
 
-          // 调用API保存到服务器，status=1表示草稿
+          // 调用API保存到服务器，status=0表示草稿
           const params = {
               sourceId: this.sourceId || this.shopId,
               shopId: this.shopId || 0,
@@ -520,7 +523,7 @@ export default {
               }).join(','),
               isAnonymous: this.isAnonymous,
               userId: this.userId,
-              status: 3  // 3=草稿
+              status: 0  // 0=草稿
           };
 
           // 如果是编辑模式，传递草稿ID用于更新
@@ -532,7 +535,7 @@ export default {
           if (this.isEdit && this.id) {
               params.id = this.id;
               updateReview(params).then(() => {
-                  this.$message.success('草稿已更新');
+                  this.$message.success(this.isDraft ? '已保存' : '已存入草稿箱');
                   setTimeout(() => {
                       this.$router.go(-1);
                   }, 500);

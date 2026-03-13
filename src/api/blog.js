@@ -21,7 +21,7 @@ export function getHotBlogs(params) {
 }
 
 export function getBlogsByCategory(id, current) {
-    return request.get(`/app/blog/category/${id}`, { params: { current, status: 0 } });
+    return request.get(`/app/blog/category/${id}`, { params: { current, status: 1 } });
 }
 
 

@@ -69,7 +69,38 @@
     </div>
     </div>
     
-    
+    <div class="status-filter-strip">
+      <div class="status-filter-group">
+        <div class="status-filter-title">业务状态</div>
+        <div class="biz-status-filter-row">
+          <button
+            v-for="option in businessStatusOptions"
+            :key="`shop-status-${option.value}`"
+            type="button"
+            class="biz-status-filter-chip"
+            :class="{ 'is-active': selectedBusinessStatus === option.value }"
+            @click="selectBusinessStatus(option.value)"
+          >
+            {{ option.label }}
+          </button>
+        </div>
+      </div>
+      <div class="status-filter-group">
+        <div class="status-filter-title">审核状态</div>
+        <div class="biz-status-filter-row">
+          <button
+            v-for="option in auditStatusOptions"
+            :key="`shop-audit-${option.value}`"
+            type="button"
+            class="biz-status-filter-chip"
+            :class="{ 'is-active': selectedAuditStatus === option.value }"
+            @click="selectAuditStatus(option.value)"
+          >
+            {{ option.label }}
+          </button>
+        </div>
+      </div>
+    </div>
 
     <!-- Search Suggestion Panel Removed -->
 
@@ -89,6 +120,11 @@
               <div class="shop-card-info">
                  <!-- Row 1: Title -->
                  <div class="shop-card-title" v-html="s.name"></div>
+                 <div v-if="getShopDisplayStatusMeta(s).visible" class="shop-card-status-row">
+                    <span :class="['biz-status-chip', getStatusToneClass(getShopDisplayStatusMeta(s).tone)]">
+                      {{ getShopDisplayStatusMeta(s).text }}
+                    </span>
+                 </div>
                  <!-- Row 2: Rating + Price -->
                  <div class="shop-card-stats">
                     <van-rate :model-value="Number(s.score || 0) / 10" readonly allow-half color="#F63" void-icon="star" void-color="#eee" size="12px" />
@@ -135,6 +171,14 @@ import { locationUtil } from '@/utils/location';
 import { getCurrentUser } from '@/api/user'; // Need userId for history
 import { throttle } from '@/utils/throttle';
 import { debounce } from '@/utils/debounce';
+import {
+  getAuditStatusMeta,
+  getAuditStatusOptions,
+  getBusinessStatusMeta,
+  getBusinessStatusOptions,
+  getSingleDisplayStatusMeta,
+  getStatusToneClass
+} from '@/utils/contentStatus';
 
 export default {
   name: 'ShopList',
@@ -148,6 +192,8 @@ export default {
        selectedDistance: null,
        selectedScore: null,
        selectedSort: 'hot',
+       selectedBusinessStatus: 'all',
+       selectedAuditStatus: 'all',
        
        // Options
        distanceOptions: [
@@ -170,6 +216,8 @@ export default {
          { label: "低价优先", value: "price" }
        ],
        
+       businessStatusOptions: getBusinessStatusOptions('shop', { includeAll: true, allLabel: '全部业务状态' }),
+       auditStatusOptions: getAuditStatusOptions({ includeAll: true, allLabel: '全部审核状态' }),
        shops: [],
        isLoading: false,
        loadError: false,
@@ -267,15 +315,17 @@ export default {
             });
          }
      },
-     syncStateFromRouteQuery() {
-         const q = this.$route.query || {};
-         this.typeName = q.name || '';
-         this.params.typeId = parseInt(q.type || 0);
-         this.selectedTypeId = this.params.typeId;
-         this.selectedDistance = q.distance || null;
-         this.selectedScore = q.score || null;
-         this.selectedSort = q.sort || 'hot';
-     },
+      syncStateFromRouteQuery() {
+          const q = this.$route.query || {};
+          this.typeName = q.name || '';
+          this.params.typeId = parseInt(q.type || 0);
+          this.selectedTypeId = this.params.typeId;
+          this.selectedDistance = q.distance || null;
+          this.selectedScore = q.score || null;
+          this.selectedSort = q.sort || 'hot';
+          this.selectedBusinessStatus = q.status || 'all';
+          this.selectedAuditStatus = q.auditStatus || 'all';
+      },
       triggerSearch(immediate = false) {
          if (immediate) {
             if (typeof this.searchDebouncedRunner?.cancel === 'function') {
@@ -356,6 +406,22 @@ export default {
          this.updateRouteQuery();
          this.triggerSearch();
      },
+     selectBusinessStatus(value) {
+         if (this.selectedBusinessStatus === value) return;
+         this.selectedBusinessStatus = value;
+         this.updateRouteQuery();
+         this.triggerSearch(true);
+     },
+     selectAuditStatus(value) {
+         if (this.selectedAuditStatus === value) return;
+         this.selectedAuditStatus = value;
+         this.updateRouteQuery();
+         this.triggerSearch(true);
+     },
+     getStatusToneClass,
+     getShopDisplayStatusMeta(item) {
+         return getSingleDisplayStatusMeta('shop', item?.status, item?.auditStatus);
+     },
      getSortLabel(val) {
          const option = this.sortOptions.find(o => o.value === val);
          return option ? option.label : '智能排序';
@@ -363,13 +429,15 @@ export default {
      updateRouteQuery() {
         // Remove 'name' from query as we rely on typeId to determine title
         // Or update it to match current selection
-        const query = {
-            ...this.$route.query,
-            type: this.selectedTypeId || undefined,
-            distance: this.selectedDistance || undefined,
-            score: this.selectedScore || undefined,
-            sort: this.selectedSort !== 'hot' ? this.selectedSort : undefined
-        };
+         const query = {
+             ...this.$route.query,
+             type: this.selectedTypeId || undefined,
+             distance: this.selectedDistance || undefined,
+             score: this.selectedScore || undefined,
+             sort: this.selectedSort !== 'hot' ? this.selectedSort : undefined,
+             status: this.selectedBusinessStatus !== 'all' ? this.selectedBusinessStatus : undefined,
+             auditStatus: this.selectedAuditStatus !== 'all' ? this.selectedAuditStatus : undefined
+         };
 
         // Update name param if type is selected
         if (this.selectedTypeId) {
@@ -463,7 +531,7 @@ export default {
          if (typeof this.searchDebouncedRunner?.cancel === 'function') {
              this.searchDebouncedRunner.cancel();
          }
-         const hasFilters = this.selectedTypeId || this.selectedDistance || this.selectedScore;
+         const hasFilters = this.selectedTypeId || this.selectedDistance || this.selectedScore || this.selectedBusinessStatus !== 'all' || this.selectedAuditStatus !== 'all';
          if (!this.searchText.trim() && !hasFilters) return;
 
          const requestToken = ++this.shopRequestToken;
@@ -479,6 +547,8 @@ export default {
 
          const filters = {};
          if (this.selectedTypeId) filters.typeId = this.selectedTypeId;
+         if (this.selectedBusinessStatus !== 'all') filters.status = Number(this.selectedBusinessStatus);
+         if (this.selectedAuditStatus !== 'all') filters.auditStatus = Number(this.selectedAuditStatus);
 
          
 
@@ -550,8 +620,10 @@ export default {
 
         this.isLoading = true;
 
-        const filters = {};
-        if (this.selectedTypeId) filters.typeId = this.selectedTypeId;
+         const filters = {};
+         if (this.selectedTypeId) filters.typeId = this.selectedTypeId;
+         if (this.selectedBusinessStatus !== 'all') filters.status = Number(this.selectedBusinessStatus);
+         if (this.selectedAuditStatus !== 'all') filters.auditStatus = Number(this.selectedAuditStatus);
 
         const searchPayload = {
            keyword: '',
@@ -717,6 +789,12 @@ export default {
     justify-content: space-between;
     min-width: 0;
 }
+.shop-card-status-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+}
 
 /* Title Row */
 .shop-card-title {
@@ -841,6 +919,19 @@ export default {
 .filter-text i { margin-left: 4px; font-size: 12px; }
 
 .filter-wrapper { position: relative; z-index: 100; }
+.status-filter-strip {
+  background: #fff;
+  padding: 10px 12px 12px;
+  margin-bottom: 8px;
+}
+.status-filter-group + .status-filter-group {
+  margin-top: 10px;
+}
+.status-filter-title {
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #999;
+}
 
 /* Filter Dropdown Content */
 .filter-content {

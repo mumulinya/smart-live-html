@@ -82,11 +82,21 @@
               </el-carousel>
             </div>
             <!-- 右下角数字指示器 -->
+            <div v-if="isOwner && blogDisplayStatusMeta.visible" class="blog-cover-status">
+              <span :class="['biz-status-chip', getStatusToneClass(blogDisplayStatusMeta.tone)]">
+                {{ blogDisplayStatusMeta.text }}
+              </span>
+            </div>
             <div class="image-counter">{{currentImageIndex + 1}}/{{blog.images.length}}</div>
           </div>
           
           <!-- 无图片时显示默认占位图 -->
           <div class="no-image-placeholder" v-else>
+             <div v-if="isOwner && blogDisplayStatusMeta.visible" class="blog-cover-status">
+                <span :class="['biz-status-chip', getStatusToneClass(blogDisplayStatusMeta.tone)]">
+                   {{ blogDisplayStatusMeta.text }}
+                </span>
+             </div>
              <img src="/imgs/default-placeholder.png" class="placeholder-image">
           </div>
 
@@ -96,6 +106,32 @@
                <h1 class="blog-title" v-if="blog.title">{{blog.title}}</h1>
                <div class="detail-status-tag status-pending" v-if="user && user.id === blog.userId && blog.status === 0">审核中</div>
                <div class="detail-status-tag status-rejected" v-if="user && user.id === blog.userId && (blog.status === 2 || blog.status === 3)">审核未通过</div>
+            </div>
+            <div v-if="false" class="biz-status-summary blog-status-summary">
+               <div class="biz-status-summary__grid">
+                  <div class="biz-status-summary__item">
+                     <span class="biz-status-summary__label">业务状态</span>
+                     <span :class="['biz-status-chip', getStatusToneClass(blogBusinessStatusMeta.tone)]">
+                        {{ blogBusinessStatusMeta.text }}
+                     </span>
+                  </div>
+                  <div class="biz-status-summary__item">
+                     <span class="biz-status-summary__label">审核状态</span>
+                     <span :class="['biz-status-chip', getStatusToneClass(blogAuditStatusMeta.tone)]">
+                        {{ blogAuditStatusMeta.text }}
+                     </span>
+                  </div>
+               </div>
+               <div v-if="blogRejectReason" class="biz-status-summary__reason">驳回原因：{{ blogRejectReason }}</div>
+            </div>
+            <div v-if="false" class="single-status-panel__reason blog-reject-reason">驳回原因：{{ blogRejectReason }}</div>
+            <div v-if="isOwner && (blogDisplayStatusMeta.visible || blogRejectReason)" class="single-status-panel blog-status-panel">
+               <div v-if="blogDisplayStatusMeta.visible" class="single-status-panel__row">
+                  <span :class="['biz-status-chip', getStatusToneClass(blogDisplayStatusMeta.tone)]">
+                     {{ blogDisplayStatusMeta.text }}
+                  </span>
+               </div>
+               <div v-if="blogRejectReason" class="single-status-panel__reason blog-reject-reason">驳回原因：{{ blogRejectReason }}</div>
             </div>
             <div class="blog-text" v-html="blog.content"></div>
             <div class="blog-meta">
@@ -532,6 +568,14 @@ import { ElImageViewer } from 'element-plus';
 import anonymousAvatar from '@/assets/images/anonymous.png';
 import { showConfirmDialog } from 'vant';
 import { throttle } from '@/utils/throttle';
+import {
+  getAuditStatusMeta,
+  getBusinessStatusMeta,
+  isDraftBusinessStatus,
+  getRejectReasonText,
+  getSingleDisplayStatusMeta,
+  getStatusToneClass
+} from '@/utils/contentStatus';
 
 import PageLayout from '@/components/PageLayout/PageLayout.vue';
 
@@ -588,7 +632,6 @@ export default {
        currentPreviewIndex: 0,
        replyToComment: null,
        showMenu: false,
-       
        // Review popup
        showReviewPopup: false,
        allComments: [],
@@ -618,6 +661,22 @@ export default {
      },
      isOwner() {
          return this.user && this.blog && this.user.id === this.blog.userId;
+     },
+     blogDisplayStatusMeta() {
+         const meta = getSingleDisplayStatusMeta('blog', this.blog?.status, this.blog?.auditStatus);
+         if (meta.key === 'draft') {
+            return { ...meta, visible: false, text: '' };
+         }
+         return meta;
+     },
+     blogBusinessStatusMeta() {
+         return getBusinessStatusMeta('blog', this.blog?.status);
+     },
+     blogAuditStatusMeta() {
+         return getAuditStatusMeta(this.blog?.auditStatus);
+     },
+     blogRejectReason() {
+         return getRejectReasonText(this.blog?.auditStatus, this.blog?.rejectReason);
      }
   },
   watch: {
@@ -658,6 +717,7 @@ export default {
      window.removeEventListener('scroll', this.onWindowScroll);
   },
   methods: {
+     getStatusToneClass,
      normalizeRouteBlogId(route = this.$route) {
         const rawId = route && route.query ? route.query.id : '';
         if (rawId === null || rawId === undefined || rawId === '') return '';
@@ -1444,7 +1504,11 @@ export default {
       },
       handleEdit() {
           this.showMenu = false;
-          this.$router.push({ path: '/blog/edit', query: { id: this.blog.id } });
+          const query = { id: this.blog.id };
+          if (isDraftBusinessStatus('blog', this.blog?.status)) {
+             query.draft = 'true';
+          }
+          this.$router.push({ path: '/blog/edit', query });
       },
       handleDelete() {
           this.showMenu = false;
@@ -1603,6 +1667,12 @@ export default {
   border-radius: 12px;
   z-index: 10;
   font-weight: 500;
+}
+.blog-cover-status {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 11;
 }
 
 /* No Image Placeholder */
@@ -2156,14 +2226,17 @@ export default {
 
 /* Status Badges */
 .title-with-status {
-   display: flex;
-   align-items: center;
-   flex-wrap: wrap;
-   gap: 8px;
-   margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
 }
 .title-with-status .blog-title {
-   margin-bottom: 0;
+    margin-bottom: 0;
+}
+.title-with-status .detail-status-tag {
+    display: none;
 }
 .detail-status-tag {
     padding: 2px 6px;
@@ -2178,5 +2251,11 @@ export default {
 }
 .status-rejected {
     background: rgba(255, 36, 66, 0.85);
+}
+.blog-reject-reason {
+    margin-bottom: 12px;
+}
+.blog-status-panel {
+    margin-bottom: 12px;
 }
 </style>

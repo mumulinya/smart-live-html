@@ -10,16 +10,21 @@
     <!-- Product List -->
     <div class="top-list-content" ref="listContainer" @scroll.passive="onScroll">
       <div class="deal-list-container" style="padding: 0 12px 12px;">
-        <DealCard 
-          v-for="(item, index) in shops" 
-          :key="item.id" 
-          :item="item" 
-          :biz="sourceType === 2 ? 'group' : 'voucher'"
-          :rank="index + 1"
-          :is-seckill="item.activityType === 1"
-          @click="toDetail(item.id)"
-          @action="toDetail(item.id)"
-        />
+        <div v-for="(item, index) in shops" :key="item.id" class="product-list-item">
+          <DealCard 
+            :item="item" 
+            :biz="sourceType === 2 ? 'group' : 'voucher'"
+            :rank="index + 1"
+            :is-seckill="item.activityType === 1"
+            @click="toDetail(item.id)"
+            @action="toDetail(item.id)"
+          />
+          <div v-if="getProductDisplayStatusMeta(item).visible" class="product-list-status">
+            <span :class="['biz-status-chip', getStatusToneClass(getProductDisplayStatusMeta(item).tone)]">
+              {{ getProductDisplayStatusMeta(item).text }}
+            </span>
+          </div>
+        </div>
       </div>
 
       <!-- Loading / No More -->
@@ -44,6 +49,12 @@ import { searchShops } from '@/api/search';
 import { getProductHotRank } from '@/api/product';
 import { locationUtil } from '@/utils/location';
 import DealCard from '@/components/DealCard.vue';
+import {
+  getAuditStatusMeta,
+  getBusinessStatusMeta,
+  getSingleDisplayStatusMeta,
+  getStatusToneClass
+} from '@/utils/contentStatus';
 
 export default {
   name: 'TopList',
@@ -78,6 +89,10 @@ export default {
     this.destroyObserver();
   },
   methods: {
+    getStatusToneClass,
+    getProductDisplayStatusMeta(item) {
+      return getSingleDisplayStatusMeta('product', item?.status, item?.auditStatus);
+    },
     initLocation() {
       locationUtil.getLocation().then(loc => {
         this.location = { x: loc.x, y: loc.y };
@@ -218,6 +233,14 @@ export default {
   flex: 1;
   overflow-y: auto;
   padding-top: 12px;
+}
+.product-list-item {
+  margin-bottom: 12px;
+}
+.product-list-status {
+  margin-top: -4px;
+  padding: 0 12px 12px;
+  border-radius: 0 0 16px 16px;
 }
 .grab-btn {
   background: linear-gradient(135deg, #ff416c, #ff4b2b);

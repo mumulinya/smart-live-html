@@ -71,6 +71,39 @@
             <div class="filter-right">{{ currentTypeLabel }}共{{ reviews.length }}条</div>
        </div>
 
+       <div v-if="false" class="review-status-filter-box">
+           <div class="review-status-filter-group">
+               <div class="review-status-filter-title">业务状态</div>
+               <div class="biz-status-filter-row">
+                   <button
+                     v-for="option in getBusinessStatusFilterOptions()"
+                     :key="`review-status-${option.value}`"
+                     type="button"
+                     class="biz-status-filter-chip"
+                     :class="{ 'is-active': selectedBusinessStatus === option.value }"
+                     @click="onBusinessStatusSelect(option.value)"
+                   >
+                     {{ option.label }}
+                   </button>
+               </div>
+           </div>
+           <div class="review-status-filter-group">
+               <div class="review-status-filter-title">审核状态</div>
+               <div class="biz-status-filter-row">
+                   <button
+                     v-for="option in getAuditStatusFilterOptions()"
+                     :key="`review-audit-${option.value}`"
+                     type="button"
+                     class="biz-status-filter-chip"
+                     :class="{ 'is-active': selectedAuditStatus === option.value }"
+                     @click="onAuditStatusSelect(option.value)"
+                   >
+                     {{ option.label }}
+                   </button>
+               </div>
+           </div>
+       </div>
+
        <!-- Review List -->
        <div class="review-list">
             <van-list
@@ -92,9 +125,31 @@
 
                         <!-- Status Tag -->
                         <div class="rc-status-area">
+                            <span
+                              v-if="getReviewDisplayStatusMeta(r).visible"
+                              :class="['biz-status-chip', getStatusToneClass(getReviewDisplayStatusMeta(r).tone)]"
+                            >
+                              {{ getReviewDisplayStatusMeta(r).text }}
+                            </span>
                             <div class="review-status-tag status-pending" v-if="r.status === 0">审核中</div>
                             <div class="review-status-tag status-rejected" v-if="r.status === 2 || r.status === 3">审核未通过</div>
                             <div class="review-status-tag status-draft" v-if="r.status === 4">草稿</div>
+                        </div>
+                    </div>
+                    <div v-if="false" class="biz-status-summary rc-status-summary">
+                        <div class="biz-status-summary__grid">
+                            <div class="biz-status-summary__item">
+                                <span class="biz-status-summary__label">业务状态</span>
+                                <span :class="['biz-status-chip', getStatusToneClass(getReviewBusinessStatusMeta(r).tone)]">
+                                    {{ getReviewBusinessStatusMeta(r).text }}
+                                </span>
+                            </div>
+                            <div class="biz-status-summary__item">
+                                <span class="biz-status-summary__label">审核状态</span>
+                                <span :class="['biz-status-chip', getStatusToneClass(getReviewAuditStatusMeta(r).tone)]">
+                                    {{ getReviewAuditStatusMeta(r).text }}
+                                </span>
+                            </div>
                         </div>
                     </div>
 
@@ -121,7 +176,7 @@
                               </div>
 
                               <!-- Reject Reason (If rejected) -->
-                              <div class="rc-reject-reason" v-if="r.status === 2 || r.status === 3">
+                              <div class="rc-reject-reason" v-if="getReviewRejectReason(r)">
                                   <van-icon name="warning-o" size="12" style="margin-right:3px;vertical-align:middle;" />
                                   {{ r.rejectReason || '内容未通过审核，请修改后重新提交' }}
                               </div>
@@ -151,7 +206,7 @@
 
                            <div class="rc-actions-right">
                                <van-button 
-                                 v-if="r.status === 2 || r.status === 3 || r.status === 4"
+                                 v-if="shouldShowReviewEdit(r)"
                                  size="mini" 
                                  plain 
                                  type="primary" 
@@ -160,7 +215,7 @@
                                  @click.stop="onEditReview(r)"
                                >修改</van-button>
                                <span
-                                 v-if="r.status === 0 || r.status === 2 || r.status === 3 || r.status === 4"
+                                 v-if="shouldShowReviewDelete(r)"
                                  class="btn-delete-text"
                                  @click.stop="onDeleteReview(r)"
                                >删除</span>
@@ -195,6 +250,13 @@ import WaitReviewList from './components/WaitReviewList.vue';
 import { getUserReviewList } from '@/api/reviews';
 import { getCurrentUser } from '@/api/user';
 import { filePrefix } from '@/utils/request';
+import {
+    getAuditStatusMeta,
+    getBusinessStatusMeta,
+    getRejectReasonText,
+    getSingleDisplayStatusMeta,
+    getStatusToneClass
+} from '@/utils/contentStatus';
 
 export default {
   name: 'MyReviews',
@@ -254,6 +316,12 @@ export default {
           return item ? item.name : '按时间筛选';
       }
   },
+      businessStatusOptions() {
+          return getBusinessStatusOptions('review', { includeAll: true, allLabel: '全部业务状态' });
+      },
+      auditStatusOptions() {
+          return getAuditStatusOptions({ includeAll: true, allLabel: '全部审核状态' });
+      },
   created() {
       // Check query param for tab
       const tab = this.$route.query.tab;
@@ -380,6 +448,43 @@ export default {
           this.page = 1;
           this.finished = false;
       },
+      getStatusToneClass,
+      getBusinessStatusFilterOptions() {
+          return getBusinessStatusOptions('review', { includeAll: true, allLabel: '全部业务状态' });
+      },
+      getAuditStatusFilterOptions() {
+          return getAuditStatusOptions({ includeAll: true, allLabel: '全部审核状态' });
+      },
+      getReviewBusinessStatusMeta(item) {
+          return getBusinessStatusMeta('review', item?.status);
+      },
+      getReviewAuditStatusMeta(item) {
+          return getAuditStatusMeta(item?.auditStatus);
+      },
+      getReviewDisplayStatusMeta(item) {
+          return getSingleDisplayStatusMeta('review', item?.status, item?.auditStatus);
+      },
+      getReviewRejectReason(item) {
+          return getRejectReasonText(item?.auditStatus, item?.rejectReason);
+      },
+      shouldShowReviewEdit(item) {
+          return this.getReviewDisplayStatusMeta(item).key === 'draft' || !!this.getReviewRejectReason(item);
+      },
+      shouldShowReviewDelete() {
+          return true;
+      },
+      onBusinessStatusSelect(value) {
+          if (this.selectedBusinessStatus === value) return;
+          this.selectedBusinessStatus = value;
+          this.resetReviewedList();
+          this.loadReviews();
+      },
+      onAuditStatusSelect(value) {
+          if (this.selectedAuditStatus === value) return;
+          this.selectedAuditStatus = value;
+          this.resetReviewedList();
+          this.loadReviews();
+      },
       // Removed goToPending since it's now a tab switch
       toReviewDetail(review) {
           this.$router.push({
@@ -471,13 +576,11 @@ export default {
               current: this.page,
               size: this.size,
               userId: this.user.id,
-              sort: this.currentSort,
-              status: 0
+              sort: this.currentSort
           };
           if (this.reviewSourceType !== 'all') {
               params.sourceType = Number(this.reviewSourceType);
           }
-
           getUserReviewList(params).then(res => {
               let list = [];
               // Robust response handling
@@ -529,7 +632,8 @@ export default {
               productPrice: item.productPrice || 0,
               productCoverImg: item.productCoverImg ? (item.productCoverImg.startsWith('http') ? item.productCoverImg : this.$fileURL + item.productCoverImg) : '',
               rejectReason: item.rejectReason || '',
-              status: item.status
+              status: item.status,
+              auditStatus: item.auditStatus
            };
        },
 
@@ -688,6 +792,19 @@ export default {
     padding: 10px 15px;
     margin-bottom: 2px;
 }
+.review-status-filter-box {
+    background: #fff;
+    padding: 0 15px 12px;
+    margin-bottom: 8px;
+}
+.review-status-filter-group + .review-status-filter-group {
+    margin-top: 10px;
+}
+.review-status-filter-title {
+    margin-bottom: 8px;
+    font-size: 12px;
+    color: #999;
+}
 .filter-left {
     font-size: 14px;
     color: #666;
@@ -715,7 +832,11 @@ export default {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 8px;
+    padding: 14px 15px 0;
+    margin-bottom: 0;
+}
+.rc-body {
+    padding: 12px 15px 15px;
 }
 
 .rc-shop-info {
@@ -750,8 +871,14 @@ export default {
 }
 
 .rc-status-area {
-    margin-left: 10px;
-    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+}
+.rc-status-summary {
+    padding: 10px 15px 12px;
+    border-bottom: 1px solid #f7f7f7;
+    border-radius: 0;
+    background: transparent;
 }
 
 .review-status-tag {
@@ -760,6 +887,7 @@ export default {
     border-radius: 4px;
     color: #fff;
     white-space: nowrap;
+    display: none;
 }
 
 .status-pending { background: #8c8c8c; }
@@ -945,6 +1073,7 @@ export default {
     font-size: 11px;
     color: #fff;
     font-weight: 500;
+    display: none;
 }
 .status-pending {
     background: #8c8c8c;

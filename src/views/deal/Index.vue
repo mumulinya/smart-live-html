@@ -153,7 +153,7 @@
     </div>
     
 
-    <div class="deal-list" @scroll.passive="onScroll">
+    <div ref="dealList" class="deal-list" @scroll.passive="onScroll">
       <div v-if="loading && deals.length === 0" class="state-box">加载中...</div>
       <div v-else-if="displayDeals.length === 0" class="empty-state">
         <template v-if="isSeckillMode">
@@ -226,6 +226,7 @@ export default {
       page: 1,
       size: 10,
       dealRequestToken: 0,
+      bottomCheckTimer: null,
       isCompactHeader: false,
       lastScrollTop: 0,
       userLocation: null,
@@ -292,7 +293,14 @@ export default {
     this.initLocation();
     this.fetchDeals(true);
   },
+  activated() {
+    this.scheduleBottomCheck(180);
+  },
+  deactivated() {
+    this.clearBottomCheckTimer();
+  },
   beforeUnmount() {
+    this.clearBottomCheckTimer();
     if (typeof this.onScroll?.cancel === 'function') {
       this.onScroll.cancel();
     }
@@ -304,6 +312,26 @@ export default {
     }
   },
   methods: {
+    clearBottomCheckTimer() {
+      if (this.bottomCheckTimer !== null) {
+        clearTimeout(this.bottomCheckTimer);
+        this.bottomCheckTimer = null;
+      }
+    },
+    scheduleBottomCheck(delay = 0) {
+      this.clearBottomCheckTimer();
+      this.bottomCheckTimer = setTimeout(() => {
+        this.bottomCheckTimer = null;
+        this.checkNeedLoadMore();
+      }, delay);
+    },
+    checkNeedLoadMore() {
+      const el = this.$refs.dealList;
+      if (!el || this.loading || this.loadingMore || this.noMore) return;
+      if (el.scrollTop + el.clientHeight >= el.scrollHeight - 120) {
+        this.fetchDeals(false);
+      }
+    },
     syncFromRoute() {
       const q = this.$route.query || {};
       const biz = q.biz || q.tab;
@@ -617,6 +645,7 @@ export default {
         if (requestToken === this.dealRequestToken) {
           this.loading = false;
           this.loadingMore = false;
+          this.scheduleBottomCheck(reset ? 100 : 60);
         }
       }
     },

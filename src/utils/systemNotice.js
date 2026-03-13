@@ -56,6 +56,7 @@ function unwrapNoticeData(data = {}) {
     action: nested.action ?? data.action,
     title: nested.title ?? data.title,
     content: nested.content ?? data.content,
+    auditStatus: nested.auditStatus ?? data.auditStatus,
     rejectReason: nested.rejectReason ?? data.rejectReason,
     createdAt: nested.createdAt ?? nested.time ?? data.createdAt ?? data.time,
     read: data.read ?? nested.read,
@@ -77,6 +78,8 @@ function extractVoucherLikeData(data = {}) {
     'payValue',
     'actualValue',
     'status',
+    'auditStatus',
+    'rejectReason',
     'validityType',
     'useStartTime',
     'useEndTime',
@@ -143,9 +146,14 @@ function normalizeExtraData(data) {
 
 export function normalizeSystemNotice(data = {}, options = {}) {
   const source = unwrapNoticeData(data);
+  let auditStatus = source.auditStatus;
   const title = String(source.title || '系统消息');
-  const rejectReason = source.rejectReason ? String(source.rejectReason) : '';
+  let rejectReason = source.rejectReason ? String(source.rejectReason) : '';
   const extraData = normalizeExtraData(source);
+  auditStatus = auditStatus ?? extraData?.auditStatus;
+  if (!rejectReason && extraData?.rejectReason) {
+    rejectReason = String(extraData.rejectReason);
+  }
   const extraContent = extraData && extraData.content ? String(extraData.content) : '';
   const content = String(
     source.content || extraContent || (rejectReason ? `${title}：${rejectReason}` : title)
@@ -164,6 +172,7 @@ export function normalizeSystemNotice(data = {}, options = {}) {
     action,
     title,
     content,
+    auditStatus,
     rejectReason,
     createdAt,
     read,

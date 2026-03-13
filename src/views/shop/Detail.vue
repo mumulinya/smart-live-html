@@ -50,6 +50,31 @@
            </div>
        </div>
     </div>
+    <div v-if="false" class="biz-status-summary shop-detail-status">
+       <div class="biz-status-summary__grid">
+          <div class="biz-status-summary__item">
+             <span class="biz-status-summary__label">业务状态</span>
+             <span :class="['biz-status-chip', getStatusToneClass(shopBusinessStatusMeta.tone)]">
+                {{ shopBusinessStatusMeta.text }}
+             </span>
+          </div>
+          <div class="biz-status-summary__item">
+             <span class="biz-status-summary__label">审核状态</span>
+             <span :class="['biz-status-chip', getStatusToneClass(shopAuditStatusMeta.tone)]">
+                {{ shopAuditStatusMeta.text }}
+             </span>
+          </div>
+       </div>
+       <div v-if="shopRejectReason" class="biz-status-summary__reason">驳回原因：{{ shopRejectReason }}</div>
+    </div>
+    <div v-if="shopDisplayStatusMeta.visible || shopRejectReason" class="shop-detail-status single-status-panel">
+       <div v-if="shopDisplayStatusMeta.visible" class="single-status-panel__row">
+          <span :class="['biz-status-chip', getStatusToneClass(shopDisplayStatusMeta.tone)]">
+             {{ shopDisplayStatusMeta.text }}
+          </span>
+       </div>
+       <div v-if="shopRejectReason" class="single-status-panel__reason">驳回原因：{{ shopRejectReason }}</div>
+    </div>
 
        <van-tabs v-model:active="activeTab" scrollspy sticky color="#ff2442" title-active-color="#ff2442" line-width="20px" offset-top="44">
           <van-tab title="商品">
@@ -502,6 +527,13 @@ import { getCurrentUser } from '@/api/user';
 import { throttle } from '@/utils/throttle';
 import '@/assets/css/blog-detail.css';
 import anonymousAvatar from '@/assets/images/anonymous.png'; // Import blog styles to reuse reply CSS
+import {
+    getAuditStatusMeta,
+    getBusinessStatusMeta,
+    getRejectReasonText,
+    getSingleDisplayStatusMeta,
+    getStatusToneClass
+} from '@/utils/contentStatus';
 
 import PageLayout from '@/components/PageLayout/PageLayout.vue';
 import DealCard from '@/components/DealCard.vue';
@@ -576,11 +608,23 @@ export default {
        allCommentsRequestToken: 0
      }
   },
-  computed: {
-     fileURL() {
-        return this.$fileURL || '';
-     }
-  },
+    computed: {
+       fileURL() {
+          return this.$fileURL || '';
+       },
+       shopDisplayStatusMeta() {
+          return getSingleDisplayStatusMeta('shop', this.shop?.status, this.shop?.auditStatus);
+       },
+       shopBusinessStatusMeta() {
+          return getBusinessStatusMeta('shop', this.shop?.status);
+       },
+       shopAuditStatusMeta() {
+          return getAuditStatusMeta(this.shop?.auditStatus);
+       },
+       shopRejectReason() {
+          return getRejectReasonText(this.shop?.auditStatus, this.shop?.rejectReason);
+       }
+    },
   created() {
      this.onPopupScroll = throttle(this.onPopupScroll, 120);
      const id = this.$route.query.id;
@@ -607,7 +651,8 @@ export default {
      }
      window.removeEventListener('scroll', this.onWindowScroll);
   },
-  methods: {
+   methods: {
+      getStatusToneClass,
      onReviewSortChange(type) {
         if (!type || this.reviewSortType === type) return;
         this.reviewSortType = type;
@@ -753,7 +798,7 @@ export default {
                 sourceId,
                 sourceType: 2,
                current: this.commentsPage,
-               status: 0,
+               status: 1,
                 size: this.commentsPageSize,
                 ...this.getReviewSortParams()
              }).then(res => {
@@ -1318,6 +1363,7 @@ export default {
              sourceId: this.shop.id,
              sourceType: 2,
              current: this.allCommentsPage,
+             status: 1,
              ...this.getReviewSortParams()
           }).then(res => {
              if (requestToken !== this.allCommentsRequestToken) return;
@@ -1527,6 +1573,10 @@ export default {
    font-size: 12px;
    color: rgba(255,255,255,0.8);
    margin-bottom: 10px;
+}
+.shop-detail-status {
+   margin: 12px 16px 8px;
+   padding: 0;
 }
 .status-badge {
     background: #00B96B;

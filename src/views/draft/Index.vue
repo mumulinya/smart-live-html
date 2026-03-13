@@ -312,7 +312,7 @@ const loadDrafts = () => {
     if (user && user.id) {
       userId.value = user.id
     }
-    // 加载评价草稿（从API，status=1表示草稿）
+    // 加载评价草稿（从API，status=0表示草稿）
     loadReviewDrafts()
     // 加载笔记草稿（从API）
     loadNoteDrafts()
@@ -324,7 +324,7 @@ const loadDrafts = () => {
 const loadReviewDrafts = () => {
     getUserReviewList({
         userId: userId.value, 
-        status: 3,
+        status: 0,
         current: 1,
         size: 100
     }).then(res => {
@@ -338,7 +338,7 @@ const loadReviewDrafts = () => {
 
 const loadNoteDrafts = () => {
     getMyBlogs({
-        status: 3,
+        status: 0,
         current: 1,
         size: 100
     }).then(res => {
@@ -528,7 +528,7 @@ const publishReview = (item) => {
       isAnonymous: false,
       orderId: item.orderId || 0,
       userId: userId.value,
-      status: 0, // 0表示发布
+      status: 1, // 1表示发布
       id: item.id // 传递id以更新或删除草稿
     }
 
@@ -566,7 +566,7 @@ const publishNote = (item) => {
       content: item.content || '',
       images: images,
       shopId: item.shopId || null,
-      status: 0  // 0=发布
+      status: 1  // 1=发布
     }
 
     updateBlog(data)
