@@ -25,7 +25,7 @@
 
           <div class="notice-reason" v-if="item.rejectReason">拒绝原因：{{ item.rejectReason }}</div>
 
-          <div class="voucher-brief" v-if="item.voucherView">
+          <div class="voucher-brief" v-if="item.voucherView && !item.productView">
             <div class="voucher-cover" v-if="item.voucherView.cover">
               <img :src="item.voucherView.cover" alt="voucher" />
             </div>
@@ -396,15 +396,34 @@ export default {
       if (!extra || typeof extra !== 'object') return null;
 
       const isProductNew = item.title && (item.title.includes('商品上新') || item.title.includes('新品推荐') || item.title.includes('商品新品'));
-      const isActionNew = extra.action === 'new' || extra.subType === 'new' || extra.dataType === 'shop_new';
+      const isActionNew =
+        extra.action === 'new' ||
+        extra.action === 'shop_new' ||
+        extra.subType === 'new' ||
+        extra.subType === 'shop_new' ||
+        extra.dataType === 'shop_new' ||
+        item.action === 'shop_new';
 
       if (!isProductNew && !isActionNew) return null;
 
-      const title = extra.title || extra.content || item.content || item.title;
-      const price = extra.price ?? extra.score ?? item.score ?? 0;
-      const originalPrice = extra.originalPrice ?? 0;
-      const images = this.resolveNoticeImages(extra.images || item.images, 1);
-      const coverImg = images.length > 0 ? images[0] : '';
+      const title =
+        extra.name ||
+        item.name ||
+        extra.title ||
+        item.title ||
+        extra.content ||
+        item.content;
+      const price = extra.price ?? extra.payValue ?? extra.score ?? item.score ?? 0;
+      const originalPrice = extra.originalPrice ?? extra.actualValue ?? 0;
+      const coverImg = this.resolveVoucherCover(
+        extra.coverImg ||
+          extra.cover ||
+          extra.shopImages ||
+          extra.images ||
+          item.coverImg ||
+          item.cover ||
+          item.images
+      );
       
       const dealItem = {
         title,
@@ -413,7 +432,13 @@ export default {
         coverImg,
         sold: extra.sold ?? 0,
         stock: extra.stock ?? 0,
-        validDate: '新品上架',
+        validDate:
+          extra.validDate ||
+          (extra.useStartTime || extra.useEndTime || extra.validDays || extra.validityType ? '' : '新品上架'),
+        validityType: extra.validityType ?? extra.validity_type,
+        useStartTime: extra.useStartTime ?? extra.use_start_time,
+        useEndTime: extra.useEndTime ?? extra.use_end_time,
+        validDays: extra.validDays ?? extra.valid_days,
         status: 'active',
         discount: extra.discount,
         beginTime: extra.beginTime,
@@ -1315,5 +1340,3 @@ export default {
   margin-left: 2px;
 }
 </style>
-
-

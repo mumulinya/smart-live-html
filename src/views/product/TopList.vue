@@ -3,7 +3,7 @@
     <!-- Header -->
     <div class="top-header">
       <div class="header-back" @click="$router.go(-1)"><i class="el-icon-arrow-left"></i></div>
-      <div class="header-title">🔥 {{ pageTitle }}</div>
+      <div class="header-title">{{ pageTitle }}</div>
       <div class="header-placeholder"></div>
     </div>
 

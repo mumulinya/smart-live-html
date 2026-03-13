@@ -54,7 +54,7 @@
     <!-- ========== 商家动态卡片 (Product/Voucher) - 优惠券风格 ========== -->
     <template v-else>
       <div class="product-header">
-        <div class="shop-info">
+        <div class="shop-info" v-if="item.dataType !== 'RESTOCK'">
           <van-image round width="38" height="38" :src="item.shopLogo || item.shopIcon" class="shop-avatar" fit="cover">
             <template #error><van-icon name="shop-o" class="shop-icon-fallback" /></template>
           </van-image>
@@ -63,6 +63,11 @@
             <div class="action-text-row" :style="{ color: isSeckill ? '#FF2442' : eventConfig.color }">
                {{ (isSeckill && ['new', 'start'].includes(eventType)) ? '限时秒杀' : actionLabel }}
             </div>
+          </div>
+        </div>
+        <div class="restock-info" v-else>
+          <div class="action-text-row" :style="{ color: eventConfig.color, fontSize: '15px', fontWeight: '600' }">
+             {{ actionLabel }}
           </div>
         </div>
         <div class="header-right">

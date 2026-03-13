@@ -108,7 +108,10 @@
                  </div>
               </div>
            </div>
-          <div class="no-more" v-if="noMore && !isSearchMode">没有更多了</div>
+          <div v-if="loadError" class="load-error-retry" @click="queryShops(false)" style="text-align: center; padding: 15px; color: #999; cursor: pointer;">
+             加载失败，点击重试 <i class="el-icon-refresh"></i>
+          </div>
+          <div class="no-more" v-if="noMore && !isSearchMode && !loadError">没有更多了</div>
        </div>
        <div v-else-if="!isLoading && isSearchMode && hasSearched" class="custom-empty-state">
            <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXw9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiByeD0iOCIgZmlsbD0iI0Y4RjlGQSIvPgo8cGF0aCBkPSJNNDAgNDJMMzIgMzRMMzQgMzJMNDAgMzhMNDYgMzJMNDggMzRMNDAgNDJaIiBmaWxsPSIjQzBDNEY0Ii8+CjxwYXRoIGQ9Ik00MCA0MkwzMiAzNEwzNCAzMkw0MCAzOEw0NiAzMkw0OCAzNEw0MCA0MloiIGZpbGw9IiNDMEM0RjQiLz4KPC9zdmc+Cg==">
@@ -169,6 +172,7 @@ export default {
        
        shops: [],
        isLoading: false,
+       loadError: false,
        noMore: false,
        showLocationStatus: false,
        
@@ -429,7 +433,7 @@ export default {
      },
      loadMoreShops() {
         if (this.isSearchMode && this.hasSearched) return;
-        if (this.isLoading || this.noMore) return;
+        if (this.isLoading || this.noMore || this.loadError) return;
         this.queryShops();
      },
      setupShopSentinelObserver() {
@@ -466,8 +470,11 @@ export default {
          const isStale = () => requestToken !== this.shopRequestToken;
 
          this.isLoading = true;
+         this.loadError = false;
          this.shops = [];
          this.noMore = false;
+         this.loadError = false;
+         this.loadError = false;
          this.hasSearched = true;
 
          const filters = {};
@@ -533,8 +540,10 @@ export default {
            this.shops = [];
            this.params.current = 1;
            this.noMore = false;
+           this.loadError = false;
+           this.loadError = false;
         }
-        if (this.isLoading || this.noMore) return;
+        if (this.isLoading || this.noMore || this.loadError) return;
 
         const requestToken = ++this.shopRequestToken;
         const isStale = () => requestToken !== this.shopRequestToken;

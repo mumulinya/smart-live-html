@@ -3,7 +3,7 @@
     <!-- Header -->
     <div class="top-header">
       <div class="header-back" @click="$router.go(-1)"><i class="el-icon-arrow-left"></i></div>
-      <div class="header-title">🔥 本地必吃榜</div>
+      <div class="header-title">本地必吃榜</div>
       <div class="header-placeholder"></div>
     </div>
 
@@ -29,10 +29,7 @@
             <span v-if="shop.area" class="rank-area">{{ shop.area }}</span>
             <span v-if="shop.distance" class="rank-distance">{{ formatDistance(shop.distance) }}</span>
           </div>
-          <div class="rank-heat-new">
-            <span class="heat-flame">🔥</span>
-            <span class="heat-score">{{ formatScore(shop.hotScore) }}</span>
-          </div>
+
         </div>
       </div>
 
@@ -163,17 +160,7 @@ export default {
     toDetail(id) {
       this.$router.push({ path: '/shop/detail', query: { id } });
     },
-    formatScore(hotScore) {
-      const n = Number(hotScore);
-      if (!Number.isFinite(n) || n <= 0) return '0.0';
-      if (n >= 100000000) {
-        return (n / 100000000).toFixed(1) + '亿';
-      }
-      if (n >= 10000) {
-        return (n / 10000).toFixed(1) + '万';
-      }
-      return String(n);
-    },
+
     formatDistance(distance) {
       const n = Number(distance);
       if (!Number.isFinite(n) || n <= 0) return '';
@@ -353,20 +340,7 @@ export default {
   flex-shrink: 0;
 }
 
-.rank-heat-new {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  margin-top: 6px;
-}
-.heat-flame { 
-  font-size: 11px; 
-}
-.heat-score {
-  font-size: 11px;
-  font-weight: 500;
-  color: #ff4b2b;
-}
+
 
 /* Status */
 .list-status {

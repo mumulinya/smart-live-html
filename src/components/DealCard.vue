@@ -40,11 +40,12 @@
             <span class="v-origin" v-if="originalPrice">¥{{ originalPrice }}</span>
           </div>
           <div class="v-date">📅 {{ validityText }}</div>
+          <div class="v-seckill-time" v-if="seckillPeriodText">⏰ {{ seckillPeriodText }}</div>
           
           <div class="v-progress-bar" v-if="showStock">
             <div class="p-header">
-              <span :class="['p-sold-text', { 'is-hot': isHot }]">
-                {{ isHot ? '🔥 火爆' : `已售${sold}张` }}
+              <span class="p-sold-text">
+                已售{{ sold }}张
               </span>
               <span class="p-remain-text">剩余{{ Math.max(0, total - sold) }}张</span>
             </div>
@@ -65,11 +66,7 @@
             </div>
           </div>
 
-          <!-- 热度值显示 -->
-          <div v-if="hotScore !== null" class="v-hot-score">
-            <span class="hot-icon">🔥</span>
-            <span class="hot-val">{{ hotScore }}</span>
-          </div>
+
         </div>
       </div>
 
@@ -93,7 +90,7 @@
         <div class="g-overlay"></div>
         
         <div v-if="isSeckill" class="seckill-badge-right-group">⚡ 秒杀</div>
-        <div v-if="isHot" class="hot-badge-top">🔥 火爆</div>
+
 
         <!-- 排名勋章 -->
         <div v-if="rank !== null" class="g-rank-badge" :class="rankClass">
@@ -124,15 +121,14 @@
         </div>
         
         <div class="g-info-row">
-          <div class="g-date">📅 {{ validityText }}</div>
+          <div class="g-date-block">
+            <div class="g-date">📅 {{ validityText }}</div>
+            <div class="g-seckill-time" v-if="seckillPeriodText">⏰ {{ seckillPeriodText }}</div>
+          </div>
           <div v-if="showStock" class="g-stock">剩余{{ Math.max(0, total - sold) }}件</div>
         </div>
         
-        <!-- 热度值显示 -->
-        <div v-if="hotScore !== null" class="g-hot-score">
-          <span class="hot-icon">🔥</span>
-          <span class="hot-val">{{ hotScore }}</span>
-        </div>
+
 
         <div class="v-countdown g-countdown" v-if="isSeckill && status === 'active' && !isExpired">
           <span class="cd-label">距结束</span>
@@ -159,8 +155,7 @@ export default {
     item: { type: Object, required: true },
     biz: { type: String, default: 'voucher' },
     isSeckill: { type: Boolean, default: false },
-    rank: { type: [Number, String], default: null },
-    hotScore: { type: [Number, String], default: null }
+    rank: { type: [Number, String], default: null }
   },
   data() {
     return {
@@ -218,32 +213,51 @@ export default {
       if (!this.total) return 0;
       return Math.min((this.sold / this.total) * 100, 100);
     },
-    isHot() { return this.progressPct >= 80; },
+
     validityText() {
-      if (this.item.validDate) return this.item.validDate;
-      if (this.item.activityType === 1 && this.item.beginTime && this.item.endTime) {
-        const format = (str) => {
-          const val = (!isNaN(str) && !isNaN(parseFloat(str))) ? Number(str) : str;
-          const d = new Date(val);
-          return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-        };
-        return `${format(this.item.beginTime)}至${format(this.item.endTime)}可用`;
+      const validityType = Number((this.item.validityType ?? this.item.validity_type) || 0);
+      const useStart = this.formatDate(this.item.useStartTime ?? this.item.use_start_time);
+      const useEnd = this.formatDate(this.item.useEndTime ?? this.item.use_end_time);
+
+      if (validityType === 1) {
+        if (useStart && useEnd) return `${useStart}至${useEnd}可用`;
+        if (useStart) return `${useStart}起可用`;
+        if (useEnd) return `${useEnd}到期`;
       }
-      if (this.item.validityType === 1 && this.item.useEndTime) return `${this.item.useEndTime.split(' ')[0]}到期`;
-      if (this.item.validDays) return `购买后${this.item.validDays}天有效`;
+
+      if (validityType === 2) {
+        const days = Number((this.item.validDays ?? this.item.valid_days) || 0);
+        if (Number.isFinite(days) && days > 0) return `购买后${days}天有效`;
+      }
+
+      if (useStart && useEnd) return `${useStart}至${useEnd}可用`;
+      if (useStart) return `${useStart}起可用`;
+      if (useEnd) return `${useEnd}到期`;
+      if (this.item.validDate) return this.item.validDate;
       return '长期有效';
     },
+    seckillPeriodText() {
+      if (!this.isSeckill) return '';
+      const start = this.formatDate(this.item.beginTime ?? this.item.begin_time, true);
+      const end = this.formatDate(this.item.endTime ?? this.item.end_time, true);
+      if (start && end) return `${start} - ${end}`;
+      if (start) return `${start}开抢`;
+      if (end) return `${end}结束`;
+      return '';
+    },
     endTimeMs() { 
-      if (!this.item.endTime) return 0;
-      const val = (!isNaN(this.item.endTime) && !isNaN(parseFloat(this.item.endTime))) ? Number(this.item.endTime) : this.item.endTime;
+      const rawEndTime = this.item.endTime ?? this.item.end_time;
+      if (!rawEndTime) return 0;
+      const val = (!isNaN(rawEndTime) && !isNaN(parseFloat(rawEndTime))) ? Number(rawEndTime) : rawEndTime;
       return new Date(val).getTime() || 0;
     },
     isExpired() { return this.endTimeMs > 0 && this.now >= this.endTimeMs; },
     status() {
       if (this.item.status === 'ended' || this.isExpired) return 'ended';
       if (this.item.status === 'soldout' || (this.total > 0 && this.sold >= this.total)) return 'soldout';
-      if (this.isSeckill && this.item.beginTime) {
-          const val = (!isNaN(this.item.beginTime) && !isNaN(parseFloat(this.item.beginTime))) ? Number(this.item.beginTime) : this.item.beginTime;
+      const rawBeginTime = this.item.beginTime ?? this.item.begin_time;
+      if (this.isSeckill && rawBeginTime) {
+          const val = (!isNaN(rawBeginTime) && !isNaN(parseFloat(rawBeginTime))) ? Number(rawBeginTime) : rawBeginTime;
           const beginTimeMs = new Date(val).getTime();
           if (this.now < beginTimeMs) return 'upcoming';
       }
@@ -293,6 +307,21 @@ export default {
     if (this.timer) clearInterval(this.timer);
   },
   methods: {
+    formatDate(value, withTime = false) {
+      if (value === undefined || value === null || value === '') return '';
+      const val = (!isNaN(value) && !isNaN(parseFloat(value))) ? Number(value) : value;
+      const date = new Date(val);
+      if (Number.isNaN(date.getTime())) return '';
+
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      if (!withTime) return `${year}-${month}-${day}`;
+
+      const hour = String(date.getHours()).padStart(2, '0');
+      const minute = String(date.getMinutes()).padStart(2, '0');
+      return `${year}-${month}-${day} ${hour}:${minute}`;
+    },
     onActionClick() {
       if (this.statusConfig.disabled) return;
       this.$emit('action', this.item);
@@ -360,24 +389,6 @@ export default {
 }
 .v-discount-text { color: #fff; font-size: 16px; font-weight: 800; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
 
-.v-color-block {
-  flex: 1;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 18px 8px;
-  position: relative;
-}
-/* Premium Mesh Gradients for Fallbacks */
-.v-color-block.seckill-bg {
-  background: linear-gradient(135deg, hsl(348, 100%, 65%), hsl(14, 100%, 60%));
-}
-.v-color-block.normal-bg {
-  background: linear-gradient(135deg, hsl(30, 100%, 60%), hsl(40, 100%, 60%));
-}
-
 .v-icon { font-size: 32px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1)); }
 .v-discount-large {
   color: #fff;
@@ -444,6 +455,7 @@ export default {
 .v-price { font-size: 26px; font-weight: 800; color: #FF4757; line-height: 1; letter-spacing: -0.5px; }
 .v-origin { font-size: 12px; color: #b0b0b0; text-decoration: line-through; }
 .v-date { font-size: 11px; color: #a0a0a0; margin-top: auto; }
+.v-seckill-time { font-size: 11px; color: #ff6b00; margin-top: 4px; line-height: 1.3; }
 
 .v-progress-bar { margin-top: 10px; }
 .p-header {
@@ -451,7 +463,6 @@ export default {
   font-size: 11px; color: #999; margin-bottom: 4px;
 }
 .p-sold-text { font-weight: 500; }
-.p-sold-text.is-hot { color: #FF4757; font-weight: 700; }
 .p-track {
   height: 6px; background: #f0f0f0; border-radius: 4px; overflow: hidden;
   box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
@@ -542,12 +553,7 @@ export default {
   border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: -2px 2px 8px rgba(255, 71, 87, 0.3);
   color: #fff; font-size: 11px; padding: 4px 10px 4px 12px; border-radius: 12px 0 0 12px; font-weight: 800; z-index: 3;
 }
-.hot-badge-top {
-  position: absolute; top: 12px; right: 12px;
-  background: rgba(255, 107, 0, 0.85); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
-  border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 2px 8px rgba(255, 107, 0, 0.3);
-  color: #fff; font-size: 11px; padding: 4px 10px; border-radius: 12px; font-weight: 700; z-index: 3;
-}
+
 
 .g-title-row {
   position: absolute; bottom: 12px; left: 14px; right: 14px;
@@ -577,7 +583,9 @@ export default {
   margin-top: 14px; padding-top: 10px; border-top: 1px dashed #eaeaea;
   flex-wrap: wrap; gap: 8px;
 }
+.g-date-block { min-width: 0; flex: 1; }
 .g-date { font-size: 12px; color: #a0a0a0; font-weight: 500; }
+.g-seckill-time { font-size: 11px; color: #ff6b00; line-height: 1.3; margin-top: 4px; word-break: break-all; }
 .g-stock { font-size: 12px; color: #999; font-weight: 500; }
 
 /* Rank & Hot Score */
@@ -594,11 +602,5 @@ export default {
 .v-rank-badge.silver, .g-rank-badge.silver { background: linear-gradient(135deg, #E2E8F0, #94A3B8); color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
 .v-rank-badge.bronze, .g-rank-badge.bronze { background: linear-gradient(135deg, #FCD34D, #B45309); color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
 
-.v-hot-score, .g-hot-score {
-  margin-top: 10px; display: flex; align-items: center; gap: 5px; border-top: 1px dashed #f0f0f0; padding-top: 8px;
-}
-.hot-icon { font-size: 13px; }
-.hot-val { font-size: 12px; color: #FF4757; font-weight: 700; }
 
-.g-hot-score { border-top: none; padding-top: 0; margin-top: 8px; width: 100%; border-top: 1px dashed #eaeaea; padding-top: 10px; }
 </style>

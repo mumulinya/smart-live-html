@@ -4,7 +4,7 @@
     <div class="fixed-top-bar">
       <div class="top-back-btn" @click="goBack"><i class="el-icon-arrow-left"></i></div>
       <div class="top-user-section" @click="toOtherInfo" v-if="blog.id">
-        <img class="top-user-avatar" :src="blog.icon || '/imgs/icons/default-icon.png'">
+        <img class="top-user-avatar" :src="blog.icon || anonymousAvatar">
         <div class="top-user-info">
           <span class="top-user-name">{{blog.name}}</span>
           <span class="top-user-tag" v-if="blog.userTag">{{blog.userTag}}</span>
@@ -134,7 +134,7 @@
                  </div>
                  <div class="like-avatars">
                     <div class="like-avatar-item" v-for="(u, index) in likes.slice(0, 8)" :key="u.id" :style="{ zIndex: 10 - index }" @click="toUserDetail(u.id)">
-                       <img :src="u.icon || '/imgs/icons/default-icon.png'">
+                       <img :src="u.icon || anonymousAvatar">
                     </div>
                  </div>
                  <div class="like-count-text">{{blog.liked}}人点赞</div>
@@ -186,7 +186,7 @@
                 <!-- 用户评论 -->
                 <div class="comment-box" v-for="c in comments" :key="c.id">
                    <div class="comment-icon" @click.stop="toUserDetail(c.userId)">
-                      <img :src="c.userIcon || '/imgs/icons/default-icon.png'">
+                      <img :src="c.userIcon || anonymousAvatar">
                    </div>
                    <div class="comment-info">
                       <div class="comment-user" @click.stop="toUserDetail(c.userId)">
@@ -225,7 +225,7 @@
                            <template v-if="c.showReplies">
                               <div class="reply-item" v-for="r in c.replies" :key="r.id">
                                   <div class="reply-avatar" @click.stop="toUserDetail(r.userId)">
-                                     <img :src="r.userIcon || r.icon || '/imgs/icons/default-icon.png'" alt="">
+                                     <img :src="r.userIcon || r.icon || anonymousAvatar" alt="">
                                   </div>
                                   <div class="reply-main">
                                      <div class="reply-header">
@@ -276,6 +276,9 @@
              <div v-if="comments.length === 0 && !(aiComment && aiComment.content) && !commentsLoading && commentsNoMore" class="no-comments">暂无评论，快来发表第一条评论吧～</div>
              <div class="comment-load-state" v-if="commentsLoading">加载中...</div>
              <div class="comment-load-state comment-load-end" v-else-if="commentsNoMore && comments.length > 0">没有更多评论了</div>
+                          <div v-if="commentsLoadError" class="load-error-retry" @click="loadComments(blog.id, false)" style="text-align: center; padding: 15px; color: #999; cursor: pointer;">
+                加载失败，点击重试<i class="el-icon-refresh"></i>
+             </div>
              <div ref="commentLoadTrigger" class="comment-load-trigger" v-if="!commentsNoMore"></div>
           </div>
          
@@ -379,7 +382,7 @@
              
              <div class="comment-box" v-for="c in allComments" :key="c.id">
                 <div class="comment-icon" @click.stop="toUserDetail(c.userId)">
-                   <img :src="c.userIcon || '/imgs/icons/default-icon.png'">
+                   <img :src="c.userIcon || anonymousAvatar">
                 </div>
                 <div class="comment-info">
                    <div class="comment-user" @click.stop="toUserDetail(c.userId)">
@@ -419,7 +422,7 @@
                       <template v-if="c.showReplies">
                          <div class="reply-item" v-for="r in c.replies" :key="r.id">
                              <div class="reply-avatar" @click.stop="toUserDetail(r.userId)">
-                                <img :src="r.userIcon || r.icon || '/imgs/icons/default-icon.png'" alt="">
+                                <img :src="r.userIcon || r.icon || anonymousAvatar" alt="">
                              </div>
                              <div class="reply-main">
                                 <div class="reply-header">
@@ -526,6 +529,7 @@ import { getCurrentUser } from '@/api/user';
 import { uploadFile } from '@/api/common';
 import '@/assets/css/blog-detail.css';
 import { ElImageViewer } from 'element-plus';
+import anonymousAvatar from '@/assets/images/anonymous.png';
 import { showConfirmDialog } from 'vant';
 import { throttle } from '@/utils/throttle';
 
@@ -546,6 +550,7 @@ export default {
        commentSortType: 'hot', // 默认最热
        commentsNoMore: false,
        commentsLoading: false,
+       commentsLoadError: false,
        commentLoadArmed: false,
        commentObserver: null,
        aiComment: null,
@@ -590,6 +595,7 @@ export default {
        allCommentsPage: 1,
        allCommentsNoMore: false,
        allCommentsLoading: false,
+       allCommentsLoadError: false,
 
        // Delete Dialog
        showDeleteDialog: false,
@@ -933,7 +939,7 @@ export default {
               .filter(c => !c.isAIGenerated)
               .map(c => ({
                  ...c,
-                 userIcon: c.userIcon ? (c.userIcon.startsWith('http') ? c.userIcon : this.fileURL + c.userIcon) : '',
+                 userIcon: c.userIcon ? (c.userIcon.startsWith('http') ? c.userIcon : this.fileURL + c.userIcon) : anonymousAvatar,
                  images: c.images ? c.images.split(',').filter(x => x).map(i => i.startsWith('http') ? i : this.fileURL + i) : [],
                  isLike: c.isLike || false,
                  liked: c.liked || 0,
@@ -963,7 +969,7 @@ export default {
         });
      },
       loadMoreComments() {
-         if (!this.blog.id || this.commentsLoading || this.commentsNoMore || !this.commentLoadArmed) return;
+         if (!this.blog.id || this.commentsLoading || this.commentsNoMore || !this.commentLoadArmed || this.commentsLoadError) return;
          this.loadComments(this.blog.id, false);
       },
       onMainScroll(e) {
@@ -1064,7 +1070,7 @@ export default {
               if (list) {
                   const newReplies = list.map(r => ({
                       ...r,
-                      userIcon: r.userIcon ? (r.userIcon.startsWith('http') ? r.userIcon : this.fileURL + r.userIcon) : '',
+                      userIcon: r.userIcon ? (r.userIcon.startsWith('http') ? r.userIcon : this.fileURL + r.userIcon) : anonymousAvatar,
                       images: r.images ? r.images.split(',').filter(x=>x).map(i => i.startsWith('http') ? i : this.fileURL + i) : [],
                       liked: r.liked || 0,
                       isLike: r.isLike || false,
@@ -1117,7 +1123,7 @@ export default {
             } else {
                const processed = list.filter(c => !c.isAIGenerated).map(c => ({
                   ...c,
-                  userIcon: c.userIcon ? (c.userIcon.startsWith('http') ? c.userIcon : this.fileURL + c.userIcon) : '',
+                  userIcon: c.userIcon ? (c.userIcon.startsWith('http') ? c.userIcon : this.fileURL + c.userIcon) : anonymousAvatar,
                   images: c.images ? c.images.split(',').filter(x=>x).map(i => i.startsWith('http') ? i : this.fileURL + i) : [],
                   clickedLike: false,
                   // Reply logic

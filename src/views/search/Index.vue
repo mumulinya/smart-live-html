@@ -114,6 +114,12 @@
 
                     <!-- Shop Results -->
                     <div v-if="isLoading" class="loading-box"><i class="el-icon-loading"></i> 加载中...</div>
+
+                    <div v-if="searchLoadError" class="load-error-retry" @click="doSearch(false)" style="text-align: center; padding: 20px; color: #999; cursor: pointer;">
+
+                        鍔犺浇澶辫触锛岀偣鍑婚噸璇?<i class="el-icon-refresh"></i>
+
+                    </div>
                     <div v-else>
                         <div v-if="shopList.length===0" class="empty-result">
                             <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiByeD0iOCIgZmlsbD0iI0Y4RjlGQSIvPgo8cGF0aCBkPSJNNDAgNDJMMzIgMzRMMzQgMzJMNDAgMzhMNDYgMzJMNDggMzRMNDAgNDJaIiBmaWxsPSIjQzBDNEY0Ii8+CjxwYXRoIGQ9Ik00MCA0MkwzMiAzNEwzNCAzMkw0MCAzOEw0NiAzMkw0OCAzNEw0MCA0MloiIGZpbGw9IiNDMEM0RjQiLz4KPC9zdmc+Cg==">
@@ -192,6 +198,12 @@
                       
                       <!-- Voucher Results -->
                       <div v-if="isLoading" class="loading-box"><i class="el-icon-loading"></i> 加载中...</div>
+
+                      <div v-if="searchLoadError" class="load-error-retry" @click="doSearch(false)" style="text-align: center; padding: 20px; color: #999; cursor: pointer;">
+
+                          鍔犺浇澶辫触锛岀偣鍑婚噸璇?<i class="el-icon-refresh"></i>
+
+                      </div>
                       <div v-else>
                           <div v-if="productList.length===0" class="empty-result">
                              <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiByeD0iOCIgZmlsbD0iI0Y4RjlGQSIvPgo8cGF0aCBkPSJNNDAgNDJMMzIgMzRMMzQgMzJMNDAgMzhMNDYgMzJMNDggMzRMNDAgNDJaIiBmaWxsPSIjQzBDNEY0Ii8+CjxwYXRoIGQ9Ik00MCA0MkwzMiAzNEwzNCAzMkw0MCAzOEw0NiAzMkw0OCAzNEw0MCA0MloiIGZpbGw9IiNDMEM0RjQiLz4KPC9zdmc+Cg==">
@@ -254,6 +266,12 @@
                       
                       <!-- Group Results -->
                       <div v-if="isLoading" class="loading-box"><i class="el-icon-loading"></i> 加载中...</div>
+
+                      <div v-if="searchLoadError" class="load-error-retry" @click="doSearch(false)" style="text-align: center; padding: 20px; color: #999; cursor: pointer;">
+
+                          鍔犺浇澶辫触锛岀偣鍑婚噸璇?<i class="el-icon-refresh"></i>
+
+                      </div>
                       <div v-else>
                           <div v-if="productList.length===0" class="empty-result">
                              <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiByeD0iOCIgZmlsbD0iI0Y4RjlGQSIvPgo8cGF0aCBkPSJNNDAgNDJMMzIgMzRMMzQgMzJMNDAgMzhMNDYgMzJMNDggMzRMNDAgNDJaIiBmaWxsPSIjQzBDNEY0Ii8+CjxwYXRoIGQ9Ik00MCA0MkwzMiAzNEwzNCAzMkw0MCAzOEw0NiAzMkw0OCAzNEw0MCA0MloiIGZpbGw9IiNDMEM0RjQiLz4KPC9zdmc+Cg==">
@@ -302,6 +320,12 @@
 
                     <!-- Blog Results -->
                     <div v-if="isLoading" class="loading-box"><i class="el-icon-loading"></i> 加载中...</div>
+
+                    <div v-if="searchLoadError" class="load-error-retry" @click="doSearch(false)" style="text-align: center; padding: 20px; color: #999; cursor: pointer;">
+
+                        鍔犺浇澶辫触锛岀偣鍑婚噸璇?<i class="el-icon-refresh"></i>
+
+                    </div>
                      <div v-else>
                         <div v-if="blogList.length===0" class="empty-result">
                            <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiByeD0iOCIgZmlsbD0iI0Y4RjlGQSIvPgo8cGF0aCBkPSJNNDAgNDJMMzIgMzRMMzQgMzJMNDAgMzhMNDYgMzJMNDggMzRMNDAgNDJaIiBmaWxsPSIjQzBDNEY0Ii8+CjxwYXRoIGQ9Ik00MCA0MkwzMiAzNEwzNCAzMkw0MCAzOEw0NiAzMkw0OCAzNEw0MCA0MloiIGZpbGw9IiNDMEM0RjQiLz4KPC9zdmc+Cg==">
@@ -342,6 +366,15 @@
             <van-tab title="用户" name="user">
                 <div class="tab-content">
                     <div v-if="isLoading" class="loading-box"><i class="el-icon-loading"></i> 加载中...</div>
+
+                    <div v-if="searchLoadError" class="load-error-retry" @click="doSearch(false)" style="text-align: center; padding: 20px; color: #999; cursor: pointer;">
+
+                        鍔犺浇澶辫触锛岀偣鍑婚噸璇?<i class="el-icon-refresh"></i>
+
+                    </div>
+                    <div v-if="searchLoadError" class="load-error-retry" @click="doSearch(false)" style="text-align: center; padding: 20px; color: #999; cursor: pointer;">
+                        加载失败，点击重试 <i class="el-icon-refresh"></i>
+                    </div>
                     <div v-else class="user-list-container">
                          <div v-if="userList.length===0" class="empty-result">
                            <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiByeD0iOCIgZmlsbD0iI0Y4RjlGQSIvPgo8cGF0aCBkPSJNNDAgNDJMMzIgMzRMMzQgMzJMNDAgMzhMNDYgMzJMNDggMzRMNDAgNDJaIiBmaWxsPSIjQzBDNEY0Ii8+CjxwYXRoIGQ9Ik00MCA0MkwzMiAzNEwzNCAzMkw0MCAzOEw0NiAzMkw0OCAzNEw0MCA0MloiIGZpbGw9IiNDMEM0RjQiLz4KPC9zdmc+Cg==">
@@ -410,6 +443,7 @@ export default {
       
       pageLoading: true,
       isLoading: false,
+      searchLoadError: false,
       locationLoading: false,
       locationSuccess: false,
       locationError: false,
@@ -614,7 +648,7 @@ export default {
       this.doSearch(false);
     },
     loadMoreSearchResults() {
-      if (this.loadingMore || this.noMore || !this.hasSearched || this.isLoading) return;
+      if (this.loadingMore || this.noMore || !this.hasSearched || this.isLoading || this.searchLoadError) return;
       this.doSearch(true);
     },
     setupSearchSentinelObserver() {
@@ -899,6 +933,7 @@ export default {
       if (!isLoadMore) {
         this.hasSearched = true;
         this.isLoading = true;
+        this.searchLoadError = false;
         this.page = 1;
         this.noMore = false;
         this.shopList = [];
@@ -907,6 +942,7 @@ export default {
         this.productList = [];
       } else {
         this.loadingMore = true;
+        this.searchLoadError = false;
       }
 
       const pageParams = { page: targetPage, size: 10 };
@@ -1064,6 +1100,7 @@ export default {
         .catch((err) => {
           if (isStale()) return;
           console.error('搜索请求错误:', err);
+          this.searchLoadError = true;
         })
         .finally(() => {
           if (isStale()) return;
@@ -1079,7 +1116,9 @@ export default {
        const el = e.target;
 
        if (el.scrollTop + el.clientHeight >= el.scrollHeight - 100) {
-           this.loadMoreSearchResults();
+           if (!this.searchLoadError) {
+               this.loadMoreSearchResults();
+           }
        }
     },
 

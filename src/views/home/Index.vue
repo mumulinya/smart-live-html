@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="home-container">
     <transition name="van-fade">
       <div v-if="isLoading" class="global-loading-overlay">
@@ -120,7 +120,7 @@
           <div class="shop-img-box">
              <img :src="shop.displayImg" v-if="shop.displayImg && !shop.imgError" @error="shop.imgError = true" @load="shop.imgLoaded = true" :class="{'is-loaded': shop.imgLoaded}" alt="">
              <div class="img-fallback" v-else><i class="el-icon-goods"></i></div>
-             <div class="heat-tag">🔥 {{ formatTopScore(shop.hotScore) }}</div>
+             <div class="heat-tag">🔥</div>
           </div>
           <div class="shop-name-trunc">
             <span v-if="shop.activityType === 1" class="seckill-tag" style="background: linear-gradient(135deg, #ff416c, #ff4b2b); color: white; font-size: 10px; padding: 1px 4px; border-radius: 3px; margin-right: 4px; vertical-align: middle;">秒杀</span>
@@ -661,17 +661,7 @@ export default {
         s.imgError = false;
       });
     },
-    formatTopScore(hotScore) {
-      const n = Number(hotScore);
-      if (!Number.isFinite(n) || n <= 0) return '0.0';
-      if (n >= 100000000) {
-        return (n / 100000000).toFixed(1) + '亿';
-      }
-      if (n >= 10000) {
-        return (n / 10000).toFixed(1) + '万';
-      }
-      return String(n);
-    },
+
     formatTopDistance(distance) {
       const n = Number(distance);
       if (!Number.isFinite(n) || n <= 0) return '';
@@ -1983,6 +1973,7 @@ export default {
   height: 100%;
   object-fit: cover;
 }
+
 .scroll-view-wrapper .heat-tag {
   position: absolute;
   top: 6px;

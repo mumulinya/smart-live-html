@@ -128,7 +128,11 @@
              </div>
           </div>
           
-          <div class="empty-comments" v-if="comments.length === 0 && !aiComment && !commentsLoading && commentsNoMore">
+          <div class="comment-load-error" v-if="commentsLoadError" @click="loadComments(false)" style="text-align: center; padding: 20px; color: #999; cursor: pointer;">
+             鍔犺浇澶辫触锛岀偣鍑婚噸璇?<i class="el-icon-refresh"></i>
+          </div>
+          
+          <div class="empty-comments" v-if="comments.length === 0 && !aiComment && !commentsLoading && commentsNoMore && !commentsLoadError">
              <div class="empty-text">暂无评价，快来抢沙发～</div>
           </div>
           
@@ -147,7 +151,7 @@
           
            <div class="comment-box" v-for="c in comments" :key="c.id">
              <div class="comment-icon" @click.stop="toUserDetail(c.userId)">
-                <img :src="c.userIcon || '/imgs/icons/default-icon.png'">
+                <img :src="c.userIcon || anonymousAvatar">
              </div>
              <div class="comment-info" @click="toReviewDetail(c)">
                 <div class="comment-user" @click.stop="toUserDetail(c.userId)">
@@ -192,7 +196,7 @@
                    <template v-if="c.showReplies">
                       <div class="reply-item" v-for="r in c.replies" :key="r.id">
                           <div class="reply-avatar" @click.stop="toUserDetail(r.userId)">
-                             <img :src="r.userIcon || r.icon || '/imgs/icons/default-icon.png'" alt="">
+                             <img :src="r.userIcon || r.icon || anonymousAvatar" alt="">
                           </div>
                           <div class="reply-main">
                              <div class="reply-header">
@@ -368,7 +372,7 @@
             
             <div class="comment-box" v-for="c in allComments" :key="c.id">
                <div class="comment-icon" @click.stop="toUserDetail(c.userId)">
-                  <img :src="c.userIcon || '/imgs/icons/default-icon.png'">
+                  <img :src="c.userIcon || anonymousAvatar">
                </div>
                <div class="comment-info" @click="toReviewDetail(c)">
                   <div class="comment-user" @click.stop="toUserDetail(c.userId)">
@@ -411,7 +415,7 @@
                       <template v-if="c.showReplies">
                          <div class="reply-item" v-for="r in c.replies" :key="r.id">
                              <div class="reply-avatar" @click.stop="toUserDetail(r.userId)">
-                                <img :src="r.userIcon || r.icon || '/imgs/icons/default-icon.png'" alt="">
+                                <img :src="r.userIcon || r.icon || anonymousAvatar" alt="">
                              </div>
                              <div class="reply-main">
                                 <div class="reply-header">
@@ -496,7 +500,8 @@ import { uploadFile } from '@/api/common';
 import { showConfirmDialog } from 'vant';
 import { getCurrentUser } from '@/api/user';
 import { throttle } from '@/utils/throttle';
-import '@/assets/css/blog-detail.css'; // Import blog styles to reuse reply CSS
+import '@/assets/css/blog-detail.css';
+import anonymousAvatar from '@/assets/images/anonymous.png'; // Import blog styles to reuse reply CSS
 
 import PageLayout from '@/components/PageLayout/PageLayout.vue';
 import DealCard from '@/components/DealCard.vue';
@@ -517,6 +522,7 @@ export default {
        reviewSortType: 'latest',
        commentsNoMore: false,
        commentsLoading: false,
+       commentsLoadError: false,
        commentLoadArmed: false,
        commentObserver: null,
        // isStared now comes from shop.isStared (API response)
@@ -565,6 +571,7 @@ export default {
        allCommentsPage: 1,
        allCommentsNoMore: false,
        allCommentsLoading: false,
+       allCommentsLoadError: false,
        commentsRequestToken: 0,
        allCommentsRequestToken: 0
      }
@@ -740,6 +747,7 @@ export default {
             }
 
              this.commentsLoading = true;
+             this.commentsLoadError = false;
 
              return getReviewList({
                 sourceId,
@@ -774,7 +782,7 @@ export default {
                   .filter(c => !c.isAIGenerated)
                   .map(c => ({
                      ...c,
-                     userIcon: c.userIcon ? (c.userIcon.startsWith('http') ? c.userIcon : this.fileURL + c.userIcon) : '',
+                     userIcon: c.userIcon ? (c.userIcon.startsWith('http') ? c.userIcon : this.fileURL + c.userIcon) : anonymousAvatar,
                      images: c.images ? c.images.split(',').filter(x=>x).map(i => i.startsWith('http') ? i : this.fileURL + i) : [],
                      rating: c.score || c.rating || 5,
                      isLike: c.isLike || false,
@@ -808,7 +816,7 @@ export default {
              });
          },
          loadMoreComments() {
-            if (!this.shop.id || this.commentsLoading || this.commentsNoMore || !this.commentLoadArmed) return;
+            if (!this.shop.id || this.commentsLoading || this.commentsNoMore || this.commentsLoadError || !this.commentLoadArmed) return;
             this.loadComments(false);
          },
          onWindowScroll() {
@@ -875,7 +883,7 @@ export default {
                  if (list) {
                      const newReplies = list.map(r => ({
                          ...r,
-                         userIcon: r.userIcon ? (r.userIcon.startsWith('http') ? r.userIcon : this.fileURL + r.userIcon) : '',
+                         userIcon: r.userIcon ? (r.userIcon.startsWith('http') ? r.userIcon : this.fileURL + r.userIcon) : anonymousAvatar,
                          images: r.images ? r.images.split(',').filter(x=>x).map(i => i.startsWith('http') ? i : this.fileURL + i) : [],
                          liked: r.liked || 0,
                          isLike: r.isLike || false
@@ -1265,6 +1273,7 @@ export default {
                this.allComments = [];
                this.allCommentsPage = 1;
                this.allCommentsNoMore = false;
+             this.allCommentsLoadError = false;
                this.loadAllComments(true);
              }
          });
@@ -1324,7 +1333,7 @@ export default {
                const processed = list.filter(c => !c.isAIGenerated).map(c => ({
                   ...c,
                   rating: c.score || c.rating || 0,
-                  userIcon: c.userIcon ? (c.userIcon.startsWith('http') ? c.userIcon : this.fileURL + c.userIcon) : '',
+                  userIcon: c.userIcon ? (c.userIcon.startsWith('http') ? c.userIcon : this.fileURL + c.userIcon) : anonymousAvatar,
                   images: c.images ? c.images.split(',').filter(x=>x).map(i => i.startsWith('http') ? i : this.fileURL + i) : [],
                   clickedLike: false,
                   // Reply logic

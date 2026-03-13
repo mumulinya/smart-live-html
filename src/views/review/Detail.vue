@@ -437,6 +437,7 @@
 
 <script>
 import { ElImageViewer } from 'element-plus';
+import anonymousAvatar from '@/assets/images/anonymous.png';
 import { likeComment, getComments, addComment, removeComment, getChildComments, toggleStar } from '@/api/interaction';
 import { removeReview, getReview, likeReviewComment } from '@/api/reviews';
 import { getCurrentUser } from '@/api/user';
@@ -452,7 +453,7 @@ export default {
   components: { ElImageViewer },
   data() {
       return {
-          defaultAvatar: 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png',
+          defaultAvatar: anonymousAvatar,
           review: null,
           voucher: null,  // 代金券详情
           imgPrefix: fileURL,
@@ -590,7 +591,7 @@ export default {
               this.review = {
                   id: data.id,
                   userId: data.userId,
-                  userName: data.nickName || 'Unknown',
+                  userName: data.nickName || '匿名用户',
                   userAvatar: data.userIcon ? (data.userIcon.startsWith('http') ? data.userIcon : this.imgPrefix + (data.userIcon.startsWith('/')?'':'/') + data.userIcon) : this.defaultAvatar,
                   date: this.formatDate(data.createTime),
                   rating: data.score || 5,

@@ -14,6 +14,7 @@ import { fileURL } from '@/utils/request';
 import { throttle } from '@/utils/throttle';
 import PageLayout from '@/components/PageLayout/PageLayout.vue';
 import '@/assets/css/blog-detail.css';
+import anonymousAvatar from '@/assets/images/anonymous.png';
 
 const route = useRoute();
 const router = useRouter();
@@ -343,7 +344,7 @@ const loadComments = async () => {
         
         comments.value = list.map(c => ({
             ...c,
-            userIcon: (c.userIcon || c.icon) ? ((c.userIcon || c.icon).startsWith('http') ? (c.userIcon || c.icon) : fileURL + ((c.userIcon || c.icon).startsWith('/') ? '' : '/') + (c.userIcon || c.icon)) : '',
+            userIcon: (c.userIcon || c.icon) ? ((c.userIcon || c.icon).startsWith('http') ? (c.userIcon || c.icon) : fileURL + ((c.userIcon || c.icon).startsWith('/') ? '' : '/') + (c.userIcon || c.icon)) : anonymousAvatar,
             images: c.images ? c.images.split(',').filter(x=>x).map(i => i.startsWith('http') ? i : fileURL + (i.startsWith('/') ? '' : '/') + i) : [],
             rating: c.score || c.rating || 5,
             isLike: c.isLike || false,
@@ -532,7 +533,7 @@ const loadAllComments = async () => {
         } else {
             const newItems = list.map(c => ({
                 ...c,
-                userIcon: (c.userIcon || c.icon) ? ((c.userIcon || c.icon).startsWith('http') ? (c.userIcon || c.icon) : fileURL + ((c.userIcon || c.icon).startsWith('/') ? '' : '/') + (c.userIcon || c.icon)) : '',
+                userIcon: (c.userIcon || c.icon) ? ((c.userIcon || c.icon).startsWith('http') ? (c.userIcon || c.icon) : fileURL + ((c.userIcon || c.icon).startsWith('/') ? '' : '/') + (c.userIcon || c.icon)) : anonymousAvatar,
                 images: c.images ? c.images.split(',').filter(x=>x).map(i => i.startsWith('http') ? i : fileURL + (i.startsWith('/') ? '' : '/') + i) : [],
                 rating: c.score || c.rating || 5,
                 isLike: c.isLike || false,
