@@ -34,7 +34,7 @@
 
         <!-- 右侧内容 -->
         <div class="v-right">
-          <div class="v-title">{{ title }}</div>
+          <div class="v-title" v-html="titleHtml"></div>
           <div class="v-price-row">
             <span class="v-price">¥{{ price }}</span>
             <span class="v-origin" v-if="originalPrice">¥{{ originalPrice }}</span>
@@ -98,7 +98,7 @@
         </div>
         
         <div class="g-title-row">
-          <div class="g-title">{{ title }}</div>
+          <div class="g-title" v-html="titleHtml"></div>
           <div class="g-sold">已售{{ sold }}件</div>
         </div>
       </div>
@@ -175,6 +175,9 @@ export default {
       if (this.item.title || this.item.name) return this.item.title || this.item.name;
       const amount = Number(this.item.originalPrice || this.item.price || 0);
       return this.biz === 'group' ? `${amount}元团购套餐` : `${amount}元代金券`;
+    },
+    titleHtml() {
+      return this.sanitizeTitleHtml(this.title);
     },
     displayImage() {
       let img = this.item.coverImg || '';
@@ -307,6 +310,83 @@ export default {
     if (this.timer) clearInterval(this.timer);
   },
   methods: {
+    escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    },
+    sanitizeInlineStyle(styleText) {
+      if (!styleText) return '';
+      const allowedProps = new Set([
+        'color',
+        'font-size',
+        'font-weight',
+        'font-style',
+        'text-decoration',
+        'background-color'
+      ]);
+
+      return styleText
+        .split(';')
+        .map((chunk) => chunk.trim())
+        .filter(Boolean)
+        .map((chunk) => {
+          const index = chunk.indexOf(':');
+          if (index < 0) return '';
+          const prop = chunk.slice(0, index).trim().toLowerCase();
+          const value = chunk.slice(index + 1).trim();
+          if (!allowedProps.has(prop)) return '';
+          if (!value || /url\s*\(|expression\s*\(|javascript:/i.test(value)) return '';
+          return `${prop}: ${value}`;
+        })
+        .filter(Boolean)
+        .join('; ');
+    },
+    sanitizeTitleHtml(value) {
+      const raw = String(value ?? '');
+      if (!/<[^>]+>/.test(raw)) {
+        return this.escapeHtml(raw);
+      }
+      if (typeof document === 'undefined') {
+        return this.escapeHtml(raw);
+      }
+
+      const container = document.createElement('div');
+      container.innerHTML = raw;
+      const allowedTags = new Set(['span', 'strong', 'b', 'em', 'i', 'u', 'br']);
+
+      const walk = (node) => {
+        Array.from(node.childNodes).forEach((child) => {
+          if (child.nodeType !== 1) return;
+
+          const tag = child.tagName.toLowerCase();
+          if (!allowedTags.has(tag)) {
+            const children = Array.from(child.childNodes);
+            child.replaceWith(...children);
+            children.forEach((nested) => walk(nested));
+            return;
+          }
+
+          Array.from(child.attributes).forEach((attr) => {
+            if (attr.name !== 'style') {
+              child.removeAttribute(attr.name);
+            }
+          });
+
+          const safeStyle = this.sanitizeInlineStyle(child.getAttribute('style'));
+          if (safeStyle) child.setAttribute('style', safeStyle);
+          else child.removeAttribute('style');
+
+          walk(child);
+        });
+      };
+
+      walk(container);
+      return container.innerHTML;
+    },
     formatDate(value, withTime = false) {
       if (value === undefined || value === null || value === '') return '';
       const val = (!isNaN(value) && !isNaN(parseFloat(value))) ? Number(value) : value;

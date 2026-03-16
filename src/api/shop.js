@@ -1,4 +1,4 @@
-import request from '@/utils/request';
+﻿import request from '@/utils/request';
 
 export function getShopTypes() {
     return request.get('/app/shop/shop-type/list');
@@ -17,7 +17,7 @@ export function getShopsByIds(ids) {
 }
 
 export function getShopDetail(id) {
-    return request.get(`/app/shop/${id}`);
+    return request.get(`/app/shop/getShopById/${id}`);
 }
 
 export function searchShopsByName(name, area) {
@@ -44,3 +44,4 @@ export function buyProductAPI(productId) {
 export function seckillProductAPI(productId) {
     return request.post(`/app/product/purchase/${productId}`);
 }
+

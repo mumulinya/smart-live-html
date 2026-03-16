@@ -1,7 +1,7 @@
-import request from '@/utils/request';
+﻿import request from '@/utils/request';
 
 export function getBlogDetail(id) {
-    return request.get(`/app/blog/${id}`);
+    return request.get(`/app/blog/getBlogById/${id}`);
 }
 
 export function getMyBlogs(params) {
@@ -45,3 +45,4 @@ export function updateBlog(data) {
 export function pinBlog(data) {
     return request.put('/app/blog/isPin', data);
 }
+
