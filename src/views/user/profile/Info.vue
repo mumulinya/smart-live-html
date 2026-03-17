@@ -26,7 +26,7 @@
              <span class="add-text">添加朋友</span>
           </div>
        </div>
-       <div class="nav-title" v-if="scrollTop > 50">{{ user.nickName }}</div>
+       <div class="nav-title" v-if="scrollTop > 50">{{ displayNickName }}</div>
        <div class="nav-right">
           <div class="icon-btn top-circle-btn" @click="$router.push('/search/user')" :style="{ color: scrollTop > 50 ? '#333' : '#fff', background: scrollTop > 50 ? 'transparent' : 'rgba(93, 131, 173, 0.35)',  border: scrollTop > 50 ? 'none' : '0.5px solid rgba(255,255,255,0.3)' }"><i class="el-icon-search"></i></div>
           <div class="icon-btn top-circle-btn top-menu-btn" @click="logout" v-if="isSelf" :style="{ color: scrollTop > 50 ? '#333' : '#fff', background: scrollTop > 50 ? 'transparent' : 'rgba(93, 131, 173, 0.35)', border: scrollTop > 50 ? 'none' : '0.5px solid rgba(255,255,255,0.3)' }"><i class="el-icon-s-operation"></i></div>
@@ -38,7 +38,7 @@
        <div class="header-top">
           <!-- Avatar -->
           <div class="avatar-box" @click="showAvatarDialog = true">
-             <van-image round width="80" height="80" :src="user.icon || '/imgs/icons/default-icon.png'" class="avatar-img" fit="cover" />
+             <van-image round width="80" height="80" :src="displayAvatar" class="avatar-img" fit="cover" />
              <!-- Removed + add status for self -->
           </div>
           <!-- Stats -->
@@ -61,11 +61,11 @@
        <!-- Info Text -->
         <div class="info-text-section">
           <div class="user-name-row">
-             <div class="cancel-bold-name">{{ user.nickName || '未命名' }}</div>
+             <div class="cancel-bold-name">{{ displayNickName }}</div>
              <button type="button" class="name-edit-btn" @click="toEdit" v-if="isSelf">编辑资料</button>
           </div>
           <div class="user-id-row">
-             <span>生活号：{{ user.id || '未知' }}</span>
+             <span>生活号：{{ displayUserId }}</span>
              <i class="el-icon-document-copy" @click="copyId"></i>
           </div>
           <!-- Bio -->
@@ -223,8 +223,8 @@
                                     <div v-if="isSelf && getBlogRejectReason(b)" class="single-status-panel__reason profile-blog-reason">驳回原因：{{ getBlogRejectReason(b) }}</div>
                                     <div class="card-bottom">
                                         <div class="card-user">
-                                            <img :src="user.icon || '/imgs/icons/default-icon.png'" class="card-avatar">
-                                            <span class="card-name">{{ user.nickName }}</span>
+                                            <img :src="displayAvatar" class="card-avatar">
+                                            <span class="card-name">{{ displayNickName }}</span>
                                         </div>
                                         <div class="card-likes">
                                             <van-icon name="like-o" v-if="!b.isLike" color="#999" />
@@ -267,8 +267,8 @@
                                     <div class="card-title">{{ b.title }}</div>
                                     <div class="card-bottom">
                                         <div class="card-user">
-                                            <img :src="b.icon || user.icon || '/imgs/icons/default-icon.png'" class="card-avatar">
-                                            <span class="card-name">{{ b.name || user.nickName }}</span>
+                                            <img :src="b.icon || displayAvatar" class="card-avatar">
+                                            <span class="card-name">{{ b.name || displayNickName }}</span>
                                         </div>
                                         <div class="card-likes">
                                             <van-icon name="like-o" v-if="!b.isLike" color="#999" />
@@ -311,8 +311,8 @@
                                     <div class="card-title">{{ b.title }}</div>
                                     <div class="card-bottom">
                                         <div class="card-user">
-                                            <img :src="b.icon || user.icon || '/imgs/icons/default-icon.png'" class="card-avatar">
-                                            <span class="card-name">{{ b.name || user.nickName }}</span>
+                                            <img :src="b.icon || displayAvatar" class="card-avatar">
+                                            <span class="card-name">{{ b.name || displayNickName }}</span>
                                         </div>
                                         <div class="card-likes">
                                             <van-icon name="like-o" v-if="!b.isLike" color="#999" />
@@ -342,7 +342,7 @@
     <div class="avatar-dialog-overlay" v-if="showAvatarDialog" @click="showAvatarDialog = false">
        <div class="avatar-dialog-content" @click.stop>
           <div class="avatar-dialog-close" @click="showAvatarDialog = false"><i class="el-icon-close"></i></div>
-          <img :src="user.icon || '/imgs/icons/default-icon.png'" class="avatar-big">
+          <img :src="displayAvatar" class="avatar-big">
           <div class="avatar-actions">
              <div class="action-btn" @click="handleChangeAvatar">更换头像</div>
              <div class="action-btn secondary" @click="handleSaveAvatar">保存图片</div>
@@ -445,15 +445,7 @@ export default {
   },
   computed: {
     coverUrl() {
-        const bg = this.info.backgroundImage;
-        if(bg) {
-             let url = bg;
-             if(!bg.startsWith('http')) {
-                  url = this.$fileURL + bg;
-             }
-             return url;
-        }
-        return '/imgs/default-bg.png';
+        return this.resolveFileUrl(this.info.backgroundImage) || '/imgs/default-bg.png';
     },
     containerStyle() {
         return {
@@ -479,6 +471,15 @@ export default {
     },
     likeColumns() {
         return this.splitWaterfallColumns(this.likes);
+    },
+    displayNickName() {
+        return this.info.nickName || this.user.nickName || '未命名';
+    },
+    displayAvatar() {
+        return this.resolveFileUrl(this.info.icon || this.user.icon) || '/imgs/icons/default-icon.png';
+    },
+    displayUserId() {
+        return this.info.userId || this.info.id || this.user.id || '未知';
     },
 
   },
@@ -525,11 +526,57 @@ export default {
       this.clearBottomCheckTimer();
       this.scrollTicking = false;
   },
-  methods: {
-    getStatusToneClass,
-    getBlogDisplayStatusMeta(item) {
-        return getSingleDisplayStatusMeta('blog', item?.status, item?.auditStatus);
-    },
+	  methods: {
+	    getStatusToneClass,
+        resolveFileUrl(value) {
+            if (!value || typeof value !== 'string') return '';
+            if (
+                value.startsWith('http') ||
+                value.startsWith('/imgs/') ||
+                value.startsWith('data:') ||
+                value.startsWith('blob:')
+            ) {
+                return value;
+            }
+            return this.$fileURL + value;
+        },
+        normalizeFullUserInfoPayload(payload) {
+            const raw = payload && typeof payload === 'object' ? payload : {};
+            const nested = raw.userInfo && typeof raw.userInfo === 'object' ? raw.userInfo : {};
+            const merged = { ...raw, ...nested };
+
+            if (merged.userId && !merged.id) {
+                merged.id = merged.userId;
+            }
+            if (merged.icon) {
+                merged.icon = this.resolveFileUrl(merged.icon);
+            }
+            if (merged.backgroundImage) {
+                merged.backgroundImage = this.resolveFileUrl(merged.backgroundImage);
+            }
+
+            return merged;
+        },
+        syncProfileIdentity(source) {
+            if (!source || typeof source !== 'object') return;
+
+            const nextNickName = source.nickName || source.userName || source.name || '';
+            const nextIcon = this.resolveFileUrl(source.icon);
+            const nextUserId = source.userId || source.id;
+
+            if (nextNickName) {
+                this.user.nickName = nextNickName;
+            }
+            if (nextIcon) {
+                this.user.icon = nextIcon;
+            }
+            if (nextUserId) {
+                this.user.id = nextUserId;
+            }
+        },
+	    getBlogDisplayStatusMeta(item) {
+	        return getSingleDisplayStatusMeta('blog', item?.status, item?.auditStatus);
+	    },
     getBlogRejectReason(item) {
         return getRejectReasonText(item?.auditStatus, item?.rejectReason);
     },
@@ -645,11 +692,11 @@ export default {
      handleFollow() {
          // Logic for follow
      },
-     copyId() {
-         const id = this.user.phoneNumber || this.user.id;
-         if(!id) return;
-         navigator.clipboard.writeText(id).then(() => {
-             this.$message.success('复制成功');
+	     copyId() {
+	         const id = this.user.phoneNumber || this.displayUserId;
+	         if(!id) return;
+	         navigator.clipboard.writeText(id).then(() => {
+	             this.$message.success('复制成功');
          }).catch(() => {
              this.$message.error('复制失败');
          });
@@ -667,11 +714,14 @@ export default {
      // Data Query
      queryUser() {
         this.pageLoading = true;
-        getCurrentUser().then(res => {
-           let userData = res.data || res;
-           if (userData && userData.data) userData = userData.data;
-           
-           if (!userData || !userData.id) {
+	        getCurrentUser().then(res => {
+	           let userData = res.data || res;
+	           if (userData && userData.data) userData = userData.data;
+               if (userData && userData.userId && !userData.id) {
+                   userData = { ...userData, id: userData.userId };
+               }
+	           
+	           if (!userData || !userData.id) {
               this.$message.error("登录已失效，请重新登录");
               localStorage.removeItem("token");
               emitAuthChanged('logout');
@@ -679,9 +729,11 @@ export default {
               return;
            }
            
-           this.user = userData;
-           if(this.user.icon) this.user.icon = this.$fileURL + this.user.icon;
-            this.queryUserInfo();
+	           this.user = userData;
+	           if (this.user.icon) {
+	               this.user.icon = this.resolveFileUrl(this.user.icon);
+	           }
+	            this.queryUserInfo();
             this.queryUserStats();
             // 用户信息加载完成后，再加载当前 Tab 的数据
             this.loadTabData(this.activeTab);
@@ -714,12 +766,12 @@ export default {
                   path = path.split(filePrefix)[1];
               }
               // Call API to update background
-              updateBackgroundImage({ userId: this.user.id, backgroundImage: path }).then(() => {
-                  this.$message.success("背景图修改成功");
-                  // Update local user info to reflect change
-                  this.user.backgroundImage = this.$fileURL + path; // Prioritize local update
-                  this.info.backgroundImage = this.$fileURL + path; // Sync both just in case
-              });
+	              updateBackgroundImage({ userId: this.user.id, backgroundImage: path }).then(() => {
+	                  this.$message.success("背景图修改成功");
+	                  // Update local user info to reflect change
+	                  this.user.backgroundImage = this.resolveFileUrl(path); // Prioritize local update
+	                  this.info.backgroundImage = this.resolveFileUrl(path); // Sync both just in case
+	              });
           }).finally(() => {
               this.pageLoading = false;
           });
@@ -782,12 +834,13 @@ export default {
            }
        }
     },
-     queryUserInfo() {
-        if(!this.user.id) return;
-        getFullUserInfo(this.user.id).then(res => {
-           this.info = res.data || {};
-        });
-     },
+	     queryUserInfo() {
+	        if(!this.user.id) return;
+	        getFullUserInfo(this.user.id).then(res => {
+	           this.info = this.normalizeFullUserInfoPayload(res.data || {});
+               this.syncProfileIdentity(this.info);
+	        });
+	     },
      queryUserStats() {
         if(!this.user.id) return;
         getUserStats(this.user.id).then(res => {
@@ -850,27 +903,15 @@ export default {
              }
          });
      },
-     processBlog(b) {
-        const item = (b && typeof b === 'object') ? b : {};
-        const iconRaw = item.icon || item.userIcon || '';
-        const avatarRaw = item.userAvatar || item.icon || item.userIcon || '';
-        const toUrl = (val) => {
-            if (!val || typeof val !== 'string') return '';
-            if (
-                val.startsWith('http') ||
-                val.startsWith('/imgs/') ||
-                val.startsWith('data:') ||
-                val.startsWith('blob:')
-            ) {
-                return val;
-            }
-            return this.$fileURL + val;
-        };
-        return {
-           ...item,
-           icon: toUrl(iconRaw),
-           userAvatar: toUrl(avatarRaw),
-           images: item.images,
+	     processBlog(b) {
+	        const item = (b && typeof b === 'object') ? b : {};
+	        const iconRaw = item.icon || item.userIcon || '';
+	        const avatarRaw = item.userAvatar || item.icon || item.userIcon || '';
+	        return {
+	           ...item,
+	           icon: this.resolveFileUrl(iconRaw),
+	           userAvatar: this.resolveFileUrl(avatarRaw),
+	           images: item.images,
            // Image error flag
            imgError: false,
            imgLoaded: false
@@ -1070,11 +1111,12 @@ export default {
            if (path.includes(filePrefix)) {
               savePath = path.split(filePrefix)[1];
            }
-           updateUser({ id: this.user.id, icon: savePath }).then(() => {
-              this.$message.success('头像修改成功');
-              this.showAvatarDialog = false;
-              this.user.icon = this.$fileURL + savePath;
-           }).catch(() => {
+	           updateUser({ id: this.user.id, icon: savePath }).then(() => {
+	              this.$message.success('头像修改成功');
+	              this.showAvatarDialog = false;
+	              this.user.icon = this.resolveFileUrl(savePath);
+                  this.info.icon = this.resolveFileUrl(savePath);
+	           }).catch(() => {
               this.$message.error('更新头像失败');
            });
         }).catch(() => {
