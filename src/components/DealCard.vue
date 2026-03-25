@@ -18,7 +18,7 @@
               <div class="v-discount-small">折扣券</div>
             </div>
           </template>
-          <div v-if="isSeckill" class="seckill-badge-right">⚡秒杀</div>
+          <div v-if="isSeckill && !hideBadge" class="seckill-badge-right">⚡秒杀</div>
           <!-- 排名勋章 -->
           <div v-if="rank !== null" class="v-rank-badge" :class="rankClass">
             {{ rank }}
@@ -89,7 +89,7 @@
         </template>
         <div class="g-overlay"></div>
         
-        <div v-if="isSeckill" class="seckill-badge-right-group">⚡ 秒杀</div>
+        <div v-if="isSeckill && !hideBadge" class="seckill-badge-right-group">⚡ 秒杀</div>
 
 
         <!-- 排名勋章 -->
@@ -154,8 +154,8 @@ export default {
   props: {
     item: { type: Object, required: true },
     biz: { type: String, default: 'voucher' },
-    isSeckill: { type: Boolean, default: false },
-    rank: { type: [Number, String], default: null }
+    rank: { type: [Number, String], default: null },
+    hideBadge: { type: Boolean, default: false }
   },
   data() {
     return {

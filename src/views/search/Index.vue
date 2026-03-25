@@ -388,6 +388,7 @@
                             </div>
                             <div class="user-info">
                                  <div class="user-name" v-html="u.nickName || '未命名'"></div>
+                                 <div class="user-id">生活号：{{ u.id }}</div>
                             </div>
                             <button class="follow-btn" :class="{'following': u.isFollow}" @click.stop="toggleFollow(u)" v-if="user && u.id !== user.id">
                                 {{ u.isFollow ? '已关注' : '关注' }}
@@ -2248,6 +2249,22 @@ export default {
   font-weight: 500;
   color: #333;
   margin-bottom: 5px;
+}
+.user-id {
+  font-size: 12px;
+  color: #999;
+  margin-bottom: 3px;
+}
+.user-meta {
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 3px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.user-meta i {
+  font-size: 12px;
 }
 .user-desc {
   font-size: 13px;

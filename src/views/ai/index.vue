@@ -254,12 +254,11 @@
                   <div
                     v-for="(item, idx) in getDisplayRecommendations(msg.shopList)"
                     :key="`${item.type || 'shop'}-${item.id || idx}`"
-                    class="shop-card"
-                    :class="{ 'voucher-card': isVoucherRecommendation(item) }"
+                    class="shop-card-wrapper"
                     @click="handleRecommendationClick(item)"
                   >
 	                    <template v-if="isVoucherRecommendation(item)">
-	                      <div style="position: relative;">
+	                      <div class="voucher-wrapper">
                             <div class="pill img-pill" :class="{ 'seckill-pill': isVoucherSeckill(item) }" style="position: absolute; top: 10px; left: 10px; z-index: 10; pointer-events: none;">
                                 {{ isVoucherSeckill(item) ? '⚡ 秒杀' : '推荐' }}
                             </div>
@@ -277,6 +276,7 @@
                               }"
                               :biz="String(item.category) === '1' ? 'voucher' : 'group'"
                               :is-seckill="isVoucherSeckill(item)"
+                              :hide-badge="true"
                               @action="goToVoucherDetail(item)"
                             />
 
@@ -287,7 +287,8 @@
 	                    </template>
 
                     <template v-else>
-                      <div class="shop-img-wrapper">
+                      <div class="shop-card">
+                        <div class="shop-img-wrapper">
                         <img :src="getShopImage(item)" class="shop-img" @error="onImgError" loading="lazy" />
                         <div class="pill img-pill">推荐</div>
                         <div class="card-index-badge">{{ idx + 1 }} / {{ msg.shopList.length }}</div>
@@ -329,6 +330,7 @@
 	                          <button class="ghost-btn primary" @click.stop="goToMap(item)">去这里</button>
 	                        </div>
 	                      </div>
+                      </div>
 	                    </template>
                   </div>
                </div>
@@ -408,6 +410,7 @@ const isSending = ref(false);
 const isLoadingHistory = ref(false);
 const currentEventSource = ref(null);
 const userAvatar = ref('https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'); // 默认头像
+const ob = ref(null); // IntersectionObserver 引用
 
 // 设置相关
 const settingsVisible = ref(false);
@@ -473,7 +476,7 @@ const saveTitle = async (item) => {
       ElMessage.error(res.message || '修改失败');
     }
   } catch (error) {
-    console.error('修改标题失败:', error);
+
     ElMessage.error('修改失败');
   } finally {
     editingSessionId.value = null;
@@ -535,9 +538,35 @@ const checkLoginStatus = async () => {
         userAvatar.value = userData.icon.startsWith('http') ? userData.icon : fileURL + userData.icon;
       }
     } catch (error) {
-      console.error('获取用户信息失败:', error);
+
     }
   }
+};
+
+const resolveCurrentUserId = async () => {
+  try {
+    const userInfoStr = localStorage.getItem('userInfo');
+    if (userInfoStr) {
+      const userInfo = JSON.parse(userInfoStr);
+      if (userInfo?.id !== undefined && userInfo?.id !== null && userInfo?.id !== '') {
+        return String(userInfo.id);
+      }
+    }
+  } catch (error) {
+
+  }
+
+  try {
+    const res = await getCurrentUser();
+    const userData = res?.data;
+    if ((res?.success || res?.code === 200 || userData) && userData?.id !== undefined && userData?.id !== null && userData?.id !== '') {
+      return String(userData.id);
+    }
+  } catch (error) {
+
+  }
+
+  return '';
 };
 
 
@@ -645,7 +674,7 @@ const handleSend = async () => {
         return;
       }
     } catch (error) {
-      console.error('创建会话失败:', error);
+
       ElMessage.error('创建会话失败，请重试');
       isSending.value = false; // 失败时解锁
       return;
@@ -657,22 +686,11 @@ const handleSend = async () => {
   try {
      location = await locationUtil.getLocation();
   } catch (e) {
-     console.error('获取位置信息失败', e);
+
   }
 
 // 获取用户信息
-  let userId = '';
-  try {
-    const userInfoStr = localStorage.getItem('userInfo');
-    if (userInfoStr) {
-      const userInfo = JSON.parse(userInfoStr);
-      if (userInfo?.id !== undefined && userInfo?.id !== null && userInfo?.id !== '') {
-        userId = String(userInfo.id);
-      }
-    }
-  } catch (e) {
-    console.error('获取用户信息失败', e);
-  }
+  const userId = await resolveCurrentUserId();
 
   // 添加 AI 消息占位（思考中状态）
   messages.value.push({ role: 'ai', content: '', thinking: true, status: null, shopList: [] });
@@ -735,7 +753,7 @@ const handleSend = async () => {
       },
       // 错误处理回调
       (error) => {
-        console.error('消息发送失败', error);
+
         const errCode = error?.code || error?.status || error?.response?.status;
         if (errCode === 401) {
           ElMessage.warning('登录状态已过期，请重新登录');
@@ -786,7 +804,7 @@ const handleSend = async () => {
       }
     );
   } catch (error) {
-    console.error('发送消息异常', error);
+
     ElMessage.error('消息发送失败，请重试');
     isSending.value = false;
   }
@@ -820,7 +838,7 @@ const loadSuggestions = async () => {
       }
     }
   } catch (error) {
-    console.error('获取推荐提问失败', error);
+
     if(suggestionsData.value.length === 0) {
        suggestionsData.value = [
           '帮我找附近评分最高的火锅店',
@@ -862,6 +880,11 @@ const createSession = async () => {
   sessionTitle.value = ''; // 重置会话标题
   sidebarVisible.value = false; // 关闭侧边栏
   
+  // 清除 URL 中的 sessionId 参数，确保刷新后仍然是新建会话状态
+  const newQuery = { ...route.query };
+  delete newQuery.sessionId;
+  router.replace({ path: route.path, query: newQuery });
+
   // 确保处于主对话界面
   if (route.path !== '/ai') {
     router.push('/ai');
@@ -899,7 +922,7 @@ const handleSearch = async () => {
       }
     }
   } catch (error) {
-    console.error('搜索会话失败:', error);
+
   } finally {
     isSearching.value = false;
   }
@@ -924,7 +947,7 @@ const loadMoreSearchResults = async () => {
       }
     }
   } catch (error) {
-    console.error('加载更多搜索结果失败:', error);
+
     searchCurrent.value--;
   } finally {
     isSearching.value = false;
@@ -990,7 +1013,7 @@ const loadHistoryList = async () => {
       ElMessage.error(res.errorMsg || res.message || '加载历史记录失败');
     }
   } catch (error) {
-    console.error('加载历史记录失败:', error);
+
     ElMessage.error('加载历史记录失败');
   } finally {
     isLoadingHistory.value = false;
@@ -1016,7 +1039,7 @@ const loadMoreHistory = async () => {
       }
     }
   } catch (error) {
-    console.error('加载更多历史记录失败:', error);
+
     historyCurrent.value--;
   } finally {
     isLoadingMore.value = false;
@@ -1112,6 +1135,21 @@ const parseMessageContent = (content) => {
       cleanContent = content.replace(/```json\s*/, '').replace(/```$/, '');
     }
 
+    // ★ 在 JSON.parse 之前，先用正则从原始字符串提取 orderId
+    // 这样可以避免 JSON.parse 将超过 Number.MAX_SAFE_INTEGER 的大整数丢失精度
+    let rawOrderId = null;
+    // 匹配字符串格式: "orderId": "123456" 或 "orderId": '123456'
+    const rawStrMatch = cleanContent.match(/"orderId"\s*:\s*"([^"]+)"/);
+    if (rawStrMatch) {
+      rawOrderId = rawStrMatch[1];
+    } else {
+      // 匹配数字格式: "orderId": 123456（不带引号）
+      const rawNumMatch = cleanContent.match(/"orderId"\s*:\s*(\d+)/);
+      if (rawNumMatch) {
+        rawOrderId = rawNumMatch[1]; // 保持字符串形式，避免精度丢失
+      }
+    }
+
     // 首先尝试进行完整的 JSON 解析。如果 AI 回复已经结束且结构完整，这里能一次性解析成功
     try {
       const fullParsed = JSON.parse(cleanContent);
@@ -1119,7 +1157,8 @@ const parseMessageContent = (content) => {
         displayContent = fullParsed.replyText;
       }
       if (fullParsed.type === 'order' || fullParsed.orderId) {
-        orderId = fullParsed.orderId;
+        // ★ 优先使用从原始字符串提取的 orderId，避免 JSON.parse 精度丢失
+        orderId = rawOrderId || String(fullParsed.orderId);
       }
       if (Array.isArray(fullParsed.recommendations)) {
         shopList = normalizeRecommendations(fullParsed.recommendations, fullParsed.type);
@@ -1212,13 +1251,39 @@ const parseMessageContent = (content) => {
     }
 
     // 4. 尝试提取 orderId (处理 type: "order")
-    const orderIdMatch = cleanContent.match(/"orderId"\s*:\s*"([^"]+)"/);
-    if (orderIdMatch) {
-       orderId = orderIdMatch[1];
+    // 支持字符串格式 "orderId": "xxx" 和数字格式 "orderId": xxx
+    if (rawOrderId) {
+       orderId = rawOrderId;
+    } else {
+       const orderIdMatch = cleanContent.match(/"orderId"\s*:\s*"([^"]+)"/);
+       if (orderIdMatch) {
+          orderId = orderIdMatch[1];
+       } else {
+          const orderIdNumMatch = cleanContent.match(/"orderId"\s*:\s*(\d+)/);
+          if (orderIdNumMatch) {
+             orderId = orderIdNumMatch[1];
+          }
+       }
+    }
+
+    // 兼容工具结果直出: Purchase succeeded, orderId=12345
+    if (!orderId) {
+      const plainOrderIdMatch = cleanContent.match(/\borderId\s*[:=]\s*["']?([A-Za-z0-9_-]+)["']?/i);
+      if (plainOrderIdMatch) {
+        orderId = plainOrderIdMatch[1];
+      }
+    }
+
+    // 兼容中文返回: 订单号12345 / 订单号：12345
+    if (!orderId) {
+      const chineseOrderIdMatch = cleanContent.match(/订单号\s*[：: ]\s*([A-Za-z0-9_-]+)/);
+      if (chineseOrderIdMatch) {
+        orderId = chineseOrderIdMatch[1];
+      }
     }
 
   } catch (err) {
-    console.error('Message parsing error', err);
+
   }
 
   return { displayContent, shopList, orderId };
@@ -1236,6 +1301,11 @@ const loadSession = async (item) => {
     currentSessionId.value = item.id || item.sessionId;
     messageCurrent.value = 1;
     noMoreMessages.value = false;
+
+    // 将 currentSessionId 反馈到 URL，以便刷新页面还能留在当前会话
+    if (route.query.sessionId !== String(currentSessionId.value)) {
+       router.replace({ path: route.path, query: { ...route.query, sessionId: currentSessionId.value } });
+    }
 
     // 加载该会话的消息历史
     const res = await getMessageList({
@@ -1269,7 +1339,7 @@ const loadSession = async (item) => {
       ElMessage.error(res.errorMsg || res.message || '加载会话失败');
     }
   } catch (error) {
-    console.error('加载会话失败:', error);
+
     ElMessage.error('加载会话失败');
   }
 };
@@ -1290,8 +1360,8 @@ const loadMoreMessages = async () => {
         noMoreMessages.value = true;
       } else {
         // 记录当前滚动高度，用于加载后保持位置
-        const scrollContainer = scrollRef.value;
-        const oldScrollHeight = scrollContainer ? scrollContainer.scrollHeight : 0;
+        const oldScrollHeight = document.documentElement.scrollHeight || document.body.scrollHeight;
+        const oldScrollY = window.scrollY || document.documentElement.scrollTop;
 
         // 旧消息插入到前面
         const oldMessages = messageList.map(msg => {
@@ -1308,11 +1378,12 @@ const loadMoreMessages = async () => {
         });
         messages.value = [...oldMessages, ...messages.value];
 
-        // 保持滚动位置
+        // 保持滚动位置：计算整页高度变化并同步补足 y 轴偏移
         nextTick(() => {
-          if (scrollContainer) {
-            const newScrollHeight = scrollContainer.scrollHeight;
-            scrollContainer.scrollTop = newScrollHeight - oldScrollHeight;
+          const newScrollHeight = document.documentElement.scrollHeight || document.body.scrollHeight;
+          if (newScrollHeight > oldScrollHeight) {
+             const delta = newScrollHeight - oldScrollHeight;
+             window.scrollTo(0, oldScrollY + delta);
           }
         });
 
@@ -1322,7 +1393,7 @@ const loadMoreMessages = async () => {
       }
     }
   } catch (error) {
-    console.error('加载更多消息失败:', error);
+
     messageCurrent.value--;
   } finally {
     isLoadingMoreMessages.value = false;
@@ -1354,7 +1425,7 @@ const deleteHistory = async (id) => {
     }
   } catch (error) {
     if (error !== 'cancel') {
-      console.error('删除会话失败:', error);
+
       ElMessage.error('删除失败');
     }
   }
@@ -1659,7 +1730,7 @@ const handleVoucherPurchase = async (voucher) => {
       router.push('/order/list');
     }
   } catch (error) {
-    console.error('购买商品失败:', error);
+
     const rawMsg = error?.msg || error?.message || error?.response?.data?.message || '';
     const msg = String(rawMsg);
     if (msg.includes('库存') || msg.toLowerCase().includes('stock')) {
@@ -1750,18 +1821,69 @@ const goToMap = (shop) => {
 };
 
 // 组件挂载时初始化
-onMounted(() => {
+onMounted(async () => {
   scrollToBottom();
   checkLoginStatus();
   loadSuggestions(); // 首次加载推荐
   document.addEventListener('fullscreenchange', handleFullscreenChange);
+  window.addEventListener('scroll', handleWindowScroll, { passive: true }); // 新增滚动监听
 
-  // 如果 URL 带 query，自动发送
-  if (route.query.q) {
+  // 检查 URL 中是否有保存的 sessionId
+  if (route.query.sessionId) {
+    const savedSessionId = route.query.sessionId;
+    // 优先加载一次历史列表获取名称等信息
+    await loadHistoryList();
+    const matchingSession = rawHistoryList.value.find(item => String(item.id || item.sessionId) === String(savedSessionId));
+    
+    if (matchingSession) {
+       loadSession(matchingSession);
+    } else {
+       // 如果历史列表前几页没找到它，也可以强制加载（标题降级显示）
+       loadSession({ id: savedSessionId, title: '历史对话' });
+    }
+  } else if (route.query.q) {
+    // 如果 URL 带 query(即快捷发问) 但没指定历史会话，自动发送
      inputText.value = route.query.q;
      handleSend();
   }
 });
+
+// 初始化 IntersectionObserver
+const initObserver = () => {
+  if (ob.value) ob.value.disconnect();
+  ob.value = new IntersectionObserver(
+    (entries) => {
+      const entry = entries[0];
+      if (entry.isIntersecting && !isLoadingMoreMessages.value && !noMoreMessages.value && currentSessionId.value) {
+        loadMoreMessages();
+      }
+    },
+    {
+      root: scrollRef.value,
+      rootMargin: '100px', // 提前 100px 触发
+      threshold: 0
+    }
+  );
+  if (topSentinel.value) {
+    ob.value.observe(topSentinel.value);
+  }
+};
+
+// 记录上一次的滚动位置，用于判断用户是否有明确的上滑意图
+let lastScrollY = window.scrollY || 0;
+
+const handleWindowScroll = () => {
+  const currentY = window.scrollY || document.documentElement.scrollTop;
+  const isScrollingUp = currentY < lastScrollY;
+  lastScrollY = currentY;
+
+  // 只有当明确向上滚动，且距离顶部小于等于 50px 时才去加载历史记录
+  if (isScrollingUp && currentY <= 50) {
+    if (!isLoadingMoreMessages.value && !noMoreMessages.value && currentSessionId.value && messages.value.length > 0) {
+      loadMoreMessages();
+    }
+  }
+};
 
 // 当消息数量从 0 变为有数据时重新绑定哨兵，确保上滑可触发
 watch(
@@ -1775,6 +1897,7 @@ watch(
 
 onUnmounted(() => {
   document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  window.removeEventListener('scroll', handleWindowScroll);
 });
 </script>
 
@@ -2603,10 +2726,14 @@ textarea:disabled {
   display: none;
   height: 0;
 }
-.shop-card {
+.shop-card-wrapper {
   scroll-snap-align: start;
-  min-width: 240px;
-  max-width: 260px;
+  min-width: 250px;
+  max-width: 280px;
+  display: flex;
+  flex-direction: column;
+}
+.shop-card {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -2616,6 +2743,14 @@ textarea:disabled {
   border-radius: 14px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  height: 100%;
+}
+.voucher-wrapper {
+  width: 100%;
+  position: relative;
+}
+.voucher-wrapper > .deal-card-wrapper {
+  margin-bottom: 0; /* Override generic margin */
 }
 .shop-card:hover {
   transform: translateY(-3px);

@@ -41,7 +41,6 @@
           <div class="user-info">
             <div class="user-name" v-html="user.nickName || '未知用户'"></div>
             <div class="user-id">生活号：{{ user.id }}</div>
-            <div class="user-intro" v-if="user.introduce">{{ user.introduce }}</div>
           </div>
           <div class="user-action">
             <button 
@@ -109,7 +108,7 @@ export default {
       this.loading = true;
       searchUsers({ 
         keyword: this.keyword, 
-        current: this.current, 
+        page: this.current, 
         size: 20 
       }).then(res => {
         // 数据在 res.data.list 中
@@ -125,8 +124,6 @@ export default {
           if (u.icon && !u.icon.startsWith('http')) {
             u.icon = this.$fileURL + u.icon;
           }
-          // 移除nickName中的HTML标签用于显示纯文本（可选保留高亮）
-          // u.nickNameText = u.nickName ? u.nickName.replace(/<[^>]*>/g, '') : '';
         });
         
         if (this.current === 1) {
@@ -326,14 +323,7 @@ export default {
   color: #999;
 }
 
-.user-intro {
-  font-size: 12px;
-  color: #666;
-  margin-top: 4px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+
 
 .user-action {
   flex-shrink: 0;
