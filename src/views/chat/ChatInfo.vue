@@ -108,7 +108,7 @@ export default {
         const res = await getChatSession({ sessionId: this.sessionId });
         const session = res.data || res;
         this.contact.name = session.contactName;
-        this.contact.avatar = session.contactAvatar ? this.$fileURL + session.contactAvatar : '';
+        this.contact.avatar = session.contactAvatar ? (session.contactAvatar.startsWith('http') ? session.contactAvatar : this.$fileURL + session.contactAvatar) : '';
         this.contact.id = session.toUid || session.fromUid;
         
         // 获取用户会话列表 (包含 pin 状态) - 需要传 userId

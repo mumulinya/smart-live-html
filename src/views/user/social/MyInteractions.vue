@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <PageLayout :loading="pageLoading" skeleton-type="list" class="my-interactions-page">
     <van-nav-bar
       title="互动记录"

@@ -1,8 +1,8 @@
 ﻿<div align="center">
 
-# 🏙️ SmartLive Web — 用户端前台
+# 🏙️ SmartLive App — 用户端 App / H5 前台
 
-**SmartLive 智评生活 · Vue 3 响应式用户端（兼容移动端）**
+**SmartLive 智评生活 · Vue 3 用户端应用（移动端 / H5 页面）**
 
 [![Vue](https://img.shields.io/badge/Vue-3.x-42b883?logo=vue.js&logoColor=white)](https://vuejs.org/)
 [![Vite](https://img.shields.io/badge/Vite-4.x-646cff?logo=vite&logoColor=white)](https://vitejs.dev/)
@@ -10,27 +10,38 @@
 [![Element Plus](https://img.shields.io/badge/Element_Plus-2.x-409eff)](https://element-plus.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
+📚 总览文档： [SmartLive 在线文档](https://mumulinya.github.io/smartLive-Cloud/)
+
 </div>
 
 ## 📦 项目仓库
 
 | 仓库 | 说明 | 链接 |
 |:---:|:---:|:---:|
-| **smartLive-Cloud** | 后端微服务 | [GitHub](https://github.com/mumulinya/smart-live) |
-| **smartLive-admin** | 后台管理端（Vue + Element UI） | [GitHub](https://github.com/mumulinya/smartLive-admin) |
-| **smartLive-web** | 用户端前台（本仓库） | [GitHub](https://github.com/mumulinya/smartLive-web) |
+| **smartLive-Cloud** | 后端主仓库与在线总文档 | [GitHub](https://github.com/mumulinya/smartLive-Cloud) |
+| **smartLive-admin** | 商家端与平台管理后台（Vue + Element UI） | [GitHub](https://github.com/mumulinya/smartLive-admin.git) |
+| **smartLive-web** | 用户端 App（本仓库） | [GitHub](https://github.com/mumulinya/smartLive-web.git) |
 
 ## 🎨 效果预览
-
-> 📷 截图占位 — 替换为实际项目截图后删除本行
 
 | 首页信息流 | 店铺详情 | 商品详情 |
 |:---:|:---:|:---:|
 | ![home](docs/screenshots/home.png) | ![shop](docs/screenshots/shop.png) | ![product](docs/screenshots/product.png) |
-| **AI 助手** | **即时聊天** | **钱包支付** |
+| **AI 快捷提问** | **即时聊天** | **我的钱包** |
 | ![ai](docs/screenshots/ai.png) | ![chat](docs/screenshots/chat.png) | ![wallet](docs/screenshots/wallet.png) |
 
+## 🖼️ 页面截图索引
+
+| 分组 | 内容说明 | 入口 |
+|:---|:---|:---|
+| 用户端视觉导览 | 登录、首页、搜索、店铺、商品、订单、评价、社交、AI、钱包与积分的完整大图走查 | [SHOWCASE](https://mumulinya.github.io/smartLive-Cloud/SHOWCASE) |
+| 用户端页面映射 | 所有用户端页面名称、分组与截图索引总表 | [PAGE_GALLERY](https://mumulinya.github.io/smartLive-Cloud/PAGE_GALLERY) |
+| 当前仓库截图目录 | README 已同步的代表页面截图资源 | [docs/screenshots](./docs/screenshots) |
+
+- 用户端主分组可对照：登录与进入、发现入口与热榜、搜索与 LBS 找店、店铺决策与商品详情、支付订单钱包积分、内容创作与评价互动、社交关系与消息、AI 智能助手与 AIGC、个人中心与收藏安全。
+
 ## 📋 文档导航
+- [页面截图索引](#页面截图索引)
 - [项目定位](#项目定位)
 - [功能全景](#功能全景)
 - [页面路由清单](#页面路由清单)
@@ -38,10 +49,12 @@
 - [快速开始](#快速开始)
 - [环境变量](#环境变量)
 - [项目结构](#项目结构)
+- [相关文档](#相关文档)
 - [常见问题](#常见问题)
+- [参与贡献](#参与贡献)
 
 ## 项目定位
-Smart Live App 是一个基于 `Vue 3 + Vite` 的本地生活类 H5 前端项目，覆盖“找店 -> 搜索 -> 领券/团购 -> 下单支付 -> 评价 -> 社交互动 -> IM -> AI 助手”的完整业务链路。
+SmartLive App 是一个基于 `Vue 3 + Vite` 的本地生活类用户端项目，覆盖“找店 -> 搜索 -> 领券/团购 -> 下单支付 -> 评价 -> 社交互动 -> IM -> AI 助手”的完整业务链路。
 
 项目面向移动端场景，包含：
 - 通用请求层（Axios 拦截器 + 登录态处理）
@@ -62,7 +75,7 @@ Smart Live App 是一个基于 `Vue 3 + Vite` 的本地生活类 H5 前端项目
 - 优惠入口：`优惠专区`、`秒杀专区`
 - 热门榜切换：店铺榜 / 代金券榜 / 团购榜
 - 笔记流点赞、懒加载、滚动状态保留
-- 首页全局 AI 悬浮入口
+- 首页全局 AI 悬浮入口与快捷提问入口
 
 ### 2. 地图找店
 - 高德地图动态加载（支持 `VITE_AMAP_KEY`）
@@ -96,6 +109,7 @@ Smart Live App 是一个基于 `Vue 3 + Vite` 的本地生活类 H5 前端项目
 ### 6. 评价系统
 - 待评价订单列表（从订单侧发起）
 - 发布/编辑评价：总体评分 + 口味/环境/服务分
+- AI 帮写评价、评价修改与草稿箱管理
 - 图文/视频上传、匿名评价
 - 草稿保存与草稿箱管理
 - 我的评价列表（全部/店铺/商品）
@@ -103,6 +117,7 @@ Smart Live App 是一个基于 `Vue 3 + Vite` 的本地生活类 H5 前端项目
 
 ### 7. 笔记社区
 - 发笔记/编辑笔记（支持图片上传与店铺关联）
+- AI 帮写博客与笔记草稿联动
 - 笔记草稿保存与发布
 - 笔记详情：点赞、收藏、关注作者、评论与多级回复
 - 笔记分享（系统分享/复制链接）
@@ -118,7 +133,7 @@ Smart Live App 是一个基于 `Vue 3 + Vite` 的本地生活类 H5 前端项目
 - 他人主页访问与私信发起
 
 ### 9. 即时通讯与系统通知
-- 会话列表：未读数、置顶、删除、系统会话
+- 会话列表：未读数、系统会话、搜索入口
 - 私聊页：文本/图片消息、表情、消息状态
 - 聊天设置：会话置顶、背景图设置、聊天记录日期导航
 - 历史消息按日期跳转（聊天日历）
@@ -126,12 +141,13 @@ Smart Live App 是一个基于 `Vue 3 + Vite` 的本地生活类 H5 前端项目
 - WebSocket 全局连接：鉴权、心跳、断线重连、全局分发
 
 ### 10. AI 智能助手
-- 首页悬浮入口 + 快捷提问
+- 首页悬浮入口 + 快捷提问页
 - AI 对话页 SSE 流式输出（打字机效果）
-- 多会话管理：新建、历史、搜索、删除
+- AI 会话列表与历史管理
 - Markdown 渲染
-- AI 推荐商家/商品卡片
-- 推荐商品支持一键下单（普通/秒杀）
+- AI 推荐商家卡片、商品卡片与快捷追问
+- 推荐商品支持一键下单（普通/秒杀）与订单结果卡片回显
+- AI 帮写评价、AI 帮写博客与结果内容回填
 
 ### 11. 用户与安全
 - 登录方式：短信验证码登录、密码登录
@@ -159,7 +175,7 @@ Smart Live App 是一个基于 `Vue 3 + Vite` 的本地生活类 H5 前端项目
 | `/search` | 全局搜索页 |
 | `/search/user` | 用户搜索页 |
 | `/map` | 地图找店 |
-| `/ai` | AI 对话页 |
+| `/ai` | AI 对话主页面（含快捷提问、会话列表、推荐卡片、AI 下单结果） |
 
 ### 用户与账户
 | 路由 | 功能 |
@@ -202,12 +218,12 @@ Smart Live App 是一个基于 `Vue 3 + Vite` 的本地生活类 H5 前端项目
 | `/product/detail` | 商品详情 |
 | `/deal/list` | 优惠聚合页（代金券/团购） |
 | `/blog/detail` | 笔记详情 |
-| `/blog/edit` | 发笔记/编辑笔记 |
+| `/blog/edit` | 发笔记/编辑笔记（含 AI 博客生成） |
 | `/drafts` | 草稿箱聚合页（评价+笔记） |
 | `/review/mine` | 我的评价 |
 | `/review/drafts` | 评价草稿页 |
 | `/review/detail` | 评价详情 |
-| `/review/publish` | 发布/编辑评价 |
+| `/review/publish` | 发布/编辑评价（含 AI 评价生成） |
 
 ### 聊天与通知
 | 路由 | 功能 |
@@ -350,15 +366,13 @@ smart-live-app/
 │     ├─ shop/             #   店铺列表 / 榜单 / 详情
 │     ├─ product/          #   商品详情 / 榜单
 │     ├─ deal/             #   优惠聚合（代金券/团购）
-│     ├─ voucher/          #   代金券详情
 │     ├─ order/            #   订单列表 / 详情
 │     ├─ pay/              #   收银台 / 支付结果
-│     ├─ review/           #   评价发布 / 详情 / 草稿
-│     ├─ blog/             #   笔记发布 / 详情
-│     ├─ comment/          #   评论组件
+│     ├─ review/           #   评价发布 / 编辑 / 详情 / AI 评价生成
+│     ├─ blog/             #   笔记发布 / 编辑 / 详情 / AI 博客生成
 │     ├─ draft/            #   草稿箱聚合
-│     ├─ chat/             #   聊天 / 系统通知 / 历史日历
-│     ├─ ai/               #   AI 对话
+│     ├─ chat/             #   会话列表 / 私聊 / 系统通知 / 历史日历
+│     ├─ ai/               #   AI 对话 / 快捷提问 / 推荐结果
 │     └─ user/             #   登录 / 资料 / 钱包 / 积分 / 社交
 ├─ docs/                  # 业务对接文档
 ├─ public/                # 公共静态资源
@@ -366,6 +380,12 @@ smart-live-app/
 ├─ vite.config.js         # Vite 与代理配置
 └─ package.json
 ```
+
+## 相关文档
+
+- [SmartLive 在线文档](https://mumulinya.github.io/smartLive-Cloud/)
+- [后端主仓库 smartLive-Cloud](https://github.com/mumulinya/smartLive-Cloud)
+- [开源接入说明](https://mumulinya.github.io/smartLive-Cloud/OPEN_SOURCE)
 
 ## 常见问题
 ### 1. 本地接口请求不到后端？
@@ -379,6 +399,19 @@ smart-live-app/
 ### 3. 地图页面不显示？
 - 配置 `VITE_AMAP_KEY`。
 - 检查浏览器定位权限是否开启。
+
+### 4. AI 页面为什么没有返回推荐内容？
+- 确认后端 AI 与向量检索相关服务已启动。
+- 优先检查 SSE 接口、登录态以及店铺/商品基础数据是否已准备完毕。
+
+## 🤝 参与贡献
+
+欢迎通过 Issue 或 PR 一起完善这个仓库。
+
+在提交改动前，建议先阅读 [CONTRIBUTING.md](./CONTRIBUTING.md)，至少确认这几项：
+- 分支命名和提交信息清晰可读
+- 截图、README 与实际页面保持一致
+- 涉及接口变更时同步更新联调说明
 
 ## 📄 开源协议
 

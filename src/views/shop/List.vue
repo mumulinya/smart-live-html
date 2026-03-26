@@ -69,38 +69,7 @@
     </div>
     </div>
     
-    <div class="status-filter-strip">
-      <div class="status-filter-group">
-        <div class="status-filter-title">业务状态</div>
-        <div class="biz-status-filter-row">
-          <button
-            v-for="option in businessStatusOptions"
-            :key="`shop-status-${option.value}`"
-            type="button"
-            class="biz-status-filter-chip"
-            :class="{ 'is-active': selectedBusinessStatus === option.value }"
-            @click="selectBusinessStatus(option.value)"
-          >
-            {{ option.label }}
-          </button>
-        </div>
-      </div>
-      <div class="status-filter-group">
-        <div class="status-filter-title">审核状态</div>
-        <div class="biz-status-filter-row">
-          <button
-            v-for="option in auditStatusOptions"
-            :key="`shop-audit-${option.value}`"
-            type="button"
-            class="biz-status-filter-chip"
-            :class="{ 'is-active': selectedAuditStatus === option.value }"
-            @click="selectAuditStatus(option.value)"
-          >
-            {{ option.label }}
-          </button>
-        </div>
-      </div>
-    </div>
+
 
     <!-- Search Suggestion Panel Removed -->
 
@@ -172,10 +141,6 @@ import { getCurrentUser } from '@/api/user'; // Need userId for history
 import { throttle } from '@/utils/throttle';
 import { debounce } from '@/utils/debounce';
 import {
-  getAuditStatusMeta,
-  getAuditStatusOptions,
-  getBusinessStatusMeta,
-  getBusinessStatusOptions,
   getSingleDisplayStatusMeta,
   getStatusToneClass
 } from '@/utils/contentStatus';
@@ -192,8 +157,6 @@ export default {
        selectedDistance: null,
        selectedScore: null,
        selectedSort: 'hot',
-       selectedBusinessStatus: 'all',
-       selectedAuditStatus: 'all',
        
        // Options
        distanceOptions: [
@@ -216,8 +179,6 @@ export default {
          { label: "低价优先", value: "price" }
        ],
        
-       businessStatusOptions: getBusinessStatusOptions('shop', { includeAll: true, allLabel: '全部业务状态' }),
-       auditStatusOptions: getAuditStatusOptions({ includeAll: true, allLabel: '全部审核状态' }),
        shops: [],
        isLoading: false,
        loadError: false,
@@ -531,7 +492,7 @@ export default {
          if (typeof this.searchDebouncedRunner?.cancel === 'function') {
              this.searchDebouncedRunner.cancel();
          }
-         const hasFilters = this.selectedTypeId || this.selectedDistance || this.selectedScore || this.selectedBusinessStatus !== 'all' || this.selectedAuditStatus !== 'all';
+         const hasFilters = this.selectedTypeId || this.selectedDistance || this.selectedScore;
          if (!this.searchText.trim() && !hasFilters) return;
 
          const requestToken = ++this.shopRequestToken;

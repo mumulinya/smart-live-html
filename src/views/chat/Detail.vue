@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="chat-detail-page">
     <div class="header">
       <div class="header-back-btn" @click="goBack"><van-icon name="arrow-left" size="24" /></div>
@@ -386,7 +386,7 @@ export default {
            if (String(this.sessionId || '') !== sessionKey) return;
            const session = res.data || res;
            this.contactName = session.contactName;
-           this.contactAvatar = session.contactAvatar ? this.$fileURL + session.contactAvatar : '';
+           this.contactAvatar = session.contactAvatar ? (session.contactAvatar.startsWith('http') ? session.contactAvatar : this.$fileURL + session.contactAvatar) : '';
            
            if (session.fromUid === this.user.id) {
                this.toUserId = session.toUid;
@@ -401,7 +401,7 @@ export default {
                const userSessions = sessionsRes.data || [];
                const userSession = userSessions.find(s => s.sessionId == this.sessionId);
                if (userSession && userSession.backgroundImage) {
-                   this.backgroundImage = this.$fileURL + userSession.backgroundImage;
+                   this.backgroundImage = userSession.backgroundImage.startsWith('http') ? userSession.backgroundImage : this.$fileURL + userSession.backgroundImage;
                }
            } catch (e) {
                console.error('Failed to load session background', e);

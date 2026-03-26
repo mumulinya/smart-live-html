@@ -859,8 +859,9 @@ export default {
              this.noMoreData = true;
            } else {
               list.forEach(b => {
-               b.img = b.images ? (this.$fileURL + b.images.split(",")[0]) : '';
-               b.icon = b.icon ? (this.$fileURL + b.icon) : '';
+               const firstImg = b.images ? b.images.split(",")[0] : '';
+               b.img = firstImg ? (firstImg.startsWith('http') ? firstImg : this.$fileURL + firstImg) : '';
+               b.icon = b.icon ? (b.icon.startsWith('http') ? b.icon : this.$fileURL + b.icon) : '';
                // If no image URL, set error true immediately so placeholder shows
                b.imgError = !b.img;
                b.imgLoaded = false;
@@ -904,8 +905,9 @@ export default {
               this.noMoreData = true;
             } else {
                list.forEach(b => {
-                b.img = b.images ? (this.$fileURL + b.images.split(",")[0]) : '';
-                b.icon = b.icon ? (this.$fileURL + b.icon) : '';
+                const firstImg = b.images ? b.images.split(",")[0] : '';
+                b.img = firstImg ? (firstImg.startsWith('http') ? firstImg : this.$fileURL + firstImg) : '';
+                b.icon = b.icon ? (b.icon.startsWith('http') ? b.icon : this.$fileURL + b.icon) : '';
                 // If no image URL, set error true immediately so placeholder shows
                 b.imgError = !b.img;
                 b.imgLoaded = false;

@@ -252,7 +252,7 @@ export default {
               const list = res.data || [];
               const sessions = list.map(s => ({
                  ...s,
-                 avatar: s.avatar ? this.$fileURL + s.avatar : '',
+                 avatar: s.avatar ? (s.avatar.startsWith('http') ? s.avatar : this.$fileURL + s.avatar) : '',
                  lastMessage: this.formatLastMessage(s.lastMessage),
                  translateX: 0,
                  isPinned: s.pin || s.isPinned || false

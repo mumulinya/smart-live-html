@@ -1002,11 +1002,8 @@ export default {
             item.imgLoaded = false;
             item.imgError = false;
             const rawImg = item.shopLogo || item.images;
-            if (!rawImg) return;
-            if (rawImg.startsWith('http')) {
-              item.images = rawImg;
-            } else {
-              item.images = this.$fileURL + rawImg.split(",")[0];
+            if (rawImg) {
+              item.images = resolveFileUrl(rawImg.split(",")[0]);
             }
           });
           applyList('shopList', list);
@@ -1035,11 +1032,7 @@ export default {
              item.imgError = false;
              const rawImg = item.coverImg || item.shopLogo || item.images || item.image;
              if (rawImg && typeof rawImg === 'string') {
-                 if (rawImg.startsWith('http')) {
-                     item.images = rawImg;
-                 } else {
-                     item.images = this.$fileURL + rawImg.split(",")[0];
-                 }
+                 item.images = resolveFileUrl(rawImg.split(",")[0]);
              }
           });
           applyList('productList', list);
@@ -1070,17 +1063,17 @@ export default {
 
             if (img) {
               blog.images = img.split(",")[0];
-              if (blog.images && !blog.images.startsWith("http")) blog.images = this.$fileURL + blog.images;
+              blog.images = resolveFileUrl(blog.images);
             } else if (blog.content) {
               const match = blog.content.match(/<img[^>]+src="([^">]+)"/);
               if (match) {
                 let src = match[1];
-                if (src && !src.startsWith("http")) src = this.$fileURL + src;
+                src = resolveFileUrl(src);
                 blog.images = src;
               }
             }
 
-            if (blog.icon) blog.icon = this.$fileURL + blog.icon;
+            if (blog.icon) blog.icon = resolveFileUrl(blog.icon);
           });
           applyList('blogList', list);
         });
@@ -1091,7 +1084,7 @@ export default {
           list.forEach((user) => {
             user.imgLoaded = false;
             user.imgError = false;
-            if (user.icon) user.icon = this.$fileURL + user.icon;
+            if (user.icon) user.icon = resolveFileUrl(user.icon);
           });
           applyList('userList', list);
         });

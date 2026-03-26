@@ -462,7 +462,10 @@ export default {
           else if (res && Array.isArray(res.data)) list = res.data; // Handle generic format
           
           list.forEach(s => {
-             if(s.images) s.images = (this.fileURL || '') + s.images.split(',')[0];
+             if (s.images) {
+                const firstImg = s.images.split(',')[0];
+                s.images = firstImg.startsWith('http') ? firstImg : (this.fileURL || '') + firstImg;
+             }
           });
           
           if (reset) {
