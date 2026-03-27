@@ -10,25 +10,29 @@
 [![Element Plus](https://img.shields.io/badge/Element_Plus-2.x-409eff)](https://element-plus.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-📚 总览文档： [SmartLive 在线文档](https://mumulinya.github.io/smartLive-Cloud/)
+📚 在线文档： [SmartLive 在线文档](https://mumulinya.github.io/smartLive-Cloud/) · [视觉导览](https://mumulinya.github.io/smartLive-Cloud/SHOWCASE) · [页面导览](https://mumulinya.github.io/smartLive-Cloud/PAGE_GALLERY) · [开源接入](https://mumulinya.github.io/smartLive-Cloud/OPEN_SOURCE)
 
 </div>
 
-## 📦 项目仓库
+## 📦 项目仓库矩阵
 
 | 仓库 | 说明 | 链接 |
 |:---:|:---:|:---:|
 | **smartLive-Cloud** | 后端主仓库与在线总文档 | [GitHub](https://github.com/mumulinya/smartLive-Cloud) |
-| **smartLive-admin** | 商家端与平台管理后台（Vue + Element UI） | [GitHub](https://github.com/mumulinya/smartLive-admin.git) |
 | **smartLive-web** | 用户端 App（本仓库） | [GitHub](https://github.com/mumulinya/smartLive-web.git) |
+| **smartLive-admin** | 商家端与平台管理后台（Vue + Element UI） | [GitHub](https://github.com/mumulinya/smartLive-admin.git) |
 
 ## 🎨 效果预览
 
-| 首页信息流 | 店铺详情 | 商品详情 |
+| 登录入口 | 首页发现 | 搜索与地图 |
 |:---:|:---:|:---:|
-| ![home](docs/screenshots/home.png) | ![shop](docs/screenshots/shop.png) | ![product](docs/screenshots/product.png) |
-| **AI 快捷提问** | **即时聊天** | **我的钱包** |
-| ![ai](docs/screenshots/ai.png) | ![chat](docs/screenshots/chat.png) | ![wallet](docs/screenshots/wallet.png) |
+| ![login](docs/screenshots/login.png) | ![home](docs/screenshots/home.png) | ![map](docs/screenshots/map.png) |
+| **店铺与商品** | **订单与支付** | **内容创作** |
+| ![shop](docs/screenshots/shop.png) | ![order](docs/screenshots/order.png) | ![publish](docs/screenshots/publish.png) |
+| **社交消息** | **AI 快捷提问** | **个人中心** |
+| ![chat](docs/screenshots/chat.png) | ![ai](docs/screenshots/ai.png) | ![profile](docs/screenshots/profile.png) |
+
+推荐阅读顺序：登录与进入 -> 发现入口与热榜 -> 搜索与 LBS 找店 -> 店铺决策与商品详情 -> 支付订单钱包积分 -> 内容创作与评价互动 -> 社交关系与消息 -> AI 智能助手与 AIGC -> 个人中心与收藏安全。
 
 ## 🖼️ 页面截图索引
 
@@ -53,7 +57,7 @@
 - [常见问题](#常见问题)
 - [参与贡献](#参与贡献)
 
-## 项目定位
+## 📖 项目定位
 SmartLive App 是一个基于 `Vue 3 + Vite` 的本地生活类用户端项目，覆盖“找店 -> 搜索 -> 领券/团购 -> 下单支付 -> 评价 -> 社交互动 -> IM -> AI 助手”的完整业务链路。
 
 项目面向移动端场景，包含：
@@ -103,7 +107,7 @@ SmartLive App 是一个基于 `Vue 3 + Vite` 的本地生活类用户端项目�
 - 订单列表状态筛选：全部/待支付/未使用/已使用/已取消/已退款
 - 订单详情、使用二维码、取消订单、申请退款
 - 收银台支持：余额支付、微信扫码/微信 H5、支付宝扫码/支付宝 H5
-- 支付状态轮询与结果页回跳
+- 支付状态轮询与订单结果回跳
 - 支付明细列表、待支付记录倒计时与取消
 
 ### 6. 评价系统
@@ -199,7 +203,6 @@ SmartLive App 是一个基于 `Vue 3 + Vite` 的本地生活类用户端项目�
 | `/order/list` | 订单列表 |
 | `/order/detail` | 订单详情 |
 | `/pay/checkout` | 收银台 |
-| `/pay/result` | 支付结果页 |
 | `/user/wallet` | 钱包主页 |
 | `/user/wallet/recharge` | 钱包充值 |
 | `/user/wallet/bill` | 钱包账单 |
@@ -367,7 +370,7 @@ smart-live-app/
 │     ├─ product/          #   商品详情 / 榜单
 │     ├─ deal/             #   优惠聚合（代金券/团购）
 │     ├─ order/            #   订单列表 / 详情
-│     ├─ pay/              #   收银台 / 支付结果
+│     ├─ pay/              #   收银台
 │     ├─ review/           #   评价发布 / 编辑 / 详情 / AI 评价生成
 │     ├─ blog/             #   笔记发布 / 编辑 / 详情 / AI 博客生成
 │     ├─ draft/            #   草稿箱聚合
