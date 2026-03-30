@@ -487,17 +487,14 @@ export default {
     },
     handleResponse(res) {
         let list = [];
-        // Extract list from various response structures
-        // Backend returns: ResponseEntity.ok(SearchResult.success(result));
-        // result = { total, list/records, ... } or just list
-        // Let's assume standard response handling wrapper unwraps 'data'
-        // So res might be the SearchResult object or the map
 
-        const data = res.data || res;
-
-        if(Array.isArray(data)) list = data;
-        else if(data && Array.isArray(data.records)) list = data.records;
-        else if(data && Array.isArray(data.list)) list = data.list;
+        if (Array.isArray(res)) list = res;
+        else if (res && Array.isArray(res.list)) list = res.list;
+        else if (res && Array.isArray(res.data)) list = res.data;
+        else if (res && res.data && Array.isArray(res.data.list)) list = res.data.list;
+        else if (res && res.data && Array.isArray(res.data.records)) list = res.data.records;
+        else if (res && res.data && res.data.data && Array.isArray(res.data.data.list)) list = res.data.data.list;
+        else if (res && res.data && res.data.data && Array.isArray(res.data.data.records)) list = res.data.data.records;
 
         if(!list || list.length === 0) {
             this.finished = true;
@@ -514,19 +511,30 @@ export default {
     },
     processItem(item) {
         let newItem = { ...item };
-        // Highlight logic could happen here if backend doesn't do it.
-        // User said "Backend returns highlighted data". So we trust backend for highlighting.
         
         if(this.activeScope === 'blog') {
-             if(newItem.icon && !newItem.icon.startsWith('http')) newItem.icon = this.getImage(newItem.icon);
+             if(newItem.icon && !newItem.icon.startsWith('http') && !newItem.icon.startsWith('data:')) newItem.icon = this.getImage(newItem.icon);
              if(typeof newItem.images === 'string') newItem.images = newItem.images.split(',');
         }
         newItem.imgLoaded = false;
         newItem.imgError = false;
         return newItem;
     },
+    getFirstImage(images) {
+        if (!images) return '/imgs/icons/default-icon.png';
+        let first = '';
+        if (Array.isArray(images)) first = images[0];
+        else if (typeof images === 'string') first = images.split(',')[0];
+        return this.getImage(first);
+    },
     getImage(img) {
         if (!img) return '/imgs/icons/default-icon.png';
+        if (img.startsWith('http') || img.startsWith('data:')) return img;
+        return this.$fileURL + img;
+    },
+    formatScore(score) {
+        if (!score) return '0.0';
+        return (score / 10).toFixed(1);
     },
     getValidityText(v) {
         if (v.validityType === 1) {
