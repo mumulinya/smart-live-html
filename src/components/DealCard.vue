@@ -151,6 +151,7 @@ import { fileURL } from '@/utils/request';
 
 export default {
   name: 'DealCard',
+  emits: ['click', 'action'],
   props: {
     item: { type: Object, required: true },
     biz: { type: String, default: 'voucher' },
@@ -401,6 +402,9 @@ export default {
       const hour = String(date.getHours()).padStart(2, '0');
       const minute = String(date.getMinutes()).padStart(2, '0');
       return `${year}-${month}-${day} ${hour}:${minute}`;
+    },
+    onClick() {
+      this.$emit('click', this.item);
     },
     onActionClick() {
       if (this.statusConfig.disabled) return;
