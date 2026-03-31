@@ -177,13 +177,8 @@
 	                     <!-- AI 回复内容 -->
 	                     <!-- 获取纯文本回复（如果有的话，比如订单前的导语） -->
 	                     <div
-	                       v-if="hasAiRenderableContent(msg) && !msg.orderId"
-	                       v-html="renderMd(msg.displayContent || msg.content)"
-	                       class="markdown-body"
-	                     ></div>
-	                     <div
-	                       v-else-if="hasAiRenderableContent(msg) && msg.orderId && msg.displayContent && msg.displayContent !== msg.content"
-	                       v-html="renderMd(msg.displayContent)"
+	                       v-if="hasAiRenderableContent(msg)"
+	                       v-html="renderMd(getAiRenderableContent(msg))"
 	                       class="markdown-body"
 	                     ></div>
 	                     
@@ -194,7 +189,7 @@
 	                     </div>
 	                     
 	                     <!-- 思考状态 (明确只有在没有文本且没有订单且没有商店时才显示) -->
-	                     <div v-else-if="!hasAiRenderableContent(msg)" class="thinking-indicator">
+	                     <div v-else-if="shouldShowThinking(msg)" class="thinking-indicator">
 	                        <span class="thinking-text">正在思考</span>
 	                        <span class="thinking-dots">
 	                           <span class="dot"></span>
@@ -590,11 +585,22 @@ const renderMd = (text) => {
   return md.render(text || '');
 };
 
-const hasAiRenderableContent = (msg) => {
-  if (msg.orderId) return true; // If it's an order card, it should render (hide thinking)
+const getAiRenderableContent = (msg) => {
   const raw = msg?.displayContent ?? msg?.content ?? '';
+  if (typeof raw === 'string') {
+    return raw.trim();
+  }
+  return raw || '';
+};
+
+const hasAiRenderableContent = (msg) => {
+  const raw = getAiRenderableContent(msg);
   if (typeof raw === 'string') return raw.trim().length > 0;
   return !!raw;
+};
+
+const shouldShowThinking = (msg) => {
+  return !hasAiRenderableContent(msg) && !msg?.orderId;
 };
 
 const isAiMessageStreaming = (msg, idx) => {
@@ -795,6 +801,8 @@ const handleSend = async () => {
         }
         if (recommendationType === 'order') {
           messages.value[aiMessageIndex].orderId = payload.orderId ?? payload.data?.orderId;
+        } else {
+          messages.value[aiMessageIndex].orderId = null;
         }
         messages.value[aiMessageIndex].shopList = normalizeRecommendations(
           recommendationList,
