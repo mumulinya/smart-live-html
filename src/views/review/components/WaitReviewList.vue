@@ -3,6 +3,8 @@
         <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
             <van-list
                 v-model:loading="loadingMore"
+                v-model:error="error"
+                error-text="请求失败，点击重新加载"
                 :finished="finished"
                 finished-text="没有更多了"
                 @load="onLoad"
@@ -64,6 +66,7 @@ export default {
             loading: false, 
             refreshing: false,
             loadingMore: false,
+            error: false,
             finished: false,
             list: [],
             page: 1,
@@ -127,11 +130,12 @@ export default {
             } catch (error) {
                 console.error("WaitReviewList onLoad error:", error);
                 this.loadingMore = false;
-                this.finished = true;
+                this.error = true;
             }
         },
         onRefresh() {
             this.finished = false;
+            this.error = false;
             this.loadingMore = true;
             this.page = 1;
             this.onLoad();

@@ -108,6 +108,8 @@
     <div class="search-results" v-if="hasSearched">
         <van-list
             v-model:loading="loading"
+            v-model:error="error"
+            error-text="请求失败，点击重新加载"
             :finished="finished"
             finished-text="没有更多了"
             @load="onLoad"
@@ -229,6 +231,7 @@ export default {
       historyList: [],
       results: [],
       loading: false,
+      error: false,
       finished: false,
       hasSearched: false,
       current: 1,
@@ -442,6 +445,7 @@ export default {
         this.results = [];
         this.current = 1;
         this.finished = false;
+        this.error = false;
         this.hasSearched = true;
         this.loading = true;
 
@@ -506,7 +510,7 @@ export default {
         this.loading = false;
     },
     handleError(err) {
-        this.finished = true;
+        this.error = true;
         this.loading = false;
     },
     processItem(item) {

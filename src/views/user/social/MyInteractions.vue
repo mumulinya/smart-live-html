@@ -37,6 +37,8 @@
 
           <van-list
             v-model:loading="likeState.loading"
+            v-model:error="likeState.error"
+            error-text="请求失败，点击重新加载"
             :finished="likeState.finished"
             finished-text="没有更多了"
             @load="loadLikes"
@@ -208,6 +210,8 @@
           </div>
           <van-list
             v-model:loading="commentState.loading"
+            v-model:error="commentState.error"
+            error-text="请求失败，点击重新加载"
             :finished="commentState.finished"
             finished-text="没有更多了"
             @load="loadComments"
@@ -340,6 +344,7 @@ const createListState = () => ({
   items: [],
   current: 1,
   loading: false,
+  error: false,
   finished: false
 });
 
@@ -352,6 +357,7 @@ const resetListState = (state) => {
   state.items = [];
   state.current = 1;
   state.loading = false;
+  state.error = false;
   state.finished = false;
 };
 
@@ -910,7 +916,7 @@ const loadLikes = async () => {
     }
   } catch (err) {
     console.error('load likes failed', err);
-    likeState.finished = true;
+    likeState.error = true;
   } finally {
     likeRequesting.value = false;
     likeState.loading = false;
@@ -944,7 +950,7 @@ const loadComments = async () => {
     }
   } catch (err) {
     console.error('load comments failed', err);
-    commentState.finished = true;
+    commentState.error = true;
   } finally {
     commentRequesting.value = false;
     commentState.loading = false;

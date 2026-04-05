@@ -188,6 +188,7 @@
                  <i class="el-icon-loading" v-if="isLoading"></i>
                  <span v-if="isLoading">加载中...</span>
                  <span v-else-if="noMoreFollowData">已加载全部动态</span>
+                 <span v-else-if="isFollowError" @click="queryFollowedFeeds" class="error-retry">加载失败，点击重试</span>
                </div>
             </div>
         </van-tab>
@@ -240,6 +241,7 @@
                  <i class="el-icon-loading" v-if="isLoading"></i>
                  <span v-if="isLoading">加载中...</span>
                  <span v-else-if="noMoreData">已加载全部数据</span>
+                 <span v-else-if="isError" @click="activeCategory === 'hot' ? queryHotBlogsScroll() : queryBlogsByCategory(activeCategory)" class="error-retry">加载失败，点击重试</span>
                </div>
             </div>
         </van-tab>
@@ -291,6 +293,7 @@
                  <i class="el-icon-loading" v-if="isLoading"></i>
                  <span v-if="isLoading">加载中...</span>
                  <span v-else-if="noMoreData">已加载全部数据</span>
+                 <span v-else-if="isError" @click="activeCategory === 'hot' ? queryHotBlogsScroll() : queryBlogsByCategory(activeCategory)" class="error-retry">加载失败，点击重试</span>
                </div>
             </div>
         </van-tab>
@@ -432,9 +435,9 @@ export default {
       pendingCategoryId: null, // Add this to track pending tab restore
       scrollPositions: {}, // Save scroll position per category
       
-      categoryPageSize: 8 // default 8 for mobile (2 rows of 4)
-    }
-  },
+      categoryPageSize: 8, // default 8 for mobile (2 rows of 4)
+      isError: false,
+      isFollowError: false
   computed: {
     featuredTypePages() {
       const pageSize = this.categoryPageSize; 
@@ -594,11 +597,11 @@ export default {
       if (el.scrollHeight - el.scrollTop - el.clientHeight >= 50) return;
 
       if (this.activeCategory === 'follow') {
-        if (!this.noMoreFollowData) this.queryFollowedFeeds();
+        if (!this.noMoreFollowData && !this.isFollowError) this.queryFollowedFeeds();
         return;
       }
 
-      if (!this.noMoreData) {
+      if (!this.noMoreData && !this.isError) {
         if (this.activeCategory === 'hot') this.queryHotBlogsScroll();
         else this.queryBlogsByCategory(this.activeCategory);
       }
@@ -840,8 +843,9 @@ export default {
       return categories;
     },
     queryHotBlogsScroll() {
-       if (this.isLoading || this.noMoreData) return;
+       if (this.isLoading || this.noMoreData || this.isError) return;
        this.isLoading = true;
+       this.isError = false;
        getHotBlogs({ current: this.current, status: 1 })
          .then((res) => {
             // Handle paginated or list response
@@ -874,6 +878,7 @@ export default {
          })
          .catch(err => {
            console.error('博客请求错误:', err);
+           this.isError = true;
          })
          .finally(() => {
            this.isLoading = false;
@@ -883,8 +888,9 @@ export default {
          });
     },
     queryBlogsByCategory(categoryId) {
-        if (this.isLoading || this.noMoreData) return; // Allow first load
+        if (this.isLoading || this.noMoreData || this.isError) return; // Allow first load
         this.isLoading = true;
+        this.isError = false;
         
         const apiCall = categoryId === 'hot' ? getHotBlogs({ current: this.current, status: 1 }) : getBlogsByCategory(categoryId, this.current);
         
@@ -920,6 +926,7 @@ export default {
           })
           .catch(err => {
             console.error('博客请求错误:', err);
+            this.isError = true;
           })
           .finally(() => {
             this.isLoading = false;
@@ -929,8 +936,9 @@ export default {
           });
     },
     queryFollowedFeeds() {
-        if (this.isLoading || this.noMoreFollowData) return;
+        if (this.isLoading || this.noMoreFollowData || this.isFollowError) return;
         this.isLoading = true;
+        this.isFollowError = false;
         
         // Use time/offset based pagination for feeds
         const lastId = this.followParams.minTime || new Date().getTime();
@@ -1022,6 +1030,7 @@ export default {
           })
           .catch(err => {
             console.error('关注动态请求错误:', err);
+            this.isFollowError = true;
           })
           .finally(() => {
             this.isLoading = false;
@@ -1071,16 +1080,19 @@ export default {
            this.followBlogs = [];
            this.followParams = { offset: 0, minTime: 0 };
            this.noMoreFollowData = false;
+           this.isFollowError = false;
            this.queryFollowedFeeds();
          } else if (categoryId === 'hot') {
            this.blogs = [];
            this.current = 1;
            this.noMoreData = false;
+           this.isError = false;
            this.queryHotBlogsScroll();
          } else {
            this.blogs = [];
            this.current = 1;
            this.noMoreData = false;
+           this.isError = false;
            this.queryBlogsByCategory(categoryId);
          }
        },
@@ -1093,16 +1105,19 @@ export default {
            this.followBlogs = [];
            this.followParams = { offset: 0, minTime: 0 };
            this.noMoreFollowData = false;
+           this.isFollowError = false;
            this.queryFollowedFeeds();
         } else if (name === 'hot') {
           this.blogs = [];
           this.current = 1;
           this.noMoreData = false;
+          this.isError = false;
           this.queryHotBlogsScroll();
         } else {
           this.blogs = [];
           this.current = 1;
           this.noMoreData = false;
+          this.isError = false;
           this.queryBlogsByCategory(name);
         }
       },
@@ -1117,11 +1132,11 @@ export default {
          
          if (scrollHeight - scrollTop - clientHeight < 50 && !this.isLoading) {
              if (this.activeCategory === 'follow') {
-               if (!this.noMoreFollowData) this.queryFollowedFeeds();
+               if (!this.noMoreFollowData && !this.isFollowError) this.queryFollowedFeeds();
              } else if (this.activeCategory === 'hot') {
-               if (!this.noMoreData) this.queryHotBlogsScroll();
+               if (!this.noMoreData && !this.isError) this.queryHotBlogsScroll();
              } else {
-               if (!this.noMoreData) this.queryBlogsByCategory(this.activeCategory);
+               if (!this.noMoreData && !this.isError) this.queryBlogsByCategory(this.activeCategory);
              }
          }
       },

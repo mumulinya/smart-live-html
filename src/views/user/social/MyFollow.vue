@@ -25,6 +25,8 @@
     >
       <van-list
         v-model:loading="loading"
+        v-model:error="error"
+        error-text="请求失败，点击重新加载"
         :finished="finished"
         finished-text="没有更多了"
         @load="onLoad"
@@ -120,6 +122,7 @@ const activeTab = ref(0);
 const list = ref([]);
 const pageLoading = ref(true);
 const loading = ref(false);
+const error = ref(false);
 const finished = ref(false);
 const current = ref(1);
 const size = 10;
@@ -277,11 +280,11 @@ const onLoad = async () => {
            current.value++;
        }
        pageLoading.value = false;
-   } catch (error) {
-       console.error(error);
+   } catch (err) {
+       console.error(err);
        loading.value = false;
+       error.value = true;
        pageLoading.value = false;
-       finished.value = true; // Stop on error to avoid loop
    }
 };
 
@@ -383,6 +386,7 @@ watch(activeTab, () => {
         list.value = [];
         current.value = 1;
         finished.value = false;
+        error.value = false;
         loading.value = true;
         onLoad();
     }

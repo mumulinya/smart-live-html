@@ -108,6 +108,8 @@
        <div class="review-list">
             <van-list
                 v-model:loading="loading"
+                v-model:error="error"
+                error-text="请求失败，点击重新加载"
                 :finished="finished"
                 finished-text="没有更多了"
                 :immediate-check="false"
@@ -266,6 +268,7 @@ export default {
        user: {},
        reviews: [],
        loading: false,
+       error: false,
        finished: false,
        page: 1,
        size: 10,
@@ -446,6 +449,7 @@ export default {
       resetReviewedList() {
           this.reviews = [];
           this.page = 1;
+          this.error = false;
           this.finished = false;
       },
       getStatusToneClass,
@@ -599,7 +603,7 @@ export default {
                   else this.page++;
               }
           }).catch(err => {
-              this.finished = true; // Stop on error to avoid loops
+              this.error = true;
           }).finally(() => {
               this.loading = false;
           });
