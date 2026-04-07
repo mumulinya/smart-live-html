@@ -438,6 +438,8 @@ export default {
       categoryPageSize: 8, // default 8 for mobile (2 rows of 4)
       isError: false,
       isFollowError: false
+    }
+  },
   computed: {
     featuredTypePages() {
       const pageSize = this.categoryPageSize; 
@@ -739,7 +741,7 @@ export default {
       event.target.src = '/imgs/types/ms.png';
     },
     onTypePagerScroll(event) {
-      const pager = event?.target;
+      const pager = event && event.target;
       if (!pager) return;
 
       const pageWidth = pager.clientWidth || 1;
@@ -791,8 +793,10 @@ export default {
 
          const list = Array.isArray(data) ? data.slice() : [];
          list.sort((a, b) => {
-           const sa = Number(a?.sort ?? Number.MAX_SAFE_INTEGER);
-           const sb = Number(b?.sort ?? Number.MAX_SAFE_INTEGER);
+           let sa = 999999999;
+           let sb = 999999999;
+           if (a && a['sort'] != null) { sa = Number(a['sort']); }
+           if (b && b['sort'] != null) { sb = Number(b['sort']); }
            return sa - sb;
          });
 
@@ -960,7 +964,7 @@ export default {
               this.noMoreFollowData = true;
             } else {
                const mappedList = list.map(rawItem => {
-                const detail = rawItem?.data && typeof rawItem.data === 'object' && !Array.isArray(rawItem.data) ? rawItem.data : null;
+                const detail = rawItem && rawItem.data && typeof rawItem.data === 'object' && !Array.isArray(rawItem.data) ? rawItem.data : null;
                 const item = detail ? { ...rawItem, ...detail } : { ...rawItem };
                 
                 // Map API fields to Component expected fields
