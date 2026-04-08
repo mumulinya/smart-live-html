@@ -133,12 +133,20 @@ export default {
        order: {},
        loading: false,
        qrVisible: false,
-       timer: null
+       timer: null,
+       hasLoadedOnce: false
     }
   },
   created() {
      this.orderId = this.$route.query.id;
      this.queryDetail();
+  },
+  activated() {
+     if (this.hasLoadedOnce) {
+         this.orderId = this.$route.query.id;
+         this.queryDetail();
+     }
+     this.hasLoadedOnce = true;
   },
   beforeUnmount() {
      if(this.timer) clearInterval(this.timer);

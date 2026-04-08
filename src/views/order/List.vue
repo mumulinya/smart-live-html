@@ -21,10 +21,6 @@
              <div class="tab-item" :class="{active: activeTab==='4'}" @click="activeTab='4'">已取消</div>
              <div class="tab-item" :class="{active: activeTab==='6'}" @click="activeTab='6'">已退款</div>
           </div>
-          <div class="total-stats">
-             <i class="el-icon-box"></i>
-             <span>{{orders.length}}笔订单</span>
-          </div>
        </div>
 
        <div v-if="orders.length > 0">
@@ -128,7 +124,8 @@ export default {
        touchEndX: 0,
        touchEndY: 0,
        swipeThreshold: 60,
-       maxVerticalTravel: 50
+       maxVerticalTravel: 50,
+       hasLoadedOnce: false
     }
   },
   watch: {
@@ -142,7 +139,11 @@ export default {
      // Keep-alive hook: sync tab from URL if changed (e.g. deep link)
      if (this.$route.query.status && String(this.$route.query.status) !== this.activeTab) {
          this.activeTab = String(this.$route.query.status);
+         // watcher on activeTab will trigger queryOrders
+     } else if (this.hasLoadedOnce) {
+         this.queryOrders();
      }
+     this.hasLoadedOnce = true;
   },
   created() {
       if (this.$route.query.status) {
