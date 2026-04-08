@@ -34,6 +34,8 @@ const commentRating = ref(5);
 const replyToComment = ref(null);
 const replyRootId = ref(null);
 
+const pageLoading = ref(true);
+
 // All Comments Popup
 const showReviewPopup = ref(false);
 const allComments = ref([]);
@@ -594,10 +596,14 @@ const toReviewDetail = (comment) => {
 };
 
 onMounted(async () => {
-    await loadData();
-    await queryUser();
-    if(info.value.id) {
-        loadComments();
+    try {
+        await loadData();
+        await queryUser();
+        if(info.value.id) {
+            loadComments();
+        }
+    } finally {
+        pageLoading.value = false;
     }
 });
 
@@ -609,7 +615,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <PageLayout :loading="false" skeleton-type="detail" class="voucher-detail-page">
+  <PageLayout :loading="pageLoading" skeleton-type="detail" class="voucher-detail-page">
     <van-nav-bar title="商品详情" left-arrow @click-left="$router.back()" fixed placeholder z-index="99" />
 
     <!-- Image Banner (16:9) -->

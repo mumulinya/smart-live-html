@@ -312,9 +312,7 @@
              <div v-if="comments.length === 0 && !(aiComment && aiComment.content) && !commentsLoading && commentsNoMore" class="no-comments">暂无评论，快来发表第一条评论吧～</div>
              <div class="comment-load-state" v-if="commentsLoading">加载中...</div>
              <div class="comment-load-state comment-load-end" v-else-if="commentsNoMore && comments.length > 0">没有更多评论了</div>
-                          <div v-if="commentsLoadError" class="load-error-retry" @click="loadComments(blog.id, false)" style="text-align: center; padding: 15px; color: #999; cursor: pointer;">
-                加载失败，点击重试<i class="el-icon-refresh"></i>
-             </div>
+                          
              <div ref="commentLoadTrigger" class="comment-load-trigger" v-if="!commentsNoMore"></div>
           </div>
          
@@ -1023,6 +1021,7 @@ export default {
            }
         }).catch(err => {
            console.error('Failed to load comments:', err);
+           this.commentsNoMore = true; // Stop infinite loop on error
         }).finally(() => {
            this.commentsLoading = false;
            this.$nextTick(() => this.observeCommentLoadTrigger());

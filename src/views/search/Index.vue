@@ -1094,7 +1094,7 @@ export default {
         .catch((err) => {
           if (isStale()) return;
           console.error('搜索请求错误:', err);
-          this.searchLoadError = true;
+          this.noMore = true;
         })
         .finally(() => {
           if (isStale()) return;

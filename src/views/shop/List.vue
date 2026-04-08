@@ -622,8 +622,9 @@ export default {
               this.params.current++;
            }
         }).catch((err) => {
-           if (isStale()) return;
-           console.error('query shops failed', err);
+            if (isStale()) return;
+            console.error('query shops failed', err);
+            this.noMore = true;
            this.$message.error('店铺列表加载失败，请稍后重试');
         }).finally(() => {
            if (isStale()) return;

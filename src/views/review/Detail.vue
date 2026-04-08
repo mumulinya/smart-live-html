@@ -1,5 +1,5 @@
 <template>
-  <div class="review-detail-wrapper">
+  <PageLayout :loading="pageLoading" skeleton-type="detail" class="review-detail-wrapper">
     <!-- Header with Back Button -->
     <div class="detail-header">
         <div class="back-btn" @click="$router.go(-1)">
@@ -249,7 +249,7 @@
             <div class="no-comments" v-if="comments.length === 0 && !commentsLoading && commentsNoMore">暂无评论</div>
             <div class="comment-load-state" v-if="commentsLoading">加载中...</div>
             <div class="comment-load-state comment-load-end" v-else-if="commentsNoMore && comments.length > 0">没有更多评论了</div>
-            <div ref="commentLoadTrigger" class="comment-load-trigger" v-if="!commentsNoMore"></div>
+                        <div ref="commentLoadTrigger" class="comment-load-trigger" v-if="!commentsNoMore"></div>
         </div>
 
         <!-- Sticky Bottom Bar (Same style as Blog Detail) -->
@@ -459,7 +459,7 @@
         @close="closeImagePreview" 
         hide-on-click-modal 
     />
-  </div>
+  </PageLayout>
 </template>
 
 <script>
@@ -482,12 +482,14 @@ import {
     getStatusToneClass
 } from '@/utils/contentStatus';
 import '@/assets/css/blog-detail.css'; // Import blog-detail.css for shared styles
+import PageLayout from '@/components/PageLayout/PageLayout.vue';
 
 export default {
   name: 'ReviewDetail',
-  components: { ElImageViewer },
+  components: { ElImageViewer, PageLayout },
   data() {
       return {
+          pageLoading: true,
           defaultAvatar: anonymousAvatar,
           review: null,
           voucher: null,  // 代金券详情
@@ -498,6 +500,7 @@ export default {
           commentSortType: 'latest',
           commentsNoMore: false,
           commentsLoading: false,
+                    commentLoadArmed: false,
           commentObserver: null,
           // Preview
           showImagePreview: false,
@@ -578,6 +581,7 @@ export default {
   },
   mounted() {
       this.setupCommentObserver();
+      window.addEventListener('scroll', this.onWindowScroll, { passive: true });
   },
   beforeUnmount() {
       if (this.commentObserver) {
@@ -587,6 +591,7 @@ export default {
       if (typeof this.onPopupScroll?.cancel === 'function') {
           this.onPopupScroll.cancel();
       }
+      window.removeEventListener('scroll', this.onWindowScroll);
   },
   methods: {
       getStatusToneClass,
@@ -689,91 +694,23 @@ export default {
 
               // Load comments/replies
               this.loadComments(id);
-          });
-      },
-      formatShopLogo(logos) {
-          if (!logos) return '';
-          let firstLogo = logos.split(',')[0];
-          return firstLogo.startsWith('http') ? firstLogo : this.imgPrefix + firstLogo;
-      },
-      toVoucherDetail() {
-          const id = this.review?.sourceId || (this.voucher && this.voucher.id);
-          if (id) {
-              this.$router.push({ path: '/product/detail', query: { id } });
-          }
-      },
-      buyVoucher() {
-          this.toVoucherDetail();
-      },
-      loadComments(id, reset = true) {
-          if (!id) return Promise.resolve();
-          if (this.commentsLoading) return Promise.resolve();
-          if (!reset && this.commentsNoMore) return Promise.resolve();
-
-          if (reset) {
-              this.comments = [];
-              this.commentsPage = 1;
-              this.commentsNoMore = false;
-          }
-
-          this.commentsLoading = true;
-
-          return getComments({
-              sourceId: id,
-              sourceType: 7,
-              current: this.commentsPage,
-              size: this.commentsPageSize,
-              ...this.getCommentSortParams()
-          }).then(res => {
-              let list = [];
-              if (Array.isArray(res)) list = res;
-              else if (res && Array.isArray(res.data)) list = res.data;
-              else if (res && res.data && Array.isArray(res.data.records)) list = res.data.records;
-
-              const rawList = list || [];
-              if (rawList.length === 0) {
-                  this.commentsNoMore = true;
-                  return;
-              }
-
-              const roots = rawList
-                  .map(c => ({
-                      ...c,
-                      userAvatar: c.userIcon ? (c.userIcon.startsWith('http') ? c.userIcon : this.imgPrefix + c.userIcon) : this.defaultAvatar,
-                      createTimeRaw: c.createTime,
-                      createTime: this.formatDate(c.createTime),
-                      images: c.images ? c.images.split(',').map(i => i.startsWith('http') ? i : this.imgPrefix + i) : [],
-                      isLike: c.isLike || false,
-                      liked: c.liked || 0,
-                      comments: c.replyCount || c.comments || 0,
-                      showReplies: false,
-                      replies: [],
-                      replyPage: 1
-                  }))
-                  .filter(c => !c.answerId || c.answerId === 0 || c.answerId === '0');
-
-              if (roots.length > 0) {
-                  const existingIds = new Set(this.comments.map(c => String(c.id)));
-                  const sortedRoots = this.sortRootComments(roots);
-                  const nextList = sortedRoots.filter(c => !existingIds.has(String(c.id)));
-                  this.comments = this.sortRootComments([...this.comments, ...nextList]);
-              }
-
-              if (rawList.length < this.commentsPageSize) {
-                  this.commentsNoMore = true;
-              } else {
-                  this.commentsPage += 1;
-              }
           }).catch(err => {
               console.error('Failed to load comments:', err);
+              this.commentsNoMore = true;
           }).finally(() => {
               this.commentsLoading = false;
               this.$nextTick(() => this.observeCommentLoadTrigger());
           });
       },
       loadMoreComments() {
-          if (!this.review || !this.review.id || this.commentsLoading || this.commentsNoMore) return;
+          if (!this.review || !this.review.id || this.commentsLoading || this.commentsNoMore || this.commentsLoadError || !this.commentLoadArmed) return;
           this.loadComments(this.review.id, false);
+      },
+      onWindowScroll() {
+          if (!this.commentLoadArmed && window.scrollY > 0) {
+              this.commentLoadArmed = true;
+              this.observeCommentLoadTrigger();
+          }
       },
       scrollToComments() {
           this.$nextTick(() => {

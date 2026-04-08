@@ -131,7 +131,7 @@ export default {
     return {
        orderId: '',
        order: {},
-       loading: false,
+       loading: true,
        qrVisible: false,
        timer: null,
        hasLoadedOnce: false
@@ -323,7 +323,7 @@ export default {
 .section-title { font-size: 16px; font-weight: bold; color: #1a1a1a; margin-bottom: 16px; display: flex; align-items: center; }
 .section-title::before { content: ''; width: 4px; height: 16px; background: #ff6633; border-radius: 2px; margin-right: 8px; }
 
-.info-list { }
+.info-list { display: flex; flex-direction: column; }
 .info-item { display: flex; margin-bottom: 12px; font-size: 14px; line-height: 1.6; align-items: flex-start; }
 .info-item:last-child { margin-bottom: 0; }
 .label { width: 85px; color: #888; flex-shrink: 0; }

@@ -286,6 +286,7 @@ export default {
             this.current++;
         }).catch(e => {
             console.error(e);
+            this.noMore = true;
         }).finally(() => {
             if (targetTab === this.activeTab && currentRefreshId === this.refreshId) {
                 this.loading = false;

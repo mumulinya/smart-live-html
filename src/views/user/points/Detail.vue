@@ -59,7 +59,7 @@ export default {
   components: { PageLayout },
   data() {
     return {
-      pageLoading: false,
+      pageLoading: true,
       activeTab: 0,
       refreshing: false,
       loading: false,
@@ -112,6 +112,7 @@ export default {
 
           this.loading = false;
           this.refreshing = false;
+          this.pageLoading = false;
 
           // 如果返回的数据少于每页大小，或者没有更多数据（适配 List 直接返回的情况）
           if (newRecords.length < this.pageSize || (res.data.total !== undefined && this.records.length >= res.data.total)) {
@@ -122,11 +123,13 @@ export default {
         } else {
           this.loading = false;
           this.finished = true;
+          this.pageLoading = false;
         }
       } catch (error) {
         console.error('Fetch points records failed', error);
         this.loading = false;
         this.finished = true;
+        this.pageLoading = false;
       }
     },
     formatAmount(item) {

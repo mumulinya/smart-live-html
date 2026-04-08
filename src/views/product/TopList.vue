@@ -141,6 +141,7 @@ export default {
         }
       }).catch(err => {
         console.error('加载店铺失败', err);
+        this.noMore = true;
       }).finally(() => {
         this.isLoading = false;
       });

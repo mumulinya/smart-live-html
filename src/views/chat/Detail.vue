@@ -530,6 +530,9 @@ export default {
              } else {
                  this.noMoreOld = true;
              }
+        }).catch(err => {
+             console.error('Failed to load old messages:', err);
+             this.noMoreOld = true;
         }).finally(() => {
              if (String(this.sessionId || '') === sessionKey) {
                  this.loadingOld = false;
@@ -573,6 +576,9 @@ export default {
              } else {
                  this.noMoreNew = true;
              }
+        }).catch(err => {
+             console.error('Failed to load new messages:', err);
+             this.noMoreNew = true;
         }).finally(() => {
              if (String(this.sessionId || '') === sessionKey) {
                  this.loadingNew = false;

@@ -852,9 +852,10 @@ export default {
                   this.commentsPage += 1;
                 }
              }).catch(err => {
-               if (requestToken !== this.commentsRequestToken) return;
+                if (requestToken !== this.commentsRequestToken) return;
                 console.error('loadComments failed:', err);
-             }).finally(() => {
+                this.commentsNoMore = true;
+              }).finally(() => {
                if (requestToken !== this.commentsRequestToken) return;
                 this.commentsLoading = false;
                 this.$nextTick(() => this.observeCommentLoadTrigger());
@@ -950,9 +951,12 @@ export default {
                          }
                      }
                  }
-             });
-         },
-     onDataLoaded() {
+             }).catch(err => {
+                  console.error(err);
+                  if (comment) comment.comments = (comment.replies || []).length;
+              });
+          },
+      onDataLoaded() {
         this.dataLoadedCount++;
         if(this.dataLoadedCount >= 4) {
            this.isLoading = false;
@@ -1407,9 +1411,12 @@ export default {
                    this.allCommentsPage++;
                 }
              }
-          }).finally(() => {
-             if (requestToken !== this.allCommentsRequestToken) return;
-             this.allCommentsLoading = false;
+          }).catch(err => {
+              console.error(err);
+              this.allCommentsNoMore = true;
+           }).finally(() => {
+              if (requestToken !== this.allCommentsRequestToken) return;
+              this.allCommentsLoading = false;
           });
        },
      onPopupScroll(e) {
